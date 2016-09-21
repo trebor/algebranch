@@ -1,0 +1,21 @@
+{
+  "name": "algebrator",
+  "description": "",
+  "authors": [
+    "Robert Harris <trebor@twitter.com> (https://twitter.com/trebor)"
+  ],
+  "keywords": [],
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "^3.3.6",
+    "mathjs": "^3.2.1",
+    "lodash": "^4.15.0"
+  }
+}

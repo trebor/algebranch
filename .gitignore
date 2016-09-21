@@ -33,3 +33,5 @@ tmp
 .publish
 .sass-cache
 *.sublime-workspace
+
+!dist/**

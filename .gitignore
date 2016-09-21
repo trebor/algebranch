@@ -33,6 +33,3 @@ tmp
 .publish
 .sass-cache
 *.sublime-workspace
-
-# Project specific
-dist

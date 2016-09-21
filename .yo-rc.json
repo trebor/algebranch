@@ -1,0 +1,15 @@
+{
+  "generator-interactive": {
+    "type": "website",
+    "name": "algebrator",
+    "safeName": "algebrator",
+    "description": "",
+    "authorName": "Robert Harris",
+    "authorEmail": "trebor@twitter.com",
+    "authorUrl": "https://twitter.com/trebor",
+    "twitterHandle": "trebor",
+    "ldapUsername": "rharris",
+    "year": 2016,
+    "addDevDependencies": true
+  }
+}

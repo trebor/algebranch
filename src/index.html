@@ -16,7 +16,23 @@
   </head>
 
   <body>
-    <p id="eq" style="text-align:center"></p>
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="input-group">
+          <input id="eq-input" type="text" class="form-control" placeholder="Enter Math like: x/2 == y/4">
+          <span class="input-group-btn">
+            <button id="eq-display" class="btn btn-default" type="button">Display</button>
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-lg-12">
+        <div id="error-alert" class="alert alert-danger" role="alert">-</div>
+      </div>
+    </div>
+
+    <p id="eq" style=""></p>
 
     <!--[if lt IE 7]>
         <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
@@ -43,7 +59,6 @@
 
     <script type="text/javascript" async
             src="https://cdn.mathjax.org/mathjax/latest/MathJax.js"></script>
-
 
     <script src="app/bundle.js"></script>
   </body>

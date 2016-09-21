@@ -17,13 +17,38 @@ const interval = setInterval((x) => {
   }
 }, 200);
 
+const $eqInput = $('#eq-input');
+const $eqDisplay = $('#eq-display');
+const $errorAlert = $('#error-alert');
+
+$eqInput
+  .on('change', d => {
+    updateExpression(d.target.value);
+  });
+
+$eqDisplay
+  .on('click', d => {
+    updateExpression($eqInput.val());
+  });
+
+function updateExpression(expressionText) {
+  try {
+    $errorAlert.css('visibility','hidden');
+    var ex = math.parse(expressionText);
+    display(ex);
+  } catch (error) {
+    $errorAlert
+      .text(error.toString())
+      .css('visibility','visible');
+  }
+}
+
 function start() {
   started = true;
-  // var raw = 'x=sqrt(3^2 + 4^2) / a';
-  var raw = '(2*x)/3==(sqrt(3^2 + 4^2) / (2 * y + 5))/z';
-  var ex = math.parse(raw);
-  display(ex);
+  $eqInput.val('(2*x)/3==(sqrt(3^2 + 4^2) / (2 * y + 5))/z');
+  $eqInput.change();
 }
+
 
 function showExpression(expression) {
   console.log("expression", expression, expression.toTex(), expression.toString());

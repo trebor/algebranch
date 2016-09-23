@@ -17,5 +17,5 @@ A tool to manipulate mathamatical expressions, inspired by the paper [Interactiv
 
 ## Help Needed
 
-This project uses [mathjs](https://github.com/josdejong/mathjs) to parse an expression into a tree structure which can be manipulated, then uses [MathJax](https://github.com/mathjax/MathJax) to beautifully display the expression in the browser.  Currently I have no way to map browser DOM elements to nodes in expression tree.  I could use some help figuring out how to do that.
+Generally, I could use additional collaborators. Specifically, this project uses [mathjs](https://github.com/josdejong/mathjs) to parse an expression into a tree structure which can be manipulated, then uses [MathJax](https://github.com/mathjax/MathJax) to beautifully display the expression in the browser.  Currently I have no way to map browser DOM elements to nodes in the expression tree.  I could use some help figuring out how to do that.
 

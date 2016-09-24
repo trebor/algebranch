@@ -1,5 +1,7 @@
 import _ from 'lodash';
 import $ from 'jquery';
+import Tree from './tree.js';
+const d3 = require('d3');
 const math = require('mathjs');
 let started = false;
 
@@ -21,6 +23,12 @@ const $eqInput = $('#eq-input');
 const $eqDisplay = $('#eq-display');
 const $errorAlert = $('#error-alert');
 
+const tree = new Tree('#tree');
+
+/* d3.csv("/data/flare.csv", function(error, data) {
+ *   tree.data(data);
+ * });
+ * */
 $eqInput
   .on('change', d => {
     updateExpression(d.target.value);
@@ -33,13 +41,14 @@ $eqDisplay
 
 function updateExpression(expressionText) {
   try {
-    $errorAlert.css('visibility','hidden');
+    $errorAlert.css('display','none');
     var ex = math.parse(expressionText);
+    tree.data(ex);
     display(ex);
   } catch (error) {
     $errorAlert
       .text(error.toString())
-      .css('visibility','visible');
+      .css('display','block');
   }
 }
 
@@ -72,7 +81,7 @@ function display(expression) {
 
   MathJax.Hub.Typeset($eqNode.get(0), function() {
     var domNode = $(treatNodes($eqNode));
-    mapExpressionToDom(expression, domNode);
+    /* mapExpressionToDom(expression, domNode);*/
   });
 }
 
@@ -100,7 +109,7 @@ function treatNodes($eqNode) {
     })
     .each(function(d) {
       const node = $(this);
-      console.log(node.attr('id'), node.attr('class'), node.text());
+      /* console.log(node.attr('id'), node.attr('class'), node.text());*/
     });
 
   return nodes[0];
@@ -128,9 +137,9 @@ let nodes = [];
 let showNodes = _.debounce(function(nodes) {
   console.log("----------");
   // console.log("nodes[0].text()", nodes[0].text());
-  nodes.forEach(node => {
-    console.log("node.text()", node.text(), node.attr('id'));
-  });
+  /* nodes.forEach(node => {
+   *   console.log("node.text()", node.text(), node.attr('id'));
+   * });*/
 }, 100);
 
 function collect(node) {

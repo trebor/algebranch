@@ -17,11 +17,11 @@ module.exports = function(){
           query: {
             presets: ['es2015']
           }
-        }
+        },
       ],
     },
     resolve: {
-      modulesDirectories: ['src/bower_components']
+      modulesDirectories: ['src/bower_components', 'node_modules']
     },
     plugins: [
       new webpack.ResolverPlugin(

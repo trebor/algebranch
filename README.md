@@ -2,6 +2,10 @@
 
 A tool to manipulate mathamatical expressions, inspired by the paper [Interactive Algebra Manipulation](https://github.com/trebor/algebrator/blob/master/resources/shuffle.pdf) by [Geoffrey Irving](https://github.com/girving). Checkout the [prototype](https://trebor.github.io/algebrator), which doesn't do very much at the moment.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/trebor/algebrator/master/resources/euler.png" alt="Euler's Identity"/>
+</p>
+
 ## From Interactive Algebra Manipulation:
 > ### Introduction
 >
@@ -13,5 +17,5 @@ A tool to manipulate mathamatical expressions, inspired by the paper [Interactiv
 
 ## Help Needed
 
-This project uses [mathjs](https://github.com/josdejong/mathjs) to parse an expression into a tree structure which can be manipulated, then uses [MathJax](https://github.com/mathjax/MathJax) to beautifully display the expression in the browser.  Currently I have no way to map browser DOM elements to nodes in expression tree.  I could use some help figuring out how to do that.
+Generally, I could use additional collaborators. Specifically, this project uses [mathjs](https://github.com/josdejong/mathjs) to parse an expression into a tree structure which can be manipulated, then uses [MathJax](https://github.com/mathjax/MathJax) to beautifully display the expression in the browser.  Currently I have no way to map browser DOM elements to nodes in the expression tree.  I could use some help figuring out how to do that.
 

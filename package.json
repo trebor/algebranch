@@ -54,6 +54,8 @@
     "deploy": "gulp build --production && rm -rf ../../interactiveprod/algebrator && cp -R dist ../../interactiveprod/algebrator"
   },
   "dependencies": {
+    "d3-dispatch": "^1.0.1",
+    "d3-selection": "^1.0.2",
     "mathjax-node": "^0.5.1"
   }
 }

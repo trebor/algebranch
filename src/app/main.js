@@ -1,7 +1,9 @@
 import _ from 'lodash';
 import $ from 'jquery';
+import Tree from './tree.js';
 const math = require('mathjs');
 let started = false;
+
 
 const interval = setInterval((x) => {
   if (window.MathJax) {

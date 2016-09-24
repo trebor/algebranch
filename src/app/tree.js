@@ -81,9 +81,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     const enter = update
       .enter()
       .append('g')
-      .classed('node', true)
-      .classed('node--internal', d => d.children)
-      .classed('node--leaf', d => !d.children);
+      .classed('node', true);
 
     enter.append('circle')
       .attr('r', options.circleRadius);
@@ -94,6 +92,8 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
 
     update
       .merge(enter)
+      .classed('node--internal', d => d.children)
+      .classed('node--leaf', d => !d.children)
       .transition(options.transition)
       .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
       .select('text')

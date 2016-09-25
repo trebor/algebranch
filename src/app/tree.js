@@ -7,7 +7,8 @@ export const DEFAULT_OPTIONS = {
   initialWidth: 600,
   initialHeight: 370,
   circleRadius: 20,
-  transition: d3.transition().duration(2000).ease(d3.easeLinear)
+  transitionDuration: 1000,
+  /* transitionEase: d3.easeLinear,*/
 };
 
 const EVENTS = ['nodeMouseenter', 'nodeMousemove', 'nodeMouseout', 'nodeClick'];
@@ -18,6 +19,10 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
   const dispatch = skeleton.getDispatcher();
   const tree = d3.tree();
 
+  /* options.transition = d3.transition()
+   *   .duration(options.transitionDuration)
+   *   .ease(options.transitionEase);
+   */
   const visualize = _.debounce(visualizeDebounced, 100);
 
   skeleton
@@ -60,7 +65,8 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
 
     update
       .merge(enter)
-      .transition(options.transition)
+      .transition()
+      .duration(options.transitionDuration)
       .attr('d', function(d) {
         return 'M' + d.x + ',' + d.y
           + 'C' + d.x + ',' +  (d.y + d.parent.y) / 2
@@ -82,6 +88,8 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .enter()
       .append('g')
       .classed('node', true)
+      .attr('opacity', 1)
+      .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
       .on('mouseenter', d => dispatch.call('nodeMouseenter', this, d))
       .on('mousemove', d => dispatch.call('nodeMousemove', this, d))
       .on('mouseout', d => dispatch.call('nodeMouseout', this, d))
@@ -98,13 +106,17 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .merge(enter)
       .classed('node--internal', d => d.children)
       .classed('node--leaf', d => !d.children)
-      .transition(options.transition)
+      .transition()
+      .duration(options.transitionDuration)
       .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
       .select('text')
       .text(establishNodeName);
 
     update
       .exit()
+      .transition()
+      .duration(options.transitionDuration)
+      .attr('opacity', 0)
       .remove();
   }
 

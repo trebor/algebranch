@@ -4,6 +4,8 @@ import Tree from './tree.js';
 const d3 = require('d3');
 const math = require('mathjs');
 let started = false;
+const EXPRESSION_TO_MATHJAX = d => '\\(' + d.toTex() + '\\)';
+
 
 const interval = setInterval((x) => {
   if (window.MathJax) {
@@ -60,7 +62,7 @@ function start() {
 
 function nodeEnter(node) {
   const $subEqNode = $('#sub-eq');
-  $subEqNode.text('$$' + node.data.toTex() + '$$');
+  $subEqNode.text(EXPRESSION_TO_MATHJAX(node.data));
 
   MathJax.Hub.Typeset($subEqNode.get(0), () => {
     $popup.css('visibility', 'visible');
@@ -100,7 +102,7 @@ function showExpression(expression) {
 
 function display(expression) {
   const $eqNode = $('#eq');
-  $eqNode.text('$$' + expression.toTex() + '$$');
+  $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
 
   MathJax.Hub.Typeset($eqNode.get(0), function() {
     var domNode = $(treatNodes($eqNode));

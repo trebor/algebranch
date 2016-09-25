@@ -10,7 +10,6 @@ const interval = setInterval((x) => {
     clearInterval(interval);
     MathJax.Hub.signal.Interest(
       function (message) {
-        // console.log("message -> ", message);
         if (!started && message[0] == 'End Process') {
           start();
         }
@@ -22,13 +21,14 @@ const interval = setInterval((x) => {
 const $eqInput = $('#eq-input');
 const $eqDisplay = $('#eq-display');
 const $errorAlert = $('#error-alert');
+const $popup = $('#popup');
 
-const tree = new Tree('#tree');
+const tree = new Tree('#tree')
+  .on('nodeMouseenter', nodeEnter)
+  .on('nodeMousemove', nodeMove)
+  .on('nodeMouseout', nodeOut)
+  .on('nodeClick', nodeClick);
 
-/* d3.csv("/data/flare.csv", function(error, data) {
- *   tree.data(data);
- * });
- * */
 $eqInput
   .on('change', d => {
     updateExpression(d.target.value);
@@ -58,6 +58,32 @@ function start() {
   $eqInput.change();
 }
 
+function nodeEnter(node) {
+  const $subEqNode = $('#sub-eq');
+  $subEqNode.text('$$' + node.data.toTex() + '$$');
+
+  MathJax.Hub.Typeset($subEqNode.get(0), () => {
+    $popup.css('visibility', 'visible');
+  });
+}
+
+function nodeMove(node) {
+  const options = tree.options();
+  $popup
+    .css('left', d3.event.clientX - $popup.width() / 2
+      + options.margin.left / 2)
+    .css('top', d3.event.clientY - $popup.height()
+      - options.circleRadius + options.margin.top);
+}
+
+function nodeOut(node) {
+  $popup.css('visibility', 'hidden');
+}
+
+function nodeClick(node) {
+  console.log("node.data.toTex()", node.data.toTex());
+  console.log("node", node);
+}
 
 function showExpression(expression) {
   console.log("expression", expression, expression.toTex(), expression.toString());
@@ -73,15 +99,11 @@ function showExpression(expression) {
 }
 
 function display(expression) {
-  // console.log("expression", expression.toTex());
-  // console.log("expression", expression.toString());
-
   const $eqNode = $('#eq');
   $eqNode.text('$$' + expression.toTex() + '$$');
 
   MathJax.Hub.Typeset($eqNode.get(0), function() {
     var domNode = $(treatNodes($eqNode));
-    /* mapExpressionToDom(expression, domNode);*/
   });
 }
 
@@ -115,27 +137,9 @@ function treatNodes($eqNode) {
   return nodes[0];
 }
 
-function mapExpressionToDom(expression, rootNode) {
-
-  const domNodes = rootNode.find(MATH_JAX_NOTE_SELECTOR).get();
-
-  expression.traverse(function (node, path, parent) {
-    let exStr = $(domNodes.shift()).text() + ' => ' + node.type + ' ';
-    switch (node.type) {
-    case 'OperatorNode': exStr += node.op;    break;
-    case 'ConstantNode': exStr += node.value; break;
-    case 'FunctionNode': exStr += node.name;  break;
-    case 'SymbolNode':   exStr += node.name;  break;
-    default:             exStr += '?';
-    }
-    console.log(exStr);
-  });
-}
-
 let nodes = [];
 
 let showNodes = _.debounce(function(nodes) {
-  console.log("----------");
   // console.log("nodes[0].text()", nodes[0].text());
   /* nodes.forEach(node => {
    *   console.log("node.text()", node.text(), node.attr('id'));

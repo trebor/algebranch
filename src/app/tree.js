@@ -10,7 +10,7 @@ export const DEFAULT_OPTIONS = {
   transition: d3.transition().duration(2000).ease(d3.easeLinear)
 };
 
-const EVENTS = [];
+const EVENTS = ['nodeMouseenter', 'nodeMousemove', 'nodeMouseout', 'nodeClick'];
 
 export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => {
   const options = skeleton.options();
@@ -81,7 +81,11 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     const enter = update
       .enter()
       .append('g')
-      .classed('node', true);
+      .classed('node', true)
+      .on('mouseenter', d => dispatch.call('nodeMouseenter', this, d))
+      .on('mousemove', d => dispatch.call('nodeMousemove', this, d))
+      .on('mouseout', d => dispatch.call('nodeMouseout', this, d))
+      .on('click', d => dispatch.call('nodeClick', this, d));
 
     enter.append('circle')
       .attr('r', options.circleRadius);

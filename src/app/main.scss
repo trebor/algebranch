@@ -30,12 +30,17 @@ html, body {
   display: none;
 }
 
+.node {
+  cursor: pointer;
+}
+
 .node circle {
   fill: #999;
 }
 
 .node text {
   font: 30px sans-serif;
+  pointer-events: none;
 }
 
 .node--internal circle {
@@ -51,4 +56,14 @@ html, body {
   stroke: #555;
   stroke-opacity: 0.4;
   stroke-width: 1.5px;
+}
+
+#popup {
+  border-radius: 4px;
+  pointer-events: none;
+  position: absolute;
+  background-color: #eee;
+  visibility: hidden;
+  width: 300px;
+  height: 150px;
 }

@@ -40,28 +40,31 @@
 
     <p id="eq"></p>
     <div id="tree"></div>
+    <div id="popup">
+      <p id="sub-eq"></p>
+    </div>
 
     <!--[if lt IE 7]>
         <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
-        <![endif]-->
-
-    <!-- <script type="text/x-mathjax-config"> -->
-    <!--   MathJax.Hub.Config({MathML: {extensions: ["content-mathml.js"]}}); -->
-    <!-- </script> -->
-    <!-- <script type="text/javascript" async -->
-    <!--         src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script> -->
+     <![endif]-->
 
     <script type="text/x-mathjax-config">
-      MathJax.Hub.Config({
-      jax: ["input/TeX","input/MathML","input/AsciiMath","output/CommonHTML"],
-      extensions: ["MathML/content-mathml.js", "tex2jax.js"],
-      <!-- extensions: ["MathML/content-mathml.js", "tex2jax.js","mml2jax.js","asciimath2jax.js","MathMenu.js","MathZoom.js","AssistiveMML.js"], -->
-      TeX: {
-      extensions: ["AMSmath.js","AMSsymbols.js","noErrors.js","noUndefined.js"]
-<!-- https://cdn.mathjax.org/mathjax/2.6-latest/extensions/MathML/content-mathml.js?rev=2.6.1       -->
-<!--       MathML: { extensions: ["mml3.js", "content-mathmlXX.js"]} -->
-      }
-      });
+     MathJax.Hub.Config({
+       jax: [
+         "input/TeX",
+         "input/MathML",
+         "input/AsciiMath",
+         "output/CommonHTML"
+       ],
+       extensions: ["MathML/content-mathml.js", "tex2jax.js"],
+       TeX: {
+         extensions: [
+           "AMSmath.js",
+           "AMSsymbols.js",
+           "noErrors.js","noUndefined.js"
+         ]
+       }
+     });
     </script>
 
     <script type="text/javascript" async

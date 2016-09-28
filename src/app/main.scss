@@ -1,35 +1,35 @@
-// Add styles
+@import '../bower_components/sass-flex-mixin/flex';
 
 html, body {
-  width: 100%;
   height: 100%;
-  margin: 0px;
-  padding: 0px;
 }
 
-.input-row {
-  margin: 20px;
+body {
+  @include flexbox;
+  @include flex-direction(column);
 }
 
-#help {
-  font-size: 30px;
-}
+#header {
+  padding: 10px;
 
-#eq {
-  font-size: 20px;
-  color: #666;
-  text-align:center;
-  display: none;
-}
+  .input-row {}
 
-#error-alert {
-  display: none;
-}
+  #help {
+    font-size: 30px;
+  }
 
+  #eq {
+    display: none;
+  }
+
+  #error-alert {
+    display: none;
+  }
+}
 
 #tree {
-  width: 100%;
-  height: 70%;
+  @include flex;
+  overflow: hidden;
 
   .node {
     cursor: pointer;
@@ -37,11 +37,6 @@ html, body {
 
   .node circle {
     fill: white;
-  }
-
-  .node text {
-    font: 30px sans-serif;
-    pointer-events: none;
   }
 
   .node--internal circle {
@@ -54,19 +49,8 @@ html, body {
 
   .link {
     fill: none;
-    stroke: #555;
+    stroke: #bbb;
     stroke-opacity: 0.4;
-    stroke-width: 1.5px;
+    stroke-width: 5px;
   }
-
-}
-
-#popup {
-  border-radius: 4px;
-  pointer-events: none;
-  position: absolute;
-  background-color: #eee;
-  visibility: hidden;
-  width: 300px;
-  height: 150px;
 }

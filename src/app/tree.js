@@ -4,7 +4,7 @@ const d3Kit = require('d3kit');
 const EXPRESSION_TO_MATHJAX = d => '\\(' + d.toTex() + '\\)';
 
 export const DEFAULT_OPTIONS = {
-  margin: { top: 30, right: 30, bottom: 30, left: 30 },
+  margin: { top: 30, right: 30, bottom: 50, left: 30 },
   offset: [0, 0],
   initialWidth: 600,
   initialHeight: 370,

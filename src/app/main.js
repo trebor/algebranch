@@ -4,8 +4,7 @@ import Tree from './tree.js';
 const d3 = require('d3');
 const math = require('mathjs');
 let started = false;
-const EXPRESSION_TO_MATHJAX = d => '\\(' + d.toTex() + '\\)';
-
+import {EXPRESSION_TO_MATHJAX} from './util.js';
 
 const interval = setInterval((x) => {
   if (window.MathJax) {
@@ -35,7 +34,7 @@ const tree = new Tree('#tree')
 /* .on('nodeMouseenter', nodeEnter)
  * .on('nodeMousemove', nodeMove)
  * .on('nodeMouseout', nodeOut)*/
-    .on('nodeClick', nodeClick);
+  .on('nodeClick', nodeClick);
 
 $eqInput
   .on('change', d => {
@@ -43,13 +42,13 @@ $eqInput
   });
 
 $eqDisplay.on('click', d => updateExpression($eqInput.val()));
+let expression = null;
 
 function updateExpression(expressionText) {
   try {
     $errorAlert.css('display','none');
-    var ex = math.parse(expressionText);
-    display(ex);
-    tree.data(ex);
+    expression = math.parse(expressionText);
+    display(expression);
   } catch (error) {
     $errorAlert
       .text(error.toString())
@@ -61,14 +60,24 @@ function display(expression) {
   const $eqNode = $('#eq');
   $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
   MathJax.Hub.Typeset($eqNode.get(0));
+  tree.data(expression);
 }
 
 function nodeEnter(node) {}
 function nodeMove(node) {}
 function nodeOut(node) {}
 function nodeClick(node) {
-  console.log("node.data.toTex()", node.data.toTex());
-  console.log("node", node);
+  console.log("node.data", node.data);
+
+  expression.filter((candidate, path, parent) => {
+    console.log("path", candidate == node.data);
+    return true;
+  });
+
+  /* display(expression);
+   */
+  /* console.log("node.data.toTex()", node.data.toTex());
+   * console.log("node", node);*/
 }
 
 class AbstractPattern {

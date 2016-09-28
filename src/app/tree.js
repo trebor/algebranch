@@ -1,7 +1,7 @@
 import $ from 'jquery';
 const d3 = require('d3');
 const d3Kit = require('d3kit');
-const EXPRESSION_TO_MATHJAX = d => '\\(' + d.toTex() + '\\)';
+import {EXPRESSION_TO_MATHJAX} from './util.js';
 
 export const DEFAULT_OPTIONS = {
   margin: { top: 50, right: 30, bottom: 50, left: 30 },

@@ -5,7 +5,9 @@ A tool to manipulate mathamatical expressions, inspired by the paper [Interactiv
 Checkout the [prototype](https://trebor.github.io/algebrator), which consumes a [mathjs](https://github.com/josdejong/mathjs) formatted expression and displays it as a tree.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/trebor/algebrator/master/resources/eq-tree.png" width="500px" alt="Expression Tree"/>
+  <a href="https://trebor.github.io/algebrator">
+    <img src="https://raw.githubusercontent.com/trebor/algebrator/master/resources/eq-tree.png" width="500px" alt="Expression Tree"/>
+  </a>
 </p>
 
 ## From Interactive Algebra Manipulation:

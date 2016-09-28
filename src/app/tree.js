@@ -4,11 +4,12 @@ const d3Kit = require('d3kit');
 const EXPRESSION_TO_MATHJAX = d => '\\(' + d.toTex() + '\\)';
 
 export const DEFAULT_OPTIONS = {
-  margin: { top: 30, right: 30, bottom: 50, left: 30 },
+  margin: { top: 50, right: 30, bottom: 50, left: 30 },
   offset: [0, 0],
   initialWidth: 600,
   initialHeight: 370,
   circleRadius: 20,
+  nodePadding: {x: 14, y: 8},
   transitionDuration: 1000,
   fontSize: 20,
 };
@@ -97,9 +98,9 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .on('mouseout', d => dispatch.call('nodeMouseout', this, d))
       .on('click', d => dispatch.call('nodeClick', this, d));
 
-    enter.append('circle')
-      .attr('r', options.circleRadius);
-
+    /* enter.append('circle')
+     *   .attr('r', options.circleRadius);
+     */
     enter.merge(update)
       .each(function(d) {$(this).find('foreignObject').remove();})
       .append("foreignObject")
@@ -115,8 +116,9 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
         $node.text(EXPRESSION_TO_MATHJAX(establishDatum(d.data)));
         MathJax.Hub.Typeset(this, (d) => {
           const $mjx = $(this).find('.mjx-chtml');
-          const dx = -$mjx.width() / 2;
-          const dy = -$mjx.height() / 2;
+          $mjx.css('padding', [options.nodePadding.y + 'px', options.nodePadding.x + 'px'].join(' '));
+          const dx = -($mjx.width() / 2 + options.nodePadding.x);
+          const dy = -($mjx.height() / 2 + options.nodePadding.y);
           $node.parent()
             .width($mjx.width())
             .height($mjx.height())

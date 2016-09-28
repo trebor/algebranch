@@ -27,30 +27,36 @@ body {
   }
 }
 
+$trackColor: #ddd;
+$trackColorLight: #cce;
+$mathColor: #666;
+
 #tree {
   @include flex;
   overflow: hidden;
 
   .node {
     cursor: pointer;
-  }
 
-  .node circle {
-    fill: white;
-  }
+    .node-expression {
+      border-radius: 5px;
+      background-color: $trackColor;
+      .mjx-chtml {
+        span {
+          color: $mathColor;
+        }
+      }
+    }
 
-  .node--internal circle {
-    fill: white;
-  }
-
-  .node--internal text {
-    text-shadow: 0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
+    .node-expression:hover {
+      background-color: $trackColorLight;
+    }
   }
 
   .link {
     fill: none;
-    stroke: #bbb;
-    stroke-opacity: 0.4;
-    stroke-width: 5px;
+    stroke: $trackColor;
+    stroke-width: 10px;
   }
 }
+

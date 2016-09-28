@@ -1,5 +1,7 @@
+import $ from 'jquery';
 const d3 = require('d3');
 const d3Kit = require('d3kit');
+const EXPRESSION_TO_MATHJAX = d => '\\(' + d.toTex() + '\\)';
 
 export const DEFAULT_OPTIONS = {
   margin: { top: 30, right: 30, bottom: 30, left: 30 },
@@ -8,7 +10,7 @@ export const DEFAULT_OPTIONS = {
   initialHeight: 370,
   circleRadius: 20,
   transitionDuration: 1000,
-  /* transitionEase: d3.easeLinear,*/
+  fontSize: 20,
 };
 
 const EVENTS = ['nodeMouseenter', 'nodeMousemove', 'nodeMouseout', 'nodeClick'];
@@ -98,9 +100,30 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     enter.append('circle')
       .attr('r', options.circleRadius);
 
-    enter.append('text')
-      .attr('dy', '0.35em')
-      .style('text-anchor', 'middle')
+    enter.merge(update)
+      .each(function(d) {$(this).find('foreignObject').remove();})
+      .append("foreignObject")
+      .append("xhtml:body")
+      .append('div')
+      .style('position', 'fixed')
+      .style('font-size', options.fontSize + 'px')
+      .classed('node-expression', true)
+      .merge(update)
+      .each(function(d) {
+        const $node = $(this);
+        $node.empty();
+        $node.text(EXPRESSION_TO_MATHJAX(establishDatum(d.data)));
+        MathJax.Hub.Typeset(this, (d) => {
+          const $mjx = $(this).find('.mjx-chtml');
+          const dx = -$mjx.width() / 2;
+          const dy = -$mjx.height() / 2;
+          $node.parent()
+            .width($mjx.width())
+            .height($mjx.height())
+            .parent()
+            .attr('transform', 'translate(' + [dx, dy] + ')');
+        });
+      });
 
     update
       .merge(enter)
@@ -108,15 +131,11 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .classed('node--leaf', d => !d.children)
       .transition()
       .duration(options.transitionDuration)
-      .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
-      .select('text')
-      .text(establishNodeName);
+      .attr('transform', d => 'translate(' + [d.x, d.y] + ')');
+
 
     update
       .exit()
-      .transition()
-      .duration(options.transitionDuration)
-      .attr('opacity', 0)
       .remove();
   }
 

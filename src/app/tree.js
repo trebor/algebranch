@@ -1,13 +1,16 @@
+import $ from 'jquery';
 const d3 = require('d3');
 const d3Kit = require('d3kit');
+const EXPRESSION_TO_MATHJAX = d => '\\(' + d.toTex() + '\\)';
 
 export const DEFAULT_OPTIONS = {
-  margin: { top: 30, right: 30, bottom: 30, left: 30 },
+  margin: { top: 30, right: 30, bottom: 50, left: 30 },
   offset: [0, 0],
   initialWidth: 600,
   initialHeight: 370,
   circleRadius: 20,
-  transition: d3.transition().duration(2000).ease(d3.easeLinear)
+  transitionDuration: 1000,
+  fontSize: 20,
 };
 
 const EVENTS = ['nodeMouseenter', 'nodeMousemove', 'nodeMouseout', 'nodeClick'];
@@ -18,6 +21,10 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
   const dispatch = skeleton.getDispatcher();
   const tree = d3.tree();
 
+  /* options.transition = d3.transition()
+   *   .duration(options.transitionDuration)
+   *   .ease(options.transitionEase);
+   */
   const visualize = _.debounce(visualizeDebounced, 100);
 
   skeleton
@@ -60,7 +67,8 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
 
     update
       .merge(enter)
-      .transition(options.transition)
+      .transition()
+      .duration(options.transitionDuration)
       .attr('d', function(d) {
         return 'M' + d.x + ',' + d.y
           + 'C' + d.x + ',' +  (d.y + d.parent.y) / 2
@@ -82,6 +90,8 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .enter()
       .append('g')
       .classed('node', true)
+      .attr('opacity', 1)
+      .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
       .on('mouseenter', d => dispatch.call('nodeMouseenter', this, d))
       .on('mousemove', d => dispatch.call('nodeMousemove', this, d))
       .on('mouseout', d => dispatch.call('nodeMouseout', this, d))
@@ -90,18 +100,39 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     enter.append('circle')
       .attr('r', options.circleRadius);
 
-    enter.append('text')
-      .attr('dy', '0.35em')
-      .style('text-anchor', 'middle')
+    enter.merge(update)
+      .each(function(d) {$(this).find('foreignObject').remove();})
+      .append("foreignObject")
+      .append("xhtml:body")
+      .append('div')
+      .style('position', 'fixed')
+      .style('font-size', options.fontSize + 'px')
+      .classed('node-expression', true)
+      .merge(update)
+      .each(function(d) {
+        const $node = $(this);
+        $node.empty();
+        $node.text(EXPRESSION_TO_MATHJAX(establishDatum(d.data)));
+        MathJax.Hub.Typeset(this, (d) => {
+          const $mjx = $(this).find('.mjx-chtml');
+          const dx = -$mjx.width() / 2;
+          const dy = -$mjx.height() / 2;
+          $node.parent()
+            .width($mjx.width())
+            .height($mjx.height())
+            .parent()
+            .attr('transform', 'translate(' + [dx, dy] + ')');
+        });
+      });
 
     update
       .merge(enter)
       .classed('node--internal', d => d.children)
       .classed('node--leaf', d => !d.children)
-      .transition(options.transition)
-      .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
-      .select('text')
-      .text(establishNodeName);
+      .transition()
+      .duration(options.transitionDuration)
+      .attr('transform', d => 'translate(' + [d.x, d.y] + ')');
+
 
     update
       .exit()

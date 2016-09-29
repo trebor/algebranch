@@ -25,6 +25,7 @@ const $errorAlert = $('#error-alert');
 
 function start() {
   started = true;
+  /* $eqInput.val('x==1+2*3');*/
   $eqInput.val('(2*x)/3==(sqrt(3^2 + 4^2) / (2 * y + 5))/z');
   $eqInput.change();
 }
@@ -66,18 +67,43 @@ function display(expression) {
 function nodeEnter(node) {}
 function nodeMove(node) {}
 function nodeOut(node) {}
-function nodeClick(node) {
-  console.log("node.data", node.data);
+function nodeClick(uiNode) {
+  const node = uiNode.data;
+  const parent = getParent(expression, node);
+  if (parent) {
+    const gParent = getParent(expression, parent);
+    if (gParent) {
+      expression = removeNode(gParent, parent, node);
+      display(expression);
+    }
+  }
+}
 
-  expression.filter((candidate, path, parent) => {
-    console.log("path", candidate == node.data);
-    return true;
+function removeNode(grandParent, parent, condemned) {
+  const sibling = getSiblings(parent, condemned)[0];
+  const newGp = grandParent.map(d => d == parent ? sibling : d);
+  return expression.transform(d => d == grandParent ? newGp : d);
+}
+
+function getParent(expression, target) {
+  let result = null;
+  expression.traverse((candidate, path, parent) => {
+    if (candidate == target) {
+      result = parent;
+    }
+    return candidate;
   });
+  return result;
+}
 
-  /* display(expression);
-   */
-  /* console.log("node.data.toTex()", node.data.toTex());
-   * console.log("node", node);*/
+function getSiblings(parent, target) {
+  let result = [];
+  parent.forEach((child, path, parent) => {
+    if (child != target) {
+      result.push(child);
+    }
+  });
+  return result;
 }
 
 class AbstractPattern {

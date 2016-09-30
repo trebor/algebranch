@@ -10,6 +10,7 @@ export const DEFAULT_OPTIONS = {
   initialHeight: 370,
   circleRadius: 20,
   nodePadding: {x: 14, y: 8},
+  nodeId: (d, i) => i,
   transitionDuration: 1000,
   fontSize: 20,
 };
@@ -26,6 +27,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
    *   .duration(options.transitionDuration)
    *   .ease(options.transitionEase);
    */
+
   const visualize = _.debounce(visualizeDebounced, 100);
 
   skeleton
@@ -59,7 +61,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
 
   function updateLinks(root) {
     const update = linkLayer.selectAll('.link')
-      .data(root.descendants().slice(1));
+      .data(root.descendants().slice(1), options.nodeId);
 
     const enter = update
       .enter()
@@ -83,9 +85,11 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
 
   function updateNodes(root) {
 
+    console.log("root", root);
+
     const update = nodeLayer
       .selectAll('g.node')
-      .data(root.descendants());
+      .data(root.descendants(), options.nodeId);
 
     const enter = update
       .enter()
@@ -151,7 +155,9 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
   }
 
   function establishDatum(node) {
-    return node.content || node;
+    let result = node;
+    while (result.content) {result = result.content;}
+    return result;
   }
 
   return skeleton.mixin({ visualize });

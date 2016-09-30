@@ -22,33 +22,39 @@ const interval = setInterval((x) => {
 const $eqInput = $('#eq-input');
 const $eqDisplay = $('#eq-display');
 const $errorAlert = $('#error-alert');
+let expression = null;
+
+$eqInput.on('change', d => {
+  updateExpression(d.target.value);
+});
 
 function start() {
   started = true;
   /* $eqInput.val('x==1+2*3');*/
-  $eqInput.val('(2*x)/3==(sqrt(3^2 + 4^2) / (2 * y + 5))/z');
+  $eqInput.val('(2*x)/3==(sqrt(w^2 + 4^2) / (2 * y + 5))/z');
+  /* $eqInput.val('(2 + (2 * 4))/5');*/
   $eqInput.change();
 }
 
+const nodeId = (d, i) => {
+//  console.log("d.data.comment", d.data.comment);
+  return d.data.comment;
+  /* return i + 1;*/
+};
 
-const tree = new Tree('#tree')
-/* .on('nodeMouseenter', nodeEnter)
- * .on('nodeMousemove', nodeMove)
+const tree = new Tree('#tree', {nodeId})
+  .on('nodeMouseenter', nodeEnter)
+/* .on('nodeMousemove', nodeMove)
  * .on('nodeMouseout', nodeOut)*/
   .on('nodeClick', nodeClick);
 
-$eqInput
-  .on('change', d => {
-    updateExpression(d.target.value);
-  });
-
 $eqDisplay.on('click', d => updateExpression($eqInput.val()));
-let expression = null;
 
 function updateExpression(expressionText) {
   try {
     $errorAlert.css('display','none');
     expression = math.parse(expressionText);
+
     display(expression);
   } catch (error) {
     $errorAlert
@@ -59,12 +65,19 @@ function updateExpression(expressionText) {
 
 function display(expression) {
   const $eqNode = $('#eq');
+
+  expression.traverse((node, path, parent) => {
+    node.comment = (parent ? parent.comment + ':' : '') + (path || 'root');
+  });
+
   $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
   MathJax.Hub.Typeset($eqNode.get(0));
   tree.data(expression);
 }
 
-function nodeEnter(node) {}
+function nodeEnter(node) {
+  console.log(node.data.toString(), node.data);
+}
 function nodeMove(node) {}
 function nodeOut(node) {}
 function nodeClick(uiNode) {
@@ -106,6 +119,13 @@ function getSiblings(parent, target) {
   return result;
 }
 
+function genUuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+
 class AbstractPattern {
   match(node) {
     throw new TypeError('test() is abstract, please implement');
@@ -119,3 +139,7 @@ class AcrossEquals extends AbstractPattern {
     return node.type == 'AssignmentNode' ? [] : null;
   }
 }
+
+
+const ex = math.parse('1 + 2');
+console.log("ex", ex);

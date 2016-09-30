@@ -30,7 +30,7 @@ $eqInput.on('change', d => {
 
 function start() {
   started = true;
-  /* $eqInput.val('x==1+2*3');*/
+  /* $eqInput.val('x==1+2');*/
   $eqInput.val('(2*x)/3==(sqrt(w^2 + 4^2) / (2 * y + 5))/z');
   /* $eqInput.val('(2 + (2 * 4))/5');*/
   $eqInput.change();
@@ -46,7 +46,12 @@ const tree = new Tree('#tree', {nodeId})
   .on('nodeMouseenter', nodeEnter)
 /* .on('nodeMousemove', nodeMove)
  * .on('nodeMouseout', nodeOut)*/
-  .on('nodeClick', nodeClick);
+  .on('nodeClick', nodeClick)
+  .on('actionMouseenter', actionEnter);
+
+function actionEnter(action) {
+  console.log("action", action);
+}
 
 $eqDisplay.on('click', d => updateExpression($eqInput.val()));
 
@@ -68,7 +73,7 @@ function display(expression) {
 
   expression.traverse((node, path, parent) => {
     node.comment = (parent ? parent.comment + ':' : '') + (path || 'root');
-    node.actions = d3.range(Math.round(Math.random() * 6));
+    node.actions = d3.range(2 + Math.round(Math.random() * 2));
   });
 
   $eqNode.text(EXPRESSION_TO_MATHJAX(expression));

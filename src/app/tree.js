@@ -15,18 +15,16 @@ export const DEFAULT_OPTIONS = {
   fontSize: 20,
 };
 
-const EVENTS = ['nodeMouseenter', 'nodeMousemove', 'nodeMouseout', 'nodeClick'];
+const EVENTS = [
+  'nodeMouseenter', 'nodeMousemove', 'nodeMouseout', 'nodeClick',
+  'actionMouseenter', 'actionMousemove', 'actionMouseout', 'actionClick'
+];
 
 export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => {
   const options = skeleton.options();
   const layerOrganizer = skeleton.getLayerOrganizer();
   const dispatch = skeleton.getDispatcher();
   const tree = d3.tree();
-
-  /* options.transition = d3.transition()
-   *   .duration(options.transitionDuration)
-   *   .ease(options.transitionEase);
-   */
 
   const visualize = _.debounce(visualizeDebounced, 100);
 
@@ -100,15 +98,34 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .on('mouseout', d => dispatch.call('nodeMouseout', this, d))
       .on('click', d => dispatch.call('nodeClick', this, d));
 
-    enter.append('g')
-      .classed('action-group', true)
+    const actionGroup = enter.append('g')
+      .classed('action-group', true);
+
+    const actionUpdate = update.select('.action-group').merge(actionGroup)
       .selectAll('.action')
-      .data(d => d.data.actions)
+      .data(d => d.data.actions);
+
+    const actionEnter = actionUpdate
       .enter()
       .append('circle')
+      .classed('action', true)
       .attr('r', options.circleRadius)
+      .style('fill', 'red')
+      .on('mouseenter', d => dispatch.call('actionMouseenter', this, d))
+      .on('mousemove', d => dispatch.call('actionMousemove', this, d))
+      .on('mouseout', d => dispatch.call('actionMouseout', this, d))
+      .on('click', d => dispatch.call('actionClick', this, d));
+
+
+    actionUpdate
+      .exit()
+      .remove();
+
+    actionUpdate.merge(actionEnter)
+      .transition()
+      .duration(options.transitionDuration)
       .attr('cx', (d, i) => i * options.circleRadius * 3)
-      .style('fill', 'red');
+
 
     enter.merge(update)
       .each(function(d) {$(this).find('foreignObject').remove();})

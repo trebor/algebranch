@@ -76,6 +76,8 @@ function display(expression) {
     node.actions = d3.range(2 + Math.round(Math.random() * 2));
   });
 
+  $eqInput.val(expression.toString());
+
   $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
   MathJax.Hub.Typeset($eqNode.get(0));
   tree.data(expression);

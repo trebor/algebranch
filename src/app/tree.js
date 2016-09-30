@@ -8,7 +8,7 @@ export const DEFAULT_OPTIONS = {
   offset: [0, 0],
   initialWidth: 600,
   initialHeight: 370,
-  circleRadius: 20,
+  circleRadius: 3,
   nodePadding: {x: 14, y: 8},
   nodeId: (d, i) => i,
   transitionDuration: 1000,
@@ -85,8 +85,6 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
 
   function updateNodes(root) {
 
-    console.log("root", root);
-
     const update = nodeLayer
       .selectAll('g.node')
       .data(root.descendants(), options.nodeId);
@@ -102,9 +100,16 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .on('mouseout', d => dispatch.call('nodeMouseout', this, d))
       .on('click', d => dispatch.call('nodeClick', this, d));
 
-    /* enter.append('circle')
-     *   .attr('r', options.circleRadius);
-     */
+    enter.append('g')
+      .classed('action-group', true)
+      .selectAll('.action')
+      .data(d => d.data.actions)
+      .enter()
+      .append('circle')
+      .attr('r', options.circleRadius)
+      .attr('cx', (d, i) => i * options.circleRadius * 3)
+      .style('fill', 'red');
+
     enter.merge(update)
       .each(function(d) {$(this).find('foreignObject').remove();})
       .append("foreignObject")
@@ -114,10 +119,10 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .style('font-size', options.fontSize + 'px')
       .classed('node-expression', true)
       .merge(update)
-      .each(function(d) {
+      .each(function(node) {
         const $node = $(this);
         $node.empty();
-        $node.text(EXPRESSION_TO_MATHJAX(establishDatum(d.data)));
+        $node.text(EXPRESSION_TO_MATHJAX(establishDatum(node.data)));
         MathJax.Hub.Typeset(this, (d) => {
           const $mjx = $(this).find('.mjx-chtml');
           $mjx.css('padding', [options.nodePadding.y + 'px', options.nodePadding.x + 'px'].join(' '));
@@ -128,6 +133,13 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
             .height($mjx.height())
             .parent()
             .attr('transform', 'translate(' + [dx, dy] + ')');
+
+          const ax = -((node.data.actions.length - 1) * options.circleRadius * 3) / 2;
+          const ay = -dy + options.circleRadius * 2.5;
+
+          $node.parent().parent().parent()
+            .find('.action-group')
+            .attr('transform', 'translate(' + [ax, ay] + ')');
         });
       });
 

@@ -68,6 +68,7 @@ function display(expression) {
 
   expression.traverse((node, path, parent) => {
     node.comment = (parent ? parent.comment + ':' : '') + (path || 'root');
+    node.actions = d3.range(Math.round(Math.random() * 6));
   });
 
   $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
@@ -139,7 +140,3 @@ class AcrossEquals extends AbstractPattern {
     return node.type == 'AssignmentNode' ? [] : null;
   }
 }
-
-
-const ex = math.parse('1 + 2');
-console.log("ex", ex);

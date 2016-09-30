@@ -2,7 +2,7 @@
   "name": "algebrator",
   "version": "0.0.0",
   "description": "",
-  "author": "Robert Harris <trebor@twitter.com> (https://twitter.com/trebor)",
+  "author": "Robert Harris <trebor@trebor.org> (https://trebor.org)",
   "keywords": [],
   "engines": {
     "node": "~5.2"
@@ -42,16 +42,12 @@
     "gulp-sass": "~2.1.1"
   },
   "main": "",
-  "private": true,
+ "private": true,
   "scripts": {
     "postinstall": "bower install && gulp build --production",
     "start": "gulp --production",
     "test": "karma start --single-run",
-    "tdd": "karma start",
-    "copy-to-staging": "gulp build --production && rm -rf ../../interactive-staging/public/algebrator && cp -R dist ../../interactive-staging/public/algebrator",
-    "stage": "npm run copy-to-staging && cd ../../interactive-staging/public/algebrator && git add --all && git commit -m \"[auto] add file to staging\"",
-    "hayaku": "cd ../../interactive-staging && (git pull; git push ; bundle exec hayaku deploy)",
-    "deploy": "gulp build --production && rm -rf ../../interactiveprod/algebrator && cp -R dist ../../interactiveprod/algebrator"
+    "tdd": "karma start"
   },
   "dependencies": {
     "d3-dispatch": "^1.0.1",

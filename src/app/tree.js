@@ -8,25 +8,23 @@ export const DEFAULT_OPTIONS = {
   offset: [0, 0],
   initialWidth: 600,
   initialHeight: 370,
-  circleRadius: 20,
+  circleRadius: 3,
   nodePadding: {x: 14, y: 8},
   nodeId: (d, i) => i,
   transitionDuration: 1000,
   fontSize: 20,
 };
 
-const EVENTS = ['nodeMouseenter', 'nodeMousemove', 'nodeMouseout', 'nodeClick'];
+const EVENTS = [
+  'nodeMouseenter', 'nodeMousemove', 'nodeMouseout', 'nodeClick',
+  'actionMouseenter', 'actionMousemove', 'actionMouseout', 'actionClick'
+];
 
 export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => {
   const options = skeleton.options();
   const layerOrganizer = skeleton.getLayerOrganizer();
   const dispatch = skeleton.getDispatcher();
   const tree = d3.tree();
-
-  /* options.transition = d3.transition()
-   *   .duration(options.transitionDuration)
-   *   .ease(options.transitionEase);
-   */
 
   const visualize = _.debounce(visualizeDebounced, 100);
 
@@ -85,8 +83,6 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
 
   function updateNodes(root) {
 
-    console.log("root", root);
-
     const update = nodeLayer
       .selectAll('g.node')
       .data(root.descendants(), options.nodeId);
@@ -102,9 +98,35 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .on('mouseout', d => dispatch.call('nodeMouseout', this, d))
       .on('click', d => dispatch.call('nodeClick', this, d));
 
-    /* enter.append('circle')
-     *   .attr('r', options.circleRadius);
-     */
+    const actionGroup = enter.append('g')
+      .classed('action-group', true);
+
+    const actionUpdate = update.select('.action-group').merge(actionGroup)
+      .selectAll('.action')
+      .data(d => d.data.actions);
+
+    const actionEnter = actionUpdate
+      .enter()
+      .append('circle')
+      .classed('action', true)
+      .attr('r', options.circleRadius)
+      .style('fill', 'red')
+      .on('mouseenter', d => dispatch.call('actionMouseenter', this, d))
+      .on('mousemove', d => dispatch.call('actionMousemove', this, d))
+      .on('mouseout', d => dispatch.call('actionMouseout', this, d))
+      .on('click', d => dispatch.call('actionClick', this, d));
+
+
+    actionUpdate
+      .exit()
+      .remove();
+
+    actionUpdate.merge(actionEnter)
+      .transition()
+      .duration(options.transitionDuration)
+      .attr('cx', (d, i) => i * options.circleRadius * 3)
+
+
     enter.merge(update)
       .each(function(d) {$(this).find('foreignObject').remove();})
       .append("foreignObject")
@@ -114,10 +136,10 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .style('font-size', options.fontSize + 'px')
       .classed('node-expression', true)
       .merge(update)
-      .each(function(d) {
+      .each(function(node) {
         const $node = $(this);
         $node.empty();
-        $node.text(EXPRESSION_TO_MATHJAX(establishDatum(d.data)));
+        $node.text(EXPRESSION_TO_MATHJAX(establishDatum(node.data)));
         MathJax.Hub.Typeset(this, (d) => {
           const $mjx = $(this).find('.mjx-chtml');
           $mjx.css('padding', [options.nodePadding.y + 'px', options.nodePadding.x + 'px'].join(' '));
@@ -128,6 +150,13 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
             .height($mjx.height())
             .parent()
             .attr('transform', 'translate(' + [dx, dy] + ')');
+
+          const ax = -((node.data.actions.length - 1) * options.circleRadius * 3) / 2;
+          const ay = -dy + options.circleRadius * 2.5;
+
+          $node.parent().parent().parent()
+            .find('.action-group')
+            .attr('transform', 'translate(' + [ax, ay] + ')');
         });
       });
 

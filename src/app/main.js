@@ -31,7 +31,7 @@ $eqInput.on('change', d => {
 function start() {
   started = true;
   /* $eqInput.val('x==1+2');*/
-  $eqInput.val('(2*x)/3==(sqrt(w^2 + 4^2) / (2 * y + 5))/z');
+  $eqInput.val('(2*x)/3==(sqrt(pi^2 + log(4)) / (2 * y + 5))/z');
   /* $eqInput.val('(2 + (2 * 4))/5');*/
   $eqInput.change();
 }
@@ -75,6 +75,8 @@ function display(expression) {
     node.comment = (parent ? parent.comment + ':' : '') + (path || 'root');
     node.actions = d3.range(2 + Math.round(Math.random() * 2));
   });
+
+  $eqInput.val(expression.toString());
 
   $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
   MathJax.Hub.Typeset($eqNode.get(0));

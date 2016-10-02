@@ -48,6 +48,10 @@ $mathColor: #666;
       }
     }
 
+    body {
+      background-color: rgba(0, 0, 0, 0) !important;
+    }
+
     .node-expression:hover {
       background-color: $trackColorLight;
     }

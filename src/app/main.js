@@ -65,19 +65,22 @@ function updateExpression(expressionText) {
   try {
     $errorAlert.css('display','none');
     expression = math.parse(expressionText);
-    display(expression);
   } catch (error) {
     $errorAlert
       .text(error.toString())
       .css('display','block');
   }
+
+  display(expression);
 }
 
 function display(expression) {
   const $eqNode = $('#eq');
 
+  // add content to expression for rendering
+
   expression.traverse((node, path, parent) => {
-    node.comment = (parent ? parent.comment + ':' : '') + (path || 'root');
+    node.comment = (parent ? parent.comment + ':' : '') + (path || 'root') + node.toString();
     node.actions = _.flatten(
       Patterns.map(pattern => pattern.test(node, path, parent))
     );

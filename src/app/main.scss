@@ -39,6 +39,9 @@ $mathColor: #666;
     cursor: pointer;
 
     .node-expression {
+      border-style: solid;
+      border-color: darken($trackColor, 5);
+      border-width: 1px;
       border-radius: 5px;
       background-color: $trackColor;
       .mjx-chtml {

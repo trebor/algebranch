@@ -8,7 +8,7 @@ export const DEFAULT_OPTIONS = {
   offset: [0, 0],
   initialWidth: 600,
   initialHeight: 370,
-  circleRadius: 3,
+  circleRadius: 6,
   nodePadding: {x: 14, y: 8},
   nodeId: (d, i) => i,
   transitionDuration: 1000,

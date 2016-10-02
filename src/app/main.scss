@@ -36,7 +36,11 @@ $mathColor: #666;
   overflow: hidden;
 
   .node {
-    cursor: pointer;
+    cursor: default;
+
+    .action {
+      cursor: pointer;
+    }
 
     .node-expression {
       border-style: solid;
@@ -47,16 +51,13 @@ $mathColor: #666;
       .mjx-chtml {
         span {
           color: $mathColor;
+          cursor: default;
         }
       }
     }
 
     body {
       background-color: rgba(0, 0, 0, 0) !important;
-    }
-
-    .node-expression:hover {
-      background-color: $trackColorLight;
     }
   }
 

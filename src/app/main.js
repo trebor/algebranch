@@ -40,8 +40,8 @@ const tree = new Tree('#tree', {nodeId})
 
 function start() {
   started = true;
-  /* $eqInput.val('x==1+2');*/
-  $eqInput.val('(2*x)/3==(sqrt(pi^2 + log(4)) / (2 * 7 + 5))/z');
+  $eqInput.val('x==1+2*sqrt(16)/4*(3y+2*7)');
+  /* $eqInput.val('(2*x)/3==(sqrt(pi^2 + log(4)) / (2 * 7 + 5))/z');*/
   /* $eqInput.val('(2 + (2 * 4))/5');*/
   $eqInput.change();
 }

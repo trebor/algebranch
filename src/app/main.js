@@ -5,6 +5,7 @@ const d3 = require('d3');
 const math = require('mathjs');
 let started = false;
 import {EXPRESSION_TO_MATHJAX} from './util.js';
+import Patterns from './patterns.js';
 
 const interval = setInterval((x) => {
   if (window.MathJax) {
@@ -28,29 +29,34 @@ $eqInput.on('change', d => {
   updateExpression(d.target.value);
 });
 
+const tree = new Tree('#tree', {nodeId})
+  .on('nodeMouseenter', nodeEnter)
+/* .on('nodeMousemove', nodeMove)
+ * .on('nodeMouseout', nodeOut)*/
+/* .on('nodeClick', nodeClick)*/
+  .on('actionMouseenter', actionEnter)
+  .on('actionClick', actionClick);
+
+
 function start() {
   started = true;
   /* $eqInput.val('x==1+2');*/
-  $eqInput.val('(2*x)/3==(sqrt(pi^2 + log(4)) / (2 * y + 5))/z');
+  $eqInput.val('(2*x)/3==(sqrt(pi^2 + log(4)) / (2 * 7 + 5))/z');
   /* $eqInput.val('(2 + (2 * 4))/5');*/
   $eqInput.change();
 }
 
 const nodeId = (d, i) => {
-//  console.log("d.data.comment", d.data.comment);
   return d.data.comment;
-  /* return i + 1;*/
 };
 
-const tree = new Tree('#tree', {nodeId})
-  .on('nodeMouseenter', nodeEnter)
-/* .on('nodeMousemove', nodeMove)
- * .on('nodeMouseout', nodeOut)*/
-  .on('nodeClick', nodeClick)
-  .on('actionMouseenter', actionEnter);
-
 function actionEnter(action) {
-  console.log("action", action);
+  console.log("action.getName()", action.name);
+}
+
+function actionClick(action) {
+  expression = action.apply(expression);
+  display(expression);
 }
 
 $eqDisplay.on('click', d => updateExpression($eqInput.val()));
@@ -59,7 +65,6 @@ function updateExpression(expressionText) {
   try {
     $errorAlert.css('display','none');
     expression = math.parse(expressionText);
-
     display(expression);
   } catch (error) {
     $errorAlert
@@ -73,7 +78,19 @@ function display(expression) {
 
   expression.traverse((node, path, parent) => {
     node.comment = (parent ? parent.comment + ':' : '') + (path || 'root');
-    node.actions = d3.range(2 + Math.round(Math.random() * 2));
+    node.actions = _.flatten(
+      Patterns.map(pattern => pattern.test(node, path, parent))
+    );
+    node.shouldRender = () => {
+      let render = node.actions.length > 0;
+      if (!render) {
+        node.forEach(child => {
+          if (child.shouldRender())
+            render = true;
+        });
+      }
+      return render;
+    };
   });
 
   $eqInput.val(expression.toString());
@@ -84,8 +101,9 @@ function display(expression) {
 }
 
 function nodeEnter(node) {
-  console.log(node.data.toString(), node.data);
+  /* console.log(node.data.toString(), node.data);*/
 }
+
 function nodeMove(node) {}
 function nodeOut(node) {}
 function nodeClick(uiNode) {
@@ -132,18 +150,4 @@ function genUuid() {
     var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
     return v.toString(16);
   });
-}
-
-class AbstractPattern {
-  match(node) {
-    throw new TypeError('test() is abstract, please implement');
-  }
-}
-
-// patters which operate across an equals method
-
-class AcrossEquals extends AbstractPattern {
-  match(node) {
-    return node.type == 'AssignmentNode' ? [] : null;
-  }
 }

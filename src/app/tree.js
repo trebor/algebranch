@@ -168,7 +168,6 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .duration(options.transitionDuration)
       .attr('transform', d => 'translate(' + [d.x, d.y] + ')');
 
-
     update
       .exit()
       .remove();
@@ -180,7 +179,8 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
   }
 
   function establishNodeChildren(node) {
-    return establishDatum(node).args;
+    const children = establishDatum(node).args;
+    return children ? children.filter(d => d.shouldRender()) : null;
   }
 
   function establishDatum(node) {

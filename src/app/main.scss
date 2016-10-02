@@ -69,3 +69,10 @@ $mathColor: #666;
   }
 }
 
+#popup {
+  position: absolute;
+  visibility: hidden;
+  width: 200px;
+  height: 100px;
+  background-color: pink;
+}

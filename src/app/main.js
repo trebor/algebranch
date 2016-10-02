@@ -31,16 +31,13 @@ $eqInput.on('change', d => {
 
 const tree = new Tree('#tree', {nodeId})
   .on('nodeMouseenter', nodeEnter)
-/* .on('nodeMousemove', nodeMove)
- * .on('nodeMouseout', nodeOut)*/
-/* .on('nodeClick', nodeClick)*/
   .on('actionMouseenter', actionEnter)
   .on('actionClick', actionClick);
 
 
 function start() {
   started = true;
-  $eqInput.val('x==1+2*sqrt(16)/4*(3y+2*7)');
+  $eqInput.val('x==(1+2)*sqrt(16)/4*(3y+2*7)');
   /* $eqInput.val('(2*x)/3==(sqrt(pi^2 + log(4)) / (2 * 7 + 5))/z');*/
   /* $eqInput.val('(2 + (2 * 4))/5');*/
   $eqInput.change();
@@ -103,50 +100,10 @@ function display(expression) {
   tree.data(expression);
 }
 
-function nodeEnter(node) {
-  /* console.log(node.data.toString(), node.data);*/
-}
-
-function nodeMove(node) {}
-function nodeOut(node) {}
-function nodeClick(uiNode) {
-  const node = uiNode.data;
-  const parent = getParent(expression, node);
-  if (parent) {
-    const gParent = getParent(expression, parent);
-    if (gParent) {
-      expression = removeNode(gParent, parent, node);
-      display(expression);
-    }
-  }
-}
-
-function removeNode(grandParent, parent, condemned) {
-  const sibling = getSiblings(parent, condemned)[0];
-  const newGp = grandParent.map(d => d == parent ? sibling : d);
-  return expression.transform(d => d == grandParent ? newGp : d);
-}
-
-function getParent(expression, target) {
-  let result = null;
-  expression.traverse((candidate, path, parent) => {
-    if (candidate == target) {
-      result = parent;
-    }
-    return candidate;
-  });
-  return result;
-}
-
-function getSiblings(parent, target) {
-  let result = [];
-  parent.forEach((child, path, parent) => {
-    if (child != target) {
-      result.push(child);
-    }
-  });
-  return result;
-}
+function nodeEnter() {}
+function nodeMove() {}
+function nodeOut() {}
+function nodeClick() {}
 
 function genUuid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

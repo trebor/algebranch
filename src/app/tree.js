@@ -147,13 +147,16 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     actionUpdate.merge(actionEnter)
       .transition()
       .duration(options.transitionDuration)
-      .attr('cx', (d, i) => i * options.circleRadius * 3);
+      .attr('cx', (d, i, actions) => {
+        return i * options.circleRadius * 3
+          - ((actions.length - 1) * options.circleRadius * 3) / 2;
+      });
   }
 
   function updateExpression(node) {
     const $node = $(this);
     const $body = $node.parent();
-    $body.css('visibility', 'hidden');
+    $node.css('visibility', 'hidden');
 
     $node.text(EXPRESSION_TO_MATHJAX_INLINE(establishDatum(node.data)));
     MathJax.Hub.Typeset(this, (d) => {
@@ -169,15 +172,15 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
         .parent()
         .attr('transform', 'translate(' + [dx, dy] + ')');
 
-      const ax = -((node.data.actions.length - 1) * options.circleRadius * 3) / 2;
-      const ay = -dy + options.circleRadius * 2.5;
+      // adjust action position
 
       $node.parent().parent().parent()
         .find('.action-group')
-        .attr('transform', 'translate(' + [ax, ay] + ')');
+        .attr('transform', 'translate('
+          + [0, -dy + options.circleRadius * 2.5]
+          + ')');
 
-      $body
-        .css('visibility', 'visible');
+      $node.css('visibility', 'visible');
     });
   }
 

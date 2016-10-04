@@ -1,78 +1,42 @@
 @import '../bower_components/sass-flex-mixin/flex';
+@import './tree';
 
 html, body {
   height: 100%;
 }
 
 body {
+  position: absolute;
   @include flexbox;
   @include flex-direction(column);
-}
 
-#header {
-  padding: 10px;
+  #header {
+    padding: 10px;
 
-  .input-row {}
+    .input-row {}
 
-  #help {
-    font-size: 30px;
+    #help {
+      font-size: 30px;
+    }
+
+    #error-alert {
+      display: none;
+    }
   }
 
   #eq {
     display: none;
   }
 
-  #error-alert {
-    display: none;
+  #popup {
+    pointer-events: none;
+    position: absolute;
+    display: block;
+    visibility: hidden;
+    width: 200px;
+    height: 100px;
+    background-color: pink;
   }
 }
 
-$trackColor: #ddd;
-$trackColorLight: #cce;
-$mathColor: #666;
 
-#tree {
-  @include flex;
-  overflow: hidden;
-
-  .node {
-    cursor: default;
-
-    .action {
-      cursor: pointer;
-    }
-
-    .node-expression {
-      border-style: solid;
-      border-color: darken($trackColor, 5);
-      border-width: 1px;
-      border-radius: 5px;
-      background-color: $trackColor;
-      .mjx-chtml {
-        span {
-          color: $mathColor;
-          cursor: default;
-        }
-      }
-    }
-
-    body {
-      background-color: rgba(0, 0, 0, 0) !important;
-    }
-  }
-
-  .link {
-    fill: none;
-    stroke: $trackColor;
-    stroke-width: 10px;
-    stroke-linecap: round;
-  }
-}
-
-#popup {
-  position: absolute;
-  visibility: hidden;
-  width: 200px;
-  height: 100px;
-  background-color: pink;
-}

@@ -4,7 +4,7 @@ import Tree from './tree.js';
 const d3 = require('d3');
 const math = require('mathjs');
 let started = false;
-import {EXPRESSION_TO_MATHJAX} from './util.js';
+import {EXPRESSION_TO_MATHJAX, ComputeExpressionSize} from './util.js';
 import Patterns from './patterns.js';
 
 const interval = setInterval((x) => {
@@ -23,6 +23,9 @@ const interval = setInterval((x) => {
 const $eqInput = $('#eq-input');
 const $eqDisplay = $('#eq-display');
 const $errorAlert = $('#error-alert');
+const $popup = $('#popup');
+const $body = $('body');
+
 let expression = null;
 
 $eqInput.on('change', d => {
@@ -32,12 +35,12 @@ $eqInput.on('change', d => {
 const tree = new Tree('#tree', {nodeId})
   .on('nodeMouseenter', nodeEnter)
   .on('actionMouseenter', actionEnter)
-  .on('actionClick', actionClick);
-
+  .on('actionClick', actionClick)
+  .on('actionMouseout', actionOut);
 
 function start() {
   started = true;
-  $eqInput.val('x==(1+2)*sqrt(16)/4*(3y+2*7)');
+  $eqInput.val('x==(1+2)*sqrt(16)/4*(3+2*7)');
   /* $eqInput.val('(2*x)/3==(sqrt(pi^2 + log(4)) / (2 * 7 + 5))/z');*/
   /* $eqInput.val('(2 + (2 * 4))/5');*/
   $eqInput.change();
@@ -48,12 +51,17 @@ const nodeId = (d, i) => {
 };
 
 function actionEnter(action) {
-  console.log("action.getName()", action.name);
+  showPopup(action.name);
 }
 
 function actionClick(action) {
+  hidePopup();
   expression = action.apply(expression);
   display(expression);
+}
+
+function actionOut(action) {
+  hidePopup();
 }
 
 $eqDisplay.on('click', d => updateExpression($eqInput.val()));
@@ -104,6 +112,41 @@ function nodeEnter() {}
 function nodeMove() {}
 function nodeOut() {}
 function nodeClick() {}
+
+function showPopup(expressionText) {
+  const expression = math.parse(expressionText);
+  const mouseX = d3.event.clientX;
+  const mouseY = d3.event.clientY;
+  const isLeft = mouseX < $body.width() / 2;
+  const isUp = mouseY < $body.height() / 2;
+
+  $popup.width(200);
+  $popup.height(200);
+
+  $popup.text(EXPRESSION_TO_MATHJAX(expression));
+  MathJax.Hub.Typeset($popup.get(0), () => {
+    const mjxSize = ComputeExpressionSize($popup);
+
+    $popup.width(mjxSize.width);
+    $popup.height(mjxSize.height);
+
+    const offset = 30;
+
+    const width = $popup.outerWidth();
+    const height = $popup.outerHeight();
+
+    const x = mouseX + (isLeft ? offset : -(width + offset));
+    const y = mouseY + (isUp ? offset : -(height + offset));
+
+    $popup.css('left', x + 'px');
+    $popup.css('top', y + 'px');
+    $popup.css('visibility', 'visible');
+  });
+}
+
+function hidePopup() {
+  $popup.css('visibility', 'hidden');
+}
 
 function genUuid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

@@ -58,7 +58,7 @@ class SimplifyToNumber extends AbstractPattern {
         const value = node.eval();
         if (!isNaN(value)) {
           actions.push(new SimplifyToNumberAction(
-            'node to ' + value, node, path, parent, value
+            node.toString() + ' to ' + value, node, path, parent, value
           ));
         }
       }

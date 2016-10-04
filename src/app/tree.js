@@ -1,10 +1,10 @@
 import $ from 'jquery';
 const d3 = require('d3');
 const d3Kit = require('d3kit');
-import {EXPRESSION_TO_MATHJAX} from './util.js';
+import {EXPRESSION_TO_MATHJAX_INLINE, ComputeInlineExpressionSize} from './util.js';
 
 export const DEFAULT_OPTIONS = {
-  margin: { top: 50, right: 30, bottom: 50, left: 30 },
+  margin: { top: 50, right: 30, bottom: 80, left: 30 },
   offset: [0, 0],
   initialWidth: 600,
   initialHeight: 370,
@@ -98,6 +98,30 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .on('mouseout', d => dispatch.call('nodeMouseout', this, d))
       .on('click', d => dispatch.call('nodeClick', this, d));
 
+    updateActions(enter, update);
+
+    enter
+      .append('foreignObject')
+      .append('xhtml:body')
+      .append('div')
+      .classed('node-expression', true)
+      .style('position', 'fixed')
+      .style('font-size', options.fontSize + 'px')
+      .merge(update.select('.node-expression'))
+      .each(updateExpression);
+
+    update
+      .merge(enter)
+      .transition()
+      .duration(options.transitionDuration)
+      .attr('transform', d => 'translate(' + [d.x, d.y] + ')');
+
+    update
+      .exit()
+      .remove();
+  }
+
+  function updateActions(enter, update) {
     const actionGroup = enter.append('g')
       .classed('action-group', true);
 
@@ -116,7 +140,6 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .on('mouseout', d => dispatch.call('actionMouseout', this, d))
       .on('click', d => dispatch.call('actionClick', this, d));
 
-
     actionUpdate
       .exit()
       .remove();
@@ -124,53 +147,38 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     actionUpdate.merge(actionEnter)
       .transition()
       .duration(options.transitionDuration)
-      .attr('cx', (d, i) => i * options.circleRadius * 3)
+      .attr('cx', (d, i) => i * options.circleRadius * 3);
+  }
 
+  function updateExpression(node) {
+    const $node = $(this);
+    const $body = $node.parent();
+    $body.css('visibility', 'hidden');
 
-    enter.merge(update)
-      .each(function(d) {$(this).find('foreignObject').remove();})
-      .append("foreignObject")
-      .append("xhtml:body")
-      .append('div')
-      .style('position', 'fixed')
-      .style('font-size', options.fontSize + 'px')
-      .classed('node-expression', true)
-      .merge(update)
-      .each(function(node) {
-        const $node = $(this);
-        $node.empty();
-        $node.text(EXPRESSION_TO_MATHJAX(establishDatum(node.data)));
-        MathJax.Hub.Typeset(this, (d) => {
-          const $mjx = $(this).find('.mjx-chtml');
-          $mjx.css('padding', [options.nodePadding.y + 'px', options.nodePadding.x + 'px'].join(' '));
-          const dx = -($mjx.width() / 2 + options.nodePadding.x);
-          const dy = -($mjx.height() / 2 + options.nodePadding.y);
-          $node.parent()
-            .width($mjx.width())
-            .height($mjx.height())
-            .parent()
-            .attr('transform', 'translate(' + [dx, dy] + ')');
+    $node.text(EXPRESSION_TO_MATHJAX_INLINE(establishDatum(node.data)));
+    MathJax.Hub.Typeset(this, (d) => {
+      const mjxSize = ComputeInlineExpressionSize($node);
+      $body
+        .width(mjxSize.width)
+        .height(mjxSize.height);
 
-          const ax = -((node.data.actions.length - 1) * options.circleRadius * 3) / 2;
-          const ay = -dy + options.circleRadius * 2.5;
+      const dx = -$node.outerWidth() / 2;
+      const dy = -$node.outerHeight() / 2;
 
-          $node.parent().parent().parent()
-            .find('.action-group')
-            .attr('transform', 'translate(' + [ax, ay] + ')');
-        });
-      });
+      $body
+        .parent()
+        .attr('transform', 'translate(' + [dx, dy] + ')');
 
-    update
-      .merge(enter)
-      .classed('node--internal', d => d.children)
-      .classed('node--leaf', d => !d.children)
-      .transition()
-      .duration(options.transitionDuration)
-      .attr('transform', d => 'translate(' + [d.x, d.y] + ')');
+      const ax = -((node.data.actions.length - 1) * options.circleRadius * 3) / 2;
+      const ay = -dy + options.circleRadius * 2.5;
 
-    update
-      .exit()
-      .remove();
+      $node.parent().parent().parent()
+        .find('.action-group')
+        .attr('transform', 'translate(' + [ax, ay] + ')');
+
+      $body
+        .css('visibility', 'visible');
+    });
   }
 
   function establishNodeName(node) {

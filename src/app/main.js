@@ -85,7 +85,8 @@ function display(expression) {
   // add content to expression for rendering
 
   expression.traverse((node, path, parent) => {
-    node.comment = (parent ? parent.comment + ':' : '') + (path || 'root') + node.toString();
+    node.comment = (parent ? parent.comment + ':' : '')
+      + (path || 'root') + node.toString();
     node.actions = _.flatten(
       Patterns.map(pattern => pattern.test(node, path, parent))
     );

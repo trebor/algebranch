@@ -56,7 +56,7 @@ class SimplifyToNumber extends AbstractPattern {
     if (['ConstantNode', 'SymbolNode'].indexOf(node.getIdentifier()) == -1) {
       try {
         const value = node.eval();
-        if (!isNaN(value)) {
+        if (!isNaN(value) && value % 1 === 0) {
           actions.push(new SimplifyToNumberAction(
             node.toString() + ' to ' + value, node, path, parent, value
           ));

@@ -10,6 +10,28 @@
     <meta name="author" content="Robert Harris">
     <meta name="description" content="">
 
+    <script type="text/x-mathjax-config">
+     MathJax.Hub.Config({
+       jax: [
+         "input/TeX",
+         "input/MathML",
+         "input/AsciiMath",
+         "output/CommonHTML"
+       ],
+       extensions: ["MathML/content-mathml.js", "tex2jax.js"],
+       TeX: {
+         extensions: [
+           "AMSmath.js",
+           "AMSsymbols.js",
+           "noErrors.js","noUndefined.js"
+         ]
+       }
+     });
+    </script>
+
+    <script type="text/javascript" async
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js"></script>
+
     <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="app/main.css">
 
@@ -49,36 +71,16 @@
           <div id="error-alert" class="alert alert-danger" role="alert">-</div>
         </div>
       </div>
-      <p id="eq"></p>
     </div>
 
+    <p id="eq"></p>
     <div id="tree"></div>
+    <div id="popup"></div>
 
     <!--[if lt IE 7]>
         <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
      <![endif]-->
 
-    <script type="text/x-mathjax-config">
-     MathJax.Hub.Config({
-       jax: [
-         "input/TeX",
-         "input/MathML",
-         "input/AsciiMath",
-         "output/CommonHTML"
-       ],
-       extensions: ["MathML/content-mathml.js", "tex2jax.js"],
-       TeX: {
-         extensions: [
-           "AMSmath.js",
-           "AMSsymbols.js",
-           "noErrors.js","noUndefined.js"
-         ]
-       }
-     });
-    </script>
-
-    <script type="text/javascript" async
-            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js"></script>
 
     <script src="app/bundle.js"></script>
   </body>

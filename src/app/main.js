@@ -51,17 +51,17 @@ const nodeId = (d, i) => {
 };
 
 function actionEnter(action) {
-  showPopup(action.name);
-}
-
-function actionClick(action) {
-  hidePopup();
-  expression = action.apply(expression);
-  display(expression);
+  tree.previewAction(action);
 }
 
 function actionOut(action) {
-  hidePopup();
+  tree.hidePreview(action);
+}
+
+function actionClick(action) {
+  tree.hidePreview(action);
+  expression = action.apply(expression);
+  display(expression);
 }
 
 $eqDisplay.on('click', d => updateExpression($eqInput.val()));

@@ -1,3 +1,4 @@
+const math = require('mathjs');
 import $ from 'jquery';
 const d3 = require('d3');
 const d3Kit = require('d3kit');
@@ -12,6 +13,7 @@ export const DEFAULT_OPTIONS = {
   nodePadding: {x: 14, y: 8},
   nodeId: (d, i) => i,
   transitionDuration: 1000,
+  previewSpace: 10,
   fontSize: 20,
 };
 
@@ -101,14 +103,32 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     updateActions(enter, update);
 
     enter
+      .append('g')
+      .classed('node-expression-g', true)
       .append('foreignObject')
+      .classed('node-expression-fo', true)
       .append('xhtml:body')
+      .classed('node-expression-body', true)
       .append('div')
       .classed('node-expression', true)
       .style('position', 'fixed')
       .style('font-size', options.fontSize + 'px')
       .merge(update.select('.node-expression'))
       .each(updateExpression);
+
+    enter
+      .append('g')
+      .classed('action-preview-g', true)
+      .append('foreignObject')
+      .classed('action-preview-fo', true)
+      .append('xhtml:body')
+      .classed('action-preview-body', true)
+      .append('div')
+      .classed('action-preview', true)
+      .style('position', 'fixed')
+      .style('font-size', options.fontSize + 'px')
+      .merge(update.select('.action-preview'))
+      .style('visibility', 'hidden');
 
     update
       .merge(enter)
@@ -154,33 +174,96 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
   }
 
   function updateExpression(node) {
-    const $node = $(this);
-    const $body = $node.parent();
-    $node.css('visibility', 'hidden');
+    const $div = $(this);
+    const $body = $div.parent();
+    const $fo = $body.parent();
 
-    $node.text(EXPRESSION_TO_MATHJAX_INLINE(establishDatum(node.data)));
+    $div.css('visibility', 'hidden');
+
+    $div.text(EXPRESSION_TO_MATHJAX_INLINE(establishDatum(node.data)));
     MathJax.Hub.Typeset(this, (d) => {
-      const mjxSize = ComputeInlineExpressionSize($node);
+      const mjxSize = ComputeInlineExpressionSize($div);
       $body
         .width(mjxSize.width)
         .height(mjxSize.height);
 
-      const dx = -$node.outerWidth() / 2;
-      const dy = -$node.outerHeight() / 2;
+      const dx = -$div.outerWidth() / 2;
+      const dy = -$div.outerHeight() / 2;
 
-      $body
-        .parent()
-        .attr('transform', 'translate(' + [dx, dy] + ')');
+      $fo.attr('transform', 'translate(' + [dx, dy] + ')');
 
       // adjust action position
 
-      $node.parent().parent().parent()
+      $fo.parent().parent()
         .find('.action-group')
         .attr('transform', 'translate('
           + [0, -dy + options.circleRadius * 2.5]
           + ')');
 
-      $node.css('visibility', 'visible');
+      $div.css('visibility', 'visible');
+    });
+  }
+
+  function previewAction(action) {
+    nodeLayer.selectAll('.node')
+      .filter(d => d.data === action.node)
+      .each(function(d) {showPreview.call(this, action);});
+  }
+
+  function hidePreview(action) {
+    nodeLayer.selectAll('.node')
+      .filter(d => d.data === action.node)
+      .each(function() {
+        const node = d3.select(this);
+
+        node.select('.action-preview')
+          .style('visibility', 'hidden');
+
+        node.select('.node-expression-g')
+          .transition()
+          .attr('transform', 'translate(0, 0)');
+      });
+  }
+
+  function showPreview(action) {
+    const $node = $(this);
+    const $body = $node.find('.action-preview-body');
+    const $expressionG = $node.find('.node-expression-g');
+    const $expressionDiv = $node.find('.node-expression');
+    const $previewFo = $node.find('.action-preview-fo');
+    const $previewG = $node.find('.action-preview-g');
+    const $div = $node.find('.action-preview');
+    const previewExpression = math.parse('_ to ' + action.value);
+
+    $div.css('visibility', 'hidden');
+    $div.text(EXPRESSION_TO_MATHJAX_INLINE(previewExpression));
+    MathJax.Hub.Typeset($div.get(0), (d) => {
+      const mjxSize = ComputeInlineExpressionSize($div);
+      $body
+        .width(mjxSize.width)
+        .height(mjxSize.height);
+
+      const dx = -$div.outerWidth() / 2;
+      const dy = -$div.outerHeight() / 2;
+
+      $previewFo.attr('transform', 'translate(' + [dx, dy] + ')');
+
+      const exWidth = $expressionDiv.outerWidth();
+      const prWidth = $div.outerWidth();
+      const width = exWidth + prWidth + options.previewSpace;
+
+      const expTrans = [(width - exWidth) / -2, 0];
+      const prevTrans = [(width - prWidth) / 2, 0];
+
+      $previewG
+        .attr('transform', 'translate(' + prevTrans + ')');
+
+      d3.select($expressionG.get(0))
+        .transition()
+        .attr('transform', 'translate(' + expTrans + ')')
+        .on('end', () => {
+          $div.css('visibility', 'visible');
+        });
     });
   }
 
@@ -200,5 +283,5 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     return result;
   }
 
-  return skeleton.mixin({ visualize });
+  return skeleton.mixin({ visualize, previewAction, hidePreview});
 });

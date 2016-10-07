@@ -8,10 +8,6 @@ class AbstractAction {
     this.parent = parent;
   }
 
-  /* get name() {
-   *   return name;
-   * }
-   */
   apply(expression) {
     throw new TypeError('apply() is abstract, please implement');
   }

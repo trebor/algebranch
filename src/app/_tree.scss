@@ -28,6 +28,21 @@ $mathColor: #666;
       }
     }
 
+    .action-preview {
+      border-style: solid;
+      border-color: darken($trackColor, 5);
+      border-width: 1px;
+      border-radius: 5px;
+      background-color: $trackColor;
+      padding: 8px 14px;
+      .mjx-chtml {
+        span {
+          color: $mathColor;
+          cursor: default;
+        }
+      }
+    }
+
     body {
       background-color: rgba(0, 0, 0, 0) !important;
     }
@@ -35,7 +50,7 @@ $mathColor: #666;
 
   .link {
     fill: none;
-    stroke: $trackColor;
+    stroke: lighten($trackColor, 6);
     stroke-width: 10px;
     stroke-linecap: round;
   }

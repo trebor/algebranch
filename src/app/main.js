@@ -5,7 +5,7 @@ const d3 = require('d3');
 const math = require('mathjs');
 let started = false;
 import {EXPRESSION_TO_MATHJAX, ComputeExpressionSize} from './util.js';
-import Patterns from './patterns.js';
+import ALL_TRANSFORMS from './transform/AllTransforms.js';
 
 const interval = setInterval((x) => {
   if (window.MathJax) {
@@ -88,8 +88,9 @@ function display(expression) {
     node.comment = (parent ? parent.comment + ':' : '')
       + (path || 'root') + node.toString();
     node.actions = _.flatten(
-      Patterns.map(pattern => pattern.test(node, path, parent))
+      ALL_TRANSFORMS.map(pattern => pattern.test(node, path, parent))
     );
+
     node.shouldRender = () => {
       let render = node.actions.length > 0;
       if (!render) {

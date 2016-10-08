@@ -84,6 +84,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
   }
 
   function updateNodes(root) {
+
     const update = nodeLayer
       .selectAll('g.node')
       .data(root.descendants(), options.nodeId);
@@ -147,10 +148,6 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     const actionUpdate = update.select('.action-group').merge(actionGroup)
       .selectAll('.action')
       .data(d => d.data.actions);
-
-    actionUpdate.each((action) => {
-      console.log("action", action);
-    });
 
     const actionEnter = actionUpdate
       .enter()

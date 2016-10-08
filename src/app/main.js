@@ -32,6 +32,10 @@ $eqInput.on('change', d => {
   updateExpression(d.target.value);
 });
 
+const nodeId = (d, i) => {
+  return d.data.custom;
+};
+
 const tree = new Tree('#tree', {nodeId})
   .on('nodeMouseenter', nodeEnter)
   .on('actionMouseenter', actionEnter)
@@ -40,15 +44,12 @@ const tree = new Tree('#tree', {nodeId})
 
 function start() {
   started = true;
+  /* $eqInput.val('x==1+2*3');*/
   $eqInput.val('x==(1+2)*sqrt(16)/4*(3+2*7)');
   /* $eqInput.val('(2*x)/3==(sqrt(pi^2 + log(4)) / (2 * 7 + 5))/z');*/
   /* $eqInput.val('(2 + (2 * 4))/5');*/
   $eqInput.change();
 }
-
-const nodeId = (d, i) => {
-  return d.data.comment;
-};
 
 function actionEnter(action) {
   tree.previewAction(action);
@@ -70,6 +71,9 @@ function updateExpression(expressionText) {
   try {
     $errorAlert.css('display','none');
     expression = math.parse(expressionText);
+    expression.traverse((node) => {
+      node.custom = genUuid();
+    });
   } catch (error) {
     $errorAlert
       .text(error.toString())
@@ -85,8 +89,6 @@ function display(expression) {
   // add content to expression for rendering
 
   expression.traverse((node, path, parent) => {
-    node.comment = (parent ? parent.comment + ':' : '')
-      + (path || 'root') + node.toString();
     node.actions = _.flatten(
       ALL_TRANSFORMS.map(pattern => pattern.test(node, path, parent))
     );

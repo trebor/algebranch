@@ -1,5 +1,4 @@
 @import '../bower_components/sass-flex-mixin/flex';
-@import './tree';
 
 html, body {
   height: 100%;
@@ -13,10 +12,36 @@ body {
   #header {
     padding: 10px;
 
-    .input-row {}
+    .my-input-row {
+      @include flexbox;
+      @include flex-direction(row);
+      @include align-items(flex-start);
 
-    #help {
-      font-size: 30px;
+      .my-input-col {
+        @include flexbox;
+        @include flex-direction(column);
+        padding-top: 3px;
+
+        .hint {
+          padding-left: 8px;
+          color: #aaa;
+        }
+      }
+
+      .links {
+        @include flexbox;
+        @include flex-direction(row);
+        padding: 0px 5px;
+        img {
+          margin: 5px;
+          width: 30px;
+        }
+
+        .tat {
+          margin: 2px;
+          width: 36px;
+        }
+      }
     }
 
     #error-alert {
@@ -37,6 +62,6 @@ body {
     height: 100px;
     background-color: pink;
   }
+
+  @import './tree';
 }
-
-

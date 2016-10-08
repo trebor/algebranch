@@ -50,24 +50,35 @@
 
   <body>
     <div id="header">
-      <div class="input-row row">
-        <div class="col-lg-11">
+      <div class="my-input-row">
+        <div class="my-input-col">
           <div class="input-group">
             <input id="eq-input" type="text" class="form-control" placeholder="Enter Math like: x/2 == y/4">
             <span class="input-group-btn">
-              <button id="eq-display" class="btn btn-default" type="button">Display</button>
+              <button id="eq-display" class="btn btn-default" type="button">Update</button>
             </span>
           </div>
+          <span>
+            <a target="_blank" href="http://mathjs.org/docs/expressions/syntax.html#operators">Input Syntax</a>
+            <span class="hint">Hint: use "==" instead of "="</span>
+          </span>
         </div>
 
-        <div class="col-lg-1">
-          <a id="help" href="https://github.com/trebor/algebrator" target="_blank">
-            <span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span>
+        <div class="links">
+          <a href="https://github.com/trebor/algebrator" target="_blank">
+            <img src="./images/GitHub-Mark-64px.png"
+                 alt="Visit this project on Github."
+                 title="Visit this project on Github.">
+          </a>
+          <a href="http://trebor.org" target="_blank">
+            <img class="tat" src="./images/tat.png"
+                 alt="Visit the creators web site."
+                 title="Visit the creators web site.">
           </a>
         </div>
       </div>
       <div class="row">
-        <div class="col-lg-12">
+        <div class="">
           <div id="error-alert" class="alert alert-danger" role="alert">-</div>
         </div>
       </div>

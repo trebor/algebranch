@@ -62,7 +62,7 @@ function actionOut(action) {
 }
 
 function actionClick(action) {
-  tree.hidePreview(action);
+  tree.choosePreview(action);
   expression = action.apply(expression);
   display(expression);
 }

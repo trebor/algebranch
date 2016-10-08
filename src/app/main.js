@@ -52,7 +52,9 @@ function start() {
 }
 
 function actionEnter(action) {
-  tree.previewAction(action);
+  if (!action.applied) {
+    tree.previewAction(action);
+  }
 }
 
 function actionOut(action) {

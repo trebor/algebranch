@@ -93,7 +93,6 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .enter()
       .append('g')
       .classed('node', true)
-      .attr('opacity', 1)
       .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
       .on('mouseenter', d => dispatch.call('nodeMouseenter', this, d))
       .on('mousemove', d => dispatch.call('nodeMousemove', this, d))
@@ -108,6 +107,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .append('foreignObject')
       .classed('node-expression-fo', true)
       .append('xhtml:body')
+      .style('opacity', 1)
       .classed('node-expression-body', true)
       .append('div')
       .classed('node-expression', true)
@@ -136,10 +136,24 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .duration(options.transitionDuration)
       .attr('transform', d => 'translate(' + [d.x, d.y] + ')');
 
-    update
+    const exit = update
       .exit()
+      .transition()
+      .duration(options.transitionDuration)
+      .attr('transform', (d) => {
+        const {x, y} = root.descendants()
+          .filter(node => node.data.custom == d.parent.data.custom)[0]
+          || d;
+        return 'translate(' + [x, y] + ')';
+      })
+      .style('opacity', 0)
       .remove();
+
+    exit
+      .selectAll('body')
+      .style('opacity', 0);
   }
+
 
   function updateActions(enter, update) {
     const actionGroup = enter.append('g')

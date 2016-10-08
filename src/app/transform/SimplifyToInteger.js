@@ -8,6 +8,7 @@ class SimplifyToIntegerAction extends AbstractAction {
   }
 
   apply(expression) {
+    super.apply(expression);
     return expression.transform(node => {
       if (node == this.parent) {
         return this.parent.map(child => child == this.node

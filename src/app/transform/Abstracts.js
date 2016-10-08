@@ -6,10 +6,11 @@ class AbstractAction {
     this.node = node;
     this.path = path;
     this.parent = parent;
+    this.applied = false;
   }
 
   apply(expression) {
-    throw new TypeError('apply() is abstract, please implement');
+    this.applied = true;
   }
 }
 

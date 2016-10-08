@@ -13,7 +13,7 @@ export const DEFAULT_OPTIONS = {
   nodePadding: {x: 14, y: 8},
   nodeId: (d, i) => i,
   transitionDuration: 1000,
-  previewSpace: 10,
+  previewSpace: 32,
   fontSize: 20,
 };
 
@@ -116,9 +116,11 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .merge(update.select('.node-expression'))
       .each(updateExpression);
 
-    enter
+    const previewEnter = enter
       .append('g')
-      .classed('action-preview-g', true)
+      .classed('action-preview-g', true);
+
+    previewEnter
       .append('foreignObject')
       .classed('action-preview-fo', true)
       .append('xhtml:body')
@@ -129,6 +131,15 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .style('font-size', options.fontSize + 'px')
       .merge(update.select('.action-preview'))
       .style('visibility', 'hidden');
+
+    previewEnter
+      .append('text')
+      .classed('arrow', true)
+      .attr('text-anchor', 'end')
+      .attr('dx', -2)
+      .attr('dy', '.2em')
+      .style('visibility', 'hidden')
+      .text('⇔');
 
     update
       .merge(enter)
@@ -142,8 +153,10 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .duration(options.transitionDuration)
       .attr('transform', (d) => {
         const {x, y} = root.descendants()
-          .filter(node => node.data.custom == d.parent.data.custom)[0]
-          || d;
+          .filter(node => d.parent
+            ? node.data.custom == d.parent.data.custom
+            : false
+          )[0] || d;
         return 'translate(' + [x, y] + ')';
       })
       .style('opacity', 0)
@@ -233,7 +246,27 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
         node.select('.action-preview')
           .style('visibility', 'hidden');
 
+        node.select('.arrow')
+          .style('visibility', 'hidden')
+
         node.select('.node-expression-g')
+          .transition()
+          .attr('transform', 'translate(0, 0)');
+      });
+  }
+
+  function choosePreview(action) {
+    nodeLayer.selectAll('.node')
+      .filter(d => d.data === action.node)
+      .each(function() {
+        const node = d3.select(this);
+
+        node.select('.node-expression')
+          .style('visibility', 'hidden');
+        node.select('.arrow')
+          .style('visibility', 'hidden');
+
+        node.select('.action-preview-g')
           .transition()
           .attr('transform', 'translate(0, 0)');
       });
@@ -247,7 +280,8 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     const $previewFo = $node.find('.action-preview-fo');
     const $previewG = $node.find('.action-preview-g');
     const $div = $node.find('.action-preview');
-    const previewExpression = math.parse('_ to ' + action.value);
+    const $arrow = $node.find('.arrow');
+    const previewExpression = math.parse(action.value);
 
     $div.css('visibility', 'hidden');
     $div.text(EXPRESSION_TO_MATHJAX_INLINE(previewExpression));
@@ -277,6 +311,9 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
         .attr('transform', 'translate(' + expTrans + ')')
         .on('end', () => {
           $div.css('visibility', 'visible');
+          $arrow
+            .attr('transform', 'translate(' + [dx, 0] + ')')
+            .css('visibility', 'visible');
         });
     });
   }
@@ -297,5 +334,10 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     return result;
   }
 
-  return skeleton.mixin({ visualize, previewAction, hidePreview});
+  return skeleton.mixin({
+    visualize,
+    previewAction,
+    hidePreview,
+    choosePreview,
+  });
 });

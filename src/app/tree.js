@@ -321,6 +321,17 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
             .css('visibility', 'visible');
         });
     });
+
+    nodeLayer.selectAll('.node')
+      .sort((a, b) => {
+        if (a.data == action.target) {
+          return 1;
+        }
+        if (b.data == action.target) {
+          return -1;
+        }
+        return 0;
+      });
   }
 
   function establishNodeName(node) {

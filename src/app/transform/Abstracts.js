@@ -26,6 +26,10 @@ class AbstractAction {
     return this._result;
   }
 
+  get target() {
+    return this.node;
+  }
+
   set result(result) {
     this._result = result;
   }

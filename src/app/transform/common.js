@@ -1,5 +1,19 @@
 const math = require('mathjs');
 
+const NODE_TYPE = {
+  operator: 'OperatorNode',
+  function: 'FunctionNode',
+  symbol:   'SymbolNode',
+};
+
+const NODE_ID = [
+  {name: 'equal',    parts: [NODE_TYPE.operator, 'equal'   ]},
+  {name: 'multiply', parts: [NODE_TYPE.operator, 'multiply']},
+  {name: 'divide',   parts: [NODE_TYPE.operator, 'divide'  ]},
+  {name: 'add',      parts: [NODE_TYPE.operator, 'add'     ]},
+  {name: 'subtract', parts: [NODE_TYPE.operator, 'subtract']},
+].reduce((map, id) => {map[id.name] = id.parts.join(':'); return map;}, {});
+
 class AbstractAction {
   constructor(name, node, path, parent) {
     this.name = name;
@@ -7,6 +21,18 @@ class AbstractAction {
     this.path = path;
     this.parent = parent;
     this.applied = false;
+  }
+
+  get result() {
+    return this._result;
+  }
+
+  get target() {
+    return this.node;
+  }
+
+  set result(result) {
+    this._result = result;
   }
 
   apply(expression) {
@@ -50,15 +76,6 @@ class AbstractTransform {
   }
 }
 
-// patters which operate across an equals method
-
-/* class AcrossEquals extends AbstractPattern {
- *   test(node, path, parent) {
- *     return node.type == 'AssignmentNode' ? [] : null;
- *   }
- * }
- * */
-
-export {AbstractTransform, AbstractAction};
+export {AbstractTransform, AbstractAction, NODE_TYPE, NODE_ID};
 
 

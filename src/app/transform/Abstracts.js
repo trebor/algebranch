@@ -6,10 +6,12 @@ const NODE_TYPE = {
   symbol:   'SymbolNode',
 };
 
-const NODE_ID = {
-  equal:    [NODE_TYPE.operator, 'equal'   ].join(':'),
-  multiply: [NODE_TYPE.operator, 'multiply'].join(':'),
-};
+const NODE_ID = [
+  {name: 'equal',    parts: [NODE_TYPE.operator, 'equal'   ]},
+  {name: 'multiply', parts: [NODE_TYPE.operator, 'multiply']},
+  {name: 'add',      parts: [NODE_TYPE.operator, 'add'     ]},
+  {name: 'subtract', parts: [NODE_TYPE.operator, 'subtract']},
+].reduce((map, id) => {map[id.name] = id.parts.join(':'); return map;}, {});
 
 class AbstractAction {
   constructor(name, node, path, parent) {

@@ -1,12 +1,12 @@
 import {AbstractTransform, AbstractAction, NODE_ID} from './Abstracts';
 const math = require('mathjs');
 
-class DivideAcrossEqualsAction extends AbstractAction {
-  constructor(eqNode, path, eqParent, multNode, operandNode) {
+class CommutativeAcrossEqualsAction extends AbstractAction {
+  constructor(eqNode, path, eqParent, opNode, operandNode, resultFactory) {
     super('', eqNode, path, eqParent);
 
     this.result = eqNode.map((cNode) => {
-      if (cNode == multNode) {
+      if (cNode == opNode) {
         let newNode = null;
         cNode.forEach((gcNode) => {
           if (gcNode != operandNode) {
@@ -16,8 +16,7 @@ class DivideAcrossEqualsAction extends AbstractAction {
         return newNode;
       }
       else {
-        return new math.expression.node.OperatorNode(
-          '/', 'divide', [cNode, operandNode]);
+        return resultFactory([cNode, operandNode]);
       }
     });
   }
@@ -30,20 +29,21 @@ class DivideAcrossEqualsAction extends AbstractAction {
   }
 }
 
-class DivideAcrossEquals extends AbstractTransform {
-  constructor() {
+class CommutativeAcrossEquals extends AbstractTransform {
+  constructor(targetId, resultFactory) {
     super({include: [NODE_ID.equal]});
+    this.targetId = targetId;
+    this.resultFactory = resultFactory;
   }
 
   test(node, path, parent) {
     if (!this.isPermittedType(node, path, parent)) return [];
     let actions = [];
     node.forEach((cNode) => {
-      if (cNode.getIdentifier() == NODE_ID.multiply) {
+      if (cNode.getIdentifier() == this.targetId) {
         cNode.forEach((gcNode) => {
-          actions.push(
-            new DivideAcrossEqualsAction(node, path, parent, cNode, gcNode)
-          );
+          actions.push(new CommutativeAcrossEqualsAction(
+            node, path, parent, cNode, gcNode, this.resultFactory));
         });
       }
     });
@@ -52,4 +52,4 @@ class DivideAcrossEquals extends AbstractTransform {
   }
 }
 
-export default DivideAcrossEquals;
+export default CommutativeAcrossEquals;

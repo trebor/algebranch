@@ -1,4 +1,4 @@
-import {AbstractTransform, AbstractAction} from './Abstracts';
+import {AbstractTransform, AbstractAction} from './common';
 const math = require('mathjs');
 
 class SimplifyToIntegerAction extends AbstractAction {

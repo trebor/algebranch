@@ -9,6 +9,7 @@ const NODE_TYPE = {
 const NODE_ID = [
   {name: 'equal',    parts: [NODE_TYPE.operator, 'equal'   ]},
   {name: 'multiply', parts: [NODE_TYPE.operator, 'multiply']},
+  {name: 'divide',   parts: [NODE_TYPE.operator, 'divide'  ]},
   {name: 'add',      parts: [NODE_TYPE.operator, 'add'     ]},
   {name: 'subtract', parts: [NODE_TYPE.operator, 'subtract']},
 ].reduce((map, id) => {map[id.name] = id.parts.join(':'); return map;}, {});

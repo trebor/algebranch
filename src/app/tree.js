@@ -26,7 +26,12 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
   const options = skeleton.options();
   const layerOrganizer = skeleton.getLayerOrganizer();
   const dispatch = skeleton.getDispatcher();
-  const tree = d3.tree();
+  const tree = d3.tree()
+    .separation((a, b) => {
+      const aLen = a.data.toString().length;
+      const bLen = b.data.toString().length;
+      return Math.log(aLen + bLen);
+    });
 
   const visualize = _.debounce(visualizeDebounced, 100);
 

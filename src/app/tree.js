@@ -101,9 +101,11 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
 
     updateActions(enter, update);
 
-    enter
+    const expressionEnter = enter
       .append('g')
-      .classed('node-expression-g', true)
+      .classed('node-expression-g', true);
+
+    expressionEnter
       .append('foreignObject')
       .classed('node-expression-fo', true)
       .append('xhtml:body')
@@ -115,6 +117,10 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .style('font-size', options.fontSize + 'px')
       .merge(update.select('.node-expression'))
       .each(updateExpression);
+
+    expressionEnter.merge(update)
+      .select('.node-expression-g')
+      .attr('transform', 'translate(0.01, 0.02)');
 
     const previewEnter = enter
       .append('g')
@@ -281,10 +287,9 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
     const $previewG = $node.find('.action-preview-g');
     const $div = $node.find('.action-preview');
     const $arrow = $node.find('.arrow');
-    const previewExpression = math.parse(action.value);
 
     $div.css('visibility', 'hidden');
-    $div.text(EXPRESSION_TO_MATHJAX_INLINE(previewExpression));
+    $div.text(EXPRESSION_TO_MATHJAX_INLINE(action.result));
     MathJax.Hub.Typeset($div.get(0), (d) => {
       const mjxSize = ComputeInlineExpressionSize($div);
       $body

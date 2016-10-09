@@ -5,6 +5,7 @@ class SimplifyToIntegerAction extends AbstractAction {
   constructor(name, node, path, parent, value) {
     super(name, node, path, parent);
     this.value = value;
+    this.result = new math.expression.node.ConstantNode(this.value);
   }
 
   apply(expression) {
@@ -12,7 +13,7 @@ class SimplifyToIntegerAction extends AbstractAction {
     return expression.transform(node => {
       if (node == this.parent) {
         return this.parent.map(child => child == this.node
-          ? new math.expression.node.ConstantNode(this.value)
+          ? this.result
           : child);
       }
       return node;

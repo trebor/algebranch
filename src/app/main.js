@@ -37,15 +37,15 @@ const nodeId = (d, i) => {
 };
 
 const tree = new Tree('#tree', {nodeId})
-  .on('nodeMouseenter', nodeEnter)
+  .on('nodeClick', nodeClick)
   .on('actionMouseenter', actionEnter)
   .on('actionClick', actionClick)
   .on('actionMouseout', actionOut);
 
 function start() {
   started = true;
-  /* $eqInput.val('x==1+2*3');*/
-  $eqInput.val('x==(1+2)*sqrt(16)/4*(3+2*7)');
+  $eqInput.val('a*b==c*(1+2)');
+  /* $eqInput.val('x==(1+2)*sqrt(16)/4*(3+2*7)');*/
   /* $eqInput.val('(2*x)/3==(sqrt(pi^2 + log(4)) / (2 * 7 + 5))/z');*/
   /* $eqInput.val('(2 + (2 * 4))/5');*/
   $eqInput.change();
@@ -58,7 +58,9 @@ function actionEnter(action) {
 }
 
 function actionOut(action) {
-  tree.hidePreview(action);
+  if (!action.applied) {
+    tree.hidePreview(action);
+  }
 }
 
 function actionClick(action) {
@@ -73,9 +75,6 @@ function updateExpression(expressionText) {
   try {
     $errorAlert.css('display','none');
     expression = math.parse(expressionText);
-    expression.traverse((node) => {
-      node.custom = genUuid();
-    });
   } catch (error) {
     $errorAlert
       .text(error.toString())
@@ -91,11 +90,14 @@ function display(expression) {
   // add content to expression for rendering
 
   expression.traverse((node, path, parent) => {
+    node.custom = node.custom || genUuid();
     node.actions = _.flatten(
       ALL_TRANSFORMS.map(pattern => pattern.test(node, path, parent))
     );
 
     node.shouldRender = () => {
+      return true;
+
       let render = node.actions.length > 0;
       if (!render) {
         node.forEach(child => {
@@ -117,7 +119,9 @@ function display(expression) {
 function nodeEnter() {}
 function nodeMove() {}
 function nodeOut() {}
-function nodeClick() {}
+function nodeClick(node) {
+  console.log(node.data.custom, node.data.toString());
+}
 
 function showPopup(expressionText) {
   const expression = math.parse(expressionText);

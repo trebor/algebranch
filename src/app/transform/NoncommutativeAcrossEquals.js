@@ -41,9 +41,11 @@ class CommutativeAcrossEquals extends AbstractTransform {
     let actions = [];
     node.forEach((cNode) => {
       if (cNode.getIdentifier() == this.targetId) {
-        cNode.forEach((gcNode) => {
-          actions.push(new CommutativeAcrossEqualsAction(
-            node, path, parent, cNode, gcNode, this.resultFactory));
+        cNode.forEach((gcNode, path, child, i) => {
+          if (path == 'args[1]') {
+            actions.push(new CommutativeAcrossEqualsAction(
+              node, path, parent, cNode, gcNode, this.resultFactory));
+          }
         });
       }
     });

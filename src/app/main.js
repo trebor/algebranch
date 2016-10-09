@@ -44,8 +44,9 @@ const tree = new Tree('#tree', {nodeId})
 
 function start() {
   started = true;
-  /* $eqInput.val('a + b * c == 0');*/
-  $eqInput.val('x==(1+2)*sqrt(16)/4*(3+2*7)');
+  /* $eqInput.val('a == b - c');*/
+  /* $eqInput.val('x==(1+2)*sqrt(16)/4*(3+2*7)');*/
+  $eqInput.val('x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)');
   /* $eqInput.val('(2*x)+3==sqrt(pi^2 + log(e)) * (2 * 7 + 5)');*/
   /* $eqInput.val('(2 + (2 * 4))/5');*/
   $eqInput.change();
@@ -91,14 +92,13 @@ function display(expression) {
 
   expression.traverse((node, path, parent) => {
     node.custom = node.custom || genUuid();
-    console.log("node.toString()", node.toString());
     node.actions = _.flatten(
       ALL_TRANSFORMS.map(pattern => pattern.test(node, path, parent))
     );
 
     node.shouldRender = () => {
-      /* return true;
-       */
+      return true;
+
       let render = node.actions.length > 0;
       if (!render) {
         node.forEach(child => {

@@ -4,7 +4,7 @@ import Tree from './tree.js';
 const d3 = require('d3');
 const math = require('mathjs');
 let started = false;
-import {EXPRESSION_TO_MATHJAX, ComputeExpressionSize} from './util.js';
+import {EXPRESSION_TO_MATHJAX, EXPRESSION_TO_MATHJAX_INLINE, ComputeExpressionSize} from './util.js';
 import ALL_TRANSFORMS from './transform/AllTransforms.js';
 
 const interval = setInterval((x) => {
@@ -144,7 +144,7 @@ function updateHistory() {
     .classed('frame', true)
     .classed('expression-box', true)
     .style('visibility', 'hidden')
-    .text(EXPRESSION_TO_MATHJAX)
+    .text(EXPRESSION_TO_MATHJAX_INLINE)
     .each(function() {
       MathJax.Hub.Typeset(this, () => {
         d3.select(this).style('visibility', 'visible');

@@ -11,16 +11,16 @@ $trackColor: #ddd;
       cursor: pointer;
     }
 
-    .node-expression {
+    .expression-box {
       padding: 8px 14px;
+    }
+
+    .expression-box:hover {
+      background-color: $expression-box-clr;
     }
 
     .arrow {
       font-size: 30px;
-    }
-
-    .action-preview {
-      padding: 8px 14px;
     }
 
     body {

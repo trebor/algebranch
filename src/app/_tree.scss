@@ -1,6 +1,4 @@
 $trackColor: #ddd;
-$trackColorLight: #cce;
-$mathColor: #666;
 
 #tree {
   @include flex;
@@ -14,18 +12,7 @@ $mathColor: #666;
     }
 
     .node-expression {
-      border-style: solid;
-      border-color: darken($trackColor, 5);
-      border-width: 1px;
-      border-radius: 5px;
-      background-color: $trackColor;
       padding: 8px 14px;
-      .mjx-chtml {
-        span {
-          color: $mathColor;
-          cursor: default;
-        }
-      }
     }
 
     .arrow {
@@ -33,18 +20,7 @@ $mathColor: #666;
     }
 
     .action-preview {
-      border-style: solid;
-      border-color: darken($trackColor, 5);
-      border-width: 1px;
-      border-radius: 5px;
-      background-color: $trackColor;
       padding: 8px 14px;
-      .mjx-chtml {
-        span {
-          color: $mathColor;
-          cursor: default;
-        }
-      }
     }
 
     body {

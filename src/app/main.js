@@ -101,8 +101,7 @@ function display(expression) {
     );
 
     node.shouldRender = () => {
-      /* return true;
-       */
+      /* return true; */
       let render = node.actions.length > 0;
       if (!render) {
         node.forEach(child => {
@@ -143,6 +142,7 @@ function updateHistory() {
   update.enter()
     .append('div')
     .classed('frame', true)
+    .classed('expression-box', true)
     .style('visibility', 'hidden')
     .text(EXPRESSION_TO_MATHJAX)
     .each(function() {
@@ -150,7 +150,10 @@ function updateHistory() {
         d3.select(this).style('visibility', 'visible');
         $history.animate({ scrollTop: $history.prop("scrollHeight")}, 1000);
       });
-    });
+    })
+    .append('span')
+    .classed('index', true)
+    .text((d, i) => i + 1);
 
   update.exit()
     .remove();

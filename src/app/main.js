@@ -25,8 +25,10 @@ const $eqDisplay = $('#eq-display');
 const $errorAlert = $('#error-alert');
 const $popup = $('#popup');
 const $body = $('body');
+const $history = $('#history > .frames');
 
 let expression = null;
+const history = [];
 
 $eqInput.on('change', d => {
   updateExpression(d.target.value);
@@ -67,6 +69,7 @@ function actionOut(action) {
 function actionClick(action) {
   tree.choosePreview(action);
   expression = action.apply(expression);
+  pushHistory(expression);
   display(expression);
 }
 
@@ -82,6 +85,7 @@ function updateExpression(expressionText) {
       .css('display','block');
   }
 
+  pushHistory(expression);
   display(expression);
 }
 
@@ -97,8 +101,8 @@ function display(expression) {
     );
 
     node.shouldRender = () => {
-      return true;
-
+      /* return true;
+       */
       let render = node.actions.length > 0;
       if (!render) {
         node.forEach(child => {
@@ -122,6 +126,34 @@ function nodeMove() {}
 function nodeOut() {}
 function nodeClick(node) {
   console.log(node.data.custom, node.data.toString());
+}
+
+function pushHistory(expression) {
+  history.push(expression);
+  updateHistory();
+}
+
+function popHistory() {
+}
+
+function updateHistory() {
+  const update = d3.select($history.get(0)).selectAll('.frame')
+    .data(history.slice(0, history.length - 1));
+
+  update.enter()
+    .append('div')
+    .classed('frame', true)
+    .style('visibility', 'hidden')
+    .text(EXPRESSION_TO_MATHJAX)
+    .each(function() {
+      MathJax.Hub.Typeset(this, () => {
+        d3.select(this).style('visibility', 'visible');
+        $history.animate({ scrollTop: $history.prop("scrollHeight")}, 1000);
+      });
+    });
+
+  update.exit()
+    .remove();
 }
 
 function showPopup(expressionText) {

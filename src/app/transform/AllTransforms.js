@@ -1,4 +1,4 @@
-const math = require('mathjs');
+import math from 'mathjs';
 import {NODE_ID} from './common';
 import CommutativeAcrossEquals from './CommutativeAcrossEquals';
 import NoncommutativeAcrossEquals from './NoncommutativeAcrossEquals';
@@ -11,8 +11,6 @@ export default [
   new NoncommutativeAcrossEquals(NODE_ID.subtract, createAddNode),
   new SimplifyToInteger(),
 ];
-
-console.log("NODE_ID.subtract", NODE_ID.subtract);
 
 function createMultiplyNode(children) {
   return new math.expression.node.OperatorNode('*', 'multiply', children);

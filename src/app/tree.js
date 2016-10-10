@@ -27,6 +27,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
   const layerOrganizer = skeleton.getLayerOrganizer();
   const dispatch = skeleton.getDispatcher();
   const tree = d3.tree()
+    .nodeSize([20, 20])
     .separation((a, b) => {
       const aLen = a.data.toString().length;
       const bLen = b.data.toString().length;

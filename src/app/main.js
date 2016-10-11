@@ -11,7 +11,8 @@ import ALL_TRANSFORMS from './transform/AllTransforms.js';
 
 
 const TEST_EXPRESSIONS = [
-
+  'sqrt(x^2) == x ',  // sqrt(x^2) -> x
+  'x - x == 0 ',  // x - x -> 0
   'x * 1 == x ',  // x * 1 -> x
   'a - b == c ',  // a - b = c  -> a = c + b
   'a / b == c ',  // a / b = c -> a = c * b
@@ -156,7 +157,7 @@ function nodeEnter() {}
 function nodeMove() {}
 function nodeOut() {}
 function nodeClick(node) {
-  /* console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());*/
+  console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());
 }
 
 function showPopup(expressionText) {

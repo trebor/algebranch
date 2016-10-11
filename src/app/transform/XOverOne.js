@@ -8,13 +8,6 @@ class XOverOneAction extends AbstractAction {
     super('x/1 -> x', node, path, parent);
     this.result = result;
   }
-
-  apply(expression) {
-    super.apply(expression);
-    return expression.transform(node => {
-      return node == this.node ? this.result : node;
-    });
-  }
 }
 
 class XOverOne extends AbstractTransform {
@@ -22,15 +15,10 @@ class XOverOne extends AbstractTransform {
     super({include: [NODE_ID.divide]});
   }
 
-  test(node, path, parent) {
-    if (!this.isPermittedType(node, path, parent)) return [];
-    let actions = [];
-
-    if (equivalent(ONE, node.args[1])) {
-      actions.push(new XOverOneAction(node, path, parent, node.args[0]));
-    }
-
-    return actions;
+  testNode(node, path, parent) {
+    return equivalent(ONE, node.args[1])
+      ? new XOverOneAction(node, path, parent, node.args[0])
+      : [];
   }
 }
 

@@ -14,11 +14,12 @@ export default [
   new NoncommutativeAcrossEquals(NODE_ID.divide, createMultiplyNode),
   new NoncommutativeAcrossEquals(NODE_ID.subtract, createAddNode),
   new SimplifyToInteger(),
-  /* new MultiplyDivide(),*/
   new DoubleNegative(),
   new XOverOne(),
   new XOverX(),
 ];
+
+/* new MultiplyDivide(),*/
 
 function createMultiplyNode(children) {
   return new math.expression.node.OperatorNode('*', 'multiply', children);

@@ -38,6 +38,9 @@ class AbstractAction {
 
   apply(expression) {
     this.applied = true;
+    return expression.transform(node => {
+      return node == this.node ? this.result : node;
+    });
   }
 }
 
@@ -48,7 +51,13 @@ class AbstractTransform {
   }
 
   test(node, path, parent) {
-    throw new TypeError('test() is abstract, please implement.');
+    return this.isPermittedType(node, path, parent)
+      ? this.testNode(node, path, parent)
+      : [];
+  }
+
+  testNode(node, path, parent) {
+    throw new TypeError('testNode() is abstract, please implement.');
   }
 
   isExcluded(node, path, parent) {

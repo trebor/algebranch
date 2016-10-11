@@ -11,7 +11,18 @@ import ALL_TRANSFORMS from './transform/AllTransforms.js';
 
 
 const TEST_EXPRESSIONS = [
-  '--x/1 == 5 * (y/y)',
+  '(2*x)+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
+
+  'a - b == c ',  // a - b = c  -> a = c + b
+  'a / b == c ',  // a / b = c -> a = c * b
+  'a + b == c ',  // a + b = c  -> a = c - b
+  'a * b == c ',  // a * b = c -> a = c / b
+  '12/4 - 3 == (pi - pi) / log(e)',  // SimplifyToInteger
+  'x/x == 1',      // XOverX   x/x -> 1
+  '--x == 1',      // XOverOne --x -> x
+
+
+  'a == b + c',
   '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',
   'x==(1+2)*sqrt(16)/4*(3+2*7)',
   'x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)',
@@ -144,7 +155,7 @@ function nodeEnter() {}
 function nodeMove() {}
 function nodeOut() {}
 function nodeClick(node) {
-  console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());
+  /* console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());*/
 }
 
 function showPopup(expressionText) {

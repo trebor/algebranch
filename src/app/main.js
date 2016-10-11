@@ -1,5 +1,5 @@
-import _ from 'lodash';
 import $ from 'jquery';
+import {NODE_ID} from './transform/common';
 import Tree from './tree';
 import History from './History';
 
@@ -7,12 +7,15 @@ const d3 = require('d3');
 const math = require('mathjs');
 let started = false;
 import {EXPRESSION_TO_MATHJAX, EXPRESSION_TO_MATHJAX_INLINE, ComputeExpressionSize} from './util.js';
-import ALL_TRANSFORMS from './transform/AllTransforms.js';
-
+import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
-  '(2*x)+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
 
+  '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
+
+  'sqrt(x^2) == x ',  // sqrt(x^2) -> x
+  'x - x == 0 ',  // x - x -> 0
+  'x * 1 == x ',  // x * 1 -> x
   'a - b == c ',  // a - b = c  -> a = c + b
   'a / b == c ',  // a / b = c -> a = c * b
   'a + b == c ',  // a + b = c  -> a = c - b
@@ -21,7 +24,7 @@ const TEST_EXPRESSIONS = [
   'x/x == 1',      // XOverX   x/x -> 1
   '--x == 1',      // XOverOne --x -> x
 
-
+  '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
   'a == b + c',
   '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',
   'x==(1+2)*sqrt(16)/4*(3+2*7)',
@@ -109,7 +112,7 @@ $eqDisplay.on('click', d => updateExpression($eqInput.val()));
 function updateExpression(expressionText) {
   try {
     $errorAlert.css('display','none');
-    expression = math.parse(expressionText);
+    expression = math.parse(expressionText).transform(compressExpression);
   } catch (error) {
     $errorAlert
       .text(error.toString())
@@ -120,6 +123,14 @@ function updateExpression(expressionText) {
   display(expression);
 }
 
+function compressExpression(node, path, parent) {
+  if (node.getIdentifier() == NODE_ID.parenthesis) {
+    return node.content;
+  }
+
+  return node;
+}
+
 function display(expression) {
   const $eqNode = $('#eq');
 
@@ -127,10 +138,7 @@ function display(expression) {
 
   expression.traverse((node, path, parent) => {
     node.custom = node.custom || genUuid();
-    node.actions = _.flatten(
-      ALL_TRANSFORMS.map(pattern => pattern.test(node, path, parent))
-    );
-
+    node.actions = establishNodeActions(node, path, parent);
     node.shouldRender = () => {
       return true;
       let render = node.actions.length > 0;
@@ -155,7 +163,7 @@ function nodeEnter() {}
 function nodeMove() {}
 function nodeOut() {}
 function nodeClick(node) {
-  /* console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());*/
+  console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());
 }
 
 function showPopup(expressionText) {

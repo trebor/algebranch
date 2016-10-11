@@ -1,6 +1,9 @@
 import $ from 'jquery';
 
-export const DEFAULT_RENDER_OPTIONS = {parenthesis: 'auto', implicit: 'hide'};
+export const DEFAULT_RENDER_OPTIONS = {
+  parenthesis: 'auto', // all
+  implicit: 'hide'
+};
 export const EXPRESSION_TO_MATHJAX_INLINE = (d,o) => '\\(' + d.toTex(o || DEFAULT_RENDER_OPTIONS) + '\\)';
 export const EXPRESSION_TO_MATHJAX = (d,o) => '$$' + d.toTex(o || DEFAULT_RENDER_OPTIONS) + '$$';
 export function ComputeExpressionSize($element) {

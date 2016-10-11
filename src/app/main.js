@@ -1,11 +1,34 @@
 import _ from 'lodash';
 import $ from 'jquery';
-import Tree from './tree.js';
+import Tree from './tree';
+import History from './History';
+
 const d3 = require('d3');
 const math = require('mathjs');
 let started = false;
-import {EXPRESSION_TO_MATHJAX, ComputeExpressionSize} from './util.js';
+import {EXPRESSION_TO_MATHJAX, EXPRESSION_TO_MATHJAX_INLINE, ComputeExpressionSize} from './util.js';
 import ALL_TRANSFORMS from './transform/AllTransforms.js';
+
+
+const TEST_EXPRESSIONS = [
+  '(2*x)+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
+
+  'a - b == c ',  // a - b = c  -> a = c + b
+  'a / b == c ',  // a / b = c -> a = c * b
+  'a + b == c ',  // a + b = c  -> a = c - b
+  'a * b == c ',  // a * b = c -> a = c / b
+  '12/4 - 3 == (pi - pi) / log(e)',  // SimplifyToInteger
+  'x/x == 1',      // XOverX   x/x -> 1
+  '--x == 1',      // XOverOne --x -> x
+
+
+  'a == b + c',
+  '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',
+  'x==(1+2)*sqrt(16)/4*(3+2*7)',
+  'x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)',
+  '(2*x)+3==sqrt(pi^2 + log(e)) * (2 * 7 + 5)',
+  '(2 + (2 * 4))/5',
+];
 
 const interval = setInterval((x) => {
   if (window.MathJax) {
@@ -28,6 +51,20 @@ const $body = $('body');
 
 let expression = null;
 
+const history = new History('#history')
+  .on('select', ex => {
+    history.pop(ex);
+    display(expression = ex);
+  })
+  .on('back', () => {
+    history.pop();
+    display(expression = history.peek());
+  })
+  .on('forward', () => {
+    history.forward();
+    display(expression = history.peek());
+  });
+
 $eqInput.on('change', d => {
   updateExpression(d.target.value);
 });
@@ -44,11 +81,7 @@ const tree = new Tree('#tree', {nodeId})
 
 function start() {
   started = true;
-  /* $eqInput.val('a == b - c');*/
-  /* $eqInput.val('x==(1+2)*sqrt(16)/4*(3+2*7)');*/
-  $eqInput.val('x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)');
-  /* $eqInput.val('(2*x)+3==sqrt(pi^2 + log(e)) * (2 * 7 + 5)');*/
-  /* $eqInput.val('(2 + (2 * 4))/5');*/
+  $eqInput.val(TEST_EXPRESSIONS[0]);
   $eqInput.change();
 }
 
@@ -67,6 +100,7 @@ function actionOut(action) {
 function actionClick(action) {
   tree.choosePreview(action);
   expression = action.apply(expression);
+  history.push(expression);
   display(expression);
 }
 
@@ -82,6 +116,7 @@ function updateExpression(expressionText) {
       .css('display','block');
   }
 
+  history.push(expression);
   display(expression);
 }
 
@@ -98,7 +133,6 @@ function display(expression) {
 
     node.shouldRender = () => {
       return true;
-
       let render = node.actions.length > 0;
       if (!render) {
         node.forEach(child => {
@@ -121,7 +155,7 @@ function nodeEnter() {}
 function nodeMove() {}
 function nodeOut() {}
 function nodeClick(node) {
-  console.log(node.data.custom, node.data.toString());
+  /* console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());*/
 }
 
 function showPopup(expressionText) {

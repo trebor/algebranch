@@ -1,8 +1,15 @@
+@import 'https://fonts.googleapis.com/css?family=Roboto+Slab';
 @import '../bower_components/sass-flex-mixin/flex';
+
+$expression-box-clr: #eee;
+$expression-text-clr: #666;
+$expression-box-select-clr: #ccc;
+$expression-box-border-clr: #ddd;
 
 html, body {
   height: 100%;
   width: 100%;
+  font-family: 'Roboto Slab', serif;
 }
 
 body {
@@ -64,5 +71,36 @@ body {
     background-color: pink;
   }
 
-  @import './tree';
+  #paper {
+    height: 100%;
+    @include flexbox;
+    @include flex-direction(row);
+    @import './tree';
+    @import './history';
+  }
+}
+
+.expression-box {
+  border-style: solid;
+  border-color: $expression-box-border-clr;
+  border-width: 1px;
+  border-radius: 5px;
+  background-color: $expression-box-clr;
+  text-align: center;
+  padding: 10px 0px;
+
+  .mjx-chtml {
+    span {
+      color: $expression-text-clr;
+      cursor: default;
+    }
+  }
+}
+
+.expression-box:hover {
+  background-color: $expression-box-select-clr;
+}
+
+.expression-box.faded {
+  opacity: 0.4;
 }

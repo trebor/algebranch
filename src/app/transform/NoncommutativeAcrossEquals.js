@@ -20,13 +20,6 @@ class CommutativeAcrossEqualsAction extends AbstractAction {
       }
     });
   }
-
-  apply(expression) {
-    super.apply(expression);
-    return expression.transform(node => {
-      return node == this.node ? this.result : node;
-    });
-  }
 }
 
 class CommutativeAcrossEquals extends AbstractTransform {
@@ -36,8 +29,7 @@ class CommutativeAcrossEquals extends AbstractTransform {
     this.resultFactory = resultFactory;
   }
 
-  test(node, path, parent) {
-    if (!this.isPermittedType(node, path, parent)) return [];
+  testNode(node, path, parent) {
     let actions = [];
     node.forEach((cNode) => {
       if (cNode.getIdentifier() == this.targetId) {

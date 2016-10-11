@@ -7,11 +7,12 @@ const NODE_TYPE = {
 };
 
 const NODE_ID = [
-  {name: 'equal',    parts: [NODE_TYPE.operator, 'equal'   ]},
-  {name: 'multiply', parts: [NODE_TYPE.operator, 'multiply']},
-  {name: 'divide',   parts: [NODE_TYPE.operator, 'divide'  ]},
-  {name: 'add',      parts: [NODE_TYPE.operator, 'add'     ]},
-  {name: 'subtract', parts: [NODE_TYPE.operator, 'subtract']},
+  {name: 'equal',      parts: [NODE_TYPE.operator, 'equal'   ]},
+  {name: 'multiply',   parts: [NODE_TYPE.operator, 'multiply']},
+  {name: 'divide',     parts: [NODE_TYPE.operator, 'divide'  ]},
+  {name: 'add',        parts: [NODE_TYPE.operator, 'add'     ]},
+  {name: 'subtract',   parts: [NODE_TYPE.operator, 'subtract']},
+  {name: 'unaryMinus', parts: [NODE_TYPE.operator, 'unaryMinus']},
 ].reduce((map, id) => {map[id.name] = id.parts.join(':'); return map;}, {});
 
 class AbstractAction {
@@ -37,6 +38,9 @@ class AbstractAction {
 
   apply(expression) {
     this.applied = true;
+    return expression.transform(node => {
+      return node == this.node ? this.result : node;
+    });
   }
 }
 
@@ -47,7 +51,13 @@ class AbstractTransform {
   }
 
   test(node, path, parent) {
-    throw new TypeError('test() is abstract, please implement.');
+    return this.isPermittedType(node, path, parent)
+      ? this.testNode(node, path, parent)
+      : [];
+  }
+
+  testNode(node, path, parent) {
+    throw new TypeError('testNode() is abstract, please implement.');
   }
 
   isExcluded(node, path, parent) {
@@ -76,6 +86,8 @@ class AbstractTransform {
   }
 }
 
-export {AbstractTransform, AbstractAction, NODE_TYPE, NODE_ID};
+function equivalent(nodeA, nodeB) {
+  return nodeA.toString() == nodeB.toString();
+}
 
-
+export {AbstractTransform, AbstractAction, NODE_TYPE, NODE_ID, equivalent};

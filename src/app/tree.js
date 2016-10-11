@@ -27,6 +27,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
   const layerOrganizer = skeleton.getLayerOrganizer();
   const dispatch = skeleton.getDispatcher();
   const tree = d3.tree()
+    .nodeSize([20, 20])
     .separation((a, b) => {
       const aLen = a.data.toString().length;
       const bLen = b.data.toString().length;
@@ -56,7 +57,11 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
   function visualizeDebounced() {
     if (!(skeleton.hasData() && skeleton.hasNonZeroArea())) return;
 
-    const root = d3.hierarchy(skeleton.data(), establishNodeChildren);
+    const root = d3.hierarchy(skeleton.data(), (node) => {
+      return (node.args || [])
+        .map(establishDatum)
+        .filter(child => child.shouldRender());
+    });
 
     tree(root);
 
@@ -118,6 +123,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .classed('node-expression-body', true)
       .append('div')
       .classed('node-expression', true)
+      .classed('expression-box', true)
       .style('position', 'fixed')
       .style('font-size', options.fontSize + 'px')
       .merge(update.select('.node-expression'))
@@ -138,6 +144,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .classed('action-preview-body', true)
       .append('div')
       .classed('action-preview', true)
+      .classed('expression-box', true)
       .style('position', 'fixed')
       .style('font-size', options.fontSize + 'px')
       .merge(update.select('.action-preview'))

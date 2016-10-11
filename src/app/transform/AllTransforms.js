@@ -5,6 +5,7 @@ import NoncommutativeAcrossEquals from './NoncommutativeAcrossEquals';
 import SimplifyToInteger from './SimplifyToInteger';
 import MultiplyDivide from './MultiplyDivide';
 import DoubleNegative from './DoubleNegative';
+import OneTimesX from './OneTimesX';
 import XOverOne from './XOverOne';
 import XOverX from './XOverX';
 
@@ -15,6 +16,7 @@ export default [
   new NoncommutativeAcrossEquals(NODE_ID.subtract, createAddNode),
   new SimplifyToInteger(),
   new DoubleNegative(),
+  new OneTimesX(),
   new XOverOne(),
   new XOverX(),
 ];

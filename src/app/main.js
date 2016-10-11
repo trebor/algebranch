@@ -1,6 +1,8 @@
 import _ from 'lodash';
 import $ from 'jquery';
-import Tree from './tree.js';
+import Tree from './tree';
+import History from './History';
+
 const d3 = require('d3');
 const math = require('mathjs');
 let started = false;
@@ -25,10 +27,14 @@ const $eqDisplay = $('#eq-display');
 const $errorAlert = $('#error-alert');
 const $popup = $('#popup');
 const $body = $('body');
-const $history = $('#history > .frames');
 
 let expression = null;
-const history = [];
+
+const history = new History('#history > .frames')
+  .on('click', ex => {
+    history.pop(ex);
+    display(expression = ex);
+  });
 
 $eqInput.on('change', d => {
   updateExpression(d.target.value);
@@ -46,9 +52,9 @@ const tree = new Tree('#tree', {nodeId})
 
 function start() {
   started = true;
-  /* $eqInput.val('a == b - c');*/
+  $eqInput.val('(x * 6) / 3 == (3 + 2 * y) / sqrt(z ^ 2)');
   /* $eqInput.val('x==(1+2)*sqrt(16)/4*(3+2*7)');*/
-  $eqInput.val('x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)');
+  /* $eqInput.val('x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)');*/
   /* $eqInput.val('(2*x)+3==sqrt(pi^2 + log(e)) * (2 * 7 + 5)');*/
   /* $eqInput.val('(2 + (2 * 4))/5');*/
   $eqInput.change();
@@ -69,7 +75,7 @@ function actionOut(action) {
 function actionClick(action) {
   tree.choosePreview(action);
   expression = action.apply(expression);
-  pushHistory(expression);
+  history.push(expression);
   display(expression);
 }
 
@@ -85,7 +91,7 @@ function updateExpression(expressionText) {
       .css('display','block');
   }
 
-  pushHistory(expression);
+  history.push(expression);
   display(expression);
 }
 
@@ -124,39 +130,7 @@ function nodeEnter() {}
 function nodeMove() {}
 function nodeOut() {}
 function nodeClick(node) {
-  console.log(node.data.custom, node.data.toString());
-}
-
-function pushHistory(expression) {
-  history.push(expression);
-  updateHistory();
-}
-
-function popHistory() {
-}
-
-function updateHistory() {
-  const update = d3.select($history.get(0)).selectAll('.frame')
-    .data(history.slice(0, history.length - 1));
-
-  update.enter()
-    .append('div')
-    .classed('frame', true)
-    .classed('expression-box', true)
-    .style('visibility', 'hidden')
-    .text(EXPRESSION_TO_MATHJAX_INLINE)
-    .each(function() {
-      MathJax.Hub.Typeset(this, () => {
-        d3.select(this).style('visibility', 'visible');
-        $history.animate({ scrollTop: $history.prop("scrollHeight")}, 1000);
-      });
-    })
-    .append('span')
-    .classed('index', true)
-    .text((d, i) => i + 1);
-
-  update.exit()
-    .remove();
+  /* console.log(node.data.custom, node.data.toString());*/
 }
 
 function showPopup(expressionText) {

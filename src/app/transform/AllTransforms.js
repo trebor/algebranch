@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import math from 'mathjs';
 import {NODE_ID} from './common';
 
@@ -13,7 +14,7 @@ import XMinusX from './XMinusX';
 import XOverOne from './XOverOne';
 import XOverX from './XOverX';
 
-export default [
+const ALL_TRANSFORMS = [
   new CommutativeAcrossEquals(NODE_ID.multiply, createDivideNode),
   new CommutativeAcrossEquals(NODE_ID.add, createSubtractNode),
   new NoncommutativeAcrossEquals(NODE_ID.divide, createMultiplyNode),
@@ -31,7 +32,16 @@ export default [
   new Commutative(NODE_ID.equal),
 ];
 
-/* new MultiplyDivide(),*/
+export default function establishNodeActions(node, path, parent) {
+  const actionMap = _
+    .flatten(ALL_TRANSFORMS.map(pattern => pattern.test(node, path, parent)))
+    .reduce((map, action) => {
+      map[action.result.toString()] = action;
+      return map;
+    }, {});
+
+  return Object.keys(actionMap).map(key => actionMap[key]);
+}
 
 function createMultiplyNode(children) {
   return new math.expression.node.OperatorNode('*', 'multiply', children);

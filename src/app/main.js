@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import $ from 'jquery';
 import {NODE_ID} from './transform/common';
 import Tree from './tree';
@@ -8,8 +7,7 @@ const d3 = require('d3');
 const math = require('mathjs');
 let started = false;
 import {EXPRESSION_TO_MATHJAX, EXPRESSION_TO_MATHJAX_INLINE, ComputeExpressionSize} from './util.js';
-import ALL_TRANSFORMS from './transform/AllTransforms.js';
-
+import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
@@ -140,10 +138,7 @@ function display(expression) {
 
   expression.traverse((node, path, parent) => {
     node.custom = node.custom || genUuid();
-    node.actions = _.flatten(
-      ALL_TRANSFORMS.map(pattern => pattern.test(node, path, parent))
-    );
-
+    node.actions = establishNodeActions(node, path, parent);
     node.shouldRender = () => {
       return true;
       let render = node.actions.length > 0;

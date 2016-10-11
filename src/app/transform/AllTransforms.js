@@ -3,6 +3,10 @@ import {NODE_ID} from './common';
 import CommutativeAcrossEquals from './CommutativeAcrossEquals';
 import NoncommutativeAcrossEquals from './NoncommutativeAcrossEquals';
 import SimplifyToInteger from './SimplifyToInteger';
+import MultiplyDivide from './MultiplyDivide';
+import DoubleNegative from './DoubleNegative';
+import XOverOne from './XOverOne';
+import XOverX from './XOverX';
 
 export default [
   new CommutativeAcrossEquals(NODE_ID.multiply, createDivideNode),
@@ -10,6 +14,10 @@ export default [
   new NoncommutativeAcrossEquals(NODE_ID.divide, createMultiplyNode),
   new NoncommutativeAcrossEquals(NODE_ID.subtract, createAddNode),
   new SimplifyToInteger(),
+  /* new MultiplyDivide(),*/
+  new DoubleNegative(),
+  new XOverOne(),
+  new XOverX(),
 ];
 
 function createMultiplyNode(children) {

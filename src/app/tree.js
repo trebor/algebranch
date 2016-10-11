@@ -57,7 +57,11 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
   function visualizeDebounced() {
     if (!(skeleton.hasData() && skeleton.hasNonZeroArea())) return;
 
-    const root = d3.hierarchy(skeleton.data(), establishNodeChildren);
+    const root = d3.hierarchy(skeleton.data(), (node) => {
+      return (node.args || [])
+        .map(establishDatum)
+        .filter(child => child.shouldRender());
+    });
 
     tree(root);
 

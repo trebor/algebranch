@@ -9,6 +9,16 @@ let started = false;
 import {EXPRESSION_TO_MATHJAX, EXPRESSION_TO_MATHJAX_INLINE, ComputeExpressionSize} from './util.js';
 import ALL_TRANSFORMS from './transform/AllTransforms.js';
 
+
+const TEST_EXPRESSIONS = [
+  '--x/1 == 5 * (y/y)',
+  '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',
+  'x==(1+2)*sqrt(16)/4*(3+2*7)',
+  'x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)',
+  '(2*x)+3==sqrt(pi^2 + log(e)) * (2 * 7 + 5)',
+  '(2 + (2 * 4))/5',
+];
+
 const interval = setInterval((x) => {
   if (window.MathJax) {
     clearInterval(interval);
@@ -60,11 +70,7 @@ const tree = new Tree('#tree', {nodeId})
 
 function start() {
   started = true;
-  $eqInput.val('6 / 3 * x == ((3 + 2) * y) / log(e) * z');
-  /* $eqInput.val('x==(1+2)*sqrt(16)/4*(3+2*7)');*/
-  /* $eqInput.val('x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)');*/
-  /* $eqInput.val('(2*x)+3==sqrt(pi^2 + log(e)) * (2 * 7 + 5)');*/
-  /* $eqInput.val('(2 + (2 * 4))/5');*/
+  $eqInput.val(TEST_EXPRESSIONS[0]);
   $eqInput.change();
 }
 
@@ -138,7 +144,7 @@ function nodeEnter() {}
 function nodeMove() {}
 function nodeOut() {}
 function nodeClick(node) {
-  /* console.log(node.data.custom, node.data.toString());*/
+  console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());
 }
 
 function showPopup(expressionText) {

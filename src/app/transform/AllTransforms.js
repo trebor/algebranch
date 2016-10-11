@@ -1,6 +1,7 @@
 import math from 'mathjs';
 import {NODE_ID} from './common';
 
+import Commutative from './Commutative';
 import CommutativeAcrossEquals from './CommutativeAcrossEquals';
 import DoubleNegative from './DoubleNegative';
 import MultiplyDivide from './MultiplyDivide';
@@ -25,6 +26,9 @@ export default [
   new XMinusX(),
   new XOverOne(),
   new XOverX(),
+  new Commutative(NODE_ID.add),
+  new Commutative(NODE_ID.multiply),
+  new Commutative(NODE_ID.equal),
 ];
 
 /* new MultiplyDivide(),*/

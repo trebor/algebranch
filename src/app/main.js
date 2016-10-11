@@ -30,10 +30,18 @@ const $body = $('body');
 
 let expression = null;
 
-const history = new History('#history > .frames')
-  .on('click', ex => {
+const history = new History('#history')
+  .on('select', ex => {
     history.pop(ex);
     display(expression = ex);
+  })
+  .on('back', () => {
+    history.pop();
+    display(expression = history.peek());
+  })
+  .on('forward', () => {
+    history.forward();
+    display(expression = history.peek());
   });
 
 $eqInput.on('change', d => {
@@ -52,7 +60,7 @@ const tree = new Tree('#tree', {nodeId})
 
 function start() {
   started = true;
-  $eqInput.val('(x * 6) / 3 == (3 + 2 * y) / sqrt(z ^ 2)');
+  $eqInput.val('6 / 3 * x == ((3 + 2) * y) / log(e) * z');
   /* $eqInput.val('x==(1+2)*sqrt(16)/4*(3+2*7)');*/
   /* $eqInput.val('x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)');*/
   /* $eqInput.val('(2*x)+3==sqrt(pi^2 + log(e)) * (2 * 7 + 5)');*/
@@ -107,7 +115,7 @@ function display(expression) {
     );
 
     node.shouldRender = () => {
-      /* return true; */
+      return true;
       let render = node.actions.length > 0;
       if (!render) {
         node.forEach(child => {

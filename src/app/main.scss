@@ -96,6 +96,11 @@ body {
     }
   }
 }
+
 .expression-box:hover {
   background-color: $expression-box-select-clr;
+}
+
+.expression-box.faded {
+  opacity: 0.4;
 }

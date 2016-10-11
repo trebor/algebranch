@@ -1,20 +1,22 @@
 const math = require('mathjs');
 
 const NODE_TYPE = {
-  operator: 'OperatorNode',
-  function: 'FunctionNode',
-  symbol:   'SymbolNode',
+  operator:    'OperatorNode',
+  function:    'FunctionNode',
+  symbol:      'SymbolNode',
+  parenthesis: 'ParenthesisNode',
 };
 
 const NODE_ID = [
-  {name: 'equal',      parts: [NODE_TYPE.operator, 'equal'     ]},
-  {name: 'multiply',   parts: [NODE_TYPE.operator, 'multiply'  ]},
-  {name: 'divide',     parts: [NODE_TYPE.operator, 'divide'    ]},
-  {name: 'add',        parts: [NODE_TYPE.operator, 'add'       ]},
-  {name: 'subtract',   parts: [NODE_TYPE.operator, 'subtract'  ]},
-  {name: 'unaryMinus', parts: [NODE_TYPE.operator, 'unaryMinus']},
-  {name: 'pow',        parts: [NODE_TYPE.operator, 'pow'       ]},
-  {name: 'sqrt',       parts: [NODE_TYPE.function, 'sqrt'      ]},
+  {name: 'equal',       parts: [NODE_TYPE.operator, 'equal'     ]},
+  {name: 'multiply',    parts: [NODE_TYPE.operator, 'multiply'  ]},
+  {name: 'divide',      parts: [NODE_TYPE.operator, 'divide'    ]},
+  {name: 'add',         parts: [NODE_TYPE.operator, 'add'       ]},
+  {name: 'subtract',    parts: [NODE_TYPE.operator, 'subtract'  ]},
+  {name: 'unaryMinus',  parts: [NODE_TYPE.operator, 'unaryMinus']},
+  {name: 'pow',         parts: [NODE_TYPE.operator, 'pow'       ]},
+  {name: 'sqrt',        parts: [NODE_TYPE.function, 'sqrt'      ]},
+  {name: 'parenthesis', parts: [NODE_TYPE.parenthesis           ]},
 ].reduce((map, id) => {map[id.name] = id.parts.join(':'); return map;}, {});
 
 class AbstractAction {

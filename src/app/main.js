@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import $ from 'jquery';
+import {NODE_ID} from './transform/common';
 import Tree from './tree';
 import History from './History';
 
@@ -11,6 +12,9 @@ import ALL_TRANSFORMS from './transform/AllTransforms.js';
 
 
 const TEST_EXPRESSIONS = [
+
+  '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
+
   'sqrt(x^2) == x ',  // sqrt(x^2) -> x
   'x - x == 0 ',  // x - x -> 0
   'x * 1 == x ',  // x * 1 -> x
@@ -22,8 +26,7 @@ const TEST_EXPRESSIONS = [
   'x/x == 1',      // XOverX   x/x -> 1
   '--x == 1',      // XOverOne --x -> x
 
-  '(2*x)+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
-
+  '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
   'a == b + c',
   '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',
   'x==(1+2)*sqrt(16)/4*(3+2*7)',
@@ -111,7 +114,7 @@ $eqDisplay.on('click', d => updateExpression($eqInput.val()));
 function updateExpression(expressionText) {
   try {
     $errorAlert.css('display','none');
-    expression = math.parse(expressionText);
+    expression = math.parse(expressionText).transform(compressExpression);
   } catch (error) {
     $errorAlert
       .text(error.toString())
@@ -120,6 +123,14 @@ function updateExpression(expressionText) {
 
   history.push(expression);
   display(expression);
+}
+
+function compressExpression(node, path, parent) {
+  if (node.getIdentifier() == NODE_ID.parenthesis) {
+    return node.content;
+  }
+
+  return node;
 }
 
 function display(expression) {

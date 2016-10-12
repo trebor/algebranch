@@ -28,10 +28,8 @@ class SquareBothSides extends AbstractTransform {
       ]);
     }
 
-    console.log("result", result);
-
     return result
-      ? new SquareBothSidesAction(node, path, parent, result)
+      ? [new SquareBothSidesAction(node, path, parent, result)]
       : [];
   }
 

@@ -11,6 +11,7 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
+  'x/x == 1',      // XOverX   x/x -> 1
   'x==sqrt(pi)',
 
   '2*x+3==sqrt(pi^2 * log(e) + z) * (2 * y + 5)',
@@ -23,7 +24,6 @@ const TEST_EXPRESSIONS = [
   'a + b == c ',  // a + b = c  -> a = c - b
   'a * b == c ',  // a * b = c -> a = c / b
   '12/4 - 3 == (pi - pi) / log(e)',  // SimplifyToInteger
-  'x/x == 1',      // XOverX   x/x -> 1
   '--x == 1',      // XOverOne --x -> x
 
   '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',

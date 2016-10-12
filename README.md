@@ -2,7 +2,7 @@
 
 A tool to manipulate mathamatical expressions, inspired by the paper [Interactive Algebra Manipulation](https://github.com/trebor/algebrator/blob/master/resources/shuffle.pdf) by [Geoffrey Irving](https://github.com/girving).  This project uses [mathjs](https://github.com/josdejong/mathjs) to parse an expression into a tree structure which can be manipulated, and [MathJax](https://github.com/mathjax/MathJax) to beautifully display the expression in the browser.
 
-Checkout the [prototype](https://trebor.github.io/algebrator), in which you can enter a [mathjs](http://mathjs.org/docs/expressions/syntax.html) formatted expression and it will be displayed as a tree.  Nodes that can be simplified to an integer will show action dots, which you can click on.
+Checkout the [prototype](https://trebor.github.io/algebrator), in which you can enter a [mathjs](http://mathjs.org/docs/expressions/syntax.html) formatted expression, and it will be displayed as a tree. Some nodes of the tree show red dots which indicate an action which can be performed at that node.  Mouse over the do to preview the change.  Click the dot to perform the action.
 
 <p align="center">
   <a href="https://trebor.github.io/algebrator">

@@ -11,7 +11,9 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
-  '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
+  'x==sqrt(pi)',
+
+  '2*x+3==sqrt(pi^2 * log(e) + z) * (2 * y + 5)',
 
   'sqrt(x^2) == x ',  // sqrt(x^2) -> x
   'x - x == 0 ',  // x - x -> 0

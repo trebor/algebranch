@@ -7,12 +7,12 @@ import CommutativeAcrossEquals from './CommutativeAcrossEquals';
 import DoubleNegative from './DoubleNegative';
 import MultiplyDivide from './MultiplyDivide';
 import NoncommutativeAcrossEquals from './NoncommutativeAcrossEquals';
-import OneTimesX from './OneTimesX';
+/* import OneTimesX from './OneTimesX';*/
 import SimplifyToInteger from './SimplifyToInteger';
 import SquareBothSides from './SquareBothSides';
 import SqrtOfSquare from './SqrtOfSquare';
-import XMinusX from './XMinusX';
-import XOverOne from './XOverOne';
+/* import XMinusX from './XMinusX';*/
+/* import XOverOne from './XOverOne';*/
 import XOverX from './XOverX';
 
 const ALL_TRANSFORMS = [
@@ -22,12 +22,11 @@ const ALL_TRANSFORMS = [
   new NoncommutativeAcrossEquals(NODE.subtract, NODE.add),
   new SimplifyToInteger(),
   new DoubleNegative(),
-  new OneTimesX(),
-  new OneTimesX(),
+  /* new OneTimesX(),*/
   new SquareBothSides(),
   new SqrtOfSquare(),
-  new XMinusX(),
-  new XOverOne(),
+  /* new XMinusX(),*/
+  /* new XOverOne(),*/
   new XOverX(),
   new Commutative(NODE.add),
   new Commutative(NODE.multiply),

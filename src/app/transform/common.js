@@ -140,4 +140,4 @@ function equivalent(nodeA, nodeB) {
   return nodeA.toString() == nodeB.toString();
 }
 
-export {AbstractTransform, AbstractAction, NODE_TYPE, NODE_ID, equivalent};
+export {AbstractTransform, AbstractAction, NODE_TYPE, equivalent};

@@ -1,4 +1,4 @@
-import {AbstractTransform, AbstractAction, NODE_ID, equivalent} from './common';
+import {AbstractTransform, AbstractAction, NODE, equivalent} from './common';
 const math = require('mathjs');
 
 const ONE = new math.expression.node.ConstantNode(1);
@@ -12,12 +12,13 @@ class DoubleNegativeAction extends AbstractAction {
 
 class DoubleNegative extends AbstractTransform {
   constructor() {
-    super({include: [NODE_ID.unaryMinus]});
+    super({include: [NODE.unaryMinus.id]});
   }
 
   testNode(node, path, parent) {
-    return node.args[0].getIdentifier() == NODE_ID.unaryMinus
-      ? [new DoubleNegativeAction(node, path, parent, node.args[0].args[0])]
+    const [a] = node.args;
+    return NODE.unaryMinus.is(a)
+      ? [new DoubleNegativeAction(node, path, parent, a.args[0])]
       : [];
   }
 }

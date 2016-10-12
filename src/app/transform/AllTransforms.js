@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import math from 'mathjs';
 import {NODE} from './common';
 
 import Commutative from './Commutative';
@@ -12,7 +11,7 @@ import SimplifyToInteger from './SimplifyToInteger';
 import SquareBothSides from './SquareBothSides';
 import SqrtOfSquare from './SqrtOfSquare';
 import XMinusX from './XMinusX';
-/* import XOverOne from './XOverOne';*/
+import XOverOne from './XOverOne';
 import XOverX from './XOverX';
 
 const ALL_TRANSFORMS = [
@@ -26,7 +25,7 @@ const ALL_TRANSFORMS = [
   new SquareBothSides(),
   new SqrtOfSquare(),
   new XMinusX(),
-  /* new XOverOne(),*/
+  new XOverOne(),
   new XOverX(),
   new Commutative(NODE.add),
   new Commutative(NODE.multiply),
@@ -42,20 +41,4 @@ export default function establishNodeActions(node, path, parent) {
     }, {});
 
   return Object.keys(actionMap).map(key => actionMap[key]);
-}
-
-function createMultiplyNode(children) {
-  return new math.expression.node.OperatorNode('*', 'multiply', children);
-}
-
-function createDivideNode(children) {
-  return new math.expression.node.OperatorNode('/', 'divide', children);
-}
-
-function createAddNode(children) {
-  return new math.expression.node.OperatorNode('+', 'add', children);
-}
-
-function createSubtractNode(children) {
-  return new math.expression.node.OperatorNode('-', 'subtract', children);
 }

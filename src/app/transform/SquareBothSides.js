@@ -1,5 +1,4 @@
-import {AbstractTransform, AbstractAction, NODE_ID, NODE} from './common';
-const math = require('mathjs');
+import {AbstractTransform, AbstractAction, NODE} from './common';
 
 class SquareBothSidesAction extends AbstractAction {
   constructor(node, path, parent, result) {

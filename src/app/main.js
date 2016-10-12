@@ -11,19 +11,18 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
+  'x * 1 == x ',  // x * 1 -> x
+  'x - x == 0 ',  // x - x -> 0
+  'x/x == 1',      // XOverX   x/x -> 1
+  '12/4 - 3 == (pi - pi) / log(e)',  // SimplifyToInteger
   '--x == 1',      // XOverOne --x -> x
   'a / b == c ',  // a / b = c -> a = c * b
   'a - b == c ',  // a - b = c  -> a = c + b
   'a + b == c ',  // a + b = c  -> a = c - b
   'a * b == c ',  // a * b = c -> a = c / b
-
   'sqrt(x^2) == x ',  // sqrt(x^2) -> x
-  'x/x == 1',      // XOverX   x/x -> 1
-  'x==sqrt(pi)',   // sqrt(x) == y -> x = y^2
 
-  'x - x == 0 ',  // x - x -> 0
-  'x * 1 == x ',  // x * 1 -> x
-  '12/4 - 3 == (pi - pi) / log(e)',  // SimplifyToInteger
+  'x==sqrt(pi)',   // sqrt(x) == y -> x = y^2
 
   '2*x+3==sqrt(pi^2 * log(e) + z) * (2 * y + 5)',
   '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',

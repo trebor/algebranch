@@ -1,16 +1,16 @@
-import {AbstractTransform, AbstractAction} from './common';
+import {AbstractTransform, AbstractAction, NODE} from './common';
 const math = require('mathjs');
 
 class SimplifyToIntegerAction extends AbstractAction {
   constructor(node, path, parent, value) {
     super(node.toString() + ' -> ' + value, node, path, parent);
-    this.result = new math.expression.node.ConstantNode(value);
+    this.result = NODE.constant.create(value);
   }
 }
 
 class SimplifyToInteger extends AbstractTransform {
   constructor() {
-    super({exclude: ['ConstantNode', 'SymbolNode']});
+    super({exclude: [NODE.constant.id, NODE.symbol.id]});
   }
 
   testNode(node, path, parent) {

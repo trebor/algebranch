@@ -46,6 +46,8 @@ class Node {
         return new FunctionNode(new SymbolNode(this.subType), children);
       case ConstantNode:
         return new ConstantNode(children);
+      case SymbolNode:
+        return new SymbolNode(children);
       default:
         return null;
     }
@@ -63,6 +65,7 @@ export const NODE = [
   {key: 'sqrt',        type: FunctionNode,    subType: 'sqrt'      , op: null  },
   {key: 'parenthesis', type: ParenthesisNode, subType: null        , op: null  },
   {key: 'constant',    type: ConstantNode,    subType: null        , op: null  },
+  {key: 'symbol',      type: SymbolNode,      subType: null        , op: null  },
 ].reduce((map, d) => {map[d.key] = new Node(d); return map;}, {});
 
 class AbstractAction {

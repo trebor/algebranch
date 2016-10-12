@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import math from 'mathjs';
-import {NODE_ID, NODE} from './common';
+import {NODE} from './common';
 
 import Commutative from './Commutative';
 import CommutativeAcrossEquals from './CommutativeAcrossEquals';
@@ -16,10 +16,10 @@ import XOverOne from './XOverOne';
 import XOverX from './XOverX';
 
 const ALL_TRANSFORMS = [
-  new CommutativeAcrossEquals(NODE_ID.multiply, createDivideNode),
-  new CommutativeAcrossEquals(NODE_ID.add, createSubtractNode),
-  new NoncommutativeAcrossEquals(NODE_ID.divide, createMultiplyNode),
-  new NoncommutativeAcrossEquals(NODE_ID.subtract, createAddNode),
+  new CommutativeAcrossEquals(NODE.multiply, NODE.divide),
+  new CommutativeAcrossEquals(NODE.add, NODE.subtract),
+  new NoncommutativeAcrossEquals(NODE.divide, NODE.multiply),
+  new NoncommutativeAcrossEquals(NODE.subtract, NODE.add),
   new SimplifyToInteger(),
   new DoubleNegative(),
   new OneTimesX(),

@@ -1,6 +1,5 @@
 import _ from 'lodash';
-import math from 'mathjs';
-import {NODE_ID} from './common';
+import {NODE} from './common';
 
 import Commutative from './Commutative';
 import CommutativeAcrossEquals from './CommutativeAcrossEquals';
@@ -9,27 +8,28 @@ import MultiplyDivide from './MultiplyDivide';
 import NoncommutativeAcrossEquals from './NoncommutativeAcrossEquals';
 import OneTimesX from './OneTimesX';
 import SimplifyToInteger from './SimplifyToInteger';
+import SquareBothSides from './SquareBothSides';
 import SqrtOfSquare from './SqrtOfSquare';
 import XMinusX from './XMinusX';
 import XOverOne from './XOverOne';
 import XOverX from './XOverX';
 
 const ALL_TRANSFORMS = [
-  new CommutativeAcrossEquals(NODE_ID.multiply, createDivideNode),
-  new CommutativeAcrossEquals(NODE_ID.add, createSubtractNode),
-  new NoncommutativeAcrossEquals(NODE_ID.divide, createMultiplyNode),
-  new NoncommutativeAcrossEquals(NODE_ID.subtract, createAddNode),
+  new CommutativeAcrossEquals(NODE.multiply, NODE.divide),
+  new CommutativeAcrossEquals(NODE.add, NODE.subtract),
+  new NoncommutativeAcrossEquals(NODE.divide, NODE.multiply),
+  new NoncommutativeAcrossEquals(NODE.subtract, NODE.add),
   new SimplifyToInteger(),
   new DoubleNegative(),
   new OneTimesX(),
-  new OneTimesX(),
+  new SquareBothSides(),
   new SqrtOfSquare(),
   new XMinusX(),
   new XOverOne(),
   new XOverX(),
-  new Commutative(NODE_ID.add),
-  new Commutative(NODE_ID.multiply),
-  new Commutative(NODE_ID.equal),
+  new Commutative(NODE.add),
+  new Commutative(NODE.multiply),
+  new Commutative(NODE.equal),
 ];
 
 export default function establishNodeActions(node, path, parent) {
@@ -41,20 +41,4 @@ export default function establishNodeActions(node, path, parent) {
     }, {});
 
   return Object.keys(actionMap).map(key => actionMap[key]);
-}
-
-function createMultiplyNode(children) {
-  return new math.expression.node.OperatorNode('*', 'multiply', children);
-}
-
-function createDivideNode(children) {
-  return new math.expression.node.OperatorNode('/', 'divide', children);
-}
-
-function createAddNode(children) {
-  return new math.expression.node.OperatorNode('+', 'add', children);
-}
-
-function createSubtractNode(children) {
-  return new math.expression.node.OperatorNode('-', 'subtract', children);
 }

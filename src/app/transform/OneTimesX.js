@@ -1,7 +1,6 @@
-import {AbstractTransform, AbstractAction, NODE_ID, equivalent} from './common';
-const math = require('mathjs');
+import {AbstractTransform, AbstractAction, NODE, equivalent} from './common';
 
-const ONE = new math.expression.node.ConstantNode(1);
+const ONE = NODE.constant.create(1);
 
 class OneTimesXAction extends AbstractAction {
   constructor(node, path, parent, result) {
@@ -12,14 +11,15 @@ class OneTimesXAction extends AbstractAction {
 
 class OneTimesX extends AbstractTransform {
   constructor() {
-    super({include: [NODE_ID.multiply]});
+    super({include: [NODE.multiply.id]});
   }
 
   testNode(node, path, parent) {
-    return equivalent(ONE, node.args[0])
-      ? new OneTimesXAction(node, path, parent, node.args[1])
-      : equivalent(ONE, node.args[1])
-        ? new OneTimesXAction(node, path, parent, node.args[0])
+    const [a, b] = node.args;
+    return equivalent(ONE, a)
+      ? [new OneTimesXAction(node, path, parent, b)]
+      : equivalent(ONE, b)
+        ? [new OneTimesXAction(node, path, parent, a)]
         : [];
   }
 }

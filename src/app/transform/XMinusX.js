@@ -1,24 +1,21 @@
-import {AbstractTransform, AbstractAction, NODE_ID, equivalent} from './common';
+import {AbstractTransform, AbstractAction, NODE, equivalent} from './common';
 const math = require('mathjs');
 
-const ZERO = new math.expression.node.ConstantNode(0);
-
 class XMinusXAction extends AbstractAction {
-  constructor(node, path, parent, result) {
+  constructor(node, path, parent) {
     super('x-x -> 0', node, path, parent);
-    this.result = result;
+    this.result = NODE.constant.create(0);
   }
 }
 
 class XMinusX extends AbstractTransform {
   constructor() {
-    super({include: [NODE_ID.subtract]});
+    super({include: [NODE.subtract.id]});
   }
 
   testNode(node, path, parent) {
-    return equivalent(node.args[0], node.args[1])
-      ? new XMinusXAction(node, path, parent, ZERO)
-      : [];
+    const [a, b] = node.args;
+    return equivalent(a, b) ? new XMinusXAction(node, path, parent) : [];
   }
 }
 

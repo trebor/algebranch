@@ -1,7 +1,7 @@
-import {AbstractTransform, AbstractAction, NODE_ID, equivalent} from './common';
+import {AbstractTransform, AbstractAction, NODE, equivalent} from './common';
 const math = require('mathjs');
 
-const ONE = new math.expression.node.ConstantNode(1);
+const ONE = NODE.constant.create(1);
 
 class XOverOneAction extends AbstractAction {
   constructor(node, path, parent, result) {
@@ -12,12 +12,13 @@ class XOverOneAction extends AbstractAction {
 
 class XOverOne extends AbstractTransform {
   constructor() {
-    super({include: [NODE_ID.divide]});
+    super({include: [NODE.divide.id]});
   }
 
   testNode(node, path, parent) {
-    return equivalent(ONE, node.args[1])
-      ? new XOverOneAction(node, path, parent, node.args[0])
+    const [a, b] = node.args;
+    return equivalent(ONE, b)
+      ? new XOverOneAction(node, path, parent, a)
       : [];
   }
 }

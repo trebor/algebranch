@@ -1,23 +1,48 @@
 const math = require('mathjs');
 
-const NODE_TYPE = {
-  operator:    'OperatorNode',
-  function:    'FunctionNode',
-  symbol:      'SymbolNode',
-  parenthesis: 'ParenthesisNode',
-};
+const {OperatorNode, FunctionNode, SymbolNode, ParenthesisNode, ConstantNode} = math.expression.node;
 
-const NODE_ID = [
-  {name: 'equal',       parts: [NODE_TYPE.operator, 'equal'     ]},
-  {name: 'multiply',    parts: [NODE_TYPE.operator, 'multiply'  ]},
-  {name: 'divide',      parts: [NODE_TYPE.operator, 'divide'    ]},
-  {name: 'add',         parts: [NODE_TYPE.operator, 'add'       ]},
-  {name: 'subtract',    parts: [NODE_TYPE.operator, 'subtract'  ]},
-  {name: 'unaryMinus',  parts: [NODE_TYPE.operator, 'unaryMinus']},
-  {name: 'pow',         parts: [NODE_TYPE.operator, 'pow'       ]},
-  {name: 'sqrt',        parts: [NODE_TYPE.function, 'sqrt'      ]},
-  {name: 'parenthesis', parts: [NODE_TYPE.parenthesis           ]},
-].reduce((map, id) => {map[id.name] = id.parts.join(':'); return map;}, {});
+class Node {
+  constructor({key, type, subType, op}) {
+    Object.assign(this, {key, type, subType, op});
+    this.id = subType
+      ? [type.prototype.type, subType].join(':')
+      : type.prototype.type;
+  }
+
+  is(node) {
+    return node.getIdentifier() == this.id;
+  }
+
+  create(children) {
+    switch (this.type) {
+      case OperatorNode:
+        return new OperatorNode(this.op, this.subType, children);
+      case FunctionNode:
+        return new FunctionNode(new SymbolNode(this.subType), children);
+      case ConstantNode:
+        return new ConstantNode(children);
+      case SymbolNode:
+        return new SymbolNode(children);
+      default:
+        return null;
+    }
+  }
+}
+
+export const NODE = [
+  {key: 'equal',       type: OperatorNode,    subType: 'equal'     , op: '=='  },
+  {key: 'multiply',    type: OperatorNode,    subType: 'multiply'  , op: '*'   },
+  {key: 'divide',      type: OperatorNode,    subType: 'divide'    , op: '/'   },
+  {key: 'add',         type: OperatorNode,    subType: 'add'       , op: '+'   },
+  {key: 'subtract',    type: OperatorNode,    subType: 'subtract'  , op: '-'   },
+  {key: 'unaryMinus',  type: OperatorNode,    subType: 'unaryMinus', op: '-'   },
+  {key: 'pow',         type: OperatorNode,    subType: 'pow'       , op: '^'   },
+  {key: 'sqrt',        type: FunctionNode,    subType: 'sqrt'      , op: null  },
+  {key: 'parenthesis', type: ParenthesisNode, subType: null        , op: null  },
+  {key: 'constant',    type: ConstantNode,    subType: null        , op: null  },
+  {key: 'symbol',      type: SymbolNode,      subType: null        , op: null  },
+].reduce((map, d) => {map[d.key] = new Node(d); return map;}, {});
 
 class AbstractAction {
   constructor(name, node, path, parent) {
@@ -94,4 +119,4 @@ function equivalent(nodeA, nodeB) {
   return nodeA.toString() == nodeB.toString();
 }
 
-export {AbstractTransform, AbstractAction, NODE_TYPE, NODE_ID, equivalent};
+export {AbstractTransform, AbstractAction, equivalent};

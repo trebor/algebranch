@@ -83,9 +83,9 @@ class History {
     this.$forwardButton.prop('disabled', this.future.length == 0);
 
     const update = d3.select($frames.get(0)).selectAll('.frame')
-      .data(this.history.slice(0, this.history.length - 1).concat(this.future));
+      .data(this.history.concat(this.future));
 
-    update.enter()
+    const enter = update.enter()
       .append('div')
       .classed('frame', true)
       .classed('expression-box', true)
@@ -99,12 +99,16 @@ class History {
           }, 1000);
         });
       })
-      .on('click', expression =>
-        this.dispatcher.call('select', this, expression))
+      .on('click', d => this.dispatcher.call('select', this, d));
+
+    enter
       .append('span')
       .classed('index', true)
-      .text((d, i) => i + 1)
+      .text((d, i) => i + 1);
+
+    enter
       .merge(update)
+      .classed('current', d => d == this.history[this.history.length - 1])
       .classed('faded', d => this.future.indexOf(d) > -1);
 
     update.exit()
@@ -114,6 +118,12 @@ class History {
   on(event, handler) {
     this.dispatcher.on(event, handler);
     return this;
+  }
+
+  clear(initialHistory, initialFuture) {
+    this.history = initialHistory || [];
+    this.future = initialFuture || [];
+    this.update();
   }
 }
 

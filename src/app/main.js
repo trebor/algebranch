@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import {NODE_ID} from './transform/common';
+import {NODE} from './transform/common';
 import Tree from './tree';
 import History from './History';
 
@@ -11,18 +11,20 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
-  '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
+  '2*x+3==sqrt(pi^2 * log(e) + z) * (2 * y + 5)',
 
-  'sqrt(x^2) == x ',  // sqrt(x^2) -> x
-  'x - x == 0 ',  // x - x -> 0
+  'x / 1 == x ',  // x / 1 -> x
   'x * 1 == x ',  // x * 1 -> x
-  'a - b == c ',  // a - b = c  -> a = c + b
+  'x - x == 0 ',  // x - x -> 0
+  'x/x == 1',      // XOverX   x/x -> 1
+  '12/4 - 3 == (pi - pi) / log(e)',  // SimplifyToInteger
+  '--x == 1',      // XOverOne --x -> x
   'a / b == c ',  // a / b = c -> a = c * b
+  'a - b == c ',  // a - b = c  -> a = c + b
   'a + b == c ',  // a + b = c  -> a = c - b
   'a * b == c ',  // a * b = c -> a = c / b
-  '12/4 - 3 == (pi - pi) / log(e)',  // SimplifyToInteger
-  'x/x == 1',      // XOverX   x/x -> 1
-  '--x == 1',      // XOverOne --x -> x
+  'sqrt(x^2) == x ',  // sqrt(x^2) -> x
+  'x==sqrt(pi)',   // sqrt(x) == y -> x = y^2
 
   '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
   'a == b + c',
@@ -119,16 +121,13 @@ function updateExpression(expressionText) {
       .css('display','block');
   }
 
+  history.clear();
   history.push(expression);
   display(expression);
 }
 
 function compressExpression(node, path, parent) {
-  if (node.getIdentifier() == NODE_ID.parenthesis) {
-    return node.content;
-  }
-
-  return node;
+  return NODE.parenthesis.is(node) ? node.content : node;
 }
 
 function display(expression) {

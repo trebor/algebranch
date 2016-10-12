@@ -1,4 +1,4 @@
-import {AbstractTransform, AbstractAction, NODE_ID} from './common';
+import {AbstractTransform, AbstractAction, NODE} from './common';
 const math = require('mathjs');
 
 class CommutativeAcrossEqualsAction extends AbstractAction {
@@ -23,19 +23,20 @@ class CommutativeAcrossEqualsAction extends AbstractAction {
 }
 
 class CommutativeAcrossEquals extends AbstractTransform {
-  constructor(targetId, resultFactory) {
-    super({include: [NODE_ID.equal]});
-    this.targetId = targetId;
-    this.resultFactory = resultFactory;
+  constructor(target, result) {
+    super({include: [NODE.equal.id]});
+    this.target = target;
+    this.result = result;
   }
 
   testNode(node, path, parent) {
     let actions = [];
     node.forEach((cNode) => {
-      if (cNode.getIdentifier() == this.targetId) {
+      if (this.target.is(cNode)) {
         cNode.forEach((gcNode) => {
           actions.push(new CommutativeAcrossEqualsAction(
-            node, path, parent, cNode, gcNode, this.resultFactory));
+            node, path, parent, cNode, gcNode,
+            (children) => this.result.create(children)));
         });
       }
     });

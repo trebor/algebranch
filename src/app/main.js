@@ -121,6 +121,7 @@ function updateExpression(expressionText) {
       .css('display','block');
   }
 
+  history.clear();
   history.push(expression);
   display(expression);
 }

@@ -4,6 +4,7 @@
 $expression-box-clr: #eee;
 $expression-text-clr: #666;
 $expression-box-select-clr: #ccc;
+$expression-box-current-clr: #dbb;
 $expression-box-border-clr: #ddd;
 
 html, body {
@@ -113,6 +114,10 @@ body {
 
 .expression-box:hover {
   background-color: $expression-box-select-clr;
+}
+
+.expression-box.current {
+  background-color: $expression-box-current-clr;
 }
 
 .expression-box.faded {

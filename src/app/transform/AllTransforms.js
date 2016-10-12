@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import math from 'mathjs';
-import {NODE_ID} from './common';
+import {NODE_ID, NODE} from './common';
 
 import Commutative from './Commutative';
 import CommutativeAcrossEquals from './CommutativeAcrossEquals';
@@ -29,9 +29,9 @@ const ALL_TRANSFORMS = [
   new XMinusX(),
   new XOverOne(),
   new XOverX(),
-  new Commutative(NODE_ID.add),
-  new Commutative(NODE_ID.multiply),
-  new Commutative(NODE_ID.equal),
+  new Commutative(NODE.add),
+  new Commutative(NODE.multiply),
+  new Commutative(NODE.equal),
 ];
 
 export default function establishNodeActions(node, path, parent) {

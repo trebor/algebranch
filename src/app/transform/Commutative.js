@@ -1,4 +1,4 @@
-import {AbstractTransform, AbstractAction, NODE_ID} from './common';
+import {AbstractTransform, AbstractAction, NODE, equivalent} from './common';
 const math = require('mathjs');
 
 class CommutativeAction extends AbstractAction {
@@ -10,12 +10,15 @@ class CommutativeAction extends AbstractAction {
 }
 
 class Commutative extends AbstractTransform {
-  constructor(targetId) {
-    super({include: [targetId]});
+  constructor(target) {
+    super({include: [target.id]});
   }
 
   testNode(node, path, parent) {
-    return [new CommutativeAction(node, path, parent)];
+    const [a, b] = node.args;
+    return equivalent(a, b)
+      ? []
+      : [new CommutativeAction(node, path, parent)];
   }
 }
 

@@ -11,6 +11,10 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
+  '3 ^ 2',
+  '(1 + 2) * (1 + 2)',
+  'z * z * z',
+
   '2*x+3==sqrt(pi^2 * log(e) + z) * (2 * y + 5)',
 
   'x / 1 == x ',  // x / 1 -> x
@@ -41,7 +45,7 @@ const interval = setInterval((x) => {
     MathJax.Hub.signal.Interest(
       function (message) {
         if (!started && message[0] == 'End Process') {
-          start();
+          //start();
         }
       }
     );

@@ -10,20 +10,39 @@ class GeneralAction extends AbstractAction {
 }
 
 class General extends AbstractTransform {
-  constructor(targetStr, resultStr) {
+  constructor(targetStr, resultStr, swap = false) {
     super();
     this.targetStr = targetStr;
     this.resultStr = resultStr;
+    this.swap = swap;
   }
 
   testNode(node, path, parent) {
     const symbolMap = {};
-    if (this.match(math.parse(this.targetStr), node, symbolMap)) {
+    if (this.match(this.getTarget(), node, symbolMap)) {
       return [new GeneralAction(node, path, parent,
-        this.apply(math.parse(this.resultStr), symbolMap))];
+        this.apply(this.getResult(), symbolMap))];
     }
 
     return [];
+  }
+
+  getTarget() {
+    return this.parseExpression(this.targetStr, this.swap);
+  }
+
+  getResult() {
+    return this.parseExpression(this.resultStr, this.swap);
+  }
+
+  parseExpression(string, swap) {
+    const expr = math.parse(string);
+    if (swap) {
+      const tmp = expr.args[0];
+      expr.args[0] = expr.args[1];
+      expr.args[1] = tmp;
+    }
+    return expr;
   }
 
   match(target, candidate, symbolMap) {

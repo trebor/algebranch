@@ -46,41 +46,65 @@ const TRANSFORM_PACKS = [
     ['3 / 1', '3'],
     ['(2 + z) / 1', '(2 + z)']]],
 
-  // // new XOverX(),
+  // new XOverX(),
 
   ['x / x', '1', false, [
     ['3 / 3', '1'],
     ['(2 + z) / (2 + z)', '1']]],
 
-  // // new XMinusX(),
+  // new XMinusX(),
 
   ['x - x', '0', false, [
     ['3 - 3', '0'],
     ['(2 + z) - (2 + z)', '0']]],
 
-  // // new DoubleNegative(),
+  // new DoubleNegative(),
 
   ['--x', 'x', false, [
     ['--3', '3'],
     ['--(2 + z)', '(2 + z)']]],
 
-  // // new CommutativeAcrossEquals(NODE.multiply, NODE.divide),
+  // new CommutativeAcrossEquals(NODE.multiply, NODE.divide),
 
   ['x == a * b', 'x / b == a', true, [
     ['12 == 3 * 4', '12 / 4 == 3'],
     ['z == 3 * 4', 'z / 4 == 3']]],
 
-  // // new CommutativeAcrossEquals(NODE.add, NODE.subtract),
+  ['x == a * b', 'x / a == b', true, [
+    ['12 == 3 * 4', '12 / 3 == 4'],
+    ['z == (2 * x + 7) * 4', 'z / (2 * x + 7) == 4']]],
+
+  // new CommutativeAcrossEquals(NODE.add, NODE.subtract),
 
   ['x == a + b', 'x - b == a', true, [
     ['12 == 3 + 4', '12 - 4 == 3'],
     ['z == 3 + 4', 'z - 4 == 3']]],
 
-  // // new NoncommutativeAcrossEquals(NODE.divide, NODE.multiply),
+  ['x == a + b', 'x - a == b', true, [
+    ['12 == 3 + 4', '12 - 3 == 4'],
+    ['z == (2 * x + 9) + 4', 'z - (2 * x + 9) == 4']]],
+
+  // new NoncommutativeAcrossEquals(NODE.divide, NODE.multiply),
 
   ['x == a / b', 'x * b == a', true, [
     ['3 == 12 / 4', '3 * 4 == 12'],
     ['z == 3 / 4', 'z * 4 == 3']]],
+
+  ['x == a / b', 'a / x  == b', true, [
+    ['3 == 12 / 4', '12 / 3 == 4'],
+    ['z == (2 * x + 1) / 4', '(2 * x + 1) / z == 4']
+  ]],
+
+  // new NoncommutativeAcrossEquals(NODE.subtract, NODE.add),
+
+  ['x == a - b', 'x + b == a', true, [
+    ['8 == 12 - 4', '8 + 4 == 12'],
+    ['z == (2 * x) - 4', 'z + 4 == (2 * x)']]],
+
+  ['x == a - b', 'x - a == -b', true, [
+    ['8 == 12 - 4', '8 - 12 == -4'],
+    ['z == (2 * x) - 4', 'z - (2 * x) == -4']
+  ]],
 
   // new SquareBothSides(),
 
@@ -96,7 +120,6 @@ const TRANSFORM_PACKS = [
     ['sqrt((1 + 4)^2)', '(1 + 4)']]],
 ];
 
-// new NoncommutativeAcrossEquals(NODE.subtract, NODE.add),
 // new SimplifyToInteger(),
 // new Commutative(NODE.add),
 // new Commutative(NODE.multiply),
@@ -134,9 +157,11 @@ function testExpression(pattern, [inputStr, outputStr]) {
 
   const result = actions[0] ? actions[0].apply(input) : 'no action';
   if (outputStr != result.toString()) {
-    console.error(
-      `   ${inputStr} expected ${outputStr} got ${result.toString()}`
-    );
+    const message = `Pattern: ${pattern.title()}\n`
+      + `  Tested:     ${inputStr}\n`
+      + `  Expected: ${outputStr}\n`
+      + `  Found:      ${result.toString()}`;
+    alert(message);
   }
   // else {
   //   console.info(`   ${inputStr} -> ${outputStr}`);

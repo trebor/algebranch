@@ -17,6 +17,10 @@ class General extends AbstractTransform {
     this.swap = swap;
   }
 
+  title() {
+    return `${this.targetStr}  ->  ${this.resultStr}`;
+  }
+
   testNode(node, path, parent) {
     const symbolMap = {};
     if (this.match(this.getTarget(), node, symbolMap)) {

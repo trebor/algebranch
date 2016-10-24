@@ -50,9 +50,6 @@ class General extends AbstractTransform {
   }
 
   matchOperatorNode(target, candidate, symbolMap) {
-    // console.log("matchOperatorNode",
-    //   target.toString(), candidate.toString());
-
     if (target.getIdentifier() != candidate.getIdentifier())
       return false;
 
@@ -65,9 +62,12 @@ class General extends AbstractTransform {
   }
 
   matchFunctionNode(target, candidate, symbolMap) {
-    console.log("matchFunctionNode",
-      target.toString(), candidate.toString());
-    return false;
+    if (target.name != candidate.name)
+      return false;
+
+    return !target.args.some((d, i) => {
+      return !this.match(target.args[i], candidate.args[i], symbolMap);
+    });
   }
 
   matchConstantNode(target, candidate, symbolMap) {
@@ -75,9 +75,6 @@ class General extends AbstractTransform {
   }
 
   matchSymbolNode(target, candidate, symbolMap) {
-    // console.log("matchSymbolNode",
-    //   target.toString(), candidate.toString());
-
     const { name } = target;
     const value = symbolMap[name];
 
@@ -97,12 +94,13 @@ class General extends AbstractTransform {
     result.args.forEach((arg, i) => {
       result.args[i] = this.apply(arg, symbolMap);
     });
-
     return result;
   }
 
   applyFunctionNode(result, symbolMap) {
-    console.log("applyFunctionNode", result.toString());
+    result.args.forEach((arg, i) => {
+      result.args[i] = this.apply(arg, symbolMap);
+    });
     return result;
   }
 

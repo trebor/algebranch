@@ -17,20 +17,6 @@ const TEST_EXPRESSIONS = [
 
   '(3 * 1) / 1 * x ^ 2 + (z - z) == (2 + y) / (2 + y)',
 
-
-  'x / 1 == x ',  // x / 1 -> x
-  'x * 1 == x ',  // x * 1 -> x
-  'x - x == 0 ',  // x - x -> 0
-  'x/x == 1',      // XOverX   x/x -> 1
-  '12/4 - 3 == (pi - pi) / log(e)',  // SimplifyToInteger
-  '--x == 1',      // XOverOne --x -> x
-  'a / b == c ',  // a / b = c -> a = c * b
-  'a - b == c ',  // a - b = c  -> a = c + b
-  'a + b == c ',  // a + b = c  -> a = c - b
-  'a * b == c ',  // a * b = c -> a = c / b
-  'sqrt(x^2) == x ',  // sqrt(x^2) -> x
-  'x==sqrt(pi)',   // sqrt(x) == y -> x = y^2
-
   '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
   'a == b + c',
   '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',

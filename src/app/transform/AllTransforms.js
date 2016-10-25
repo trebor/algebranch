@@ -118,12 +118,27 @@ const TRANSFORM_PACKS = [
   ['sqrt(x^2)', 'x', false, [
     ['sqrt(3 ^ 2)', '3'],
     ['sqrt((1 + 4)^2)', '(1 + 4)']]],
+
+  // new Commutative(NODE.add),
+
+  ['x + y ', 'y + x', false, [
+    ['3 + 4', '4 + 3'],
+    ['(1 + 4) + 2 * x', '2 * x + (1 + 4)']]],
+
+  // new Commutative(NODE.multiply),
+
+  ['x * y ', 'y * x', false, [
+    ['3 * 4', '4 * 3'],
+    ['(1 * 4) * 2 + x', '2 * (1 * 4) + x']]],
+
+  // new Commutative(NODE.equal),
+
+  ['x == y ', 'y == x', false, [
+    ['3 == 4', '4 == 3'],
+    ['(1 * 4) == 2 + x', '2 + x == (1 * 4)']]],
 ];
 
 // new SimplifyToInteger(),
-// new Commutative(NODE.add),
-// new Commutative(NODE.multiply),
-// new Commutative(NODE.equal),
 
 
 const ALL_TRANSFORMS = _(TRANSFORM_PACKS)

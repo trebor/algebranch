@@ -11,7 +11,7 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
-  'a == b / c',
+  'a == b / c + d',
 
   'y == (2 * x) - (3 * y)',
 
@@ -154,7 +154,7 @@ function nodeEnter() {}
 function nodeMove() {}
 function nodeOut() {}
 function nodeClick(node) {
-  console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());
+  // console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());
 }
 
 function showPopup(expressionText) {

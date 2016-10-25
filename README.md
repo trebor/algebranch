@@ -22,3 +22,7 @@ Checkout the [prototype](https://trebor.github.io/algebrator), in which you can 
 ## Help Needed
 
 I could use additional collaborators.
+
+## List of alternate math tools
+
+* [Desmos Graphing Calculator](https://www.desmos.com/calculator)

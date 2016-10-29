@@ -162,11 +162,18 @@ const TRANSFORM_PACKS = [
     ['1 + 2', '3'],
   ]],
 
-  // simple distributive
+  // distribute
 
   ['a * (b + c)', 'a * b + a * c', true, [
     ['x * (3 + 2)', 'x * 3 + x * 2'],
     ['(2 + x) * (3 + y)', '(2 + x) * 3 + (2 + x) * y'],
+  ]],
+
+  // distribute -1
+
+  ['-(a + b)', '-a -b', true, [
+    ['-(3 + 2)', '-3 - 2'],
+    ['-(3 + (2 * y))', '-3 - (2 * y)'],
   ]],
 ];
 

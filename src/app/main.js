@@ -11,6 +11,10 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
+  '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',
+
+  'x * 5 / x == y * (3 * x + 7) / (3 * x + 7)',
+
   'x==(1+2)*sqrt(16)/log(e)*(3+2*7)',
 
   'a == b / c + d',
@@ -19,7 +23,6 @@ const TEST_EXPRESSIONS = [
 
   '(3 * 1) / 1 * x ^ 2 + (z - z) == (2 + y) / (2 + y)',
 
-  '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',
   'x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)',
   '(2*x)+3==sqrt(pi^2 + log(e)) * (2 * 7 + 5)',
   '(2 + (2 * 4))/5',

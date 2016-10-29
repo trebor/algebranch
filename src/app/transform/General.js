@@ -77,6 +77,18 @@ class General extends AbstractTransform {
     return this[`match${target.type}`](target, candidate, symbolMap);
   }
 
+  matchParenthesisNode(target, candidate, symbolMap) {
+    const targetContent = target.content;
+    const candidateContent = NODE.parenthesis.is(candidate)
+      ? candidate.content
+      : candidate;
+
+    return !targetContent.args.some((d, i) => {
+      return !this.match(
+        targetContent, candidateContent, symbolMap);
+    });
+  }
+
   matchOperatorNode(target, candidate, symbolMap) {
     if (target.getIdentifier() != candidate.getIdentifier())
       return false;

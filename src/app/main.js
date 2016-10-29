@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import {NODE} from './transform/common';
+import {NODE, parseExpression} from './transform/common';
 import Tree from './tree';
 import History from './History';
 
@@ -10,6 +10,8 @@ import {EXPRESSION_TO_MATHJAX, EXPRESSION_TO_MATHJAX_INLINE, ComputeExpressionSi
 import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
+
+  '(2 + x) * (3 + y)',
 
   '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',
 
@@ -107,7 +109,7 @@ $eqDisplay.on('click', d => updateExpression($eqInput.val()));
 function updateExpression(expressionText) {
   try {
     $errorAlert.css('display','none');
-    expression = math.parse(expressionText).transform(compressExpression);
+    expression = parseExpression(expressionText);
   } catch (error) {
     $errorAlert
       .text(error.toString())
@@ -117,10 +119,6 @@ function updateExpression(expressionText) {
   history.clear();
   history.push(expression);
   display(expression);
-}
-
-function compressExpression(node, path, parent) {
-  return NODE.parenthesis.is(node) ? node.content : node;
 }
 
 function display(expression) {

@@ -1,20 +1,7 @@
 import _ from 'lodash';
 import math from 'mathjs';
 import General from './General';
-
-// import {NODE} from './common';
-// import Commutative from './Commutative';
-// import CommutativeAcrossEquals from './CommutativeAcrossEquals';
-// import DoubleNegative from './DoubleNegative';
-// import MultiplyDivide from './MultiplyDivide';
-// import NoncommutativeAcrossEquals from './NoncommutativeAcrossEquals';
-// import OneTimesX from './OneTimesX';
-// import SimplifyToInteger from './SimplifyToInteger';
-// import SquareBothSides from './SquareBothSides';
-// import SqrtOfSquare from './SqrtOfSquare';
-// import XMinusX from './XMinusX';
-// import XOverOne from './XOverOne';
-// import XOverX from './XOverX';
+import { parseExpression } from './common';
 
 // transform data
 
@@ -22,7 +9,8 @@ const TRANSFORM_PACKS = [
   // [input, output, [
   //   [test-input-1, test-output-1],
   //   [test-input-2, test-output-2],
-  //   ...]]]
+  //   ...
+  // ]],
 
   ['x ^ 2', 'x * x', false, [
     ['3 ^ 2', '3 * 3'],
@@ -173,6 +161,13 @@ const TRANSFORM_PACKS = [
     ['log(e)', '1'],
     ['1 + 2', '3'],
   ]],
+
+  // simple distributive
+
+  ['a * (b + c)', 'a * b + a * c', true, [
+    ['x * (3 + 2)', 'x * 3 + x * 2'],
+    ['(2 + x) * (3 + y)', '(2 + x) * 3 + (2 + x) * y'],
+  ]],
 ];
 
 const ALL_TRANSFORMS = _(TRANSFORM_PACKS)
@@ -208,6 +203,7 @@ function testExpression(pattern, [inputStr, outputStr]) {
 
   const result = actions[0] ? actions[0].apply(input) : 'no action';
   if (outputStr != result.toString()) {
+    console.log("math.parse(inputStr)", math.parse(inputStr));
     const message = `Pattern: ${pattern.title()}\n`
       + `  Tested:     ${inputStr}\n`
       + `  Expected: ${outputStr}\n`

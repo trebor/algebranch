@@ -11,17 +11,15 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
+  'x==(1+2)*sqrt(16)/log(e)*(3+2*7)',
+
   'a == b / c + d',
 
   'y == (2 * x) - (3 * y)',
 
-  '2*x+3==sqrt(pi^2 * log(e) + z) * (2 * y + 5)',
-
   '(3 * 1) / 1 * x ^ 2 + (z - z) == (2 + y) / (2 + y)',
 
-  '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
   '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',
-  'x==(1+2)*sqrt(16)/4*(3+2*7)',
   'x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)',
   '(2*x)+3==sqrt(pi^2 + log(e)) * (2 * 7 + 5)',
   '(2 + (2 * 4))/5',

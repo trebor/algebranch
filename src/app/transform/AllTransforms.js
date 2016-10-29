@@ -136,6 +136,13 @@ const TRANSFORM_PACKS = [
   ['x == y ', 'y == x', false, [
     ['3 == 4', '4 == 3'],
     ['(1 * 4) == 2 + x', '2 + x == (1 * 4)']]],
+
+  // new Commutative(NODE.equal),
+
+  ['_isInt(x)', '_toInt(x)', false, [
+    ['3 * 4', '12'],
+    ['log(e)', '1'],
+    ['1 + 2', '3']]],
 ];
 
 // new SimplifyToInteger(),
@@ -158,7 +165,9 @@ export default function establishNodeActions(node, path, parent) {
   return Object.keys(actionMap).map(key => actionMap[key]);
 }
 
-TRANSFORM_PACKS.forEach(([input, output, commutative, tests]) => {
+TRANSFORM_PACKS
+//  .filter(([input, output, commutative, tests, only]) => only)
+  .forEach(([input, output, commutative, tests]) => {
   console.info(`[ ${input} ] -> [ ${output} ]`);
   tests.forEach(test => testExpression(new General(input, output), test));
 });

@@ -9,12 +9,36 @@ class GeneralAction extends AbstractAction {
   }
 }
 
+
 class General extends AbstractTransform {
   constructor(targetStr, resultStr, swap = false) {
     super();
     this.targetStr = targetStr;
     this.resultStr = resultStr;
     this.swap = swap;
+    this.customFunctions = {
+      '_isInt': this.isInt,
+      '_toInt': this.toInt,
+    }
+  }
+
+  isInt(candidate) {
+    if (!NODE.constant.is(candidate)) {
+      try {
+        const value = candidate.eval();
+        if (value % 1 === 0)
+          return true;
+      } catch(e) {}
+    }
+
+    return false;
+  }
+
+  toInt(candidate) {
+    try {
+      return NODE.constant.create(candidate.eval());
+    } catch(e) {}
+    return null;
   }
 
   title() {
@@ -66,8 +90,15 @@ class General extends AbstractTransform {
   }
 
   matchFunctionNode(target, candidate, symbolMap) {
-    if (target.name != candidate.name)
+
+    const fn = this.customFunctions[target.name];
+
+    if (fn && fn(candidate)) {
+      return this.match(target.args[0], candidate, symbolMap);
+    }
+    else if (target.name != candidate.name) {
       return false;
+    }
 
     return !target.args.some((d, i) => {
       return !this.match(target.args[i], candidate.args[i], symbolMap);
@@ -102,6 +133,12 @@ class General extends AbstractTransform {
   }
 
   applyFunctionNode(result, symbolMap) {
+    const fn = this.customFunctions[result.name];
+
+    if (fn) {
+      return fn(this.apply(result.args[0], symbolMap));
+    }
+
     result.args.forEach((arg, i) => {
       result.args[i] = this.apply(arg, symbolMap);
     });

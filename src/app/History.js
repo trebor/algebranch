@@ -28,6 +28,11 @@ class History {
     });
 
     $(document).keydown((e) => {
+
+      if (e.target == $('#eq-input').get(0)) {
+        return;
+      }
+
       if (e.which == KEY.LEFT_ARROW){
         if (!this.$backButton.prop('disabled')) {
           this.$backButton.click();

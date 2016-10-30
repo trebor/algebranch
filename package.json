@@ -42,7 +42,7 @@
     "gulp-sass": "~2.1.1"
   },
   "main": "",
- "private": true,
+  "private": true,
   "scripts": {
     "postinstall": "bower install && gulp build --production",
     "start": "gulp --production",
@@ -52,6 +52,7 @@
   "dependencies": {
     "d3-dispatch": "^1.0.1",
     "d3-selection": "^1.0.2",
-    "mathjax-node": "^0.5.1"
+    "mathjax-node": "^0.5.1",
+    "urljs": "^2.3.1"
   }
 }

@@ -1,7 +1,8 @@
 import $ from 'jquery';
-import {NODE, parseExpression} from './transform/common';
+import { NODE, parseExpression } from './transform/common';
 import Tree from './tree';
 import History from './History';
+import url from 'urljs';
 
 const d3 = require('d3');
 const math = require('mathjs');
@@ -79,7 +80,9 @@ const tree = new Tree('#tree', {nodeId})
 
 function start() {
   started = true;
-  $eqInput.val(TEST_EXPRESSIONS[0]);
+  $eqInput.val(url.queryString('eq')
+    ? decodeURIComponent(url.queryString('eq'))
+    : TEST_EXPRESSIONS[0]);
   $eqInput.change();
 }
 
@@ -140,6 +143,8 @@ function display(expression) {
     };
   });
 
+  url.updateSearchParam('eq',
+    encodeURIComponent(expression.toString().replace(/ /g,'')));
   $eqInput.val(expression.toString());
 
   $eqNode.text(EXPRESSION_TO_MATHJAX(expression));

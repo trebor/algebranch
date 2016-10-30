@@ -214,7 +214,7 @@ export default function establishNodeActions(node, path, parent) {
 TRANSFORM_PACKS
 //  .filter(([input, output, commutative, tests, only]) => only)
   .forEach(([input, output, commutative, tests]) => {
-  console.info(`[ ${input} ] -> [ ${output} ]`);
+  //console.info(`[ ${input} ] -> [ ${output} ]`);
   tests.forEach(test => testExpression(new General(input, output), test));
 });
 

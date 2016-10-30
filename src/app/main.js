@@ -108,6 +108,10 @@ function actionClick(action) {
 $eqDisplay.on('click', d => updateExpression($eqInput.val()));
 
 function updateExpression(expressionText) {
+  if (stripWhite(expressionText).length == 0) {
+    return;
+  }
+
   try {
     $errorAlert.css('display','none');
     expression = parseExpression(expressionText);
@@ -144,12 +148,16 @@ function display(expression) {
   });
 
   url.updateSearchParam('eq',
-    encodeURIComponent(expression.toString().replace(/ /g,'')));
+    encodeURIComponent(stripWhite(expression.toString())));
   $eqInput.val(expression.toString());
 
   $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
   MathJax.Hub.Typeset($eqNode.get(0));
   tree.data(expression);
+}
+
+function stripWhite(string) {
+  return string.replace(/ /g,'');
 }
 
 function nodeEnter() {}

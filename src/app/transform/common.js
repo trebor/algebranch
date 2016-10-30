@@ -30,7 +30,7 @@ class Node {
   }
 }
 
-export const NODE = [
+const NODE = [
   {key: 'equal',       type: OperatorNode,    subType: 'equal'     , op: '=='  },
   {key: 'multiply',    type: OperatorNode,    subType: 'multiply'  , op: '*'   },
   {key: 'divide',      type: OperatorNode,    subType: 'divide'    , op: '/'   },
@@ -119,4 +119,18 @@ function equivalent(nodeA, nodeB) {
   return nodeA.toString() == nodeB.toString();
 }
 
-export {AbstractTransform, AbstractAction, equivalent};
+function parseExpression(expressionText) {
+  return math.parse(expressionText).transform(compressExpression);
+}
+
+function compressExpression(node, path, parent) {
+  return NODE.parenthesis.is(node) ? node.content : node;
+}
+
+export {
+  AbstractTransform,
+  AbstractAction,
+  equivalent,
+  parseExpression,
+  NODE
+};

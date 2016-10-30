@@ -1,7 +1,8 @@
 import $ from 'jquery';
-import {NODE} from './transform/common';
+import { NODE, parseExpression } from './transform/common';
 import Tree from './tree';
 import History from './History';
+import url from 'urljs';
 
 const d3 = require('d3');
 const math = require('mathjs');
@@ -11,25 +12,18 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
-  '2*x+3==sqrt(pi^2 * log(e) + z) * (2 * y + 5)',
+  '2 * x + x * 3 == (sqrt(pi^2) * y) / (4 + log(e)) * z',
 
-  'x / 1 == x ',  // x / 1 -> x
-  'x * 1 == x ',  // x * 1 -> x
-  'x - x == 0 ',  // x - x -> 0
-  'x/x == 1',      // XOverX   x/x -> 1
-  '12/4 - 3 == (pi - pi) / log(e)',  // SimplifyToInteger
-  '--x == 1',      // XOverOne --x -> x
-  'a / b == c ',  // a / b = c -> a = c * b
-  'a - b == c ',  // a - b = c  -> a = c + b
-  'a + b == c ',  // a + b = c  -> a = c - b
-  'a * b == c ',  // a * b = c -> a = c / b
-  'sqrt(x^2) == x ',  // sqrt(x^2) -> x
-  'x==sqrt(pi)',   // sqrt(x) == y -> x = y^2
+  'x * 5 / x == y * (3 * x + 7) / (3 * x + 7)',
 
-  '2*x+3==sqrt(pi^2 * log(e)) * (2 * y + 5)',
-  'a == b + c',
-  '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',
-  'x==(1+2)*sqrt(16)/4*(3+2*7)',
+  'x==(1+2)*sqrt(16)/log(e)*(3+2*7)',
+
+  'a == b / c + d',
+
+  'y == (2 * x) - (3 * y)',
+
+  '(3 * 1) / 1 * x ^ 2 + (z - z) == (2 + y) / (2 + y)',
+
   'x / (3 + 2 * 7) * 4 / sqrt(16) == (1 + 2)',
   '(2*x)+3==sqrt(pi^2 + log(e)) * (2 * 7 + 5)',
   '(2 + (2 * 4))/5',
@@ -86,7 +80,9 @@ const tree = new Tree('#tree', {nodeId})
 
 function start() {
   started = true;
-  $eqInput.val(TEST_EXPRESSIONS[0]);
+  $eqInput.val(url.queryString('eq')
+    ? decodeURIComponent(url.queryString('eq'))
+    : TEST_EXPRESSIONS[0]);
   $eqInput.change();
 }
 
@@ -112,22 +108,22 @@ function actionClick(action) {
 $eqDisplay.on('click', d => updateExpression($eqInput.val()));
 
 function updateExpression(expressionText) {
+  if (stripWhite(expressionText).length == 0) {
+    return;
+  }
+
   try {
     $errorAlert.css('display','none');
-    expression = math.parse(expressionText).transform(compressExpression);
+    expression = parseExpression(expressionText);
+
+    history.clear();
+    history.push(expression);
+    display(expression);
   } catch (error) {
     $errorAlert
       .text(error.toString())
       .css('display','block');
   }
-
-  history.clear();
-  history.push(expression);
-  display(expression);
-}
-
-function compressExpression(node, path, parent) {
-  return NODE.parenthesis.is(node) ? node.content : node;
 }
 
 function display(expression) {
@@ -151,6 +147,8 @@ function display(expression) {
     };
   });
 
+  url.updateSearchParam('eq',
+    encodeURIComponent(stripWhite(expression.toString())));
   $eqInput.val(expression.toString());
 
   $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
@@ -158,11 +156,15 @@ function display(expression) {
   tree.data(expression);
 }
 
+function stripWhite(string) {
+  return string.replace(/ /g,'');
+}
+
 function nodeEnter() {}
 function nodeMove() {}
 function nodeOut() {}
 function nodeClick(node) {
-  console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());
+  // console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());
 }
 
 function showPopup(expressionText) {

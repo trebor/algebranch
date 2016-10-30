@@ -111,15 +111,15 @@ function updateExpression(expressionText) {
   try {
     $errorAlert.css('display','none');
     expression = parseExpression(expressionText);
+
+    history.clear();
+    history.push(expression);
+    display(expression);
   } catch (error) {
     $errorAlert
       .text(error.toString())
       .css('display','block');
   }
-
-  history.clear();
-  history.push(expression);
-  display(expression);
 }
 
 function display(expression) {

@@ -137,6 +137,10 @@ class General extends AbstractTransform {
     return this[`apply${result.type}`](result, symbolMap);
   }
 
+  applyParenthesisNode(result, symbolMap) {
+    return this.apply(result.content, symbolMap);
+  }
+
   applyOperatorNode(result, symbolMap) {
     result.args.forEach((arg, i) => {
       result.args[i] = this.apply(arg, symbolMap);

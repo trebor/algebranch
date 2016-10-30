@@ -175,6 +175,23 @@ const TRANSFORM_PACKS = [
     ['-(3 + 2)', '-3 - 2'],
     ['-(3 + (2 * y))', '-3 - (2 * y)'],
   ]],
+
+  // factor
+
+  ['x * a + x * b', 'x * (a + b)', false, [
+    ['x * z + x * 12', 'x * (z + 12)'],
+    ['3 * 12 + 3 * (2 * y)', '3 * (12 + (2 * y))'],
+  ]],
+
+  ['a * x + b * x', 'x * (a + b)', false, [
+    ['z * x + 12 * x', 'x * (z + 12)'],
+    ['12 * 3 + (2 * y) * 3', '3 * (12 + (2 * y))'],
+  ]],
+
+  ['x * a + b * x', 'x * (a + b)', true, [
+    ['x * z + 12 * x', 'x * (z + 12)'],
+    ['3 * 12 + (2 * y) * 3', '3 * (12 + (2 * y))'],
+  ]],
 ];
 
 const ALL_TRANSFORMS = _(TRANSFORM_PACKS)
@@ -210,7 +227,6 @@ function testExpression(pattern, [inputStr, outputStr]) {
 
   const result = actions[0] ? actions[0].apply(input) : 'no action';
   if (outputStr != result.toString()) {
-    console.log("math.parse(inputStr)", math.parse(inputStr));
     const message = `Pattern: ${pattern.title()}\n`
       + `  Tested:     ${inputStr}\n`
       + `  Expected: ${outputStr}\n`

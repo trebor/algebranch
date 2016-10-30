@@ -11,7 +11,7 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
-  '-(a + b)',
+  '2 * x + x * 3',
 
   '6 / 3 * x == ((3 + 2) * y) / (4 + log(e)) * z',
 

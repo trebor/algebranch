@@ -192,9 +192,22 @@ const TRANSFORM_PACKS = [
     ['x * z + 12 * x', 'x * (z + 12)'],
     ['3 * 12 + (2 * y) * 3', '3 * (12 + (2 * y))'],
   ]],
+
+  // move up into top of divide
+
+  ['(x / y) * z', '(x * z) / y', false, [
+    ['2 / 5 * 3', '2 * 3 / 5'],
+    ['(3 / (2 * y)) * 3', '3 * 3 / (2 * y)'],
+  ]],
+
+  ['z * (x / y)', '(z * x) / y', false, [
+    ['3 * (2 / 5)', '3 * 2 / 5'],
+    ['3 * (3 / (2 * y))', '3 * 3 / (2 * y)'],
+  ]],
 ];
 
 const ALL_TRANSFORMS = _(TRANSFORM_PACKS)
+//  .filter(([input, output, commutative, tests, only]) => only)
   .map(([input, output, swapable]) => (swapable ? [false, true] : [false])
     .map(swap => new General(input, output, swap)))
   .flatten()

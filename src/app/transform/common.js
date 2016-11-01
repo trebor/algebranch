@@ -120,7 +120,7 @@ function equivalent(nodeA, nodeB) {
 }
 
 function parseExpression(expressionText) {
-  return math.parse(expressionText).transform(compressExpression);
+  return math.parse(expressionText); //.transform(compressExpression);
 }
 
 function compressExpression(node, path, parent) {

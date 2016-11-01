@@ -1,87 +1,102 @@
 const math = require('mathjs');
+
 import $ from 'jquery';
-const d3 = require('d3');
-const d3Kit = require('d3kit');
+import { select } from 'd3-selection';
+import { transition } from 'd3-transition';
+import { tree, hierarchy } from 'd3-hierarchy';
+import { SvgChart, helper } from 'd3kit';
 import {EXPRESSION_TO_MATHJAX_INLINE, ComputeInlineExpressionSize} from './util.js';
+
+const { deepExtend } = helper;
 
 export const DEFAULT_OPTIONS = {
   margin: { top: 50, right: 30, bottom: 80, left: 30 },
-  offset: [0, 0],
   initialWidth: 600,
   initialHeight: 370,
   circleRadius: 6,
   nodePadding: {x: 14, y: 8},
   nodeId: (d, i) => i,
-  transitionDuration: 1000,
+  expressionTransDur: 2000,
+  previewTransDur: 100,
   previewSpace: 32,
   fontSize: 20,
 };
 
-const EVENTS = [
-  'nodeMouseenter', 'nodeMousemove', 'nodeMouseout', 'nodeClick',
-  'actionMouseenter', 'actionMousemove', 'actionMouseout', 'actionClick'
-];
+class Tree extends SvgChart {
 
-export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => {
-  const options = skeleton.options();
-  const layerOrganizer = skeleton.getLayerOrganizer();
-  const dispatch = skeleton.getDispatcher();
-  const tree = d3.tree()
-    .nodeSize([20, 20])
-    .separation((a, b) => {
-      const aLen = a.data.toString().length;
-      const bLen = b.data.toString().length;
-      return Math.log(aLen + bLen);
-    });
+  constructor(selector, options) {
+    super(selector, options);
 
-  const visualize = _.debounce(visualizeDebounced, 100);
+    this.tree = tree()
+      .nodeSize([20, 20])
+      .separation((a, b) => {
+        const aLen = a.data.toString().length;
+        const bLen = b.data.toString().length;
+        return Math.log(aLen + bLen);
+      });
 
-  skeleton
-    .autoResize('both')
-    .on('options', visualize)
-    .on('data', visualize)
-    .on('resize', resize);
+    this.layers.create(['links', 'nodes']);
 
-  skeleton.resizeToFitContainer('both');
+    ['resize', 'showPreview', 'updateExpression', 'visualize']
+      .map(methodName => this[methodName] = this[methodName].bind(this));
 
-  const rootG = d3.select('#tree > svg > g');
-  layerOrganizer.create(['links', 'nodes']);
-  const linkLayer = rootG.select('.links-layer');
-  const nodeLayer = rootG.select('.nodes-layer');
+    this.on('resize.default', _.debounce(this.resize, 100));
+    this.on('data.default', _.debounce(this.visualize, 100));
+    this.on('options.default', _.debounce(this.visualize, 100));
 
-  function resize() {
-    tree.size([skeleton.getInnerWidth(), skeleton.getInnerHeight()]);
-    visualize();
+    this.fit({
+  	  width: '100%',
+  	  height: '100%',
+    }, true);
   }
 
-  function visualizeDebounced() {
-    if (!(skeleton.hasData() && skeleton.hasNonZeroArea())) return;
+  static getCustomEventNames() {
+    return [
+      'nodeMouseenter', 'nodeMousemove', 'nodeMouseout', 'nodeClick',
+      'actionMouseenter', 'actionMousemove', 'actionMouseout', 'actionClick'
+    ];
+  }
 
-    const root = d3.hierarchy(skeleton.data(), (node) => {
+  static getDefaultOptions() {
+    return deepExtend(super.getDefaultOptions(), DEFAULT_OPTIONS);
+  }
+
+  resize() {
+    this.tree.size([this.getInnerWidth(), this.getInnerHeight()]);
+    this.visualize();
+  }
+
+  visualize() {
+    if (!(this.hasData() && this.hasNonZeroArea())) return;
+
+    const root = hierarchy(this.data(), (node) => {
       return (node.args || [])
-        .map(establishDatum)
+        .map(this.establishDatum)
         .filter(child => child.shouldRender());
     });
 
-    tree(root);
-
-    updateLinks(root);
-    updateNodes(root);
+    this.tree(root);
+    this.updateLinks(root);
+    this.updateNodes(root);
   }
 
-  function updateLinks(root) {
-    const update = linkLayer.selectAll('.link')
-      .data(root.descendants().slice(1), options.nodeId);
+  updateLinks(root) {
+
+    const linkTrans = transition()
+      .duration(this.options().expressionTransDur);
+
+    const update = this.layers.get('links')
+      .selectAll('.link')
+      .data(root.descendants().slice(1), this.options().nodeId);
 
     const enter = update
       .enter()
       .append('path')
-      .attr('class', 'link');
+      .classed('link', true);
 
     update
       .merge(enter)
-      .transition()
-      .duration(options.transitionDuration)
+      .transition(linkTrans)
       .attr('d', function(d) {
         return 'M' + d.x + ',' + d.y
           + 'C' + d.x + ',' +  (d.y + d.parent.y) / 2
@@ -93,23 +108,31 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .remove();
   }
 
-  function updateNodes(root) {
+  updateNodes(root) {
 
-    const update = nodeLayer
+    const { updateExpression } = this;
+
+    const nodeUpdateTrans = transition()
+      .duration(this.options().expressionTransDur);
+
+    const nodeExitTrans = transition()
+      .duration(this.options().expressionTransDur);
+
+    const update = this.layers.get('nodes')
       .selectAll('g.node')
-      .data(root.descendants(), options.nodeId);
+      .data(root.descendants(), this.options().nodeId);
 
     const enter = update
       .enter()
       .append('g')
       .classed('node', true)
       .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
-      .on('mouseenter', d => dispatch.call('nodeMouseenter', this, d))
-      .on('mousemove', d => dispatch.call('nodeMousemove', this, d))
-      .on('mouseout', d => dispatch.call('nodeMouseout', this, d))
-      .on('click', d => dispatch.call('nodeClick', this, d));
+      .on('mouseenter', d => this.dispatcher.call('nodeMouseenter', this, d))
+      .on('mousemove', d => this.dispatcher.call('nodeMousemove', this, d))
+      .on('mouseout', d => this.dispatcher.call('nodeMouseout', this, d))
+      .on('click', d => this.dispatcher.call('nodeClick', this, d));
 
-    updateActions(enter, update);
+    this.updateActions(enter, update);
 
     const expressionEnter = enter
       .append('g')
@@ -125,9 +148,9 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .classed('node-expression', true)
       .classed('expression-box', true)
       .style('position', 'fixed')
-      .style('font-size', options.fontSize + 'px')
+      .style('font-size', this.options().fontSize + 'px')
       .merge(update.select('.node-expression'))
-      .each(updateExpression);
+      .each(function(d) {updateExpression(d, this);});
 
     expressionEnter.merge(update)
       .select('.node-expression-g')
@@ -146,7 +169,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .classed('action-preview', true)
       .classed('expression-box', true)
       .style('position', 'fixed')
-      .style('font-size', options.fontSize + 'px')
+      .style('font-size', this.options().fontSize + 'px')
       .merge(update.select('.action-preview'))
       .style('visibility', 'hidden');
 
@@ -161,14 +184,15 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
 
     update
       .merge(enter)
-      .transition()
-      .duration(options.transitionDuration)
-      .attr('transform', d => 'translate(' + [d.x, d.y] + ')');
+      .transition(nodeUpdateTrans)
+      .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
+      .style('opacity', 1)
+      .selectAll('body')
+      .style('opacity', 1);
 
     const exit = update
       .exit()
-      .transition()
-      .duration(options.transitionDuration)
+      .transition(nodeExitTrans)
       .attr('transform', (d) => {
         const {x, y} = root.descendants()
           .filter(node => d.parent
@@ -185,8 +209,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .style('opacity', 0);
   }
 
-
-  function updateActions(enter, update) {
+  updateActions(enter, update) {
     const actionGroup = enter.append('g')
       .classed('action-group', true);
 
@@ -198,35 +221,34 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       .enter()
       .append('circle')
       .classed('action', true)
-      .attr('r', options.circleRadius)
+      .attr('r', this.options().circleRadius)
       .style('fill', 'red')
-      .on('mouseenter', d => dispatch.call('actionMouseenter', this, d))
-      .on('mousemove', d => dispatch.call('actionMousemove', this, d))
-      .on('mouseout', d => dispatch.call('actionMouseout', this, d))
-      .on('click', d => dispatch.call('actionClick', this, d));
+      .on('mouseenter', d => this.dispatcher.call('actionMouseenter', this, d))
+      .on('mousemove', d => this.dispatcher.call('actionMousemove', this, d))
+      .on('mouseout', d => this.dispatcher.call('actionMouseout', this, d))
+      .on('click', d => this.dispatcher.call('actionClick', this, d));
 
     actionUpdate
       .exit()
       .remove();
 
     actionUpdate.merge(actionEnter)
-      .transition()
-      .duration(options.transitionDuration)
+      .transition(this.expressionTrans)
       .attr('cx', (d, i, actions) => {
-        return i * options.circleRadius * 3
-          - ((actions.length - 1) * options.circleRadius * 3) / 2;
+        return i * this.options().circleRadius * 3
+          - ((actions.length - 1) * this.options().circleRadius * 3) / 2;
       });
   }
 
-  function updateExpression(node) {
-    const $div = $(this);
+  updateExpression(node, element) {
+    const $div = $(element);
     const $body = $div.parent();
     const $fo = $body.parent();
 
     $div.css('visibility', 'hidden');
 
-    $div.text(EXPRESSION_TO_MATHJAX_INLINE(establishDatum(node.data)));
-    MathJax.Hub.Typeset(this, (d) => {
+    $div.text(EXPRESSION_TO_MATHJAX_INLINE(this.establishDatum(node.data)));
+    MathJax.Hub.Typeset(element, (d) => {
       const mjxSize = ComputeInlineExpressionSize($div);
       $body
         .width(mjxSize.width)
@@ -242,24 +264,29 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       $fo.parent().parent()
         .find('.action-group')
         .attr('transform', 'translate('
-          + [0, -dy + options.circleRadius * 2.5]
+          + [0, -dy + this.options().circleRadius * 2.5]
           + ')');
 
       $div.css('visibility', 'visible');
     });
   }
 
-  function previewAction(action) {
-    nodeLayer.selectAll('.node')
+  previewAction(action) {
+    const { showPreview } = this;
+
+    this.layers.get('nodes').selectAll('.node')
       .filter(d => d.data === action.node)
-      .each(function(d) {showPreview.call(this, action);});
+      .each(function() {showPreview(action, this);});
   }
 
-  function hidePreview(action) {
-    nodeLayer.selectAll('.node')
+  hidePreview(action) {
+    const hidePrevTrans = transition()
+      .duration(this.options().previewTransDur);
+
+    this.layers.get('nodes').selectAll('.node')
       .filter(d => d.data === action.node)
       .each(function() {
-        const node = d3.select(this);
+        const node = select(this);
 
         node.select('.action-preview')
           .style('visibility', 'hidden');
@@ -268,16 +295,19 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
           .style('visibility', 'hidden')
 
         node.select('.node-expression-g')
-          .transition()
+          .transition(hidePrevTrans)
           .attr('transform', 'translate(0, 0)');
       });
   }
 
-  function choosePreview(action) {
-    nodeLayer.selectAll('.node')
+  choosePreview(action) {
+    const choosePrevTrans = transition()
+      .duration(this.options().previewTransDur);
+
+    this.layers.get('nodes').selectAll('.node')
       .filter(d => d.data === action.node)
       .each(function() {
-        const node = d3.select(this);
+        const node = select(this);
 
         node.select('.node-expression')
           .style('visibility', 'hidden');
@@ -285,13 +315,14 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
           .style('visibility', 'hidden');
 
         node.select('.action-preview-g')
-          .transition()
+          .transition(choosePrevTrans)
           .attr('transform', 'translate(0, 0)');
       });
   }
 
-  function showPreview(action) {
-    const $node = $(this);
+  showPreview(action, element) {
+
+    const $node = $(element);
     const $body = $node.find('.action-preview-body');
     const $expressionG = $node.find('.node-expression-g');
     const $expressionDiv = $node.find('.node-expression');
@@ -315,7 +346,7 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
 
       const exWidth = $expressionDiv.outerWidth();
       const prWidth = $div.outerWidth();
-      const width = exWidth + prWidth + options.previewSpace;
+      const width = exWidth + prWidth + this.options().previewSpace;
 
       const expTrans = [(width - exWidth) / -2, 0];
       const prevTrans = [(width - prWidth) / 2, 0];
@@ -323,18 +354,21 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       $previewG
         .attr('transform', 'translate(' + prevTrans + ')');
 
-      d3.select($expressionG.get(0))
-        .transition()
-        .attr('transform', 'translate(' + expTrans + ')')
+      const showPrevTrans = transition()
+        .duration(this.options().previewTransDur)
         .on('end', () => {
           $div.css('visibility', 'visible');
           $arrow
             .attr('transform', 'translate(' + [dx, 0] + ')')
             .css('visibility', 'visible');
         });
+
+      select($expressionG.get(0))
+        .transition(showPrevTrans)
+        .attr('transform', 'translate(' + expTrans + ')');
     });
 
-    nodeLayer.selectAll('.node')
+    this.layers.get('nodes').selectAll('.node')
       .sort((a, b) => {
         if (a.data == action.target) {
           return 1;
@@ -346,26 +380,11 @@ export default d3Kit.factory.createChart(DEFAULT_OPTIONS, EVENTS, (skeleton) => 
       });
   }
 
-  function establishNodeName(node) {
-    const datum = establishDatum(node.data);
-    return datum.op || datum.value || datum.name;
-  }
-
-  function establishNodeChildren(node) {
-    const children = establishDatum(node).args;
-    return children ? children.filter(d => d.shouldRender()) : null;
-  }
-
-  function establishDatum(node) {
+  establishDatum(node) {
     let result = node;
     while (result.content) {result = result.content;}
     return result;
   }
+}
 
-  return skeleton.mixin({
-    visualize,
-    previewAction,
-    hidePreview,
-    choosePreview,
-  });
-});
+export default Tree;

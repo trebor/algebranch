@@ -1,6 +1,7 @@
-import {EXPRESSION_TO_MATHJAX_INLINE} from './util.js';
 import $ from 'jquery';
-const d3 = require('d3');
+import { select } from 'd3-selection';
+import { dispatch } from 'd3-dispatch';
+import {EXPRESSION_TO_MATHJAX_INLINE} from './util.js';
 
 const KEY = {
   LEFT_ARROW:  37,
@@ -15,7 +16,7 @@ class History {
     this.$frames = this.$element.find('#frames');
     this.history = initialHistory || [];
     this.future = initialFuture || [];
-    this.dispatcher = d3.dispatch('select', 'back', 'forward');
+    this.dispatcher = dispatch('select', 'back', 'forward');
     this.$backButton = this.$element.find('#back');
     this.$forwardButton = this.$element.find('#forward');
 
@@ -87,7 +88,7 @@ class History {
     this.$backButton.prop('disabled', this.history.length <= 1);
     this.$forwardButton.prop('disabled', this.future.length == 0);
 
-    const update = d3.select($frames.get(0)).selectAll('.frame')
+    const update = select($frames.get(0)).selectAll('.frame')
       .data(this.history.concat(this.future));
 
     const enter = update.enter()
@@ -98,7 +99,7 @@ class History {
       .text(EXPRESSION_TO_MATHJAX_INLINE)
       .each(function() {
         MathJax.Hub.Typeset(this, () => {
-          d3.select(this).style('visibility', 'visible');
+          select(this).style('visibility', 'visible');
           $frames.animate({
             scrollTop: $frames.prop("scrollHeight")
           }, 1000);

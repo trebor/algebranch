@@ -4,7 +4,7 @@ import Tree from './tree';
 import History from './History';
 import url from 'urljs';
 
-const d3 = require('d3');
+
 const math = require('mathjs');
 let started = false;
 import {EXPRESSION_TO_MATHJAX, EXPRESSION_TO_MATHJAX_INLINE, ComputeExpressionSize} from './util.js';
@@ -13,6 +13,8 @@ import establishNodeActions from './transform/AllTransforms.js';
 const TEST_EXPRESSIONS = [
 
   '2 * x + x * 3 == (sqrt(pi^2) * y) / (4 + log(e)) * z',
+
+  'x * y',
 
   'x * 5 / x == y * (3 * x + 7) / (3 * x + 7)',
 
@@ -169,8 +171,8 @@ function nodeClick(node) {
 
 function showPopup(expressionText) {
   const expression = math.parse(expressionText);
-  const mouseX = d3.event.clientX;
-  const mouseY = d3.event.clientY;
+  const mouseX = null; // d3.event.clientX;
+  const mouseY = null; // d3.event.clientY;
   const isLeft = mouseX < $body.width() / 2;
   const isUp = mouseY < $body.height() / 2;
 

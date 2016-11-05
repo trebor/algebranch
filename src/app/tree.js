@@ -1,5 +1,4 @@
 import $ from 'jquery';
-import { queue } from 'd3-queue';
 import { select } from 'd3-selection';
 import { transition } from 'd3-transition';
 import { tree, hierarchy } from 'd3-hierarchy';
@@ -26,7 +25,6 @@ class Tree extends SvgChart {
   constructor(selector, options) {
     super(selector, options);
 
-    this.renderQueue = queue(1);
     this.tree = tree()
       .nodeSize([20, 20])
       .separation((a, b) => {
@@ -271,30 +269,24 @@ class Tree extends SvgChart {
   }
 
   previewAction(action) {
-    const { showPreview, renderQueue } = this;
+    const { showPreview } = this;
 
     this.layers.get('nodes').selectAll('.node')
       .filter(d => d.data === action.node)
-      .each(function() {
-        renderQueue.defer(showPreview, action, this);
-      });
+      .each(function() {showPreview(action, this);});
   }
 
   unpreviewAction(action) {
-    const { hidePreview, renderQueue } = this;
+    const { hidePreview } = this;
 
     this.layers.get('nodes').selectAll('.node')
       .filter(d => d.data === action.node)
-      .each(function() {
-        renderQueue.defer(hidePreview, action, this);
-      });
+      .each(function() {hidePreview(action, this);});
   }
 
-  hidePreview(action, element, done) {
+  hidePreview(action, element) {
     const hidePrevTrans = transition()
-      .duration(this.options().previewTransDur)
-      .on('interrupt', done)
-      .on('end', done);
+      .duration(this.options().previewTransDur);
 
     this.layers.get('nodes').selectAll('.node')
       .filter(d => d.data === action.node)
@@ -313,7 +305,7 @@ class Tree extends SvgChart {
       });
   }
 
-  showPreview(action, element, done) {
+  showPreview(action, element) {
     const $node = $(element);
     const $body = $node.find('.action-preview-body');
     const $expressionG = $node.find('.node-expression-g');
@@ -347,14 +339,11 @@ class Tree extends SvgChart {
 
       const showPrevTrans = transition()
         .duration(this.options().previewTransDur)
-        .on('interrupt', done)
         .on('end', () => {
           $div.css('visibility', 'visible');
           $arrow
             .attr('transform', 'translate(' + [dx, 0] + ')')
             .css('visibility', 'visible');
-
-          done();
         });
 
       select($expressionG.get(0))

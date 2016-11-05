@@ -1,5 +1,3 @@
-const math = require('mathjs');
-
 import $ from 'jquery';
 import { queue } from 'd3-queue';
 import { select } from 'd3-selection';
@@ -147,6 +145,7 @@ class Tree extends SvgChart {
       .style('opacity', 1)
       .classed('node-expression-body', true)
       .append('div')
+      .attr('id', d => 'id' + d.data.custom)
       .classed('node-expression', true)
       .classed('expression-box', true)
       .style('position', 'fixed')

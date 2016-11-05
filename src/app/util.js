@@ -17,9 +17,16 @@ export function applyExpression($element, expression, isInline, callback) {
     : ComputeExpressionSize;
 
   $element.text(toMathJax(expression));
-  MathJax.Hub.Typeset($element.get(0), () => {
-    callback(computeSize($element));
-  });
+  const id = '#' + $element.attr('id');
+
+  MathJax.Hub.Queue(
+    [
+      'Typeset',
+      MathJax.Hub,
+      $element.get(0),
+      () => {callback(computeSize($element))},
+    ],
+  );
 }
 
 export function ComputeExpressionSize($element) {

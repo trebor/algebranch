@@ -12,9 +12,9 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
-  '2 * x + x * 3 == (sqrt(pi^2) * y) / (4 + log(e)) * z',
+  // 'x * y',
 
-  'x * y',
+  '2 * x + x * 3 == (sqrt(pi^2) * y) / (4 + log(e)) * z',
 
   'x * 5 / x == y * (3 * x + 7) / (3 * x + 7)',
 

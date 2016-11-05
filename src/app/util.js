@@ -19,7 +19,7 @@ export function applyExpression($element, expression, isInline, callback) {
   $element.text(toMathJax(expression));
   const id = '#' + $element.attr('id');
 
-  MathJax.Hub.Queue(
+  MathJax.Callback.Queue(
     [
       'Typeset',
       MathJax.Hub,

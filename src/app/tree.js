@@ -14,7 +14,7 @@ export const DEFAULT_OPTIONS = {
   circleRadius: 6,
   nodePadding: {x: 14, y: 8},
   nodeId: (d, i) => i,
-  expressionTransDur: 2000,
+  expressionTransDur: 1000,
   previewTransDur: 100,
   previewSpace: 32,
   fontSize: 20,

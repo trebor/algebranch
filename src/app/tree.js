@@ -1,11 +1,12 @@
 const math = require('mathjs');
 
 import $ from 'jquery';
+import { queue } from 'd3-queue';
 import { select } from 'd3-selection';
 import { transition } from 'd3-transition';
 import { tree, hierarchy } from 'd3-hierarchy';
+import { applyExpression } from './util.js';
 import { SvgChart, helper } from 'd3kit';
-import {EXPRESSION_TO_MATHJAX_INLINE, ComputeInlineExpressionSize} from './util.js';
 
 const { deepExtend } = helper;
 
@@ -27,6 +28,7 @@ class Tree extends SvgChart {
   constructor(selector, options) {
     super(selector, options);
 
+    this.renderQueue = queue(1);
     this.tree = tree()
       .nodeSize([20, 20])
       .separation((a, b) => {
@@ -37,7 +39,7 @@ class Tree extends SvgChart {
 
     this.layers.create(['links', 'nodes']);
 
-    ['resize', 'showPreview', 'updateExpression', 'visualize']
+    ['resize', 'showPreview', 'hidePreview', 'updateExpression', 'visualize']
       .map(methodName => this[methodName] = this[methodName].bind(this));
 
     this.on('resize.default', _.debounce(this.resize, 100));
@@ -247,9 +249,7 @@ class Tree extends SvgChart {
 
     $div.css('visibility', 'hidden');
 
-    $div.text(EXPRESSION_TO_MATHJAX_INLINE(this.establishDatum(node.data)));
-    MathJax.Hub.Typeset(element, (d) => {
-      const mjxSize = ComputeInlineExpressionSize($div);
+    applyExpression($div, this.establishDatum(node.data), true, mjxSize => {
       $body
         .width(mjxSize.width)
         .height(mjxSize.height);
@@ -272,16 +272,30 @@ class Tree extends SvgChart {
   }
 
   previewAction(action) {
-    const { showPreview } = this;
+    const { showPreview, renderQueue } = this;
 
     this.layers.get('nodes').selectAll('.node')
       .filter(d => d.data === action.node)
-      .each(function() {showPreview(action, this);});
+      .each(function() {
+        renderQueue.defer(showPreview, action, this);
+      });
   }
 
-  hidePreview(action) {
+  unpreviewAction(action) {
+    const { hidePreview, renderQueue } = this;
+
+    this.layers.get('nodes').selectAll('.node')
+      .filter(d => d.data === action.node)
+      .each(function() {
+        renderQueue.defer(hidePreview, action, this);
+      });
+  }
+
+  hidePreview(action, element, done) {
     const hidePrevTrans = transition()
-      .duration(this.options().previewTransDur);
+      .duration(this.options().previewTransDur)
+      .on('interrupt', done)
+      .on('end', done);
 
     this.layers.get('nodes').selectAll('.node')
       .filter(d => d.data === action.node)
@@ -300,28 +314,7 @@ class Tree extends SvgChart {
       });
   }
 
-  choosePreview(action) {
-    const choosePrevTrans = transition()
-      .duration(this.options().previewTransDur);
-
-    this.layers.get('nodes').selectAll('.node')
-      .filter(d => d.data === action.node)
-      .each(function() {
-        const node = select(this);
-
-        node.select('.node-expression')
-          .style('visibility', 'hidden');
-        node.select('.arrow')
-          .style('visibility', 'hidden');
-
-        node.select('.action-preview-g')
-          .transition(choosePrevTrans)
-          .attr('transform', 'translate(0, 0)');
-      });
-  }
-
-  showPreview(action, element) {
-
+  showPreview(action, element, done) {
     const $node = $(element);
     const $body = $node.find('.action-preview-body');
     const $expressionG = $node.find('.node-expression-g');
@@ -332,9 +325,8 @@ class Tree extends SvgChart {
     const $arrow = $node.find('.arrow');
 
     $div.css('visibility', 'hidden');
-    $div.text(EXPRESSION_TO_MATHJAX_INLINE(action.result));
-    MathJax.Hub.Typeset($div.get(0), (d) => {
-      const mjxSize = ComputeInlineExpressionSize($div);
+
+    applyExpression($div, this.establishDatum(action.result), true, mjxSize => {
       $body
         .width(mjxSize.width)
         .height(mjxSize.height);
@@ -356,11 +348,14 @@ class Tree extends SvgChart {
 
       const showPrevTrans = transition()
         .duration(this.options().previewTransDur)
+        .on('interrupt', done)
         .on('end', () => {
           $div.css('visibility', 'visible');
           $arrow
             .attr('transform', 'translate(' + [dx, 0] + ')')
             .css('visibility', 'visible');
+
+          done();
         });
 
       select($expressionG.get(0))
@@ -377,6 +372,26 @@ class Tree extends SvgChart {
           return -1;
         }
         return 0;
+      });
+  }
+
+  choosePreview(action) {
+    const choosePrevTrans = transition()
+      .duration(this.options().previewTransDur);
+
+    this.layers.get('nodes').selectAll('.node')
+      .filter(d => d.data === action.node)
+      .each(function() {
+        const node = select(this);
+
+        node.select('.node-expression')
+          .style('visibility', 'hidden');
+        node.select('.arrow')
+          .style('visibility', 'hidden');
+
+        node.select('.action-preview-g')
+          .transition(choosePrevTrans)
+          .attr('transform', 'translate(0, 0)');
       });
   }
 

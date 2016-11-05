@@ -54,6 +54,7 @@
     "d3-hierarchy": "^1.0.2",
     "d3-selection": "^1.0.2",
     "d3-transition": "^1.0.3",
+    "d3kit": "^3.1.1",
     "mathjax-node": "^0.5.1",
     "urljs": "^2.3.1"
   }

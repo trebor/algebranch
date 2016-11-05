@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import { select } from 'd3-selection';
 import { dispatch } from 'd3-dispatch';
-import {EXPRESSION_TO_MATHJAX_INLINE} from './util.js';
+import { applyExpression, EXPRESSION_TO_MATHJAX_INLINE } from './util.js';
 
 const KEY = {
   LEFT_ARROW:  37,
@@ -96,9 +96,8 @@ class History {
       .classed('frame', true)
       .classed('expression-box', true)
       .style('visibility', 'hidden')
-      .text(EXPRESSION_TO_MATHJAX_INLINE)
-      .each(function() {
-        MathJax.Hub.Typeset(this, () => {
+      .each(function(d) {
+        applyExpression($(this), d, true, () => {
           select(this).style('visibility', 'visible');
           $frames.animate({
             scrollTop: $frames.prop("scrollHeight")

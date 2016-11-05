@@ -12,9 +12,9 @@ import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 
-  '2 * x + x * 3 == (sqrt(pi^2) * y) / (4 + log(e)) * z',
+  // 'x * y',
 
-  'x * y',
+  '2 * x + x * 3 == (sqrt(pi^2) * y) / (4 + log(e)) * z',
 
   'x * 5 / x == y * (3 * x + 7) / (3 * x + 7)',
 
@@ -35,9 +35,9 @@ const interval = setInterval((x) => {
   if (window.MathJax) {
     clearInterval(interval);
     MathJax.Hub.signal.Interest(
-      function (message) {
+      function (message, a, b) {
         if (!started && message[0] == 'End Process') {
-          start();
+          MathJax.Callback.Queue([start]);
         }
       }
     );
@@ -151,10 +151,9 @@ function display(expression) {
 
   url.updateSearchParam('eq',
     encodeURIComponent(stripWhite(expression.toString())));
-  $eqInput.val(expression.toString());
-
-  $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
-  MathJax.Hub.Typeset($eqNode.get(0));
+  // $eqInput.val(expression.toString());
+  // $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
+  // MathJax.Hub.Typeset($eqNode.get(0));
   tree.data(expression);
 }
 
@@ -165,44 +164,7 @@ function stripWhite(string) {
 function nodeEnter() {}
 function nodeMove() {}
 function nodeOut() {}
-function nodeClick(node) {
-  // console.log(node.data.custom, node.data.toString(), node.data.getIdentifier());
-}
-
-function showPopup(expressionText) {
-  const expression = math.parse(expressionText);
-  const mouseX = null; // d3.event.clientX;
-  const mouseY = null; // d3.event.clientY;
-  const isLeft = mouseX < $body.width() / 2;
-  const isUp = mouseY < $body.height() / 2;
-
-  $popup.width(200);
-  $popup.height(200);
-
-  $popup.text(EXPRESSION_TO_MATHJAX(expression));
-  MathJax.Hub.Typeset($popup.get(0), () => {
-    const mjxSize = ComputeExpressionSize($popup);
-
-    $popup.width(mjxSize.width);
-    $popup.height(mjxSize.height);
-
-    const offset = 30;
-
-    const width = $popup.outerWidth();
-    const height = $popup.outerHeight();
-
-    const x = mouseX + (isLeft ? offset : -(width + offset));
-    const y = mouseY + (isUp ? offset : -(height + offset));
-
-    $popup.css('left', x + 'px');
-    $popup.css('top', y + 'px');
-    $popup.css('visibility', 'visible');
-  });
-}
-
-function hidePopup() {
-  $popup.css('visibility', 'hidden');
-}
+function nodeClick() {}
 
 function genUuid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

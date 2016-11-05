@@ -1,11 +1,9 @@
-const math = require('mathjs');
-
 import $ from 'jquery';
 import { select } from 'd3-selection';
 import { transition } from 'd3-transition';
 import { tree, hierarchy } from 'd3-hierarchy';
+import { applyExpression } from './util.js';
 import { SvgChart, helper } from 'd3kit';
-import {EXPRESSION_TO_MATHJAX_INLINE, ComputeInlineExpressionSize} from './util.js';
 
 const { deepExtend } = helper;
 
@@ -16,7 +14,7 @@ export const DEFAULT_OPTIONS = {
   circleRadius: 6,
   nodePadding: {x: 14, y: 8},
   nodeId: (d, i) => i,
-  expressionTransDur: 2000,
+  expressionTransDur: 1000,
   previewTransDur: 100,
   previewSpace: 32,
   fontSize: 20,
@@ -37,7 +35,7 @@ class Tree extends SvgChart {
 
     this.layers.create(['links', 'nodes']);
 
-    ['resize', 'showPreview', 'updateExpression', 'visualize']
+    ['resize', 'showPreview', 'hidePreview', 'updateExpression', 'visualize']
       .map(methodName => this[methodName] = this[methodName].bind(this));
 
     this.on('resize.default', _.debounce(this.resize, 100));
@@ -145,6 +143,7 @@ class Tree extends SvgChart {
       .style('opacity', 1)
       .classed('node-expression-body', true)
       .append('div')
+      .attr('id', d => 'id' + d.data.custom)
       .classed('node-expression', true)
       .classed('expression-box', true)
       .style('position', 'fixed')
@@ -247,9 +246,7 @@ class Tree extends SvgChart {
 
     $div.css('visibility', 'hidden');
 
-    $div.text(EXPRESSION_TO_MATHJAX_INLINE(this.establishDatum(node.data)));
-    MathJax.Hub.Typeset(element, (d) => {
-      const mjxSize = ComputeInlineExpressionSize($div);
+    applyExpression($div, this.establishDatum(node.data), true, mjxSize => {
       $body
         .width(mjxSize.width)
         .height(mjxSize.height);
@@ -279,7 +276,15 @@ class Tree extends SvgChart {
       .each(function() {showPreview(action, this);});
   }
 
-  hidePreview(action) {
+  unpreviewAction(action) {
+    const { hidePreview } = this;
+
+    this.layers.get('nodes').selectAll('.node')
+      .filter(d => d.data === action.node)
+      .each(function() {hidePreview(action, this);});
+  }
+
+  hidePreview(action, element) {
     const hidePrevTrans = transition()
       .duration(this.options().previewTransDur);
 
@@ -300,28 +305,7 @@ class Tree extends SvgChart {
       });
   }
 
-  choosePreview(action) {
-    const choosePrevTrans = transition()
-      .duration(this.options().previewTransDur);
-
-    this.layers.get('nodes').selectAll('.node')
-      .filter(d => d.data === action.node)
-      .each(function() {
-        const node = select(this);
-
-        node.select('.node-expression')
-          .style('visibility', 'hidden');
-        node.select('.arrow')
-          .style('visibility', 'hidden');
-
-        node.select('.action-preview-g')
-          .transition(choosePrevTrans)
-          .attr('transform', 'translate(0, 0)');
-      });
-  }
-
   showPreview(action, element) {
-
     const $node = $(element);
     const $body = $node.find('.action-preview-body');
     const $expressionG = $node.find('.node-expression-g');
@@ -332,9 +316,8 @@ class Tree extends SvgChart {
     const $arrow = $node.find('.arrow');
 
     $div.css('visibility', 'hidden');
-    $div.text(EXPRESSION_TO_MATHJAX_INLINE(action.result));
-    MathJax.Hub.Typeset($div.get(0), (d) => {
-      const mjxSize = ComputeInlineExpressionSize($div);
+
+    applyExpression($div, this.establishDatum(action.result), true, mjxSize => {
       $body
         .width(mjxSize.width)
         .height(mjxSize.height);
@@ -377,6 +360,26 @@ class Tree extends SvgChart {
           return -1;
         }
         return 0;
+      });
+  }
+
+  choosePreview(action) {
+    const choosePrevTrans = transition()
+      .duration(this.options().previewTransDur);
+
+    this.layers.get('nodes').selectAll('.node')
+      .filter(d => d.data === action.node)
+      .each(function() {
+        const node = select(this);
+
+        node.select('.node-expression')
+          .style('visibility', 'hidden');
+        node.select('.arrow')
+          .style('visibility', 'hidden');
+
+        node.select('.action-preview-g')
+          .transition(choosePrevTrans)
+          .attr('transform', 'translate(0, 0)');
       });
   }
 

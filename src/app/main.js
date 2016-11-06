@@ -55,15 +55,15 @@ let expression = null;
 const history = new History('#history')
   .on('select', ex => {
     history.pop(ex);
-    display(expression = ex);
+    display(expression = ex, ture);
   })
   .on('back', () => {
     history.pop();
-    display(expression = history.peek());
+    display(expression = history.peek(), true);
   })
   .on('forward', () => {
     history.forward();
-    display(expression = history.peek());
+    display(expression = history.peek(), true);
   });
 
 $eqInput.on('change', d => {
@@ -89,18 +89,15 @@ function start() {
 }
 
 function actionEnter(action) {
-  if (!action.applied) {
-    tree.previewAction(action);
-  }
+  tree.previewAction(action);
 }
 
 function actionOut(action) {
-  if (!action.applied) {
-    tree.unpreviewAction(action);
-  }
+  tree.unpreviewAction(action);
 }
 
 function actionClick(action) {
+  action.applied = true;
   tree.choosePreview(action);
   expression = action.apply(expression);
   history.push(expression);
@@ -128,11 +125,7 @@ function updateExpression(expressionText) {
   }
 }
 
-function display(expression) {
-  const $eqNode = $('#eq');
-
-  // add content to expression for rendering
-
+function prep(expression) {
   expression.traverse((node, path, parent) => {
     node.custom = node.custom || genUuid();
     node.actions = establishNodeActions(node, path, parent);
@@ -148,12 +141,17 @@ function display(expression) {
       return render;
     };
   });
+}
+
+function display(expression, bypassPrep) {
+
+  if (!bypassPrep) {
+    prep(expression);
+  }
 
   url.updateSearchParam('eq',
     encodeURIComponent(stripWhite(expression.toString())));
-  // $eqInput.val(expression.toString());
-  // $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
-  // MathJax.Hub.Typeset($eqNode.get(0));
+  $eqInput.val(expression.toString());
   tree.data(expression);
 }
 

@@ -223,7 +223,6 @@ class Tree extends SvgChart {
       .append('circle')
       .classed('action', true)
       .attr('r', this.options().circleRadius)
-      .style('fill', 'red')
       .on('mouseenter', d => this.dispatcher.call('actionMouseenter', this, d))
       .on('mousemove', d => this.dispatcher.call('actionMousemove', this, d))
       .on('mouseout', d => this.dispatcher.call('actionMouseout', this, d))
@@ -235,6 +234,7 @@ class Tree extends SvgChart {
 
     actionUpdate.merge(actionEnter)
       .transition(this.expressionTrans)
+      .style('fill', d => d.applied ? 'grey': 'red')
       .attr('cx', (d, i, actions) => {
         return i * this.options().circleRadius * 3
           - ((actions.length - 1) * this.options().circleRadius * 3) / 2;

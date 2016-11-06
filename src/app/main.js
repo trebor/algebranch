@@ -55,7 +55,7 @@ let expression = null;
 const history = new History('#history')
   .on('select', ex => {
     history.pop(ex);
-    display(expression = ex, ture);
+    display(expression = ex, true);
   })
   .on('back', () => {
     history.pop();

@@ -96,7 +96,7 @@ function actionEnter(action) {
 
 function actionOut(action) {
   if (!action.applied) {
-    tree.hidePreview(action);
+    tree.unpreviewAction(action);
   }
 }
 

@@ -17,8 +17,6 @@ export function applyExpression($element, expression, isInline, callback) {
     : ComputeExpressionSize;
 
   $element.text(toMathJax(expression));
-  const id = '#' + $element.attr('id');
-
   MathJax.Callback.Queue(
     [
       'Typeset',

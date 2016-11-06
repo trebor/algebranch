@@ -151,9 +151,7 @@ function display(expression) {
 
   url.updateSearchParam('eq',
     encodeURIComponent(stripWhite(expression.toString())));
-  // $eqInput.val(expression.toString());
-  // $eqNode.text(EXPRESSION_TO_MATHJAX(expression));
-  // MathJax.Hub.Typeset($eqNode.get(0));
+  $eqInput.val(expression.toString());
   tree.data(expression);
 }
 

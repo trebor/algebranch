@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import { queue } from 'd3-queue';
 import { select } from 'd3-selection';
 import { transition } from 'd3-transition';
 import { tree, hierarchy } from 'd3-hierarchy';
@@ -25,6 +26,7 @@ class Tree extends SvgChart {
   constructor(selector, options) {
     super(selector, options);
 
+    this.renderQueue = queue(1);
     this.tree = tree()
       .nodeSize([20, 20])
       .separation((a, b) => {
@@ -269,43 +271,30 @@ class Tree extends SvgChart {
   }
 
   previewAction(action) {
-    const { showPreview } = this;
-
-    this.layers.get('nodes').selectAll('.node')
-      .filter(d => d.data === action.node)
-      .each(function() {showPreview(action, this);});
-  }
-
-  unpreviewAction(action) {
-    const { hidePreview } = this;
-
-    this.layers.get('nodes').selectAll('.node')
-      .filter(d => d.data === action.node)
-      .each(function() {hidePreview(action, this);});
-  }
-
-  hidePreview(action, element) {
-    const hidePrevTrans = transition()
-      .duration(this.options().previewTransDur);
+    const { showPreview, renderQueue } = this;
 
     this.layers.get('nodes').selectAll('.node')
       .filter(d => d.data === action.node)
       .each(function() {
-        const node = select(this);
-
-        node.select('.action-preview')
-          .style('visibility', 'hidden');
-
-        node.select('.arrow')
-          .style('visibility', 'hidden')
-
-        node.select('.node-expression-g')
-          .transition(hidePrevTrans)
-          .attr('transform', 'translate(0, 0)');
+        renderQueue.defer(done => {
+          showPreview(action, this, done);
+        });
       });
   }
 
-  showPreview(action, element) {
+  unpreviewAction(action) {
+    const { hidePreview, renderQueue } = this;
+
+    this.layers.get('nodes').selectAll('.node')
+      .filter(d => d.data === action.node)
+      .each(function() {
+        renderQueue.defer(done => {
+          hidePreview(action, this, done);
+        });
+      });
+  }
+
+  showPreview(action, element, done) {
     const $node = $(element);
     const $body = $node.find('.action-preview-body');
     const $expressionG = $node.find('.node-expression-g');
@@ -344,6 +333,7 @@ class Tree extends SvgChart {
           $arrow
             .attr('transform', 'translate(' + [dx, 0] + ')')
             .css('visibility', 'visible');
+          done();
         });
 
       select($expressionG.get(0))
@@ -360,6 +350,30 @@ class Tree extends SvgChart {
           return -1;
         }
         return 0;
+      });
+  }
+
+  hidePreview(action, element, done) {
+    const hidePrevTrans = transition()
+      .duration(this.options().previewTransDur)
+      .on('end', () => {
+        done();
+      });
+
+    this.layers.get('nodes').selectAll('.node')
+      .filter(d => d.data === action.node)
+      .each(function() {
+        const node = select(this);
+
+        node.select('.action-preview')
+          .style('visibility', 'hidden');
+
+        node.select('.arrow')
+          .style('visibility', 'hidden')
+
+        node.select('.node-expression-g')
+          .transition(hidePrevTrans)
+          .attr('transform', 'translate(0, 0)');
       });
   }
 

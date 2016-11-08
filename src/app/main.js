@@ -14,7 +14,8 @@ const TEST_EXPRESSIONS = [
 
   // 'x * y',
 
-  // 'sin(3 + 2 * y) ^ 2 + cos(3 + 2 * y) ^ 2',
+//  'sin(3 + 2 * y) ^ 2 + cos(3 + 2 * y) ^ 2',
+//  'cos(3 + 2 * y) ^ 2 + sin(3 + 2 * y) ^ 2',
 
   '2 * x + x * 3 == (sqrt(pi^2) * y) / (4 + log(e)) * z',
 

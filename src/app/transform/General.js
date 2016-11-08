@@ -19,6 +19,7 @@ class General extends AbstractTransform {
     this.customFunctions = {
       '_isInt': this.isInt,
       '_toInt': this.toInt,
+      '_isMultChain': this.isMultChain,
     }
   }
 
@@ -39,6 +40,10 @@ class General extends AbstractTransform {
       return NODE.constant.create(candidate.eval());
     } catch(e) {}
     return null;
+  }
+
+  isMultChain(candidate) {
+    // tbd
   }
 
   title() {
@@ -66,9 +71,11 @@ class General extends AbstractTransform {
   parseExpression(string, swap) {
     const expr = math.parse(string);
     if (swap) {
-      const tmp = expr.args[0];
-      expr.args[0] = expr.args[1];
-      expr.args[1] = tmp;
+      if (expr.args && expr.args.length == 2) {
+        const tmp = expr.args[0];
+        expr.args[0] = expr.args[1];
+        expr.args[1] = tmp;
+      }
     }
     return expr;
   }

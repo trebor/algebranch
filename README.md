@@ -26,8 +26,3 @@ I could use additional collaborators.
 ## List of alternate math tools
 
 * [Desmos Graphing Calculator](https://www.desmos.com/calculator)
-
-## In The Media
-
-<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">An interactive algebra tool/toy.  Everyone at my house is loving this.  Thanks for the demo, <a href="https://twitter.com/trebor">@trebor</a>! <a href="https://t.co/w6psPqaUN3">https://t.co/w6psPqaUN3</a></p>&mdash; kathleencodes (@kathleencodes) <a href="https://twitter.com/kathleencodes/status/792952679869788160">October 31, 2016</a></blockquote>
-<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>

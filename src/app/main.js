@@ -91,11 +91,11 @@ function start() {
 }
 
 function actionEnter(action) {
-  tree.previewAction(action);
+  tree.previewAction(action, true);
 }
 
 function actionOut(action) {
-  tree.unpreviewAction(action);
+  tree.previewAction(action, false);
 }
 
 function actionClick(action) {

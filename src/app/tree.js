@@ -1,5 +1,6 @@
 import $ from 'jquery';
 import { queue } from 'd3-queue';
+import { debounce } from 'lodash';
 import { select } from 'd3-selection';
 import { transition } from 'd3-transition';
 import { tree, hierarchy } from 'd3-hierarchy';
@@ -37,12 +38,22 @@ class Tree extends SvgChart {
 
     this.layers.create(['links', 'nodes']);
 
-    ['resize', 'showPreview', 'hidePreview', 'updateExpression', 'visualize']
-      .map(methodName => this[methodName] = this[methodName].bind(this));
+    [
+      'resize',
+      '_showPreview',
+      '_hidePreview',
+      'updateExpression',
+      'visualize'
+    ].map(methodName => this[methodName] = this[methodName].bind(this));
 
-    this.on('resize.default', _.debounce(this.resize, 100));
-    this.on('data.default', _.debounce(this.visualize, 100));
-    this.on('options.default', _.debounce(this.visualize, 100));
+    this.on('resize.default', debounce(this.resize, 100));
+    this.on('data.default', debounce(this.visualize, 100));
+    this.on('options.default', debounce(this.visualize, 100));
+
+    this.previewAction = debounce(
+      (action, show) => show
+        ? this.showActionPreview(action)
+        : this.hideActionPreview(action), 100);
 
     this.fit({
   	  width: '100%',
@@ -270,31 +281,31 @@ class Tree extends SvgChart {
     });
   }
 
-  previewAction(action) {
-    const { showPreview, renderQueue } = this;
+  showActionPreview(action) {
+    const { _showPreview, renderQueue } = this;
 
     this.layers.get('nodes').selectAll('.node')
       .filter(d => d.data === action.node)
       .each(function() {
         renderQueue.defer(done => {
-          showPreview(action, this, done);
+          _showPreview(action, this, done);
         });
       });
   }
 
-  unpreviewAction(action) {
-    const { hidePreview, renderQueue } = this;
+  hideActionPreview(action) {
+    const { _hidePreview, renderQueue } = this;
 
     this.layers.get('nodes').selectAll('.node')
       .filter(d => d.data === action.node)
       .each(function() {
         renderQueue.defer(done => {
-          hidePreview(action, this, done);
+          _hidePreview(action, this, done);
         });
       });
   }
 
-  showPreview(action, element, done) {
+  _showPreview(action, element, done) {
     const $node = $(element);
     const $body = $node.find('.action-preview-body');
     const $expressionG = $node.find('.node-expression-g');
@@ -353,7 +364,7 @@ class Tree extends SvgChart {
       });
   }
 
-  hidePreview(action, element, done) {
+  _hidePreview(action, element, done) {
     const hidePrevTrans = transition()
       .duration(this.options().previewTransDur)
       .on('end', () => {

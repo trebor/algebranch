@@ -45,7 +45,6 @@ class History {
         }
       }
     });
-
   }
 
   push(expression) {
@@ -61,19 +60,34 @@ class History {
     }
   }
 
-  pop(until) {
-    let result = null;
-    if (until) {
-      while (this.peek() != until && history.length > 0) {
-        this.future.unshift(this.history.pop());
-      }
-      result = until;
+  skipTo(target) {
+    if (this.history.indexOf(target) != -1) {
+      return this.skipBackward(target);
     }
-    else {
-      result = this.history.pop();
-      this.future.unshift(result);
+    else if (this.future.indexOf(target) != -1) {
+      return this.skipForward(target);
     }
+  }
 
+  skipForward(target) {
+    while (this.peek() != target && this.future.length > 0) {
+      this.history.push(this.future.shift());
+    }
+    this.update();
+    return target;
+  }
+
+  skipBackward(target) {
+    while (this.peek() != target && this.history.length > 0) {
+      this.future.unshift(this.history.pop());
+    }
+    this.update();
+    return target;
+  }
+
+  pop() {
+    const result = this.history.pop();
+    this.future.unshift(result);
     this.update();
     return result;
   }

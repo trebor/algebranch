@@ -204,6 +204,11 @@ const TRANSFORM_PACKS = [
     ['3 * (2 / 5)', '3 * 2 / 5'],
     ['3 * (3 / (2 * y))', '3 * 3 / (2 * y)'],
   ]],
+
+  // ['cos(x) ^ 2 + sin(x) ^ 2', '1', true, [
+  //   ['cos(3 + 2 * y) ^ 2 + sin(3 + 2 * y) ^ 2', '1'],
+  //   // ['3 * (3 / (2 * y))', '3 * 3 / (2 * y)'],
+  // ]],
 ];
 
 const ALL_TRANSFORMS = _(TRANSFORM_PACKS)

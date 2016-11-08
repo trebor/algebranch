@@ -14,6 +14,8 @@ const TEST_EXPRESSIONS = [
 
   // 'x * y',
 
+  // 'sin(3 + 2 * y) ^ 2 + cos(3 + 2 * y) ^ 2',
+
   '2 * x + x * 3 == (sqrt(pi^2) * y) / (4 + log(e)) * z',
 
   'x * 5 / x == y * (3 * x + 7) / (3 * x + 7)',
@@ -54,8 +56,8 @@ let expression = null;
 
 const history = new History('#history')
   .on('select', ex => {
-    history.pop(ex);
-    display(expression = ex, true);
+    history.skipTo(ex);
+    display(expression = history.peek(), true);
   })
   .on('back', () => {
     history.pop();
@@ -89,11 +91,11 @@ function start() {
 }
 
 function actionEnter(action) {
-  tree.previewAction(action);
+  tree.previewAction(action, true);
 }
 
 function actionOut(action) {
-  tree.unpreviewAction(action);
+  tree.previewAction(action, false);
 }
 
 function actionClick(action) {

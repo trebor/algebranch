@@ -70,7 +70,9 @@ const history = new History('#history')
   });
 
 $eqInput.on('change', d => {
-  updateExpression(d.target.value);
+  updateExpression(d.target.value
+    .replace(/=\s*=/g, '=')
+    .replace('=', '=='));
 });
 
 const nodeId = (d, i) => {

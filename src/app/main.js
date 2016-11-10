@@ -1,14 +1,11 @@
 import $ from 'jquery';
-import { NODE, parseExpression } from './transform/common';
 import Tree from './tree';
 import History from './History';
 import url from 'urljs';
-
+import establishNodeActions from './indentities/AllTransforms.js';
 
 const math = require('mathjs');
 let started = false;
-import {EXPRESSION_TO_MATHJAX, EXPRESSION_TO_MATHJAX_INLINE, ComputeExpressionSize} from './util.js';
-import establishNodeActions from './transform/AllTransforms.js';
 
 const TEST_EXPRESSIONS = [
 

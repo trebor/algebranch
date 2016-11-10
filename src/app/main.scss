@@ -91,8 +91,8 @@ body {
     height: 100%;
     @include flexbox;
     @include flex-direction(row);
-    @import './tree';
-    @import './history';
+    @import './component/Tree';
+    @import './component/History';
   }
 }
 

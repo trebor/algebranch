@@ -1,6 +1,6 @@
 import $ from 'jquery';
-import Tree from './tree';
-import History from './History';
+import Tree from './component/Tree';
+import History from './component/History';
 import url from 'urljs';
 import establishNodeActions from './identities/AllTransforms';
 import { parseExpression } from './util/mathjs-helper';

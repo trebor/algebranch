@@ -4,7 +4,7 @@ import { debounce } from 'lodash';
 import { select } from 'd3-selection';
 import { transition } from 'd3-transition';
 import { tree, hierarchy } from 'd3-hierarchy';
-import { applyExpression } from './util/mathjax-helper';
+import { applyExpression } from '../util/mathjax-helper';
 import { SvgChart, helper } from 'd3kit';
 
 const { deepExtend } = helper;

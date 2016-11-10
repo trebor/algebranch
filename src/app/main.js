@@ -2,7 +2,8 @@ import $ from 'jquery';
 import Tree from './tree';
 import History from './History';
 import url from 'urljs';
-import establishNodeActions from './indentities/AllTransforms.js';
+import establishNodeActions from './identities/AllTransforms';
+import { parseExpression } from './util/mathjs-helper';
 
 const math = require('mathjs');
 let started = false;

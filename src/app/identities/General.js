@@ -1,6 +1,5 @@
-import {AbstractTransform, AbstractAction, NODE, equivalent} from './common';
+import { AbstractTransform, AbstractAction, NODE, equivalent } from '../util/mathjs-helper';
 const math = require('mathjs');
-const {OperatorNode, FunctionNode, SymbolNode, ParenthesisNode, ConstantNode} = math.expression.node;
 
 class GeneralAction extends AbstractAction {
   constructor(node, path, parent, result) {
@@ -8,7 +7,6 @@ class GeneralAction extends AbstractAction {
     this.result = result;
   }
 }
-
 
 class General extends AbstractTransform {
   constructor(targetStr, resultStr, swap = false) {

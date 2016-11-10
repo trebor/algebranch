@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import { select } from 'd3-selection';
 import { dispatch } from 'd3-dispatch';
-import { applyExpression, EXPRESSION_TO_MATHJAX_INLINE } from './util.js';
+import { applyExpression } from './util/mathjax-helper';
 
 const KEY = {
   LEFT_ARROW:  37,

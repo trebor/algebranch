@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import math from 'mathjs';
 import General from './General';
-import { parseExpression } from './common';
+import { parseExpression } from '../util/mathjs-helper';
 
 // transform data
 

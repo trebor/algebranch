@@ -4,7 +4,7 @@ import { debounce } from 'lodash';
 import { select } from 'd3-selection';
 import { transition } from 'd3-transition';
 import { tree, hierarchy } from 'd3-hierarchy';
-import { applyExpression } from './util.js';
+import { applyExpression } from '../util/mathjax-helper';
 import { SvgChart, helper } from 'd3kit';
 
 const { deepExtend } = helper;
@@ -43,7 +43,7 @@ class Tree extends SvgChart {
       '_showPreview',
       '_hidePreview',
       'updateExpression',
-      'visualize'
+      'visualize',
     ].map(methodName => this[methodName] = this[methodName].bind(this));
 
     this.on('resize.default', debounce(this.resize, 100));
@@ -78,7 +78,15 @@ class Tree extends SvgChart {
   }
 
   visualize() {
+    this.renderQueue.defer(done => {
+      this.visualizeImmediate();
+      done();
+    });
+  }
+
+  visualizeImmediate() {
     if (!(this.hasData() && this.hasNonZeroArea())) return;
+
 
     const root = hierarchy(this.data(), (node) => {
       return (node.args || [])
@@ -288,7 +296,9 @@ class Tree extends SvgChart {
       .filter(d => d.data === action.node)
       .each(function() {
         renderQueue.defer(done => {
-          _showPreview(action, this, done);
+          _showPreview(action, this, () => {
+            return done();
+          });
         });
       });
   }
@@ -389,23 +399,28 @@ class Tree extends SvgChart {
   }
 
   choosePreview(action) {
-    const choosePrevTrans = transition()
-      .duration(this.options().previewTransDur);
+    this.renderQueue.defer(done => {
+      const choosePrevTrans = transition()
+        .duration(this.options().previewTransDur)
+        .on('end', () => {
+          done();
+        });
 
-    this.layers.get('nodes').selectAll('.node')
-      .filter(d => d.data === action.node)
-      .each(function() {
-        const node = select(this);
+      this.layers.get('nodes').selectAll('.node')
+        .filter(d => d.data === action.node)
+        .each(function() {
+          const node = select(this);
 
-        node.select('.node-expression')
-          .style('visibility', 'hidden');
-        node.select('.arrow')
-          .style('visibility', 'hidden');
+          node.select('.node-expression')
+            .style('visibility', 'hidden');
+          node.select('.arrow')
+            .style('visibility', 'hidden');
 
-        node.select('.action-preview-g')
-          .transition(choosePrevTrans)
-          .attr('transform', 'translate(0, 0)');
-      });
+          node.select('.action-preview-g')
+            .transition(choosePrevTrans)
+            .attr('transform', 'translate(0, 0)');
+        });
+    });
   }
 
   establishDatum(node) {

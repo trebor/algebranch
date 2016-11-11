@@ -2,7 +2,7 @@ import $ from 'jquery';
 import Tree from './component/Tree';
 import History from './component/History';
 import url from 'urljs';
-import establishNodeActions from './identities/AllTransforms';
+import establishNodeActions from './identity/AllTransforms';
 import { parseExpression } from './util/mathjs-helper';
 
 const math = require('mathjs');

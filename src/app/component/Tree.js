@@ -231,7 +231,7 @@ class Tree extends SvgChart {
 
   updateActions(enter, update) {
     const actionGroup = enter.append('g')
-      .classed('action-group', true);
+      .classed('action-group', true)
 
     const actionUpdate = update.select('.action-group').merge(actionGroup)
       .selectAll('.action')
@@ -246,6 +246,9 @@ class Tree extends SvgChart {
       .on('mousemove', d => this.dispatcher.call('actionMousemove', this, d))
       .on('mouseout', d => this.dispatcher.call('actionMouseout', this, d))
       .on('click', d => this.dispatcher.call('actionClick', this, d));
+
+    actionEnter.append('title')
+      .text(d => d.title);
 
     actionUpdate
       .exit()

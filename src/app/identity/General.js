@@ -2,8 +2,8 @@ import { AbstractTransform, AbstractAction, NODE, equivalent } from '../util/mat
 const math = require('mathjs');
 
 class GeneralAction extends AbstractAction {
-  constructor(node, path, parent, result) {
-    super("general", node, path, parent);
+  constructor(title, node, path, parent, result) {
+    super(title, node, path, parent);
     this.result = result;
   }
 }
@@ -51,7 +51,7 @@ class General extends AbstractTransform {
   testNode(node, path, parent) {
     const symbolMap = {};
     if (this.match(this.getTarget(), node, symbolMap)) {
-      return [new GeneralAction(node, path, parent,
+      return [new GeneralAction(this.title(), node, path, parent,
         this.apply(this.getResult(), symbolMap))];
     }
 

@@ -38,6 +38,7 @@ var patterns = {
   appJson     : paths.src + '/app/**/*.json',
   json        : paths.src + '/data/**/*.json',
   data        : paths.src + '/data/**/*.!(json)',
+  assets      : paths.src + '/assets/**/*',
   appImages   : paths.src + '/app/**/*.@(png|gif|jpg|jpeg|tiff)',
   images      : paths.src + '/images/**/*',
   fonts       : paths.src + '/fonts/**/*',
@@ -67,6 +68,13 @@ gulp.task('json', function(){
 gulp.task('data', function(){
   var dest = paths.dist + '/data';
   return gulp.src(patterns.data)
+    .pipe($.newer(dest))
+    .pipe(gulp.dest(dest));
+});
+
+gulp.task('assets', function(){
+  var dest = paths.dist + '/assets';
+  return gulp.src(patterns.assets)
     .pipe($.newer(dest))
     .pipe(gulp.dest(dest));
 });
@@ -218,6 +226,7 @@ var buildTasks = [
   'ngtemplates',
   'appJson',
   'json',
+  'assets',
   'data',
   'appImages',
   'images',

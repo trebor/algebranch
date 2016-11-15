@@ -1,5 +1,6 @@
 @import 'https://fonts.googleapis.com/css?family=Roboto+Slab';
 @import '../bower_components/sass-flex-mixin/flex';
+@import url('../assets/bootstrap.min.css');
 
 $expression-box-clr: #eee;
 $expression-text-clr: #666;
@@ -55,8 +56,14 @@ body {
         @include flexbox;
         @include flex-direction(row);
         padding: 0px 5px;
+
+        .options {
+          padding-top: 2px;
+          font-size: 30px;
+        }
+
         img {
-          margin: 5px;
+          margin: 5px 5px 5px 0px;
           width: 30px;
         }
 

@@ -5,6 +5,13 @@ import url from 'urljs';
 import IdentityManager from './identity/IdentityManager';
 import { parseExpression } from './util/mathjs-helper';
 
+
+
+// require("bower_components/bootstrap/dist/js/bootstrap.min.js");
+import bs from "bootstrap";
+
+console.log("bs", bs);
+
 const math = require('mathjs');
 let started = false;
 const identityManager = new IdentityManager();

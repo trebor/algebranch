@@ -14,7 +14,6 @@
     "tests"
   ],
   "dependencies": {
-    "bootstrap": "^3.3.6",
     "mathjs": "git://github.com/trebor/mathjs.git#custom_data",
     "lodash": "^4.15.0",
     "sass-flex-mixin": "^1.0.3"

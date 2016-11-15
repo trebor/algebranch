@@ -1,8 +1,8 @@
 import $ from 'jquery';
 import { queue } from 'd3-queue';
 import { debounce } from 'lodash';
-import { select } from 'd3-selection';
 import { transition } from 'd3-transition';
+import { select, event } from 'd3-selection';
 import { tree, hierarchy } from 'd3-hierarchy';
 import { applyExpression } from '../util/mathjax-helper';
 import { SvgChart, helper } from 'd3kit';
@@ -146,10 +146,7 @@ class Tree extends SvgChart {
       .append('g')
       .classed('node', true)
       .attr('transform', d => 'translate(' + [d.x, d.y] + ')')
-      .on('mouseenter', d => this.dispatcher.call('nodeMouseenter', this, d))
-      .on('mousemove', d => this.dispatcher.call('nodeMousemove', this, d))
-      .on('mouseout', d => this.dispatcher.call('nodeMouseout', this, d))
-      .on('click', d => this.dispatcher.call('nodeClick', this, d));
+      .call(this.bindEvents('node'));
 
     this.updateActions(enter, update);
 
@@ -240,15 +237,11 @@ class Tree extends SvgChart {
     const actionEnter = actionUpdate
       .enter()
       .append('circle')
+      .classed('hint--bottom', true)
+      .attr('aria-label', 'frogs')
       .classed('action', true)
       .attr('r', this.options().circleRadius)
-      .on('mouseenter', d => this.dispatcher.call('actionMouseenter', this, d))
-      .on('mousemove', d => this.dispatcher.call('actionMousemove', this, d))
-      .on('mouseout', d => this.dispatcher.call('actionMouseout', this, d))
-      .on('click', d => this.dispatcher.call('actionClick', this, d));
-
-    actionEnter.append('title')
-      .text(d => d.title);
+      .call(this.bindEvents('action'))
 
     actionUpdate
       .exit()
@@ -424,6 +417,23 @@ class Tree extends SvgChart {
             .attr('transform', 'translate(0, 0)');
         });
     });
+  }
+
+  bindEvents(prefix) {
+    return selection => {
+      selection
+        .on('mouseenter', this.dispatchFn(prefix + 'Mouseenter'))
+        .on('mousemove', this.dispatchFn(prefix + 'Mousemove'))
+        .on('mouseout', this.dispatchFn(prefix + 'Mouseout'))
+        .on('click', this.dispatchFn(prefix + 'Click'));
+    };
+  }
+
+  dispatchFn(eventName) {
+    const dispatcher = this.dispatcher;
+    return function(datum) {
+      dispatcher.call(eventName, this, datum, event);
+    };
   }
 
   establishDatum(node) {

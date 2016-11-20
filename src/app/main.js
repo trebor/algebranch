@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import Tree from './component/Tree';
 import History from './component/History';
-import url from 'urljs';
+import url from './util/url.js';
 import IdentityManager from './identity/IdentityManager';
 import { parseExpression } from './util/mathjs-helper';
 

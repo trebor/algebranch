@@ -1,12 +1,13 @@
 import $ from 'jquery';
 import Tree from './component/Tree';
 import History from './component/History';
-import url from 'urljs';
-import establishNodeActions from './identity/AllTransforms';
+import url from './util/url.js';
+import IdentityManager from './identity/IdentityManager';
 import { parseExpression } from './util/mathjs-helper';
 
 const math = require('mathjs');
 let started = false;
+const identityManager = new IdentityManager();
 
 const TEST_EXPRESSIONS = [
 
@@ -131,7 +132,7 @@ function updateExpression(expressionText) {
 function prep(expression) {
   expression.traverse((node, path, parent) => {
     node.custom = node.custom || genUuid();
-    node.actions = establishNodeActions(node, path, parent);
+    node.actions = identityManager.establishNodeActions(node, path, parent);
     node.shouldRender = () => {
       return true;
       let render = node.actions.length > 0;

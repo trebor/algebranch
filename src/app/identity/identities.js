@@ -1,11 +1,6 @@
-import _ from 'lodash';
-import math from 'mathjs';
-import General from './General';
-import { parseExpression } from '../util/mathjs-helper';
+// a list of all math identites
 
-// transform data
-
-const TRANSFORM_PACKS = [
+const IDENTITIES = [
   // [input, output, [
   //   [test-input-1, test-output-1],
   //   [test-input-2, test-output-2],
@@ -211,47 +206,4 @@ const TRANSFORM_PACKS = [
   ]],
 ];
 
-const ALL_TRANSFORMS = _(TRANSFORM_PACKS)
-//  .filter(([input, output, commutative, tests, only]) => only)
-  .map(([input, output, swapable]) => (swapable ? [false, true] : [false])
-    .map(swap => new General(input, output, swap)))
-  .flatten()
-  .valueOf();
-
-export default function establishNodeActions(node, path, parent) {
-  const actionMap = _
-    .flatten(ALL_TRANSFORMS.map(pattern => pattern.test(node, path, parent)))
-    .reduce((map, action) => {
-      map[action.result.toString()] = action;
-      return map;
-    }, {});
-
-  return Object.keys(actionMap).map(key => actionMap[key]);
-}
-
-TRANSFORM_PACKS
-//  .filter(([input, output, commutative, tests, only]) => only)
-  .forEach(([input, output, commutative, tests]) => {
-  //console.info(`[ ${input} ] -> [ ${output} ]`);
-  tests.forEach(test => testExpression(new General(input, output), test));
-});
-
-function testExpression(pattern, [inputStr, outputStr]) {
-  let actions = [];
-  const input = math.parse(inputStr);
-  input.traverse((node, path, parent) => {
-    actions = actions.concat(pattern.test(node, path, parent));
-  });
-
-  const result = actions[0] ? actions[0].apply(input) : 'no action';
-  if (outputStr != result.toString()) {
-    const message = `Pattern: ${pattern.title()}\n`
-      + `  Tested:     ${inputStr}\n`
-      + `  Expected: ${outputStr}\n`
-      + `  Found:      ${result.toString()}`;
-    alert(message);
-  }
-  // else {
-  //   console.info(`   ${inputStr} -> ${outputStr}`);
-  // }
-};
+export default IDENTITIES;

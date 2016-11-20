@@ -45,8 +45,8 @@ const NODE = [
 ].reduce((map, d) => {map[d.key] = new Node(d); return map;}, {});
 
 class AbstractAction {
-  constructor(name, node, path, parent) {
-    this.name = name;
+  constructor(title, node, path, parent) {
+    this.title = title;
     this.node = node;
     this.path = path;
     this.parent = parent;

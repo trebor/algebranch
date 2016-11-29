@@ -1,12 +1,12 @@
-# Algebrator
+# Algebranch
 
-A tool to manipulate mathamatical expressions, inspired by the paper [Interactive Algebra Manipulation](https://github.com/trebor/algebrator/blob/master/resources/shuffle.pdf) by [Geoffrey Irving](https://github.com/girving).  This project uses [mathjs](https://github.com/josdejong/mathjs) to parse an expression into a tree structure which can be manipulated, and [MathJax](https://github.com/mathjax/MathJax) to beautifully display the expression in the browser.
+A tool to manipulate mathamatical expressions, inspired by the paper [Interactive Algebra Manipulation](https://github.com/trebor/algebranch/blob/master/resources/shuffle.pdf) by [Geoffrey Irving](https://github.com/girving).  This project uses [mathjs](https://github.com/josdejong/mathjs) to parse an expression into a tree structure which can be manipulated, and [MathJax](https://github.com/mathjax/MathJax) to beautifully display the expression in the browser.
 
-Checkout the [prototype](https://trebor.github.io/algebrator), in which you can enter a [mathjs](http://mathjs.org/docs/expressions/syntax.html) formatted expression which will be displayed as a tree. Some nodes of the tree show red dots, this indicates an action which can be performed at that node.  Mouse over the dot to preview the action. Click the dot to perform the action.
+Checkout the [prototype](https://trebor.github.io/algebranch), in which you can enter a [mathjs](http://mathjs.org/docs/expressions/syntax.html) formatted expression which will be displayed as a tree. Some nodes of the tree show red dots, this indicates an action which can be performed at that node.  Mouse over the dot to preview the action. Click the dot to perform the action.
 
 <p align="center">
-  <a href="https://trebor.github.io/algebrator">
-    <img src="https://raw.githubusercontent.com/trebor/algebrator/master/resources/eq-tree.png" width="500px" alt="Expression Tree"/>
+  <a href="https://trebor.github.io/algebranch">
+    <img src="https://raw.githubusercontent.com/trebor/algebranch/master/resources/eq-tree.png" width="500px" alt="Expression Tree"/>
   </a>
 </p>
 

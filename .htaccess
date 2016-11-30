@@ -1,0 +1,10 @@
+RewriteEngine on
+RewriteBase /
+
+RewriteCond %{REQUEST_URI} !^/dist/
+
+# Rewrites all URLS
+RewriteCond %{HTTP_HOST} ^(www\.)?algebranch\.
+
+# Rewrite all those to insert /folder
+RewriteRule ^(.*)$ /dist/$1 [L]

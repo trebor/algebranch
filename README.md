@@ -5,7 +5,7 @@ A tool to manipulate mathamatical expressions, inspired by the paper [Interactiv
 Checkout the [prototype](http://algebranch.org), in which you can enter a [mathjs](http://mathjs.org/docs/expressions/syntax.html) formatted expression which will be displayed as a tree. Some nodes of the tree show red dots, this indicates an action which can be performed at that node.  Mouse over the dot to preview the action. Click the dot to perform the action.
 
 <p align="center">
-  <a href="https://trebor.github.io/algebranch">
+  <a href="http://algebranch.org">
     <img src="https://raw.githubusercontent.com/trebor/algebranch/master/resources/eq-tree.png" width="500px" alt="Expression Tree"/>
   </a>
 </p>

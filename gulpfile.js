@@ -38,6 +38,7 @@ var patterns = {
   appJson     : paths.src + '/app/**/*.json',
   json        : paths.src + '/data/**/*.json',
   data        : paths.src + '/data/**/*.!(json)',
+  cname       : paths.src + '/CNAME',
   appImages   : paths.src + '/app/**/*.@(png|gif|jpg|jpeg|tiff)',
   images      : paths.src + '/images/**/*',
   fonts       : paths.src + '/fonts/**/*',
@@ -67,6 +68,13 @@ gulp.task('json', function(){
 gulp.task('data', function(){
   var dest = paths.dist + '/data';
   return gulp.src(patterns.data)
+    .pipe($.newer(dest))
+    .pipe(gulp.dest(dest));
+});
+
+gulp.task('cname', function(){
+  var dest = paths.dist + '/';
+  return gulp.src(patterns.cname)
     .pipe($.newer(dest))
     .pipe(gulp.dest(dest));
 });
@@ -219,6 +227,7 @@ var buildTasks = [
   'appJson',
   'json',
   'data',
+  'cname',
   'appImages',
   'images',
   'fonts',

@@ -13,13 +13,14 @@ const TEST_EXPRESSIONS = [
   //  'sin(3 + 2 * y) ^ 2 + cos(3 + 2 * y) ^ 2',
   //  'cos(3 + 2 * y) ^ 2 + sin(3 + 2 * y) ^ 2',
 
+  'a == b / c + d',
+
   '2 * x + x * 3 == (sqrt(pi^2) * y) / (4 + log(e)) * z',
 
   'x * 5 / x == y * (3 * x + 7) / (3 * x + 7)',
 
   'x==(1+2)*sqrt(16)/log(e)*(3+2*7)',
 
-  'a == b / c + d',
 
   'y == (2 * x) - (3 * y)',
 

@@ -63,6 +63,16 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(equationToString(moves['rhs'])).toBe('x = (7 - 3) / y');
   });
 
+  test('generateValidMoves rejects overwriting non-neutral constants', () => {
+    const eq = parseEquation('3 * x + 5 = x + 13');
+    // Path for 'x' in '3 * x' is 'lhs/0/1'.
+    const moves = generateValidMoves(eq, 'lhs/0/1');
+    
+    // It should NOT allow overwriting '13' (path 'rhs/1') to produce '3 + 5 = x + x'
+    // even though both equations happen to share x = 4 as a unique solution root.
+    expect(moves['rhs/1']).toBeUndefined();
+  });
+
   test('autoSimplify eliminates redundant terms', () => {
     // Additive redundancy: x + 2 - 2 = 5  =>  x = 5
     const eq1 = parseEquation('x + 2 - 2 = 5');

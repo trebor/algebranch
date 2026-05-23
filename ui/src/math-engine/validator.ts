@@ -362,6 +362,22 @@ export const getExcludedParentPaths = (eq: Equation, sourcePath: string): Set<st
 };
 
 /**
+ * Checks if a node is an additive or multiplicative neutral constant (0 or 1).
+ * Unwraps parenthesis nodes recursively.
+ */
+export const isNeutralNode = (node: math.MathNode): boolean => {
+  let current = node;
+  while (current.type === 'ParenthesisNode') {
+    current = (current as math.ParenthesisNode).content;
+  }
+  if (current.type === 'ConstantNode') {
+    const val = Number((current as math.ConstantNode).value);
+    return val === 0 || val === 1;
+  }
+  return false;
+};
+
+/**
  * Generates all mathematically valid target equations for a selected node.
  * Maps destination path string to the resulting Equation.
  */
@@ -411,15 +427,18 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
         }
       });
 
-      const eqDirect = replaceNodeAtPath(tempEq, targetPath, removedNode);
-      
-      const isNoOpDirect = (
-        originalEq.lhs.toString() === eqDirect.lhs.toString() &&
-        originalEq.rhs.toString() === eqDirect.rhs.toString()
-      );
+      // Direct replacement is only valid if we are overwriting a neutral constant (0 or 1)
+      if (isNeutralNode(targetNode)) {
+        const eqDirect = replaceNodeAtPath(tempEq, targetPath, removedNode);
+        
+        const isNoOpDirect = (
+          originalEq.lhs.toString() === eqDirect.lhs.toString() &&
+          originalEq.rhs.toString() === eqDirect.rhs.toString()
+        );
 
-      if (!isNoOpDirect && areEquationsEquivalent(originalEq, eqDirect)) {
-        moves[targetPath] = eqDirect;
+        if (!isNoOpDirect && areEquationsEquivalent(originalEq, eqDirect)) {
+          moves[targetPath] = eqDirect;
+        }
       }
     });
   } catch (err) {

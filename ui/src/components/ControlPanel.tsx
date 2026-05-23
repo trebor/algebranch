@@ -128,6 +128,38 @@ export const ControlPanel: React.FC = () => {
           </button>
         </form>
 
+        <div className="mt-4 flex flex-col gap-1.5 border-t border-white/10 pt-3">
+          <span className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">
+            Quick Sample Presets
+          </span>
+          <div className="flex flex-col gap-2">
+            {[
+              { label: 'Linear Equation', eq: '3 * x + 5 = x + 13' },
+              { label: 'Multi-Variable Literal', eq: 'a * b + c = d' },
+              { label: 'Ratio & Fraction Group', eq: '(x + 4) / 2 = y - 1' },
+            ].map((sample) => (
+              <button
+                key={sample.eq}
+                type="button"
+                onClick={() => {
+                  try {
+                    setErrorStr(null);
+                    resetToEquation(sample.eq);
+                  } catch (err) {
+                    setErrorStr(err instanceof Error ? err.message : String(err));
+                  }
+                }}
+                className={`w-full text-left px-3 py-2 text-xs rounded-xl bg-white/5 border border-white/5 text-indigo-300 hover:text-white hover:bg-white/10 active:scale-98 transition-all flex items-center justify-between cursor-pointer group ${THEME_TRANSITIONS.FAST}`}
+              >
+                <span className="font-medium">{sample.label}</span>
+                <span className="font-mono text-[10px] text-zinc-400 group-hover:text-indigo-200 transition-colors">
+                  {sample.eq}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {errorStr && (
           <div className="mt-3 flex items-start gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-2.5">
             <ShieldAlert size={14} className="shrink-0 mt-0.5" />

@@ -109,12 +109,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   // Styling hooks
   const borderStyle = isSelected
-    ? THEME_GLASS.GLOW_ACTIVE
+    ? THEME_GLASS.GLOW_ACTIVE + ' bg-indigo-950/80 text-indigo-100'
     : isValidDrop
-    ? THEME_GLASS.GLOW_VALID + ' animate-pulse border-emerald-400 bg-emerald-500/10 cursor-pointer'
+    ? THEME_GLASS.GLOW_VALID + ' border-emerald-400 bg-emerald-950/80 cursor-pointer text-emerald-100 animate-pulse'
     : isHovered
-    ? 'border-indigo-400/40 bg-white/10'
-    : 'border-white/10';
+    ? 'border-indigo-400/40 bg-neutral-900/90 text-white'
+    : 'border-white/10 bg-neutral-950/90 text-white/90';
 
   // Recursive Render logic depending on Node type
   const renderContent = () => {

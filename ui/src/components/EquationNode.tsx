@@ -12,7 +12,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, replaceNodeAtPath, getFunctionName, equationToString } from 'math-engine';
-import { ArrowUp, ArrowDown, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 interface EquationNodeProps {
   readonly path: string;
@@ -63,20 +63,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const isSelected = selectedPath === path;
   const isHovered = hoverPath === path;
   const isValidDrop = path in validDrops;
-
-  // Selection depth adjustments
-  const handleExpandSelection = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const parts = path.split('/');
-    if (parts.length > 1) {
-      setSelectedPath(parts.slice(0, -1).join('/'));
-    }
-  };
-
-  const handleShrinkSelection = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedPath(`${path}/0`);
-  };
 
   // Toggle Root Sign (Positive/Negative branches)
   const handleToggleRootSign = (e: React.MouseEvent) => {
@@ -252,38 +238,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       {renderContent()}
 
       {/* Hover selection controls toolbar */}
-      {isSelected && (
-        <div className="absolute -top-9 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-neutral-900 border border-white/10 rounded-full px-2 py-0.5 z-30 shadow-lg text-[10px]">
-          {path.split('/').length > 1 && (
-            <button
-              onClick={handleExpandSelection}
-              className="p-1 hover:bg-white/10 text-white rounded-full transition-colors flex items-center gap-0.5"
-              title="Expand selection (Select parent terms)"
-            >
-              <ArrowUp size={10} />
-              <span>Expand</span>
-            </button>
-          )}
-          {node.type !== 'ConstantNode' && node.type !== 'SymbolNode' && (
-            <button
-              onClick={handleShrinkSelection}
-              className="p-1 hover:bg-white/10 text-white rounded-full transition-colors flex items-center gap-0.5"
-              title="Shrink selection (Select inner terms)"
-            >
-              <ArrowDown size={10} />
-              <span>Shrink</span>
-            </button>
-          )}
-          {canToggleRoot(node) && (
-            <button
-              onClick={handleToggleRootSign}
-              className="p-1 hover:bg-white/10 text-indigo-400 hover:text-indigo-300 rounded-full transition-colors flex items-center gap-0.5"
-              title="Toggle root branch (+/- sign)"
-            >
-              <Sparkles size={10} />
-              <span>± Sign</span>
-            </button>
-          )}
+      {isSelected && canToggleRoot(node) && (
+        <div className="absolute -top-9 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-neutral-900 border border-white/10 rounded-full px-2.5 py-1 z-30 shadow-lg text-[10px] whitespace-nowrap">
+          <button
+            onClick={handleToggleRootSign}
+            className="p-0.5 hover:bg-white/10 text-indigo-400 hover:text-indigo-300 rounded-full transition-colors flex items-center gap-1 cursor-pointer"
+            title="Toggle root branch (+/- sign)"
+          >
+            <Sparkles size={10} />
+            <span>± Sign</span>
+          </button>
         </div>
       )}
 

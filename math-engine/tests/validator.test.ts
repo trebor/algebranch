@@ -53,6 +53,16 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(moves['lhs']).toBeUndefined(); // Parent path 'lhs' is excluded
   });
 
+  test('generateValidMoves suggests division for multiplicative terms', () => {
+    const eq = parseEquation('x * y = 7 - 3');
+    // Path for 'y' in 'x * y = 7 - 3' is 'lhs/1'
+    const moves = generateValidMoves(eq, 'lhs/1');
+    
+    // It should suggest moving 'y' to RHS as division: 'x = (7 - 3) / y'
+    expect(moves['rhs']).toBeDefined();
+    expect(equationToString(moves['rhs'])).toBe('x = (7 - 3) / y');
+  });
+
   test('autoSimplify eliminates redundant terms', () => {
     // Additive redundancy: x + 2 - 2 = 5  =>  x = 5
     const eq1 = parseEquation('x + 2 - 2 = 5');

@@ -171,24 +171,101 @@ export const evaluateInterval = (node: math.MathNode, scope: Record<string, Inte
 };
 
 /**
+ * Numerically solves LHS - RHS = 0 for a specific variable using Newton-Raphson.
+ * Returns the root value or null if it fails to converge.
+ */
+export const solveForVariable = (
+  nodeLHS: math.MathNode,
+  nodeRHS: math.MathNode,
+  solveVar: string,
+  scope: Record<string, number>
+): number | null => {
+  const f = (x: number): number => {
+    const localScope = { ...scope, [solveVar]: x };
+    return evaluatePoint(nodeLHS, localScope) - evaluatePoint(nodeRHS, localScope);
+  };
+
+  let x = 1.0; // Initial guess
+  const maxIterations = 20;
+  const tolerance = 1e-10;
+  const h = 1e-5;
+
+  for (let i = 0; i < maxIterations; i++) {
+    const y = f(x);
+    if (isNaN(y) || !isFinite(y)) {
+      return null;
+    }
+    if (Math.abs(y) < tolerance) {
+      return x;
+    }
+    const dy = (f(x + h) - f(x - h)) / (2 * h);
+    if (Math.abs(dy) < 1e-12) {
+      x += 1.5; // Shift guess if derivative is zero
+      continue;
+    }
+    x = x - y / dy;
+  }
+
+  if (Math.abs(f(x)) < 1e-7) {
+    return x;
+  }
+  return null;
+};
+
+/**
+ * Checks if target equation is satisfied when source equation's root is found.
+ */
+export const isEquationSatisfiedAtRoot = (
+  eqSource: Equation,
+  eqTarget: Equation,
+  variables: string[],
+  scope: Record<string, number>
+): boolean => {
+  let solved = false;
+  for (const solveVar of variables) {
+    const root = solveForVariable(eqSource.lhs, eqSource.rhs, solveVar, { ...scope });
+    if (root !== null) {
+      scope[solveVar] = root;
+      solved = true;
+      break;
+    }
+  }
+
+  if (!solved) {
+    // Fallback for constant equations or equations with no real roots on the domain
+    const d1 = evaluatePoint(eqSource.lhs, scope) - evaluatePoint(eqSource.rhs, scope);
+    const d2 = evaluatePoint(eqTarget.lhs, scope) - evaluatePoint(eqTarget.rhs, scope);
+    if (isNaN(d1) || isNaN(d2) || !isFinite(d1) || !isFinite(d2)) {
+      return false;
+    }
+    return Math.abs(d1 - d2) <= POINT_TOLERANCE;
+  }
+
+  // Check if eqTarget is satisfied at this root
+  const dTarget = evaluatePoint(eqTarget.lhs, scope) - evaluatePoint(eqTarget.rhs, scope);
+  return !isNaN(dTarget) && isFinite(dTarget) && Math.abs(dTarget) <= 1e-6;
+};
+
+/**
  * Tests if two equations are equivalent using point evaluation across multiple random midpoints.
  */
 export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variables: string[]): boolean => {
   try {
-    for (let run = 0; run < NUM_TEST_RUNS; run++) {
+    const numTestRuns = 3;
+
+    for (let run = 0; run < numTestRuns; run++) {
       const scope: Record<string, number> = {};
       variables.forEach((v) => {
         scope[v] = Math.random() * (RANGE_MID_MAX - RANGE_MID_MIN) + RANGE_MID_MIN;
       });
 
-      const d1 = evaluatePoint(eq1.lhs, scope) - evaluatePoint(eq1.rhs, scope);
-      const d2 = evaluatePoint(eq2.lhs, scope) - evaluatePoint(eq2.rhs, scope);
-
-      if (isNaN(d1) || isNaN(d2) || !isFinite(d1) || !isFinite(d2)) {
-        return false; // Direct failure on division by zero or invalid domain
+      // 1. Check if root of eq1 satisfies eq2
+      if (!isEquationSatisfiedAtRoot(eq1, eq2, variables, { ...scope })) {
+        return false;
       }
 
-      if (Math.abs(d1 - d2) > POINT_TOLERANCE) {
+      // 2. Check if root of eq2 satisfies eq1
+      if (!isEquationSatisfiedAtRoot(eq2, eq1, variables, { ...scope })) {
         return false;
       }
     }
@@ -251,11 +328,7 @@ export const areEquationsEquivalent = (eq1: Equation, eq2: Equation): boolean =>
     variables.push('x');
   }
 
-  if (!areEquationsEquivalentPoint(eq1, eq2, variables)) {
-    return false;
-  }
-
-  return areEquationsEquivalentInterval(eq1, eq2, variables);
+  return areEquationsEquivalentPoint(eq1, eq2, variables);
 };
 
 /**

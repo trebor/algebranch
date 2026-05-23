@@ -41,6 +41,48 @@ export const tryDoubleRemoval = (eq: Equation, p1: string, p2: string): Equation
 };
 
 /**
+ * Checks if a given path has a simplification opportunity.
+ * Returns the simplified Equation if found, otherwise null.
+ */
+export const getSimplificationForPath = (eq: Equation, p: string): Equation | null => {
+  try {
+    const node = getNodeByPath(eq, p);
+    if (!node) return null;
+
+    // 1. Unpack redundant parenthesis at this path
+    if (node.type === 'ParenthesisNode') {
+      const paren = node as math.ParenthesisNode;
+      const candidate = replaceNodeAtPath(eq, p, paren.content);
+      if (areEquationsEquivalent(eq, candidate)) {
+        return candidate;
+      }
+    }
+
+    // 2. Try single removal of this node
+    const singleCandidate = trySingleRemoval(eq, p);
+    if (singleCandidate && areEquationsEquivalent(eq, singleCandidate)) {
+      return singleCandidate;
+    }
+
+    // 3. Try double removal involving this node and another node
+    const allPaths = getAllPaths(eq);
+    for (let i = 0; i < allPaths.length; i++) {
+      const otherPath = allPaths[i];
+      if (otherPath === p) continue;
+      const doubleCandidate = tryDoubleRemoval(eq, p, otherPath);
+      if (doubleCandidate && areEquationsEquivalent(eq, doubleCandidate)) {
+        return doubleCandidate;
+      }
+    }
+  } catch {
+    // Graceful fallback
+  }
+
+  return null;
+};
+
+
+/**
  * Automatically simplifies an equation by trying all single and double node
  * removals and verifying equivalence. Iterates until no more nodes can be removed.
  */

@@ -11,6 +11,7 @@ import {
   currentEquationAtom,
   hoverPathAtom,
   validDropPathsAtom,
+  hoverSimplifyPathAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { Info, Sparkles, HelpCircle } from 'lucide-react';
@@ -20,7 +21,8 @@ export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
   const hoverPath = useAtomValue(hoverPathAtom);
   const validDrops = useAtomValue(validDropPathsAtom);
-  const isSpeculative = hoverPath !== null && hoverPath in validDrops;
+  const hoverSimplifyPath = useAtomValue(hoverSimplifyPathAtom);
+  const isSpeculative = (hoverPath !== null && hoverPath in validDrops) || hoverSimplifyPath !== null;
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(30,27,75,0.8),rgba(10,10,12,1))] text-white font-sans">

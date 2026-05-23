@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { Equation, parseEquation, generateValidMoves, getAllPaths } from 'math-engine';
+import { Equation, parseEquation, generateValidMoves, getAllPaths, getSimplificationForPath } from 'math-engine';
 
 // Global Initial Value Constants
 const INITIAL_EQUATION_STRING = '3 * x + 5 = x + 13';
@@ -15,6 +15,8 @@ export const currentIndexAtom = atom<number>(DEFAULT_ZERO);
 export const selectedPathAtom = atom<string | null>(null);
 
 export const hoverPathAtom = atom<string | null>(null);
+
+export const hoverSimplifyPathAtom = atom<string | null>(null);
 
 // Derived Atoms (Step 3: Transformations)
 
@@ -70,11 +72,45 @@ export const pathsWithValidMovesAtom = atom<Set<string>>((get) => {
 });
 
 /**
+ * Computes all paths that have simplification opportunities, mapping paths to the simplified equation.
+ */
+export const simplifiablePathsAtom = atom<Record<string, Equation>>((get) => {
+  const currentEq = get(currentEquationAtom);
+  const simplifiable: Record<string, Equation> = {};
+
+  if (!currentEq) {
+    return simplifiable;
+  }
+
+  const allPaths = getAllPaths(currentEq);
+
+  allPaths.forEach((path) => {
+    try {
+      const simplified = getSimplificationForPath(currentEq, path);
+      if (simplified) {
+        simplifiable[path] = simplified;
+      }
+    } catch {
+      // Graceful fallback
+    }
+  });
+
+  return simplifiable;
+});
+
+/**
  * Computes the preview equation reactively.
- * If the user hovers over a valid drop target, it shows the speculative equation.
+ * If the user hovers over a simplification dot or a valid drop target, it shows the speculative equation.
  * Otherwise, it shows the current active equation.
  */
 export const previewEquationAtom = atom<Equation>((get) => {
+  const hoverSimplifyPath = get(hoverSimplifyPathAtom);
+  const simplifiable = get(simplifiablePathsAtom);
+
+  if (hoverSimplifyPath && hoverSimplifyPath in simplifiable) {
+    return simplifiable[hoverSimplifyPath];
+  }
+
   const hoverPath = get(hoverPathAtom);
   const validDrops = get(validDropPathsAtom);
 
@@ -100,6 +136,7 @@ export const pushEquationAtom = atom(
     set(currentIndexAtom, nextHistory.length - 1);
     set(selectedPathAtom, null);
     set(hoverPathAtom, null);
+    set(hoverSimplifyPathAtom, null);
   }
 );
 
@@ -115,6 +152,7 @@ export const resetToEquationStringAtom = atom(
       set(currentIndexAtom, DEFAULT_ZERO);
       set(selectedPathAtom, null);
       set(hoverPathAtom, null);
+      set(hoverSimplifyPathAtom, null);
     } catch (err) {
       console.error('Failed to reset equation:', err);
       throw err;

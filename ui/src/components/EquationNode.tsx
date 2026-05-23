@@ -10,6 +10,8 @@ import {
   pushEquationAtom,
   currentEquationAtom,
   pathsWithValidMovesAtom,
+  hoverSimplifyPathAtom,
+  simplifiablePathsAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, replaceNodeAtPath, getFunctionName, equationToString } from 'math-engine';
@@ -47,6 +49,8 @@ const canToggleRoot = (eq: math.MathNode | unknown): boolean => {
 export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const [selectedPath, setSelectedPath] = useAtom(selectedPathAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
+  const setHoverSimplifyPath = useSetAtom(hoverSimplifyPathAtom);
+  const simplifiablePaths = useAtomValue(simplifiablePathsAtom);
   const validDrops = useAtomValue(validDropPathsAtom);
   const pushEquation = useSetAtom(pushEquationAtom);
   const currentEq = useAtomValue(currentEquationAtom);
@@ -67,6 +71,17 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const isValidDrop = path in validDrops;
   const hasValidMoves = pathsWithValidMoves.has(path);
   const isGreyedOut = !selectedPath && !hasValidMoves;
+
+  const simplifiedEq = simplifiablePaths[path];
+  const isSimplifiable = !!simplifiedEq;
+
+  const handleSimplifyClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (simplifiedEq) {
+      pushEquation(simplifiedEq);
+      setHoverSimplifyPath(null);
+    }
+  };
 
   // Toggle Root Sign (Positive/Negative branches)
   const handleToggleRootSign = (e: React.MouseEvent) => {
@@ -260,6 +275,27 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       {/* Glowing placeholder icon for valid drops */}
       {isValidDrop && (
         <div className="absolute -inset-0.5 bg-emerald-400/20 blur-md rounded-lg -z-10 animate-pulse" />
+      )}
+
+      {/* Simplification Dot */}
+      {isSimplifiable && (
+        <button
+          className={`absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full bg-amber-400 border border-neutral-950 flex items-center justify-center cursor-pointer shadow-md hover:bg-amber-300 transition-colors z-20 group ${THEME_TRANSITIONS.FAST}`}
+          onMouseEnter={(e) => {
+            e.stopPropagation();
+            setHoverSimplifyPath(path);
+          }}
+          onMouseLeave={(e) => {
+            e.stopPropagation();
+            setHoverSimplifyPath(null);
+          }}
+          onClick={handleSimplifyClick}
+          title="Simplify this term"
+        >
+          {/* Subtle pulse effect inside the dot */}
+          <span className="absolute inset-0 rounded-full bg-amber-400/40 animate-ping group-hover:opacity-0 pointer-events-none" />
+          <span className="h-1.5 w-1.5 rounded-full bg-neutral-950 pointer-events-none" />
+        </button>
       )}
     </div>
   );

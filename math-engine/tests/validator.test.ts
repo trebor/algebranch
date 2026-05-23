@@ -1,6 +1,6 @@
 import { parseEquation, equationToString } from '../src/index';
 import { areEquationsEquivalent, generateValidMoves } from '../src/validator';
-import { autoSimplify } from '../src/simplify';
+import { autoSimplify, getSimplificationForPath } from '../src/simplify';
 
 describe('Math Engine Validator & Simplifier', () => {
   test('parseEquation and equationToString work correctly', () => {
@@ -101,5 +101,33 @@ describe('Math Engine Validator & Simplifier', () => {
     const eq3 = parseEquation('x + 0 = 5');
     const simplified3 = autoSimplify(eq3);
     expect(equationToString(simplified3)).toBe('x = 5');
+  });
+
+  test('getSimplificationForPath identifies simplification opportunities correctly', () => {
+    // 1. Redundant parenthesis
+    const eq1 = parseEquation('(x) + 2 = 5');
+    const simplified1 = getSimplificationForPath(eq1, 'lhs/0');
+    expect(simplified1).not.toBeNull();
+    expect(equationToString(simplified1!)).toBe('x + 2 = 5');
+
+    // 2. Identity addition (+ 0)
+    const eq2 = parseEquation('x + 0 = 5');
+    const simplified2 = getSimplificationForPath(eq2, 'lhs/1');
+    expect(simplified2).not.toBeNull();
+    expect(equationToString(simplified2!)).toBe('x = 5');
+
+    // 3. Double removal (+ 2 - 2)
+    const eq3 = parseEquation('x + 2 - 2 = 5');
+    const simplified3_1 = getSimplificationForPath(eq3, 'lhs/0/1');
+    const simplified3_2 = getSimplificationForPath(eq3, 'lhs/1');
+    expect(simplified3_1).not.toBeNull();
+    expect(equationToString(simplified3_1!)).toBe('x = 5');
+    expect(simplified3_2).not.toBeNull();
+    expect(equationToString(simplified3_2!)).toBe('x = 5');
+
+    // 4. Non-simplifiable node
+    const eq4 = parseEquation('3 * x + 5 = 12');
+    const simplified4 = getSimplificationForPath(eq4, 'lhs/0/0'); // '3'
+    expect(simplified4).toBeNull();
   });
 });

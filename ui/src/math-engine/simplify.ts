@@ -41,6 +41,28 @@ export const tryDoubleRemoval = (eq: Equation, p1: string, p2: string): Equation
 };
 
 /**
+ * Checks recursively if a mathjs node is a subtree containing only constants (no variables).
+ */
+export const isConstantSubtree = (node: math.MathNode): boolean => {
+  if (node.type === 'ConstantNode') return true;
+  if (node.type === 'SymbolNode') {
+    const name = (node as math.SymbolNode).name;
+    return name === 'pi' || name === 'e';
+  }
+  if (node.type === 'ParenthesisNode') {
+    return isConstantSubtree((node as math.ParenthesisNode).content);
+  }
+  if (node.type === 'OperatorNode') {
+    return (node as math.OperatorNode).args.every(isConstantSubtree);
+  }
+  if (node.type === 'FunctionNode') {
+    // Only check args, NOT the function name reference (which is a SymbolNode like 'sqrt')
+    return (node as math.FunctionNode).args.every(isConstantSubtree);
+  }
+  return false;
+};
+
+/**
  * Checks if a given path has a simplification opportunity.
  * Returns the simplified Equation if found, otherwise null.
  */
@@ -49,7 +71,33 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
     const node = getNodeByPath(eq, p);
     if (!node) return null;
 
-    // 1. Unpack redundant parenthesis at this path
+    // 1. Try constant folding first (non-constant subtrees composed entirely of constants)
+    if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
+      try {
+        const val = node.compile().evaluate();
+        let numVal: number | null = null;
+        if (typeof val === 'number') {
+          numVal = val;
+        } else if (val && typeof val === 'object' && 'toNumber' in val) {
+          numVal = (val as any).toNumber();
+        } else {
+          const parsed = parseFloat(val?.toString());
+          if (!isNaN(parsed)) {
+            numVal = parsed;
+          }
+        }
+        if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
+          const candidate = replaceNodeAtPath(eq, p, new math.ConstantNode(numVal));
+          if (areEquationsEquivalent(eq, candidate)) {
+            return candidate;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // 2. Unpack redundant parenthesis at this path
     if (node.type === 'ParenthesisNode') {
       const paren = node as math.ParenthesisNode;
       const candidate = replaceNodeAtPath(eq, p, paren.content);
@@ -58,13 +106,13 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
       }
     }
 
-    // 2. Try single removal of this node
+    // 3. Try single removal of this node
     const singleCandidate = trySingleRemoval(eq, p);
     if (singleCandidate && areEquationsEquivalent(eq, singleCandidate)) {
       return singleCandidate;
     }
 
-    // 3. Try double removal involving this node and another node
+    // 4. Try double removal involving this node and another node
     const allPaths = getAllPaths(eq);
     for (let i = 0; i < allPaths.length; i++) {
       const otherPath = allPaths[i];
@@ -80,7 +128,6 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
 
   return null;
 };
-
 
 /**
  * Automatically simplifies an equation by trying all single and double node
@@ -100,9 +147,37 @@ export const autoSimplify = (eq: Equation): Equation => {
 
     const paths = getAllPaths(currentEq);
 
-    // 1. Try single term eliminations or parenthesis unwrapping
+    // 1. Try single term eliminations, parenthesis unwrapping, or constant folding
     for (let i = 0; i < paths.length; i++) {
       const node = getNodeByPath(currentEq, paths[i]);
+
+      // Try constant folding first
+      if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
+        try {
+          const val = node.compile().evaluate();
+          let numVal: number | null = null;
+          if (typeof val === 'number') {
+            numVal = val;
+          } else if (val && typeof val === 'object' && 'toNumber' in val) {
+            numVal = (val as any).toNumber();
+          } else {
+            const parsed = parseFloat(val?.toString());
+            if (!isNaN(parsed)) {
+              numVal = parsed;
+            }
+          }
+          if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
+            const candidate = replaceNodeAtPath(currentEq, paths[i], new math.ConstantNode(numVal));
+            if (areEquationsEquivalent(currentEq, candidate)) {
+              currentEq = candidate;
+              simplified = true;
+              break; // Restart scan on the simplified tree
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
 
       // Unpack redundant parentheses (e.g. (x) -> x)
       if (node.type === 'ParenthesisNode') {

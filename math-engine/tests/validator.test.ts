@@ -130,4 +130,29 @@ describe('Math Engine Validator & Simplifier', () => {
     const simplified4 = getSimplificationForPath(eq4, 'lhs/0/0'); // '3'
     expect(simplified4).toBeNull();
   });
+
+  test('getSimplificationForPath performs constant folding correctly', () => {
+    // 1. Basic addition of constants
+    const eq1 = parseEquation('x = 2 + 3');
+    const simplified1 = getSimplificationForPath(eq1, 'rhs');
+    expect(simplified1).not.toBeNull();
+    expect(equationToString(simplified1!)).toBe('x = 5');
+
+    // 2. Complex nested constants
+    const eq2 = parseEquation('x = (12 - 4) * 2');
+    const simplified2 = getSimplificationForPath(eq2, 'rhs');
+    expect(simplified2).not.toBeNull();
+    expect(equationToString(simplified2!)).toBe('x = 16');
+
+    // 3. Constant function (sqrt(9))
+    const eq3 = parseEquation('x = sqrt(9)');
+    const simplified3 = getSimplificationForPath(eq3, 'rhs');
+    expect(simplified3).not.toBeNull();
+    expect(equationToString(simplified3!)).toBe('x = 3');
+
+    // 4. Does not fold expressions containing variables
+    const eq4 = parseEquation('x = 2 * y + 3');
+    const simplified4 = getSimplificationForPath(eq4, 'rhs');
+    expect(simplified4).toBeNull();
+  });
 });

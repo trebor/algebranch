@@ -39,10 +39,10 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
 
     if (node.type === 'ParenthesisNode') {
       return (
-        <div className="flex items-center px-1">
-          <span className="text-white/20 font-light text-lg mr-0.5">(</span>
+        <div className="flex items-center px-[0.1em]">
+          <span className="text-white/20 font-light text-[1.05em] mr-[0.05em] select-none">(</span>
           <PreviewEquationNode path={`${path}/0`} />
-          <span className="text-white/20 font-light text-lg ml-0.5">)</span>
+          <span className="text-white/20 font-light text-[1.05em] ml-[0.05em] select-none">)</span>
         </div>
       );
     }
@@ -53,8 +53,8 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       if (opNode.isUnary()) {
         const opSymbol = opNode.op === '-' ? '−' : opNode.op;
         return (
-          <div className="flex items-center gap-0.5">
-            <span className="text-indigo-400/60 font-bold">{opSymbol}</span>
+          <div className="flex items-center gap-[0.05em]">
+            <span className="text-indigo-400/60 font-bold select-none">{opSymbol}</span>
             <PreviewEquationNode path={`${path}/0`} />
           </div>
         );
@@ -63,12 +63,12 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       // Binary Fraction operator (Vertical rendering)
       if (opNode.op === '/') {
         return (
-          <div className="flex flex-col items-center justify-center mx-1 my-0.5">
-            <div className="w-full text-center pb-1">
+          <div className="flex flex-col items-center justify-center mx-[0.1em] my-[0.05em]">
+            <div className="w-full text-center pb-[0.1em]">
               <PreviewEquationNode path={`${path}/0`} />
             </div>
             <div className="w-full border-t border-white/10 h-0" />
-            <div className="w-full text-center pt-1">
+            <div className="w-full text-center pt-[0.1em]">
               <PreviewEquationNode path={`${path}/1`} />
             </div>
           </div>
@@ -80,7 +80,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
         return (
           <div className="flex items-start">
             <PreviewEquationNode path={`${path}/0`} />
-            <div className="text-[10px] leading-none -mt-1 ml-0.5 scale-90 opacity-70">
+            <div className="text-[0.65em] leading-none -mt-[0.2em] ml-[0.05em] scale-90 opacity-70">
               <PreviewEquationNode path={`${path}/1`} />
             </div>
           </div>
@@ -96,9 +96,9 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       const opSymbol = opDisplayMap[opNode.op] || opNode.op;
 
       return (
-        <div className="flex items-center gap-1.5 flex-wrap justify-center py-1">
+        <div className="flex items-center gap-[0.2em] flex-wrap justify-center py-[0.05em]">
           <PreviewEquationNode path={`${path}/0`} />
-          <span className="text-indigo-400/60 font-medium text-sm">{opSymbol}</span>
+          <span className="text-indigo-400/60 font-medium text-[0.85em] select-none">{opSymbol}</span>
           <PreviewEquationNode path={`${path}/1`} />
         </div>
       );
@@ -110,9 +110,9 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
 
       if (nameStr === 'sqrt') {
         return (
-          <div className="flex items-stretch mx-1">
-            <span className="text-2xl font-light font-serif mr-[-2px] text-indigo-400/60 self-center">√</span>
-            <div className="border-t border-l border-white/15 pt-1 px-1.5 rounded-tr-md flex items-center">
+          <div className="flex items-stretch mx-[0.1em]">
+            <span className="text-[1.25em] font-light font-serif mr-[-0.05em] text-indigo-400/60 self-center select-none">√</span>
+            <div className="border-t border-l border-white/15 pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center">
               <PreviewEquationNode path={`${path}/0`} />
             </div>
           </div>
@@ -121,11 +121,11 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
 
       // Default fallback function renderer
       return (
-        <div className="flex items-center gap-0.5">
-          <span className="text-purple-400/60 font-medium">{nameStr}</span>
-          <span className="text-white/20 mr-0.5">(</span>
+        <div className="flex items-center gap-[0.05em]">
+          <span className="text-purple-400/60 font-medium text-[0.9em]">{nameStr}</span>
+          <span className="text-white/20 mr-[0.05em]">(</span>
           <PreviewEquationNode path={`${path}/0`} />
-          <span className="text-white/20 ml-0.5">)</span>
+          <span className="text-white/20 ml-[0.05em]">)</span>
         </div>
       );
     }
@@ -134,7 +134,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
   };
 
   return (
-    <div className="relative inline-flex items-center justify-center p-1.5 border border-white/5 bg-white/0 rounded-lg">
+    <div className="relative inline-flex items-center justify-center p-[0.2em] border border-white/5 bg-white/0 rounded-[0.4em]">
       {renderContent()}
     </div>
   );

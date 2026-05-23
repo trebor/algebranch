@@ -140,10 +140,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
     if (node.type === 'ParenthesisNode') {
       return (
-        <div className="flex items-center px-1">
-          <span className="text-white/40 font-light text-lg select-none mr-0.5">(</span>
+        <div className="flex items-center px-[0.1em]">
+          <span className="text-white/40 font-light text-[1.05em] select-none mr-[0.05em]">(</span>
           <EquationNode path={`${path}/0`} />
-          <span className="text-white/40 font-light text-lg select-none ml-0.5">)</span>
+          <span className="text-white/40 font-light text-[1.05em] select-none ml-[0.05em]">)</span>
         </div>
       );
     }
@@ -154,7 +154,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       if (opNode.isUnary()) {
         const opSymbol = opNode.op === '-' ? '−' : opNode.op;
         return (
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-[0.05em]">
             <span className="text-indigo-300/90 font-bold select-none">{opSymbol}</span>
             <EquationNode path={`${path}/0`} />
           </div>
@@ -164,12 +164,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       // Binary Fraction operator (Vertical rendering)
       if (opNode.op === '/') {
         return (
-          <div className="flex flex-col items-center justify-center mx-1 my-0.5">
-            <div className="w-full text-center pb-1">
+          <div className="flex flex-col items-center justify-center mx-[0.1em] my-[0.05em]">
+            <div className="w-full text-center pb-[0.1em]">
               <EquationNode path={`${path}/0`} />
             </div>
             <div className="w-full border-t border-white/20 h-0" />
-            <div className="w-full text-center pt-1">
+            <div className="w-full text-center pt-[0.1em]">
               <EquationNode path={`${path}/1`} />
             </div>
           </div>
@@ -181,7 +181,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         return (
           <div className="flex items-start">
             <EquationNode path={`${path}/0`} />
-            <div className="text-[10px] leading-none -mt-1 ml-0.5 scale-90 opacity-90">
+            <div className="text-[0.65em] leading-none -mt-[0.2em] ml-[0.05em] scale-90 opacity-90">
               <EquationNode path={`${path}/1`} />
             </div>
           </div>
@@ -197,9 +197,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       const opSymbol = opDisplayMap[opNode.op] || opNode.op;
 
       return (
-        <div className="flex items-center gap-1.5 flex-wrap justify-center py-1">
+        <div className="flex items-center gap-[0.2em] flex-wrap justify-center py-[0.05em]">
           <EquationNode path={`${path}/0`} />
-          <span className="text-indigo-400 font-medium select-none text-sm">{opSymbol}</span>
+          <span className="text-indigo-400 font-medium select-none text-[0.85em]">{opSymbol}</span>
           <EquationNode path={`${path}/1`} />
         </div>
       );
@@ -211,9 +211,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
       if (nameStr === 'sqrt') {
         return (
-          <div className="flex items-stretch mx-1">
-            <span className="text-2xl font-light font-serif mr-[-2px] select-none text-indigo-300 self-center">√</span>
-            <div className="border-t border-l border-white/30 pt-1 px-1.5 rounded-tr-md flex items-center">
+          <div className="flex items-stretch mx-[0.1em]">
+            <span className="text-[1.25em] font-light font-serif mr-[-0.05em] select-none text-indigo-300 self-center">√</span>
+            <div className="border-t border-l border-white/30 pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center">
               <EquationNode path={`${path}/0`} />
             </div>
           </div>
@@ -222,11 +222,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
       // Default fallback function renderer
       return (
-        <div className="flex items-center gap-0.5">
-          <span className="text-purple-300 font-medium select-none">{nameStr}</span>
-          <span className="text-white/40 mr-0.5">(</span>
+        <div className="flex items-center gap-[0.05em]">
+          <span className="text-purple-300 font-medium select-none text-[0.9em]">{nameStr}</span>
+          <span className="text-white/40 mr-[0.05em]">(</span>
           <EquationNode path={`${path}/0`} />
-          <span className="text-white/40 ml-0.5">)</span>
+          <span className="text-white/40 ml-[0.05em]">)</span>
         </div>
       );
     }
@@ -236,7 +236,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   return (
     <div
-      className={`relative inline-flex items-center justify-center p-1.5 border rounded-lg ${borderStyle} ${THEME_TRANSITIONS.FAST}`}
+      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] ${borderStyle} ${THEME_TRANSITIONS.FAST}`}
       onMouseEnter={() => setHoverPath(path)}
       onMouseLeave={() => setHoverPath(null)}
       onClick={handleNodeClick}
@@ -245,10 +245,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
       {/* Hover selection controls toolbar */}
       {isSelected && canToggleRoot(node) && (
-        <div className="absolute -top-9 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-neutral-900 border border-white/10 rounded-full px-2.5 py-1 z-30 shadow-lg text-[10px] whitespace-nowrap">
+        <div className="absolute -top-[2em] left-1/2 -translate-x-1/2 flex items-center gap-[0.1em] bg-neutral-900 border border-white/10 rounded-[1em] px-[0.6em] py-[0.2em] z-30 shadow-lg text-[0.55em] whitespace-nowrap">
           <button
             onClick={handleToggleRootSign}
-            className="p-0.5 hover:bg-white/10 text-indigo-400 hover:text-indigo-300 rounded-full transition-colors flex items-center gap-1 cursor-pointer"
+            className="p-[0.1em] hover:bg-white/10 text-indigo-400 hover:text-indigo-300 rounded-[1em] transition-colors flex items-center gap-[0.2em] cursor-pointer"
             title="Toggle root branch (+/- sign)"
           >
             <Sparkles size={10} />

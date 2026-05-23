@@ -62,24 +62,24 @@ export default function Home() {
             <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
               
               {/* 1. Active Derivation Workspace (Top 50%) */}
-              <div className="flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8">
+              <div className="flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
                 <div className="flex flex-col items-center justify-center gap-2">
                   <span className="text-[10px] text-indigo-400 font-semibold tracking-wider uppercase select-none">
                     Active Workspace
                   </span>
-                  <div className="flex items-center justify-center gap-8 flex-wrap max-w-full">
+                  <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full">
                     {/* LHS Term Tree */}
-                    <div className="flex justify-end min-w-[200px]">
+                    <div className="flex justify-end min-w-[5em]">
                       <EquationNode path="lhs" />
                     </div>
 
                     {/* Equals Operator sign */}
-                    <span className="text-3xl font-light font-mono text-indigo-400 select-none px-4 py-2 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl shadow-inner shadow-black">
+                    <span className="text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black">
                       =
                     </span>
 
                     {/* RHS Term Tree */}
-                    <div className="flex justify-start min-w-[200px]">
+                    <div className="flex justify-start min-w-[5em]">
                       <EquationNode path="rhs" />
                     </div>
                   </div>
@@ -90,7 +90,7 @@ export default function Home() {
               <div className="w-11/12 border-t border-dashed border-white/10 shrink-0 self-center" />
 
               {/* 2. Speculative Preview Workspace (Bottom 50%) */}
-              <div className="flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8">
+              <div className="flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
                 <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 ${
                   isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
                 }`}>
@@ -103,14 +103,14 @@ export default function Home() {
                     )}
                   </span>
                   
-                  <div className="flex items-center justify-center gap-8 flex-wrap max-w-full pointer-events-none select-none">
+                  <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full pointer-events-none select-none">
                     {/* LHS Preview Term Tree */}
-                    <div className="flex justify-end min-w-[200px]">
+                    <div className="flex justify-end min-w-[5em]">
                       <PreviewEquationNode path="lhs" />
                     </div>
 
                     {/* Equals Operator sign */}
-                    <span className={`text-3xl font-light font-mono select-none px-4 py-2 border rounded-2xl transition-all duration-300 ${
+                    <span className={`text-[1.2em] font-light font-mono select-none px-[0.6em] py-[0.2em] border rounded-[0.4em] transition-all duration-300 ${
                       isSpeculative
                         ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
                         : 'text-zinc-600 border-zinc-500/10 bg-zinc-500/5'
@@ -119,7 +119,7 @@ export default function Home() {
                     </span>
 
                     {/* RHS Preview Term Tree */}
-                    <div className="flex justify-start min-w-[200px]">
+                    <div className="flex justify-start min-w-[5em]">
                       <PreviewEquationNode path="rhs" />
                     </div>
                   </div>

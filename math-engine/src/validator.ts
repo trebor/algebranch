@@ -185,7 +185,7 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
       const d2 = evaluatePoint(eq2.lhs, scope) - evaluatePoint(eq2.rhs, scope);
 
       if (isNaN(d1) || isNaN(d2) || !isFinite(d1) || !isFinite(d2)) {
-        continue;
+        return false; // Direct failure on division by zero or invalid domain
       }
 
       if (Math.abs(d1 - d2) > POINT_TOLERANCE) {
@@ -214,6 +214,16 @@ export const areEquationsEquivalentInterval = (eq1: Equation, eq2: Equation, var
       const rhs1 = evaluateInterval(eq1.rhs, scope);
       const lhs2 = evaluateInterval(eq2.lhs, scope);
       const rhs2 = evaluateInterval(eq2.rhs, scope);
+
+      // Reject non-finite bounds (division by zero / undefined ranges) immediately
+      if (
+        !isFinite(lhs1.min) || !isFinite(lhs1.max) ||
+        !isFinite(rhs1.min) || !isFinite(rhs1.max) ||
+        !isFinite(lhs2.min) || !isFinite(lhs2.max) ||
+        !isFinite(rhs2.min) || !isFinite(rhs2.max)
+      ) {
+        return false;
+      }
 
       const d1 = subInterval(lhs1, rhs1);
       const d2 = subInterval(lhs2, rhs2);

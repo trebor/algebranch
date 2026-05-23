@@ -26,6 +26,12 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(areEquationsEquivalent(eq1, eqNonEquivalent2)).toBe(false);
   });
 
+  test('areEquationsEquivalent rejects division by zero and domain errors', () => {
+    const eq1 = parseEquation('0 = 4 - x^2');
+    const eqInvalid = parseEquation('x / 0 = 4 - 2');
+    expect(areEquationsEquivalent(eq1, eqInvalid)).toBe(false);
+  });
+
   test('generateValidMoves suggests correct algebraic transfers', () => {
     const eq = parseEquation('x + 2 = 5');
 

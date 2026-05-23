@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { Equation, parseEquation, generateValidMoves } from 'math-engine';
 
 // Global Initial Value Constants
-const INITIAL_EQUATION_STRING = 'x^2 - 4 = 0';
+const INITIAL_EQUATION_STRING = 'E = (m * c^2) / sqrt(1 - v^2 / c^2)';
 const DEFAULT_ZERO = 0;
 
 // Base Atoms

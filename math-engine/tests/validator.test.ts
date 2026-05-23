@@ -73,6 +73,19 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(moves['rhs/1']).toBeUndefined();
   });
 
+  test('generateValidMoves rejects deep cross-equals drops', () => {
+    const eq = parseEquation('x + 4 = (y - 1) * 2');
+    // Path for '4' is 'lhs/1'.
+    const moves = generateValidMoves(eq, 'lhs/1');
+    
+    // It should NOT allow dropping '4' deep inside the RHS tree (e.g. at 'rhs/0/0/1' which is '1' in 'y - 1')
+    // to produce 'x = (y - (4 - 1)) * 2', even though it is mathematically equivalent.
+    // The only allowed drop target on the RHS must be the root 'rhs'.
+    expect(moves['rhs/0/0/1']).toBeUndefined();
+    expect(moves['rhs']).toBeDefined();
+    expect(equationToString(moves['rhs'])).toBe('x = (y - 1) * 2 - 4');
+  });
+
   test('autoSimplify eliminates redundant terms', () => {
     // Additive redundancy: x + 2 - 2 = 5  =>  x = 5
     const eq1 = parseEquation('x + 2 - 2 = 5');

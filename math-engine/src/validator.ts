@@ -393,6 +393,16 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
       if (excludedParents.has(targetPath)) {
         return;
       }
+
+      // If it's a cross-equals move, the target path must be the root of the destination side
+      const isCrossEquals = (
+        (sourcePath.startsWith('lhs') && targetPath.startsWith('rhs')) ||
+        (sourcePath.startsWith('rhs') && targetPath.startsWith('lhs'))
+      );
+      if (isCrossEquals && targetPath !== 'lhs' && targetPath !== 'rhs') {
+        return;
+      }
+
       const targetNode = getNodeByPath(tempEq, targetPath);
 
       // Declared as const to satisfy TypeScript operator union types

@@ -90,7 +90,7 @@ export default function Home() {
               <div className="w-11/12 border-t border-dashed border-white/10 shrink-0 self-center" />
 
               {/* 2. Speculative Preview Workspace (Bottom 50%) */}
-              <div className="flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 pb-16">
+              <div className="flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8">
                 <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 ${
                   isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
                 }`}>
@@ -124,16 +124,6 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Glowing instruction panel at bottom of canvas */}
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-neutral-950/80 border border-white/15 px-4 py-2 rounded-full text-xs text-indigo-200 select-none max-w-[85%] text-center shadow-2xl backdrop-blur-md z-30">
-                <Info size={14} className="text-indigo-400 shrink-0" />
-                <span>
-                  {selectedPath
-                    ? 'Slot Selected! Hover over a green slot to preview the new equation below, click it to apply.'
-                    : 'Click an operator card or term variable box in the equation tree to start a derivation step.'}
-                </span>
               </div>
             </div>
 

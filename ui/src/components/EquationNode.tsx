@@ -128,14 +128,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   // Styling hooks
   const borderStyle = isSelected
-    ? THEME_GLASS.GLOW_ACTIVE + ' bg-indigo-950/80 text-indigo-100 font-semibold'
+    ? THEME_GLASS.GLOW_ACTIVE + ' bg-indigo-950/80 text-indigo-100 font-semibold cursor-pointer'
     : isValidDrop
     ? THEME_GLASS.GLOW_VALID + ' border-emerald-400 bg-emerald-950/80 cursor-pointer text-emerald-100 animate-pulse font-semibold'
     : isGreyedOut
-    ? 'border-white/5 bg-transparent opacity-25 pointer-events-none select-none'
+    ? 'border-white/5 bg-transparent opacity-25 pointer-events-none select-none cursor-default'
     : isHovered
-    ? 'border-indigo-400/40 bg-neutral-900/90 text-white font-medium shadow-md shadow-indigo-500/5'
-    : 'border-white/10 bg-neutral-950/90 text-white/90';
+    ? 'border-indigo-400/40 bg-neutral-900/90 text-white font-medium shadow-md shadow-indigo-500/5 cursor-pointer'
+    : hasValidMoves
+    ? 'border-white/10 bg-neutral-950/90 text-white/90 cursor-pointer'
+    : 'border-white/10 bg-neutral-950/90 text-white/90 cursor-default';
 
   // Recursive Render logic depending on Node type
   const renderContent = () => {
@@ -251,7 +253,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   return (
     <div
-      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] ${borderStyle} ${THEME_TRANSITIONS.FAST}`}
+      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${borderStyle} ${THEME_TRANSITIONS.FAST}`}
       onMouseEnter={() => setHoverPath(path)}
       onMouseLeave={() => setHoverPath(null)}
       onClick={handleNodeClick}

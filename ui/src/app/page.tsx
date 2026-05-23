@@ -59,71 +59,75 @@ export default function Home() {
         <div className="flex-1 flex gap-6 p-8 min-h-0">
           {/* Equation Editor Canvas */}
           <div className="flex-1 flex flex-col gap-6 min-w-0">
-            <div className={`flex-1 flex flex-col items-center justify-center p-8 overflow-auto gap-8 relative ${THEME_GLASS.PANEL}`}>
+            <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
               
-              {/* 1. Active Derivation Workspace */}
-              <div className="flex flex-col items-center justify-center gap-2">
-                <span className="text-[10px] text-indigo-400 font-semibold tracking-wider uppercase select-none">
-                  Active Workspace
-                </span>
-                <div className="flex items-center justify-center gap-8 flex-wrap max-w-full">
-                  {/* LHS Term Tree */}
-                  <div className="flex justify-end min-w-[200px]">
-                    <EquationNode path="lhs" />
-                  </div>
-
-                  {/* Equals Operator sign */}
-                  <span className="text-3xl font-light font-mono text-indigo-400 select-none px-4 py-2 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl shadow-inner shadow-black">
-                    =
+              {/* 1. Active Derivation Workspace (Top 50%) */}
+              <div className="flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8">
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <span className="text-[10px] text-indigo-400 font-semibold tracking-wider uppercase select-none">
+                    Active Workspace
                   </span>
+                  <div className="flex items-center justify-center gap-8 flex-wrap max-w-full">
+                    {/* LHS Term Tree */}
+                    <div className="flex justify-end min-w-[200px]">
+                      <EquationNode path="lhs" />
+                    </div>
 
-                  {/* RHS Term Tree */}
-                  <div className="flex justify-start min-w-[200px]">
-                    <EquationNode path="rhs" />
+                    {/* Equals Operator sign */}
+                    <span className="text-3xl font-light font-mono text-indigo-400 select-none px-4 py-2 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl shadow-inner shadow-black">
+                      =
+                    </span>
+
+                    {/* RHS Term Tree */}
+                    <div className="flex justify-start min-w-[200px]">
+                      <EquationNode path="rhs" />
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Elegant Dashed Separator */}
-              <div className="w-11/12 border-t border-dashed border-white/10" />
+              <div className="w-11/12 border-t border-dashed border-white/10 shrink-0 self-center" />
 
-              {/* 2. Speculative Preview Workspace */}
-              <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 ${
-                isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
-              }`}>
-                <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
-                  isSpeculative ? 'text-emerald-400' : 'text-zinc-500'
+              {/* 2. Speculative Preview Workspace (Bottom 50%) */}
+              <div className="flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 pb-16">
+                <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 ${
+                  isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
                 }`}>
-                  <span>Derivation Preview</span>
-                  {isSpeculative && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                  )}
-                </span>
-                
-                <div className="flex items-center justify-center gap-8 flex-wrap max-w-full pointer-events-none select-none">
-                  {/* LHS Preview Term Tree */}
-                  <div className="flex justify-end min-w-[200px]">
-                    <PreviewEquationNode path="lhs" />
-                  </div>
-
-                  {/* Equals Operator sign */}
-                  <span className={`text-3xl font-light font-mono select-none px-4 py-2 border rounded-2xl transition-all duration-300 ${
-                    isSpeculative
-                      ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
-                      : 'text-zinc-600 border-zinc-500/10 bg-zinc-500/5'
+                  <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
+                    isSpeculative ? 'text-emerald-400' : 'text-zinc-500'
                   }`}>
-                    =
+                    <span>Derivation Preview</span>
+                    {isSpeculative && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                    )}
                   </span>
+                  
+                  <div className="flex items-center justify-center gap-8 flex-wrap max-w-full pointer-events-none select-none">
+                    {/* LHS Preview Term Tree */}
+                    <div className="flex justify-end min-w-[200px]">
+                      <PreviewEquationNode path="lhs" />
+                    </div>
 
-                  {/* RHS Preview Term Tree */}
-                  <div className="flex justify-start min-w-[200px]">
-                    <PreviewEquationNode path="rhs" />
+                    {/* Equals Operator sign */}
+                    <span className={`text-3xl font-light font-mono select-none px-4 py-2 border rounded-2xl transition-all duration-300 ${
+                      isSpeculative
+                        ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
+                        : 'text-zinc-600 border-zinc-500/10 bg-zinc-500/5'
+                    }`}>
+                      =
+                    </span>
+
+                    {/* RHS Preview Term Tree */}
+                    <div className="flex justify-start min-w-[200px]">
+                      <PreviewEquationNode path="rhs" />
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Glowing instruction panel at bottom of canvas */}
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-neutral-950/80 border border-white/15 px-4 py-2 rounded-full text-xs text-indigo-200 select-none max-w-[85%] text-center shadow-2xl backdrop-blur-md">
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-neutral-950/80 border border-white/15 px-4 py-2 rounded-full text-xs text-indigo-200 select-none max-w-[85%] text-center shadow-2xl backdrop-blur-md z-30">
                 <Info size={14} className="text-indigo-400 shrink-0" />
                 <span>
                   {selectedPath

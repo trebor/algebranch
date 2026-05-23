@@ -34,14 +34,22 @@ export const currentEquationAtom = atom<Equation>((get) => {
  * Maps destination paths to the resulting mathematical Equation.
  */
 export const validDropPathsAtom = atom<Record<string, Equation>>((get) => {
-  const selectedPath = get(selectedPathAtom);
   const currentEq = get(currentEquationAtom);
-
-  if (!selectedPath || !currentEq) {
+  if (!currentEq) {
     return {};
   }
 
-  return generateValidMoves(currentEq, selectedPath);
+  const selectedPath = get(selectedPathAtom);
+  if (selectedPath) {
+    return generateValidMoves(currentEq, selectedPath);
+  }
+
+  const hoverPath = get(hoverPathAtom);
+  if (hoverPath) {
+    return generateValidMoves(currentEq, hoverPath);
+  }
+
+  return {};
 });
 
 /**

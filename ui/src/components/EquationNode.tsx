@@ -291,16 +291,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       {isValidDrop && (
         <div className="absolute -inset-0.5 bg-emerald-400/20 blur-md rounded-lg -z-10 animate-pulse" />
       )}
-
-      {/* Floating speculative equation tooltip on hover */}
-      {isValidDrop && isHovered && (
-        <div className="absolute -top-11 left-1/2 -translate-x-1/2 bg-neutral-950/95 border border-indigo-500/35 rounded-xl px-3 py-1.5 shadow-2xl z-40 text-[10px] font-mono whitespace-nowrap animate-[pulse_2s_infinite]">
-          <span className="text-white/40 mr-1 select-none">Result:</span>
-          <span className="text-indigo-200 font-semibold tracking-wide">
-            {equationToString(validDrops[path])}
-          </span>
-        </div>
-      )}
     </div>
   );
 };

@@ -42,6 +42,21 @@ export const validDropPathsAtom = atom<Record<string, Equation>>((get) => {
   return generateValidMoves(currentEq, selectedPath);
 });
 
+/**
+ * Computes the preview equation reactively.
+ * If the user hovers over a valid drop target, it shows the speculative equation.
+ * Otherwise, it shows the current active equation.
+ */
+export const previewEquationAtom = atom<Equation>((get) => {
+  const hoverPath = get(hoverPathAtom);
+  const validDrops = get(validDropPathsAtom);
+
+  if (hoverPath && hoverPath in validDrops) {
+    return validDrops[hoverPath];
+  }
+  return get(currentEquationAtom);
+});
+
 // Write-only Actions
 
 /**

@@ -259,6 +259,36 @@ export const areEquationsEquivalent = (eq1: Equation, eq2: Equation): boolean =>
 };
 
 /**
+ * Helper to get all parent paths that should be excluded from drop targets.
+ * This includes the immediate parent and any parenthesis wrapping it, up to and including
+ * the first non-parenthesis operator ancestor.
+ */
+export const getExcludedParentPaths = (eq: Equation, sourcePath: string): Set<string> => {
+  const excluded = new Set<string>();
+  if (!sourcePath.includes('/')) {
+    return excluded;
+  }
+
+  let currentPath = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
+  while (true) {
+    excluded.add(currentPath);
+    try {
+      const node = getNodeByPath(eq, currentPath);
+      if (node.type !== 'ParenthesisNode') {
+        break;
+      }
+    } catch {
+      break;
+    }
+    if (!currentPath.includes('/')) {
+      break;
+    }
+    currentPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+  }
+  return excluded;
+};
+
+/**
  * Generates all mathematically valid target equations for a selected node.
  * Maps destination path string to the resulting Equation.
  */
@@ -268,8 +298,12 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
   try {
     const { newEquation: tempEq, removedNode } = removeNodeAtPath(originalEq, sourcePath);
     const targetPaths = getAllPaths(tempEq);
+    const excludedParents = getExcludedParentPaths(originalEq, sourcePath);
 
     targetPaths.forEach((targetPath) => {
+      if (excludedParents.has(targetPath)) {
+        return;
+      }
       const targetNode = getNodeByPath(tempEq, targetPath);
 
       // Declared as const to satisfy TypeScript operator union types
@@ -279,21 +313,39 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
         // Cast via never to satisfy very specific types of OperatorNodeMap in mathjs
         const nodeStandard = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [targetNode, removedNode]);
         const eqStandard = replaceNodeAtPath(tempEq, targetPath, nodeStandard);
-        if (areEquationsEquivalent(originalEq, eqStandard)) {
+        
+        const isNoOpStandard = (
+          originalEq.lhs.toString() === eqStandard.lhs.toString() &&
+          originalEq.rhs.toString() === eqStandard.rhs.toString()
+        );
+
+        if (!isNoOpStandard && areEquationsEquivalent(originalEq, eqStandard)) {
           moves[targetPath] = eqStandard;
         }
 
         if (op === '-' || op === '/') {
           const nodeReverse = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [removedNode, targetNode]);
           const eqReverse = replaceNodeAtPath(tempEq, targetPath, nodeReverse);
-          if (areEquationsEquivalent(originalEq, eqReverse)) {
+          
+          const isNoOpReverse = (
+            originalEq.lhs.toString() === eqReverse.lhs.toString() &&
+            originalEq.rhs.toString() === eqReverse.rhs.toString()
+          );
+
+          if (!isNoOpReverse && areEquationsEquivalent(originalEq, eqReverse)) {
             moves[targetPath] = eqReverse;
           }
         }
       });
 
       const eqDirect = replaceNodeAtPath(tempEq, targetPath, removedNode);
-      if (areEquationsEquivalent(originalEq, eqDirect)) {
+      
+      const isNoOpDirect = (
+        originalEq.lhs.toString() === eqDirect.lhs.toString() &&
+        originalEq.rhs.toString() === eqDirect.rhs.toString()
+      );
+
+      if (!isNoOpDirect && areEquationsEquivalent(originalEq, eqDirect)) {
         moves[targetPath] = eqDirect;
       }
     });

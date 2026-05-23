@@ -46,6 +46,13 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(equationToString(moves['rhs'])).toBe('x = 5 - 2');
   });
 
+  test('generateValidMoves excludes parent and parenthesis-wrapped parent paths from destinations', () => {
+    const eq = parseEquation('x + 2 = 5');
+    // Path for 'x' in 'x + 2 = 5' is 'lhs/0'. Immediate parent is 'lhs'.
+    const moves = generateValidMoves(eq, 'lhs/0');
+    expect(moves['lhs']).toBeUndefined(); // Parent path 'lhs' is excluded
+  });
+
   test('autoSimplify eliminates redundant terms', () => {
     // Additive redundancy: x + 2 - 2 = 5  =>  x = 5
     const eq1 = parseEquation('x + 2 - 2 = 5');

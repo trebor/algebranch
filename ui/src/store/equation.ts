@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { Equation, parseEquation, generateValidMoves } from 'math-engine';
+import { Equation, parseEquation, generateValidMoves, getAllPaths } from 'math-engine';
 
 // Global Initial Value Constants
 const INITIAL_EQUATION_STRING = '3 * x + 5 = x + 13';
@@ -40,6 +40,33 @@ export const validDropPathsAtom = atom<Record<string, Equation>>((get) => {
   }
 
   return generateValidMoves(currentEq, selectedPath);
+});
+
+/**
+ * Computes the set of all paths in the current equation that have at least one valid drop destination.
+ */
+export const pathsWithValidMovesAtom = atom<Set<string>>((get) => {
+  const currentEq = get(currentEquationAtom);
+  const validPaths = new Set<string>();
+
+  if (!currentEq) {
+    return validPaths;
+  }
+
+  const allPaths = getAllPaths(currentEq);
+
+  allPaths.forEach((path) => {
+    try {
+      const moves = generateValidMoves(currentEq, path);
+      if (Object.keys(moves).length > 0) {
+        validPaths.add(path);
+      }
+    } catch {
+      // Graceful fallback
+    }
+  });
+
+  return validPaths;
 });
 
 /**

@@ -9,6 +9,7 @@ import {
   validDropPathsAtom,
   pushEquationAtom,
   currentEquationAtom,
+  pathsWithValidMovesAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, replaceNodeAtPath, getFunctionName, equationToString } from 'math-engine';
@@ -49,6 +50,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const validDrops = useAtomValue(validDropPathsAtom);
   const pushEquation = useSetAtom(pushEquationAtom);
   const currentEq = useAtomValue(currentEquationAtom);
+  const pathsWithValidMoves = useAtomValue(pathsWithValidMovesAtom);
 
   const node = React.useMemo(() => {
     try {
@@ -63,6 +65,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const isSelected = selectedPath === path;
   const isHovered = hoverPath === path;
   const isValidDrop = path in validDrops;
+  const hasValidMoves = pathsWithValidMoves.has(path);
+  const isGreyedOut = !selectedPath && !hasValidMoves;
 
   // Toggle Root Sign (Positive/Negative branches)
   const handleToggleRootSign = (e: React.MouseEvent) => {
@@ -109,11 +113,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   // Styling hooks
   const borderStyle = isSelected
-    ? THEME_GLASS.GLOW_ACTIVE + ' bg-indigo-950/80 text-indigo-100'
+    ? THEME_GLASS.GLOW_ACTIVE + ' bg-indigo-950/80 text-indigo-100 font-semibold'
     : isValidDrop
-    ? THEME_GLASS.GLOW_VALID + ' border-emerald-400 bg-emerald-950/80 cursor-pointer text-emerald-100 animate-pulse'
+    ? THEME_GLASS.GLOW_VALID + ' border-emerald-400 bg-emerald-950/80 cursor-pointer text-emerald-100 animate-pulse font-semibold'
+    : isGreyedOut
+    ? 'border-white/5 bg-transparent opacity-25 pointer-events-none select-none'
     : isHovered
-    ? 'border-indigo-400/40 bg-neutral-900/90 text-white'
+    ? 'border-indigo-400/40 bg-neutral-900/90 text-white font-medium shadow-md shadow-indigo-500/5'
     : 'border-white/10 bg-neutral-950/90 text-white/90';
 
   // Recursive Render logic depending on Node type

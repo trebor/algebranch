@@ -1,0 +1,1 @@
+/Users/trebor/.agents/rules.md

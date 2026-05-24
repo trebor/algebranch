@@ -275,8 +275,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   return (
     <motion.div
-      layoutId={`active_${(node as any).id || path}`}
       layout="position"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
       transition={{
         type: 'spring',
         stiffness: 300,

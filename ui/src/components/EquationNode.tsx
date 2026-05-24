@@ -128,6 +128,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   };
 
   // Styling hooks
+  const canClick = selectedPath ? (isSelected || isValidDrop) : hasValidMoves;
+
   const borderStyle = isSelected
     ? THEME_GLASS.GLOW_ACTIVE + ' bg-indigo-950/80 text-indigo-100 font-semibold cursor-pointer'
     : isValidDrop
@@ -136,7 +138,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     ? 'border-white/5 bg-transparent opacity-25 pointer-events-none select-none cursor-default'
     : isHovered
     ? 'border-indigo-400/40 bg-neutral-900/90 text-white font-medium shadow-md shadow-indigo-500/5 cursor-pointer'
-    : hasValidMoves
+    : canClick
     ? 'border-white/10 bg-neutral-950/90 text-white/90 cursor-pointer'
     : 'border-white/10 bg-neutral-950/90 text-white/90 cursor-default';
 
@@ -252,7 +254,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     return <span>{node.toString()}</span>;
   };
 
-  const isInteractive = isSelected || isValidDrop || isSimplifiable || hasValidMoves;
+  const isInteractive = selectedPath
+    ? (isSelected || isValidDrop || isSimplifiable)
+    : (hasValidMoves || isSimplifiable);
 
   return (
     <motion.div

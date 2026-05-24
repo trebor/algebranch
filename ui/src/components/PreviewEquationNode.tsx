@@ -136,9 +136,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
 
   return (
     <motion.div
-      layout="position"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      layout
       transition={{
         type: 'spring',
         stiffness: 300,

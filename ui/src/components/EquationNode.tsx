@@ -13,7 +13,7 @@ import {
   hoverSimplifyPathAtom,
   simplifiablePathsAtom,
 } from '../store/equation';
-import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
+import { THEME_GLASS, THEME_TRANSITIONS, THEME_ANIMATIONS } from '../constants/theme';
 import { getNodeByPath, replaceNodeAtPath, getFunctionName, equationToString } from 'math-engine';
 import { Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -276,11 +276,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   return (
     <motion.div
       layout
-      transition={{
-        type: 'spring',
-        stiffness: 300,
-        damping: 30,
-      }}
+      transition={THEME_ANIMATIONS.LAYOUT_TRANSITION}
       className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${borderStyle} ${shouldBlockEvents ? 'pointer-events-none' : ''} ${THEME_TRANSITIONS.FAST}`}
       onMouseEnter={() => setHoverPath(path)}
       onMouseLeave={() => setHoverPath(null)}

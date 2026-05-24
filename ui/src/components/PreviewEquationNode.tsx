@@ -6,6 +6,7 @@ import * as math from 'mathjs';
 import { previewEquationAtom } from '../store/equation';
 import { getNodeByPath, getFunctionName } from 'math-engine';
 import { motion } from 'framer-motion';
+import { THEME_ANIMATIONS } from '../constants/theme';
 
 interface PreviewEquationNodeProps {
   readonly path: string;
@@ -137,11 +138,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
   return (
     <motion.div
       layout
-      transition={{
-        type: 'spring',
-        stiffness: 300,
-        damping: 30,
-      }}
+      transition={THEME_ANIMATIONS.LAYOUT_TRANSITION}
       className="relative inline-flex items-center justify-center p-[0.2em] border border-white/5 bg-white/0 rounded-[0.4em]"
     >
       {renderContent()}

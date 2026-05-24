@@ -9,6 +9,14 @@ export const THEME_TRANSITIONS = {
   SLOW: 'transition-all duration-500 ease-in-out',
 } as const;
 
+export const THEME_ANIMATIONS = {
+  LAYOUT_TRANSITION: {
+    type: 'spring',
+    duration: 2.0, // Stretched to 2.0s for visual debugging, reduce later
+    bounce: 0.2,   // Light organic bounce
+  },
+} as const;
+
 export const THEME_GLASS = {
   PANEL: 'backdrop-blur-md bg-white/5 border border-white/10 shadow-2xl shadow-black/40 rounded-2xl',
   CARD: 'backdrop-blur-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200 ease-in-out shadow-md rounded-xl',

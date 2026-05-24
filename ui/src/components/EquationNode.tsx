@@ -68,7 +68,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   if (!node) return null;
 
   const isSelected = selectedPath === path;
-  const isHovered = hoverPath === path;
+  const isHovered = hoverPath === path || (hoverPath !== null && hoverPath.startsWith(`${path}/`));
   const isValidDrop = path in validDrops;
   const hasValidMoves = pathsWithValidMoves.has(path);
   const isGreyedOut = !selectedPath && !hasValidMoves;
@@ -110,12 +110,24 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     }
   };
 
+  const getValidDropPath = (): string | null => {
+    if (isValidDrop) return path;
+    const parts = path.split('/');
+    for (let i = parts.length - 1; i > 0; i--) {
+      const ancestorPath = parts.slice(0, i).join('/');
+      if (ancestorPath in validDrops) {
+        return ancestorPath;
+      }
+    }
+    return null;
+  };
+
   const handleNodeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (isValidDrop) {
-      // Complete move!
-      pushEquation(validDrops[path]);
+    const activeDropPath = getValidDropPath();
+    if (activeDropPath) {
+      pushEquation(validDrops[activeDropPath]);
       return;
     }
 
@@ -129,6 +141,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   // Styling hooks
   const canClick = selectedPath ? (isSelected || isValidDrop) : hasValidMoves;
+  const canHover = selectedPath ? (isSelected || isValidDrop) : hasValidMoves;
 
   const borderStyle = isSelected
     ? THEME_GLASS.GLOW_ACTIVE + ' bg-indigo-950/80 text-indigo-100 font-semibold cursor-pointer'
@@ -136,7 +149,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     ? THEME_GLASS.GLOW_VALID + ' border-emerald-400 bg-emerald-950/80 cursor-pointer text-emerald-100 animate-pulse font-semibold'
     : isGreyedOut
     ? 'border-white/5 bg-transparent opacity-25 pointer-events-none select-none cursor-default'
-    : isHovered
+    : (isHovered && canHover)
     ? 'border-indigo-400/40 bg-neutral-900/90 text-white font-medium shadow-md shadow-indigo-500/5 cursor-pointer'
     : canClick
     ? 'border-white/10 bg-neutral-950/90 text-white/90 cursor-pointer'
@@ -258,6 +271,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     ? (isSelected || isValidDrop || isSimplifiable)
     : (hasValidMoves || isSimplifiable);
 
+  const shouldBlockEvents = selectedPath ? false : !isInteractive;
+
   return (
     <motion.div
       layoutId={`active_${(node as any).id || path}`}
@@ -267,7 +282,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         stiffness: 300,
         damping: 30,
       }}
-      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${borderStyle} ${!isInteractive ? 'pointer-events-none' : ''} ${THEME_TRANSITIONS.FAST}`}
+      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${borderStyle} ${shouldBlockEvents ? 'pointer-events-none' : ''} ${THEME_TRANSITIONS.FAST}`}
       onMouseEnter={() => setHoverPath(path)}
       onMouseLeave={() => setHoverPath(null)}
       onClick={handleNodeClick}

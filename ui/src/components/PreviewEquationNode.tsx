@@ -5,6 +5,7 @@ import { useAtomValue } from 'jotai';
 import * as math from 'mathjs';
 import { previewEquationAtom } from '../store/equation';
 import { getNodeByPath, getFunctionName } from 'math-engine';
+import { motion } from 'framer-motion';
 
 interface PreviewEquationNodeProps {
   readonly path: string;
@@ -134,8 +135,17 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
   };
 
   return (
-    <div className="relative inline-flex items-center justify-center p-[0.2em] border border-white/5 bg-white/0 rounded-[0.4em]">
+    <motion.div
+      layoutId={`preview_${(node as any).id || path}`}
+      layout="position"
+      transition={{
+        type: 'spring',
+        stiffness: 300,
+        damping: 30,
+      }}
+      className="relative inline-flex items-center justify-center p-[0.2em] border border-white/5 bg-white/0 rounded-[0.4em]"
+    >
       {renderContent()}
-    </div>
+    </motion.div>
   );
 };

@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { Equation, parseEquation, generateValidMoves, getAllPaths, getSimplificationForPath } from 'math-engine';
+import { Equation, parseEquation, generateValidMoves, getAllPaths, getSimplificationForPath, ensureNodeIds } from 'math-engine';
 
 // Global Initial Value Constants
 const INITIAL_EQUATION_STRING = '3 * x + 5 = x + 13';
@@ -41,12 +41,20 @@ export const validDropPathsAtom = atom<Record<string, Equation>>((get) => {
 
   const selectedPath = get(selectedPathAtom);
   if (selectedPath) {
-    return generateValidMoves(currentEq, selectedPath);
+    const moves = generateValidMoves(currentEq, selectedPath);
+    Object.keys(moves).forEach((k) => {
+      moves[k] = ensureNodeIds(moves[k]);
+    });
+    return moves;
   }
 
   const hoverPath = get(hoverPathAtom);
   if (hoverPath) {
-    return generateValidMoves(currentEq, hoverPath);
+    const moves = generateValidMoves(currentEq, hoverPath);
+    Object.keys(moves).forEach((k) => {
+      moves[k] = ensureNodeIds(moves[k]);
+    });
+    return moves;
   }
 
   return {};
@@ -96,7 +104,7 @@ export const simplifiablePathsAtom = atom<Record<string, Equation>>((get) => {
     try {
       const simplified = getSimplificationForPath(currentEq, path);
       if (simplified) {
-        simplifiable[path] = simplified;
+        simplifiable[path] = ensureNodeIds(simplified);
       }
     } catch {
       // Graceful fallback
@@ -138,7 +146,7 @@ export const pushEquationAtom = atom(
   (get, set, newEq: Equation) => {
     const history = get(historyAtom);
     const index = get(currentIndexAtom);
-    const nextHistory = [...history.slice(DEFAULT_ZERO, index + 1), newEq];
+    const nextHistory = [...history.slice(DEFAULT_ZERO, index + 1), ensureNodeIds(newEq)];
 
     set(historyAtom, nextHistory);
     set(currentIndexAtom, nextHistory.length - 1);
@@ -155,7 +163,7 @@ export const resetToEquationStringAtom = atom(
   null,
   (_get, set, eqStr: string) => {
     try {
-      const newEq = parseEquation(eqStr);
+      const newEq = ensureNodeIds(parseEquation(eqStr));
       set(historyAtom, [newEq]);
       set(currentIndexAtom, DEFAULT_ZERO);
       set(selectedPathAtom, null);

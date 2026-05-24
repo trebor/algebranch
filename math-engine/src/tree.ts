@@ -185,3 +185,25 @@ export const getAllPaths = (eq: Equation): string[] => {
     ...getAllPathsInTree(eq.rhs, 'rhs'),
   ];
 };
+
+/**
+ * Recursively ensures every node in the equation tree has a stable unique ID.
+ * Preserves existing IDs if they are already present.
+ */
+export const ensureNodeIds = (eq: Equation): Equation => {
+  let counter = 0;
+  const generateId = () => `node_${Math.random().toString(36).substring(2, 9)}_${counter++}`;
+
+  const traverseAndAssign = (node: math.MathNode) => {
+    if (!node) return;
+    if (!(node as any).id) {
+      (node as any).id = generateId();
+    }
+    const children = getChildren(node);
+    children.forEach(traverseAndAssign);
+  };
+
+  traverseAndAssign(eq.lhs);
+  traverseAndAssign(eq.rhs);
+  return eq;
+};

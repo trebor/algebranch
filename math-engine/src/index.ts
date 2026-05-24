@@ -1,5 +1,5 @@
 import * as math from 'mathjs';
-import { Equation } from './tree';
+import { Equation, ensureNodeIds } from './tree';
 
 export * from './interval';
 export * from './tree';
@@ -18,10 +18,11 @@ export const parseEquation = (eqStr: string): Equation => {
     throw new Error('Equation must contain exactly one "=" sign');
   }
 
-  return {
+  const eq = {
     lhs: math.parse(parts[0].trim()),
     rhs: math.parse(parts[1].trim()),
   };
+  return ensureNodeIds(eq);
 };
 
 /**

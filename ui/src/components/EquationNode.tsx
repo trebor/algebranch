@@ -16,6 +16,7 @@ import {
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, replaceNodeAtPath, getFunctionName, equationToString } from 'math-engine';
 import { Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface EquationNodeProps {
   readonly path: string;
@@ -254,7 +255,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const isInteractive = isSelected || isValidDrop || isSimplifiable || hasValidMoves;
 
   return (
-    <div
+    <motion.div
+      layoutId={`active_${(node as any).id || path}`}
+      layout="position"
+      transition={{
+        type: 'spring',
+        stiffness: 300,
+        damping: 30,
+      }}
       className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${borderStyle} ${!isInteractive ? 'pointer-events-none' : ''} ${THEME_TRANSITIONS.FAST}`}
       onMouseEnter={() => setHoverPath(path)}
       onMouseLeave={() => setHoverPath(null)}
@@ -301,6 +309,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
           <span className="h-1.5 w-1.5 rounded-full bg-neutral-950 pointer-events-none" />
         </button>
       )}
-    </div>
+    </motion.div>
   );
 };

@@ -9,13 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "next": "16.2.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "framer-motion": "^12.40.0",
     "jotai": "^2.11.0",
     "lucide-react": "^0.474.0",
     "math-engine": "file:../math-engine",
-    "mathjs": "^14.0.1"
+    "mathjs": "^14.0.1",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

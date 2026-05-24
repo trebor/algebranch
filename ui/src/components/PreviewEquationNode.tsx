@@ -4,8 +4,8 @@ import React from 'react';
 import { useAtomValue } from 'jotai';
 import * as math from 'mathjs';
 import { previewEquationAtom } from '../store/equation';
-import { getNodeByPath, getFunctionName } from 'math-engine';
-import { motion } from 'framer-motion';
+import { getNodeByPath, getFunctionName, getChildren } from 'math-engine';
+import { motion, AnimatePresence } from 'framer-motion';
 import { THEME_ANIMATIONS } from '../constants/theme';
 
 interface PreviewEquationNodeProps {
@@ -25,6 +25,16 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
 
   if (!node) return null;
 
+  const getChildId = (index: number): string => {
+    try {
+      const children = getChildren(node);
+      if (children && children[index]) {
+        return (children[index] as any).id || `${path}/${index}`;
+      }
+    } catch {}
+    return `${path}/${index}`;
+  };
+
   // Recursive Render logic depending on Node type
   const renderContent = () => {
     if (node.type === 'ConstantNode') {
@@ -43,7 +53,9 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       return (
         <div className="flex items-center px-[0.1em]">
           <span className="text-white/20 font-light text-[1.05em] mr-[0.05em] select-none">(</span>
-          <PreviewEquationNode path={`${path}/0`} />
+          <AnimatePresence mode="popLayout">
+            <PreviewEquationNode path={`${path}/0`} key={getChildId(0)} />
+          </AnimatePresence>
           <span className="text-white/20 font-light text-[1.05em] ml-[0.05em] select-none">)</span>
         </div>
       );
@@ -57,7 +69,9 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
         return (
           <div className="flex items-center gap-[0.05em]">
             <span className="text-indigo-400/60 font-bold select-none">{opSymbol}</span>
-            <PreviewEquationNode path={`${path}/0`} />
+            <AnimatePresence mode="popLayout">
+              <PreviewEquationNode path={`${path}/0`} key={getChildId(0)} />
+            </AnimatePresence>
           </div>
         );
       }
@@ -67,11 +81,15 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
         return (
           <div className="flex flex-col items-center justify-center mx-[0.1em] my-[0.05em]">
             <div className="w-full text-center pb-[0.1em]">
-              <PreviewEquationNode path={`${path}/0`} />
+              <AnimatePresence mode="popLayout">
+                <PreviewEquationNode path={`${path}/0`} key={getChildId(0)} />
+              </AnimatePresence>
             </div>
             <div className="w-full border-t border-white/10 h-0" />
             <div className="w-full text-center pt-[0.1em]">
-              <PreviewEquationNode path={`${path}/1`} />
+              <AnimatePresence mode="popLayout">
+                <PreviewEquationNode path={`${path}/1`} key={getChildId(1)} />
+              </AnimatePresence>
             </div>
           </div>
         );
@@ -81,9 +99,13 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       if (opNode.op === '^') {
         return (
           <div className="flex items-start">
-            <PreviewEquationNode path={`${path}/0`} />
+            <AnimatePresence mode="popLayout">
+              <PreviewEquationNode path={`${path}/0`} key={getChildId(0)} />
+            </AnimatePresence>
             <div className="text-[0.65em] leading-none -mt-[0.2em] ml-[0.05em] scale-90 opacity-70">
-              <PreviewEquationNode path={`${path}/1`} />
+              <AnimatePresence mode="popLayout">
+                <PreviewEquationNode path={`${path}/1`} key={getChildId(1)} />
+              </AnimatePresence>
             </div>
           </div>
         );
@@ -99,9 +121,13 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
 
       return (
         <div className="flex items-center gap-[0.2em] flex-wrap justify-center py-[0.05em]">
-          <PreviewEquationNode path={`${path}/0`} />
+          <AnimatePresence mode="popLayout">
+            <PreviewEquationNode path={`${path}/0`} key={getChildId(0)} />
+          </AnimatePresence>
           <span className="text-indigo-400/60 font-medium text-[0.85em] select-none">{opSymbol}</span>
-          <PreviewEquationNode path={`${path}/1`} />
+          <AnimatePresence mode="popLayout">
+            <PreviewEquationNode path={`${path}/1`} key={getChildId(1)} />
+          </AnimatePresence>
         </div>
       );
     }
@@ -115,7 +141,9 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
           <div className="flex items-stretch mx-[0.1em]">
             <span className="text-[1.25em] font-light font-serif mr-[-0.05em] text-indigo-400/60 self-center select-none">√</span>
             <div className="border-t border-l border-white/15 pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center">
-              <PreviewEquationNode path={`${path}/0`} />
+              <AnimatePresence mode="popLayout">
+                <PreviewEquationNode path={`${path}/0`} key={getChildId(0)} />
+              </AnimatePresence>
             </div>
           </div>
         );
@@ -126,7 +154,9 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
         <div className="flex items-center gap-[0.05em]">
           <span className="text-purple-400/60 font-medium text-[0.9em]">{nameStr}</span>
           <span className="text-white/20 mr-[0.05em]">(</span>
-          <PreviewEquationNode path={`${path}/0`} />
+          <AnimatePresence mode="popLayout">
+            <PreviewEquationNode path={`${path}/0`} key={getChildId(0)} />
+          </AnimatePresence>
           <span className="text-white/20 ml-[0.05em]">)</span>
         </div>
       );
@@ -138,6 +168,9 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
   return (
     <motion.div
       layout
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0 }}
       transition={THEME_ANIMATIONS.LAYOUT_TRANSITION}
       className="relative inline-flex items-center justify-center p-[0.2em] border border-white/5 bg-white/0 rounded-[0.4em]"
     >

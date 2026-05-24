@@ -14,9 +14,9 @@ import {
   simplifiablePathsAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS, THEME_ANIMATIONS } from '../constants/theme';
-import { getNodeByPath, replaceNodeAtPath, getFunctionName, equationToString } from 'math-engine';
+import { getNodeByPath, replaceNodeAtPath, getFunctionName, equationToString, getChildren } from 'math-engine';
 import { Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface EquationNodeProps {
   readonly path: string;
@@ -66,6 +66,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   }, [currentEq, path]);
 
   if (!node) return null;
+
+  const getChildId = (index: number): string => {
+    try {
+      const children = getChildren(node);
+      if (children && children[index]) {
+        return (children[index] as any).id || `${path}/${index}`;
+      }
+    } catch {}
+    return `${path}/${index}`;
+  };
 
   const isSelected = selectedPath === path;
   const isHovered = hoverPath === path || (hoverPath !== null && hoverPath.startsWith(`${path}/`));
@@ -175,7 +185,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       return (
         <div className="flex items-center px-[0.1em]">
           <span className="text-white/40 font-light text-[1.05em] select-none mr-[0.05em]">(</span>
-          <EquationNode path={`${path}/0`} />
+          <AnimatePresence mode="popLayout">
+            <EquationNode path={`${path}/0`} key={getChildId(0)} />
+          </AnimatePresence>
           <span className="text-white/40 font-light text-[1.05em] select-none ml-[0.05em]">)</span>
         </div>
       );
@@ -189,7 +201,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         return (
           <div className="flex items-center gap-[0.05em]">
             <span className="text-indigo-300/90 font-bold select-none">{opSymbol}</span>
-            <EquationNode path={`${path}/0`} />
+            <AnimatePresence mode="popLayout">
+              <EquationNode path={`${path}/0`} key={getChildId(0)} />
+            </AnimatePresence>
           </div>
         );
       }
@@ -199,11 +213,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         return (
           <div className="flex flex-col items-center justify-center mx-[0.1em] my-[0.05em]">
             <div className="w-full text-center pb-[0.1em]">
-              <EquationNode path={`${path}/0`} />
+              <AnimatePresence mode="popLayout">
+                <EquationNode path={`${path}/0`} key={getChildId(0)} />
+              </AnimatePresence>
             </div>
             <div className="w-full border-t border-white/20 h-0" />
             <div className="w-full text-center pt-[0.1em]">
-              <EquationNode path={`${path}/1`} />
+              <AnimatePresence mode="popLayout">
+                <EquationNode path={`${path}/1`} key={getChildId(1)} />
+              </AnimatePresence>
             </div>
           </div>
         );
@@ -213,9 +231,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       if (opNode.op === '^') {
         return (
           <div className="flex items-start">
-            <EquationNode path={`${path}/0`} />
+            <AnimatePresence mode="popLayout">
+              <EquationNode path={`${path}/0`} key={getChildId(0)} />
+            </AnimatePresence>
             <div className="text-[0.65em] leading-none -mt-[0.2em] ml-[0.05em] scale-90 opacity-90">
-              <EquationNode path={`${path}/1`} />
+              <AnimatePresence mode="popLayout">
+                <EquationNode path={`${path}/1`} key={getChildId(1)} />
+              </AnimatePresence>
             </div>
           </div>
         );
@@ -231,9 +253,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
       return (
         <div className="flex items-center gap-[0.2em] flex-wrap justify-center py-[0.05em]">
-          <EquationNode path={`${path}/0`} />
+          <AnimatePresence mode="popLayout">
+            <EquationNode path={`${path}/0`} key={getChildId(0)} />
+          </AnimatePresence>
           <span className="text-indigo-400 font-medium select-none text-[0.85em]">{opSymbol}</span>
-          <EquationNode path={`${path}/1`} />
+          <AnimatePresence mode="popLayout">
+            <EquationNode path={`${path}/1`} key={getChildId(1)} />
+          </AnimatePresence>
         </div>
       );
     }
@@ -247,7 +273,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
           <div className="flex items-stretch mx-[0.1em]">
             <span className="text-[1.25em] font-light font-serif mr-[-0.05em] select-none text-indigo-300 self-center">√</span>
             <div className="border-t border-l border-white/30 pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center">
-              <EquationNode path={`${path}/0`} />
+              <AnimatePresence mode="popLayout">
+                <EquationNode path={`${path}/0`} key={getChildId(0)} />
+              </AnimatePresence>
             </div>
           </div>
         );
@@ -258,7 +286,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         <div className="flex items-center gap-[0.05em]">
           <span className="text-purple-300 font-medium select-none text-[0.9em]">{nameStr}</span>
           <span className="text-white/40 mr-[0.05em]">(</span>
-          <EquationNode path={`${path}/0`} />
+          <AnimatePresence mode="popLayout">
+            <EquationNode path={`${path}/0`} key={getChildId(0)} />
+          </AnimatePresence>
           <span className="text-white/40 ml-[0.05em]">)</span>
         </div>
       );
@@ -276,6 +306,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   return (
     <motion.div
       layout
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0 }}
       transition={THEME_ANIMATIONS.LAYOUT_TRANSITION}
       className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${borderStyle} ${shouldBlockEvents ? 'pointer-events-none' : ''} ${THEME_TRANSITIONS.FAST}`}
       onMouseEnter={() => setHoverPath(path)}

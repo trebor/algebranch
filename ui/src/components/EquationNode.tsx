@@ -251,9 +251,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     return <span>{node.toString()}</span>;
   };
 
+  const isInteractive = isSelected || isValidDrop || isSimplifiable || hasValidMoves;
+
   return (
     <div
-      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${borderStyle} ${THEME_TRANSITIONS.FAST}`}
+      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${borderStyle} ${!isInteractive ? 'pointer-events-none' : ''} ${THEME_TRANSITIONS.FAST}`}
       onMouseEnter={() => setHoverPath(path)}
       onMouseLeave={() => setHoverPath(null)}
       onClick={handleNodeClick}

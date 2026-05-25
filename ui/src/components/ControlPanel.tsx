@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { useAtom, useSetAtom, useAtomValue } from 'jotai';
+import { useSetAtom, useAtomValue } from 'jotai';
 import * as math from 'mathjs';
-import { parseEquation, autoSimplify, Equation } from 'math-engine';
+import { autoSimplify, Equation } from 'math-engine';
 import {
   currentEquationAtom,
   pushEquationAtom,
@@ -13,7 +13,6 @@ import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Sparkles, Terminal, ShieldAlert, Plus, Minus, X, Percent } from 'lucide-react';
 
 // Global Index Value Constants
-const DEFAULT_ZERO = 0;
 const CONST_POWER_TWO = 2;
 const SIMULATION_DURATION = 800; // ms scanning duration
 

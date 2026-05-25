@@ -79,7 +79,7 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
         if (typeof val === 'number') {
           numVal = val;
         } else if (val && typeof val === 'object' && 'toNumber' in val) {
-          numVal = (val as any).toNumber();
+          numVal = (val as unknown as { toNumber: () => number }).toNumber();
         } else {
           const parsed = parseFloat(val?.toString());
           if (!isNaN(parsed)) {
@@ -159,7 +159,7 @@ export const autoSimplify = (eq: Equation): Equation => {
           if (typeof val === 'number') {
             numVal = val;
           } else if (val && typeof val === 'object' && 'toNumber' in val) {
-            numVal = (val as any).toNumber();
+            numVal = (val as unknown as { toNumber: () => number }).toNumber();
           } else {
             const parsed = parseFloat(val?.toString());
             if (!isNaN(parsed)) {

@@ -7,17 +7,15 @@ import { PreviewEquationNode } from '../components/PreviewEquationNode';
 import { Sidebar } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import {
-  sourcePathAtom,
   currentEquationAtom,
   hoverPathAtom,
   targetPathsAtom,
   hoverReducePathAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
-import { Info, Sparkles, HelpCircle } from 'lucide-react';
+import { Sparkles, HelpCircle } from 'lucide-react';
 
 export default function Home() {
-  const sourcePath = useAtomValue(sourcePathAtom);
   const currentEq = useAtomValue(currentEquationAtom);
   const hoverPath = useAtomValue(hoverPathAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
@@ -72,7 +70,7 @@ export default function Home() {
                   <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full">
                     {/* LHS Term Tree */}
                     <div className="flex justify-end min-w-[5em]">
-                      <EquationNode path="lhs" key={(currentEq?.lhs as any)?.id || 'lhs'} />
+                      <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />
                     </div>
 
                     {/* Equals Operator sign */}
@@ -82,7 +80,7 @@ export default function Home() {
 
                     {/* RHS Term Tree */}
                     <div className="flex justify-start min-w-[5em]">
-                      <EquationNode path="rhs" key={(currentEq?.rhs as any)?.id || 'rhs'} />
+                      <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
                     </div>
                   </div>
                 </div>

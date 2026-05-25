@@ -46,8 +46,9 @@ export const cloneWithChildren = (node: math.MathNode, newChildren: math.MathNod
   }
 
   // Explicitly preserve stable IDs across clones
-  if ((node as any).id) {
-    (cloned as any).id = (node as any).id;
+  const nodeId = (node as unknown as { id?: string }).id;
+  if (nodeId) {
+    (cloned as unknown as Record<string, string>).id = nodeId;
   }
   return cloned;
 };
@@ -203,8 +204,9 @@ export const ensureNodeIds = (eq: Equation): Equation => {
 
   const traverseAndAssign = (node: math.MathNode) => {
     if (!node) return;
-    if (!(node as any).id) {
-      (node as any).id = generateId();
+    const nodeObj = node as unknown as Record<string, string>;
+    if (!nodeObj.id) {
+      nodeObj.id = generateId();
     }
     const children = getChildren(node);
     children.forEach(traverseAndAssign);

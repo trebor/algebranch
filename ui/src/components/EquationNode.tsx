@@ -68,22 +68,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     }
   }, [currentEq, path]);
 
-  if (!node) return null;
-
-  const nodeId = (node as any).id || '';
-
-  const getChildId = (index: number): string => {
-    try {
-      const children = getChildren(node);
-      if (children && children[index]) {
-        return (children[index] as any).id || `${path}/${index}`;
-      }
-    } catch {}
-    return `${path}/${index}`;
-  };
+  const nodeId = node ? (node as unknown as { id?: string }).id || '' : '';
 
   // Local state to keep the entering node scaled down to 0 instantly on initial render
-  const [isScaledDown, setIsScaledDown] = React.useState(nodeId && nodeId === animatingEntryId);
+  const [isScaledDown, setIsScaledDown] = React.useState(!!(nodeId && nodeId === animatingEntryId));
 
   React.useEffect(() => {
     if (nodeId && nodeId === animatingEntryId) {
@@ -104,11 +92,25 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     }
   }, [nodeId, animatingEntryId, setAnimatingEntryId]);
 
+  if (!node) return null;
+
+  const getChildId = (index: number): string => {
+    try {
+      const children = getChildren(node);
+      if (children && children[index]) {
+        return (children[index] as unknown as { id?: string }).id || `${path}/${index}`;
+      }
+    } catch {}
+    return `${path}/${index}`;
+  };
+
   const isSelected = sourcePath === path;
   const isHovered = hoverPath === path || (hoverPath !== null && hoverPath.startsWith(`${path}/`));
   const isTarget = path in targetPaths;
   const isActive = activePaths.has(path);
-  const isStatic = !sourcePath && !isActive;
+  const isStatic = sourcePath
+    ? (!isSelected && !isTarget)
+    : !isActive;
 
   const reducedEq = reduciblePaths[path];
   const isReducible = !!reducedEq;
@@ -162,12 +164,17 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const handleNodeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
 
+    if (isStatic) {
+      // Static nodes do not interact and block click propagation to parent elements
+      return;
+    }
+
     const activeTargetPath = getTargetPath();
     if (activeTargetPath) {
       if (sourcePath) {
         // Fetch the unique ID of the moving node
         const movingNode = getNodeByPath(currentEq, sourcePath);
-        const movingId = movingNode ? (movingNode as any).id : null;
+        const movingId = movingNode ? (movingNode as unknown as { id?: string }).id : null;
 
         // Trigger the exit transition on the selected node
         setAnimatingExitPath(sourcePath);
@@ -203,7 +210,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     : isTarget
     ? THEME_GLASS.TARGET
     : isStatic
-    ? THEME_GLASS.STATIC + ' pointer-events-none select-none'
+    ? THEME_GLASS.STATIC + ' select-none'
     : (isHovered && canHover)
     ? THEME_GLASS.CARD_HOVER
     : canClick
@@ -328,13 +335,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     return <span>{node.toString()}</span>;
   };
 
-  const isInteractive = sourcePath
-    ? (isSelected || isTarget || isReducible)
-    : (isActive || isReducible);
-
   // Block clicks globally during active exit or entry transitions
   const isGlobalAnimating = animatingExitPath !== null || animatingEntryId !== null;
-  const shouldBlockEvents = isGlobalAnimating || (sourcePath ? false : !isInteractive);
+  const shouldBlockEvents = isGlobalAnimating;
 
   // Transition styling logic
   const isAnimatingExit = animatingExitPath === path;

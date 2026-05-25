@@ -203,7 +203,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     : isValidDrop
     ? THEME_GLASS.GLOW_VALID + ' border-emerald-400 bg-emerald-950/80 cursor-pointer text-emerald-100 animate-pulse font-semibold'
     : isGreyedOut
-    ? 'border-white/5 bg-transparent opacity-25 pointer-events-none select-none cursor-default'
+    ? THEME_GLASS.UNMOVABLE + ' pointer-events-none select-none cursor-default'
     : (isHovered && canHover)
     ? 'border-indigo-400/40 bg-neutral-900/90 text-white font-medium shadow-md shadow-indigo-500/5 cursor-pointer'
     : canClick
@@ -216,22 +216,30 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
     if (node.type === 'ConstantNode') {
       const constNode = node as math.ConstantNode;
-      return <span className="font-semibold text-yellow-400/90">{constNode.value.toString()}</span>;
+      return (
+        <span className={`font-semibold ${isGreyedOut ? 'text-zinc-500' : 'text-yellow-400/90'}`}>
+          {constNode.value.toString()}
+        </span>
+      );
     }
 
     if (node.type === 'SymbolNode') {
       const symbolNode = node as math.SymbolNode;
       const displayMap: Record<string, string> = { pi: 'π', e: 'e' };
       const val = displayMap[symbolNode.name] || symbolNode.name;
-      return <span className="italic font-serif text-sky-300 font-medium">{val}</span>;
+      return (
+        <span className={`italic font-serif ${isGreyedOut ? 'text-zinc-500' : 'text-sky-300'} font-medium`}>
+          {val}
+        </span>
+      );
     }
 
     if (node.type === 'ParenthesisNode') {
       return (
         <div className="flex items-center px-[0.1em]">
-          <span className="text-white/40 font-light text-[1.05em] select-none mr-[0.05em]">(</span>
+          <span className={`font-light text-[1.05em] select-none mr-[0.05em] ${isGreyedOut ? 'text-zinc-600' : 'text-white/40'}`}>(</span>
           <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          <span className="text-white/40 font-light text-[1.05em] select-none ml-[0.05em]">)</span>
+          <span className={`font-light text-[1.05em] select-none ml-[0.05em] ${isGreyedOut ? 'text-zinc-600' : 'text-white/40'}`}>)</span>
         </div>
       );
     }
@@ -243,7 +251,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         const opSymbol = opNode.op === '-' ? '−' : opNode.op;
         return (
           <div className="flex items-center gap-[0.05em]">
-            <span className="text-indigo-300/90 font-bold select-none">{opSymbol}</span>
+            <span className={`font-bold select-none ${isGreyedOut ? 'text-zinc-600' : 'text-indigo-300/90'}`}>{opSymbol}</span>
             <EquationNode path={`${path}/0`} key={getChildId(0)} />
           </div>
         );
@@ -287,7 +295,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       return (
         <div className="flex items-center gap-[0.2em] flex-wrap justify-center py-[0.05em]">
           <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          <span className="text-indigo-400 font-medium select-none text-[0.85em]">{opSymbol}</span>
+          <span className={`font-medium select-none text-[0.85em] ${isGreyedOut ? 'text-zinc-600' : 'text-indigo-400'}`}>{opSymbol}</span>
           <EquationNode path={`${path}/1`} key={getChildId(1)} />
         </div>
       );
@@ -300,8 +308,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       if (nameStr === 'sqrt') {
         return (
           <div className="flex items-stretch mx-[0.1em]">
-            <span className="text-[1.25em] font-light font-serif mr-[-0.05em] select-none text-indigo-300 self-center">√</span>
-            <div className="border-t border-l border-white/30 pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center">
+            <span className={`text-[1.25em] font-light font-serif mr-[-0.05em] select-none self-center ${isGreyedOut ? 'text-zinc-600' : 'text-indigo-300'}`}>√</span>
+            <div className={`border-t border-l pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center ${isGreyedOut ? 'border-zinc-800' : 'border-white/30'}`}>
               <EquationNode path={`${path}/0`} key={getChildId(0)} />
             </div>
           </div>
@@ -311,10 +319,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       // Default fallback function renderer
       return (
         <div className="flex items-center gap-[0.05em]">
-          <span className="text-purple-300 font-medium select-none text-[0.9em]">{nameStr}</span>
-          <span className="text-white/40 mr-[0.05em]">(</span>
+          <span className={`font-medium select-none text-[0.9em] ${isGreyedOut ? 'text-zinc-500' : 'text-purple-300'}`}>{nameStr}</span>
+          <span className={`mr-[0.05em] ${isGreyedOut ? 'text-zinc-600' : 'text-white/40'}`}>(</span>
           <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          <span className="text-white/40 ml-[0.05em]">)</span>
+          <span className={`ml-[0.05em] ${isGreyedOut ? 'text-zinc-600' : 'text-white/40'}`}>)</span>
         </div>
       );
     }

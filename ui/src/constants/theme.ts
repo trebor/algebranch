@@ -24,6 +24,7 @@ export const THEME_GLASS = {
   GLOW: 'shadow-[0_0_15px_rgba(99,102,241,0.2)]',
   GLOW_ACTIVE: 'shadow-[0_0_25px_rgba(99,102,241,0.5)] border-indigo-400/50',
   GLOW_VALID: 'shadow-[0_0_25px_rgba(16,185,129,0.5)] border-emerald-400/50',
+  UNMOVABLE: 'border-zinc-800/80 bg-zinc-900/90 text-zinc-500 shadow-none font-normal opacity-100',
 } as const;
 
 export const MATH_PRESETS = [

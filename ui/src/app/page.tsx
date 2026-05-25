@@ -7,22 +7,22 @@ import { PreviewEquationNode } from '../components/PreviewEquationNode';
 import { Sidebar } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import {
-  selectedPathAtom,
+  sourcePathAtom,
   currentEquationAtom,
   hoverPathAtom,
-  validDropPathsAtom,
-  hoverSimplifyPathAtom,
+  targetPathsAtom,
+  hoverReducePathAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { Info, Sparkles, HelpCircle } from 'lucide-react';
 
 export default function Home() {
-  const selectedPath = useAtomValue(selectedPathAtom);
+  const sourcePath = useAtomValue(sourcePathAtom);
   const currentEq = useAtomValue(currentEquationAtom);
   const hoverPath = useAtomValue(hoverPathAtom);
-  const validDrops = useAtomValue(validDropPathsAtom);
-  const hoverSimplifyPath = useAtomValue(hoverSimplifyPathAtom);
-  const isSpeculative = (hoverPath !== null && hoverPath in validDrops) || hoverSimplifyPath !== null;
+  const targetPaths = useAtomValue(targetPathsAtom);
+  const hoverReducePath = useAtomValue(hoverReducePathAtom);
+  const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(30,27,75,0.8),rgba(10,10,12,1))] text-white font-sans">

@@ -4,19 +4,19 @@ import React from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import * as math from 'mathjs';
 import {
-  selectedPathAtom,
+  sourcePathAtom,
   hoverPathAtom,
-  validDropPathsAtom,
+  targetPathsAtom,
   pushEquationAtom,
   currentEquationAtom,
-  pathsWithValidMovesAtom,
-  hoverSimplifyPathAtom,
-  simplifiablePathsAtom,
+  activePathsAtom,
+  hoverReducePathAtom,
+  reduciblePathsAtom,
   animatingExitPathAtom,
   animatingEntryIdAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS, THEME_ANIMATIONS } from '../constants/theme';
-import { getNodeByPath, replaceNodeAtPath, getFunctionName, equationToString, getChildren } from 'math-engine';
+import { getNodeByPath, replaceNodeAtPath, getFunctionName, getChildren } from 'math-engine';
 import { Sparkles } from 'lucide-react';
 
 interface EquationNodeProps {
@@ -49,14 +49,14 @@ const canToggleRoot = (eq: math.MathNode | unknown): boolean => {
 };
 
 export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
-  const [selectedPath, setSelectedPath] = useAtom(selectedPathAtom);
+  const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
-  const setHoverSimplifyPath = useSetAtom(hoverSimplifyPathAtom);
-  const simplifiablePaths = useAtomValue(simplifiablePathsAtom);
-  const validDrops = useAtomValue(validDropPathsAtom);
+  const setHoverReducePath = useSetAtom(hoverReducePathAtom);
+  const reduciblePaths = useAtomValue(reduciblePathsAtom);
+  const targetPaths = useAtomValue(targetPathsAtom);
   const pushEquation = useSetAtom(pushEquationAtom);
   const currentEq = useAtomValue(currentEquationAtom);
-  const pathsWithValidMoves = useAtomValue(pathsWithValidMovesAtom);
+  const activePaths = useAtomValue(activePathsAtom);
   const [animatingExitPath, setAnimatingExitPath] = useAtom(animatingExitPathAtom);
   const [animatingEntryId, setAnimatingEntryId] = useAtom(animatingEntryIdAtom);
 
@@ -104,20 +104,20 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     }
   }, [nodeId, animatingEntryId, setAnimatingEntryId]);
 
-  const isSelected = selectedPath === path;
+  const isSelected = sourcePath === path;
   const isHovered = hoverPath === path || (hoverPath !== null && hoverPath.startsWith(`${path}/`));
-  const isValidDrop = path in validDrops;
-  const hasValidMoves = pathsWithValidMoves.has(path);
-  const isGreyedOut = !selectedPath && !hasValidMoves;
+  const isTarget = path in targetPaths;
+  const isActive = activePaths.has(path);
+  const isStatic = !sourcePath && !isActive;
 
-  const simplifiedEq = simplifiablePaths[path];
-  const isSimplifiable = !!simplifiedEq;
+  const reducedEq = reduciblePaths[path];
+  const isReducible = !!reducedEq;
 
-  const handleSimplifyClick = (e: React.MouseEvent) => {
+  const handleReduceClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (simplifiedEq) {
-      pushEquation(simplifiedEq);
-      setHoverSimplifyPath(null);
+    if (reducedEq) {
+      pushEquation(reducedEq);
+      setHoverReducePath(null);
     }
   };
 
@@ -147,12 +147,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     }
   };
 
-  const getValidDropPath = (): string | null => {
-    if (isValidDrop) return path;
+  const getTargetPath = (): string | null => {
+    if (isTarget) return path;
     const parts = path.split('/');
     for (let i = parts.length - 1; i > 0; i--) {
       const ancestorPath = parts.slice(0, i).join('/');
-      if (ancestorPath in validDrops) {
+      if (ancestorPath in targetPaths) {
         return ancestorPath;
       }
     }
@@ -162,62 +162,60 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const handleNodeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    const activeDropPath = getValidDropPath();
-    if (activeDropPath) {
-      if (selectedPath) {
+    const activeTargetPath = getTargetPath();
+    if (activeTargetPath) {
+      if (sourcePath) {
         // Fetch the unique ID of the moving node
-        const movingNode = getNodeByPath(currentEq, selectedPath);
+        const movingNode = getNodeByPath(currentEq, sourcePath);
         const movingId = movingNode ? (movingNode as any).id : null;
 
         // Trigger the exit transition on the selected node
-        setAnimatingExitPath(selectedPath);
+        setAnimatingExitPath(sourcePath);
 
         // Defer pushing the new equation until after the animation duration
         setTimeout(() => {
           if (movingId) {
             setAnimatingEntryId(movingId);
           }
-          pushEquation(validDrops[activeDropPath]);
+          pushEquation(targetPaths[activeTargetPath]);
           setAnimatingExitPath(null);
         }, THEME_ANIMATIONS.TRANSITION_DURATION_MS);
       } else {
-        pushEquation(validDrops[activeDropPath]);
+        pushEquation(targetPaths[activeTargetPath]);
       }
       return;
     }
 
     // Toggle select
     if (isSelected) {
-      setSelectedPath(null);
+      setSourcePath(null);
     } else {
-      setSelectedPath(path);
+      setSourcePath(path);
     }
   };
 
   // Styling hooks
-  const canClick = selectedPath ? (isSelected || isValidDrop) : hasValidMoves;
-  const canHover = selectedPath ? (isSelected || isValidDrop) : hasValidMoves;
+  const canClick = sourcePath ? (isSelected || isTarget) : isActive;
+  const canHover = sourcePath ? (isSelected || isTarget) : isActive;
 
-  const borderStyle = isSelected
-    ? THEME_GLASS.GLOW_ACTIVE + ' bg-indigo-950/80 text-indigo-100 font-semibold cursor-pointer'
-    : isValidDrop
-    ? THEME_GLASS.GLOW_VALID + ' border-emerald-400 bg-emerald-950/80 cursor-pointer text-emerald-100 animate-pulse font-semibold'
-    : isGreyedOut
-    ? THEME_GLASS.UNMOVABLE + ' pointer-events-none select-none cursor-default'
+  const semanticStyle = isSelected
+    ? THEME_GLASS.SOURCE
+    : isTarget
+    ? THEME_GLASS.TARGET
+    : isStatic
+    ? THEME_GLASS.STATIC + ' pointer-events-none select-none'
     : (isHovered && canHover)
-    ? 'border-indigo-400/40 bg-neutral-900/90 text-white font-medium shadow-md shadow-indigo-500/5 cursor-pointer'
+    ? THEME_GLASS.CARD_HOVER
     : canClick
-    ? 'border-white/10 bg-neutral-950/90 text-white/90 cursor-pointer'
-    : 'border-white/10 bg-neutral-950/90 text-white/90 cursor-default';
+    ? THEME_GLASS.CARD_ACTIVE
+    : THEME_GLASS.CARD_ACTIVE + ' cursor-default';
 
   // Recursive Render logic depending on Node type
   const renderContent = () => {
-    const valExponent = 2;
-
     if (node.type === 'ConstantNode') {
       const constNode = node as math.ConstantNode;
       return (
-        <span className={`font-semibold ${isGreyedOut ? 'text-zinc-500' : 'text-yellow-400/90'}`}>
+        <span className={`font-semibold ${isStatic ? 'text-zinc-500' : 'text-yellow-400/90'}`}>
           {constNode.value.toString()}
         </span>
       );
@@ -228,7 +226,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       const displayMap: Record<string, string> = { pi: 'π', e: 'e' };
       const val = displayMap[symbolNode.name] || symbolNode.name;
       return (
-        <span className={`italic font-serif ${isGreyedOut ? 'text-zinc-500' : 'text-sky-300'} font-medium`}>
+        <span className={`italic font-serif ${isStatic ? 'text-zinc-500' : 'text-sky-300'} font-medium`}>
           {val}
         </span>
       );
@@ -237,9 +235,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     if (node.type === 'ParenthesisNode') {
       return (
         <div className="flex items-center px-[0.1em]">
-          <span className={`font-light text-[1.05em] select-none mr-[0.05em] ${isGreyedOut ? 'text-zinc-600' : 'text-white/40'}`}>(</span>
+          <span className={`font-light text-[1.05em] select-none mr-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`}>(</span>
           <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          <span className={`font-light text-[1.05em] select-none ml-[0.05em] ${isGreyedOut ? 'text-zinc-600' : 'text-white/40'}`}>)</span>
+          <span className={`font-light text-[1.05em] select-none ml-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`}>)</span>
         </div>
       );
     }
@@ -251,7 +249,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         const opSymbol = opNode.op === '-' ? '−' : opNode.op;
         return (
           <div className="flex items-center gap-[0.05em]">
-            <span className={`font-bold select-none ${isGreyedOut ? 'text-zinc-600' : 'text-indigo-300/90'}`}>{opSymbol}</span>
+            <span className={`font-bold select-none ${isStatic ? 'text-zinc-600' : 'text-indigo-300/90'}`}>{opSymbol}</span>
             <EquationNode path={`${path}/0`} key={getChildId(0)} />
           </div>
         );
@@ -295,7 +293,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       return (
         <div className="flex items-center gap-[0.2em] flex-wrap justify-center py-[0.05em]">
           <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          <span className={`font-medium select-none text-[0.85em] ${isGreyedOut ? 'text-zinc-600' : 'text-indigo-400'}`}>{opSymbol}</span>
+          <span className={`font-medium select-none text-[0.85em] ${isStatic ? 'text-zinc-600' : 'text-indigo-400'}`}>{opSymbol}</span>
           <EquationNode path={`${path}/1`} key={getChildId(1)} />
         </div>
       );
@@ -308,8 +306,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       if (nameStr === 'sqrt') {
         return (
           <div className="flex items-stretch mx-[0.1em]">
-            <span className={`text-[1.25em] font-light font-serif mr-[-0.05em] select-none self-center ${isGreyedOut ? 'text-zinc-600' : 'text-indigo-300'}`}>√</span>
-            <div className={`border-t border-l pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center ${isGreyedOut ? 'border-zinc-800' : 'border-white/30'}`}>
+            <span className={`text-[1.25em] font-light font-serif mr-[-0.05em] select-none self-center ${isStatic ? 'text-zinc-600' : 'text-indigo-300'}`}>√</span>
+            <div className={`border-t border-l pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center ${isStatic ? 'border-zinc-800' : 'border-white/30'}`}>
               <EquationNode path={`${path}/0`} key={getChildId(0)} />
             </div>
           </div>
@@ -319,10 +317,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       // Default fallback function renderer
       return (
         <div className="flex items-center gap-[0.05em]">
-          <span className={`font-medium select-none text-[0.9em] ${isGreyedOut ? 'text-zinc-500' : 'text-purple-300'}`}>{nameStr}</span>
-          <span className={`mr-[0.05em] ${isGreyedOut ? 'text-zinc-600' : 'text-white/40'}`}>(</span>
+          <span className={`font-medium select-none text-[0.9em] ${isStatic ? 'text-zinc-500' : 'text-purple-300'}`}>{nameStr}</span>
+          <span className={`mr-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`}>(</span>
           <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          <span className={`ml-[0.05em] ${isGreyedOut ? 'text-zinc-600' : 'text-white/40'}`}>)</span>
+          <span className={`ml-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`}>)</span>
         </div>
       );
     }
@@ -330,13 +328,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     return <span>{node.toString()}</span>;
   };
 
-  const isInteractive = selectedPath
-    ? (isSelected || isValidDrop || isSimplifiable)
-    : (hasValidMoves || isSimplifiable);
+  const isInteractive = sourcePath
+    ? (isSelected || isTarget || isReducible)
+    : (isActive || isReducible);
 
+  // Block clicks globally during active exit or entry transitions
   const isGlobalAnimating = animatingExitPath !== null || animatingEntryId !== null;
-  const shouldBlockEvents = isGlobalAnimating || (selectedPath ? false : !isInteractive);
+  const shouldBlockEvents = isGlobalAnimating || (sourcePath ? false : !isInteractive);
 
+  // Transition styling logic
   const isAnimatingExit = animatingExitPath === path;
   let customStyle: React.CSSProperties = {
     transition: 'all 150ms ease-in-out',
@@ -366,7 +366,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   return (
     <div
       style={customStyle}
-      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${borderStyle} ${shouldBlockEvents ? 'pointer-events-none' : ''}`}
+      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${semanticStyle} ${shouldBlockEvents ? 'pointer-events-none' : ''}`}
       onMouseEnter={() => setHoverPath(path)}
       onMouseLeave={() => setHoverPath(null)}
       onClick={handleNodeClick}
@@ -387,25 +387,25 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         </div>
       )}
 
-      {/* Glowing placeholder icon for valid drops */}
-      {isValidDrop && (
+      {/* Receptive target backing card transition layer */}
+      {isTarget && (
         <div className="absolute -inset-0.5 bg-emerald-400/20 blur-md rounded-lg -z-10 animate-pulse" />
       )}
 
-      {/* Simplification Dot */}
-      {isSimplifiable && (
+      {/* Reduce Dot */}
+      {isReducible && (
         <button
           className={`absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full bg-amber-400 border border-neutral-950 flex items-center justify-center cursor-pointer shadow-md hover:bg-amber-300 transition-colors z-20 group ${THEME_TRANSITIONS.FAST}`}
           onMouseEnter={(e) => {
             e.stopPropagation();
-            setHoverSimplifyPath(path);
+            setHoverReducePath(path);
           }}
           onMouseLeave={(e) => {
             e.stopPropagation();
-            setHoverSimplifyPath(null);
+            setHoverReducePath(null);
           }}
-          onClick={handleSimplifyClick}
-          title="Simplify this term"
+          onClick={handleReduceClick}
+          title="Reduce this term"
         >
           {/* Subtle pulse effect inside the dot */}
           <span className="absolute inset-0 rounded-full bg-amber-400/40 animate-ping group-hover:opacity-0 pointer-events-none" />

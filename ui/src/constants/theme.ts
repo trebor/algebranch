@@ -21,10 +21,12 @@ export const THEME_ANIMATIONS = {
 export const THEME_GLASS = {
   PANEL: 'backdrop-blur-md bg-white/5 border border-white/10 shadow-2xl shadow-black/40 rounded-2xl',
   CARD: 'backdrop-blur-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200 ease-in-out shadow-md rounded-xl',
-  GLOW: 'shadow-[0_0_15px_rgba(99,102,241,0.2)]',
-  GLOW_ACTIVE: 'shadow-[0_0_25px_rgba(99,102,241,0.5)] border-indigo-400/50',
-  GLOW_VALID: 'shadow-[0_0_25px_rgba(16,185,129,0.5)] border-emerald-400/50',
-  UNMOVABLE: 'border-zinc-800/80 bg-zinc-900/90 text-zinc-500 shadow-none font-normal opacity-100',
+  SHADOW_AMBIENT: 'shadow-[0_0_15px_rgba(99,102,241,0.2)]',
+  SOURCE: 'shadow-[0_0_25px_rgba(99,102,241,0.5)] border-indigo-400/50 bg-indigo-950/80 text-indigo-100 font-semibold cursor-pointer',
+  TARGET: 'shadow-[0_0_25px_rgba(16,185,129,0.5)] border-emerald-400/50 bg-emerald-950/80 cursor-pointer text-emerald-100 animate-pulse font-semibold',
+  STATIC: 'border-zinc-800/80 bg-zinc-900/90 text-zinc-500 shadow-none font-normal opacity-100 cursor-default',
+  CARD_ACTIVE: 'border-white/10 bg-neutral-950/90 text-white/90 cursor-pointer',
+  CARD_HOVER: 'border-indigo-400/40 bg-neutral-900/90 text-white font-medium shadow-md shadow-indigo-500/5 cursor-pointer',
 } as const;
 
 export const MATH_PRESETS = [

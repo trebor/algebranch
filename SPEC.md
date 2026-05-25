@@ -54,3 +54,12 @@ The primary method of manipulating the equation relies on the recursive structur
 ## 7. Test-Driven Development (TDD) Strategy
 *   **Local Move Unit Tests:** Because the system evaluates discrete, known moves, developers will design essentially perfect unit tests for each move. The specification of correctness for the system is encoded directly in these automated unit tests that verify each local move is valid.
 *   **Interval Evaluator Rigor:** The custom interval arithmetic engine must be tested against known false identities to ensure it reliably rejects invalid operations.
+
+## 8. Nomenclature Framework
+To ensure complete semantic consistency between visual rendering, user interaction, state management, and the codebase, Algebranch defines a strict five-state conceptual framework for all nodes in the expression tree:
+
+1.  **Active:** Interactive terms that possess valid algebraic transformations in the current context. These are highlighted as ready for user interaction.
+2.  **Source:** The active selected node undergoing transposition. There can be at most one active source selected at any time.
+3.  **Target:** A valid mathematical destination slot receptive to receiving the active **Source** node.
+4.  **Static:** Inert terms that are non-interactive in the current state. They display as fully opaque gray elements to establish the stable visual landscape of the equation.
+5.  **Reduce:** Terms containing active constant folding or simplification opportunities. Clicking a **Reduce** point immediately reduces the term to its simplified form.

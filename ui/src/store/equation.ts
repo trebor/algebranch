@@ -12,11 +12,11 @@ export const historyAtom = atom<Equation[]>([
 
 export const currentIndexAtom = atom<number>(DEFAULT_ZERO);
 
-export const selectedPathAtom = atom<string | null>(null);
+export const sourcePathAtom = atom<string | null>(null);
 
 export const hoverPathAtom = atom<string | null>(null);
 
-export const hoverSimplifyPathAtom = atom<string | null>(null);
+export const hoverReducePathAtom = atom<string | null>(null);
 
 // New base atom to track the node path that is currently animating its exit
 export const animatingExitPathAtom = atom<string | null>(null);
@@ -36,18 +36,18 @@ export const currentEquationAtom = atom<Equation>((get) => {
 });
 
 /**
- * Computes all valid drop target paths reactively when a node is selected.
+ * Computes all valid drop targets reactively when a node is selected.
  * Maps destination paths to the resulting mathematical Equation.
  */
-export const validDropPathsAtom = atom<Record<string, Equation>>((get) => {
+export const targetPathsAtom = atom<Record<string, Equation>>((get) => {
   const currentEq = get(currentEquationAtom);
   if (!currentEq) {
     return {};
   }
 
-  const selectedPath = get(selectedPathAtom);
-  if (selectedPath) {
-    const moves = generateValidMoves(currentEq, selectedPath);
+  const sourcePath = get(sourcePathAtom);
+  if (sourcePath) {
+    const moves = generateValidMoves(currentEq, sourcePath);
     Object.keys(moves).forEach((k) => {
       moves[k] = ensureNodeIds(moves[k]);
     });
@@ -67,14 +67,14 @@ export const validDropPathsAtom = atom<Record<string, Equation>>((get) => {
 });
 
 /**
- * Computes the set of all paths in the current equation that have at least one valid drop destination.
+ * Computes the set of all paths in the current equation that are active (have valid transformations).
  */
-export const pathsWithValidMovesAtom = atom<Set<string>>((get) => {
+export const activePathsAtom = atom<Set<string>>((get) => {
   const currentEq = get(currentEquationAtom);
-  const validPaths = new Set<string>();
+  const activePaths = new Set<string>();
 
   if (!currentEq) {
-    return validPaths;
+    return activePaths;
   }
 
   const allPaths = getAllPaths(currentEq);
@@ -83,25 +83,25 @@ export const pathsWithValidMovesAtom = atom<Set<string>>((get) => {
     try {
       const moves = generateValidMoves(currentEq, path);
       if (Object.keys(moves).length > 0) {
-        validPaths.add(path);
+        activePaths.add(path);
       }
     } catch {
       // Graceful fallback
     }
   });
 
-  return validPaths;
+  return activePaths;
 });
 
 /**
- * Computes all paths that have simplification opportunities, mapping paths to the simplified equation.
+ * Computes all paths that have reduction opportunities, mapping paths to the reduced equation.
  */
-export const simplifiablePathsAtom = atom<Record<string, Equation>>((get) => {
+export const reduciblePathsAtom = atom<Record<string, Equation>>((get) => {
   const currentEq = get(currentEquationAtom);
-  const simplifiable: Record<string, Equation> = {};
+  const reducible: Record<string, Equation> = {};
 
   if (!currentEq) {
-    return simplifiable;
+    return reducible;
   }
 
   const allPaths = getAllPaths(currentEq);
@@ -110,34 +110,34 @@ export const simplifiablePathsAtom = atom<Record<string, Equation>>((get) => {
     try {
       const simplified = getSimplificationForPath(currentEq, path);
       if (simplified) {
-        simplifiable[path] = ensureNodeIds(simplified);
+        reducible[path] = ensureNodeIds(simplified);
       }
     } catch {
       // Graceful fallback
     }
   });
 
-  return simplifiable;
+  return reducible;
 });
 
 /**
  * Computes the preview equation reactively.
- * If the user hovers over a simplification dot or a valid drop target, it shows the speculative equation.
+ * If the user hovers over a reduction point or a valid drop target, it shows the speculative equation.
  * Otherwise, it shows the current active equation.
  */
 export const previewEquationAtom = atom<Equation>((get) => {
-  const hoverSimplifyPath = get(hoverSimplifyPathAtom);
-  const simplifiable = get(simplifiablePathsAtom);
+  const hoverReducePath = get(hoverReducePathAtom);
+  const reducible = get(reduciblePathsAtom);
 
-  if (hoverSimplifyPath && hoverSimplifyPath in simplifiable) {
-    return simplifiable[hoverSimplifyPath];
+  if (hoverReducePath && hoverReducePath in reducible) {
+    return reducible[hoverReducePath];
   }
 
   const hoverPath = get(hoverPathAtom);
-  const validDrops = get(validDropPathsAtom);
+  const targetPaths = get(targetPathsAtom);
 
-  if (hoverPath && hoverPath in validDrops) {
-    return validDrops[hoverPath];
+  if (hoverPath && hoverPath in targetPaths) {
+    return targetPaths[hoverPath];
   }
   return get(currentEquationAtom);
 });
@@ -156,9 +156,9 @@ export const pushEquationAtom = atom(
 
     set(historyAtom, nextHistory);
     set(currentIndexAtom, nextHistory.length - 1);
-    set(selectedPathAtom, null);
+    set(sourcePathAtom, null);
     set(hoverPathAtom, null);
-    set(hoverSimplifyPathAtom, null);
+    set(hoverReducePathAtom, null);
   }
 );
 
@@ -172,9 +172,9 @@ export const resetToEquationStringAtom = atom(
       const newEq = ensureNodeIds(parseEquation(eqStr));
       set(historyAtom, [newEq]);
       set(currentIndexAtom, DEFAULT_ZERO);
-      set(selectedPathAtom, null);
+      set(sourcePathAtom, null);
       set(hoverPathAtom, null);
-      set(hoverSimplifyPathAtom, null);
+      set(hoverReducePathAtom, null);
     } catch (err) {
       console.error('Failed to reset equation:', err);
       throw err;

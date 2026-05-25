@@ -7,7 +7,7 @@ import {
   historyAtom,
   currentIndexAtom,
   resetToEquationStringAtom,
-  selectedPathAtom,
+  sourcePathAtom,
   hoverPathAtom,
 } from '../store/equation';
 import { MATH_PRESETS, THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
@@ -22,7 +22,7 @@ export const Sidebar: React.FC = () => {
   const [history, setHistory] = useAtom(historyAtom);
   const [currentIndex, setCurrentIndex] = useAtom(currentIndexAtom);
   const resetToEquation = useSetAtom(resetToEquationStringAtom);
-  const setSelectedPath = useSetAtom(selectedPathAtom);
+  const setSourcePath = useSetAtom(sourcePathAtom);
   const setHoverPath = useSetAtom(hoverPathAtom);
   const [copiedIndex, setCopiedIndex] = React.useState<number | null>(null);
 
@@ -43,7 +43,7 @@ export const Sidebar: React.FC = () => {
   const handleUndo = () => {
     if (canUndo) {
       setCurrentIndex((prev) => prev - INDEX_INCREMENT);
-      setSelectedPath(null);
+      setSourcePath(null);
       setHoverPath(null);
     }
   };
@@ -51,7 +51,7 @@ export const Sidebar: React.FC = () => {
   const handleRedo = () => {
     if (canRedo) {
       setCurrentIndex((prev) => prev + INDEX_INCREMENT);
-      setSelectedPath(null);
+      setSourcePath(null);
       setHoverPath(null);
     }
   };
@@ -61,14 +61,14 @@ export const Sidebar: React.FC = () => {
       const initialEq = history[DEFAULT_ZERO];
       setHistory([initialEq]);
       setCurrentIndex(DEFAULT_ZERO);
-      setSelectedPath(null);
+      setSourcePath(null);
       setHoverPath(null);
     }
   };
 
   const handleStepClick = (idx: number) => {
     setCurrentIndex(idx);
-    setSelectedPath(null);
+    setSourcePath(null);
     setHoverPath(null);
   };
 

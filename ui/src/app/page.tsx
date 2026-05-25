@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useAtomValue } from 'jotai';
-import { AnimatePresence } from 'framer-motion';
 import { EquationNode } from '../components/EquationNode';
 import { PreviewEquationNode } from '../components/PreviewEquationNode';
 import { Sidebar } from '../components/Sidebar';
@@ -73,9 +72,7 @@ export default function Home() {
                   <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full">
                     {/* LHS Term Tree */}
                     <div className="flex justify-end min-w-[5em]">
-                      <AnimatePresence mode="popLayout">
-                        <EquationNode path="lhs" key={(currentEq.lhs as any).id || 'lhs'} />
-                      </AnimatePresence>
+                      <EquationNode path="lhs" key={(currentEq?.lhs as any)?.id || 'lhs'} />
                     </div>
 
                     {/* Equals Operator sign */}
@@ -85,9 +82,7 @@ export default function Home() {
 
                     {/* RHS Term Tree */}
                     <div className="flex justify-start min-w-[5em]">
-                      <AnimatePresence mode="popLayout">
-                        <EquationNode path="rhs" key={(currentEq.rhs as any).id || 'rhs'} />
-                      </AnimatePresence>
+                      <EquationNode path="rhs" key={(currentEq?.rhs as any)?.id || 'rhs'} />
                     </div>
                   </div>
                 </div>
@@ -113,9 +108,7 @@ export default function Home() {
                   <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full pointer-events-none select-none">
                     {/* LHS Preview Term Tree */}
                     <div className="flex justify-end min-w-[5em]">
-                      <AnimatePresence mode="popLayout">
-                        <PreviewEquationNode path="lhs" key="preview_lhs" />
-                      </AnimatePresence>
+                      <PreviewEquationNode path="lhs" />
                     </div>
 
                     {/* Equals Operator sign */}
@@ -129,9 +122,7 @@ export default function Home() {
 
                     {/* RHS Preview Term Tree */}
                     <div className="flex justify-start min-w-[5em]">
-                      <AnimatePresence mode="popLayout">
-                        <PreviewEquationNode path="rhs" key="preview_rhs" />
-                      </AnimatePresence>
+                      <PreviewEquationNode path="rhs" />
                     </div>
                   </div>
                 </div>

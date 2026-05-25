@@ -18,6 +18,12 @@ export const hoverPathAtom = atom<string | null>(null);
 
 export const hoverSimplifyPathAtom = atom<string | null>(null);
 
+// New base atom to track the node path that is currently animating its exit
+export const animatingExitPathAtom = atom<string | null>(null);
+
+// New base atom to track the stable ID of the node currently animating its entry
+export const animatingEntryIdAtom = atom<string | null>(null);
+
 // Derived Atoms (Step 3: Transformations)
 
 /**

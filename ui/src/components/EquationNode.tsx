@@ -12,11 +12,12 @@ import {
   pathsWithValidMovesAtom,
   hoverSimplifyPathAtom,
   simplifiablePathsAtom,
+  animatingExitPathAtom,
+  animatingEntryIdAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS, THEME_ANIMATIONS } from '../constants/theme';
 import { getNodeByPath, replaceNodeAtPath, getFunctionName, equationToString, getChildren } from 'math-engine';
 import { Sparkles } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface EquationNodeProps {
   readonly path: string;
@@ -56,6 +57,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const pushEquation = useSetAtom(pushEquationAtom);
   const currentEq = useAtomValue(currentEquationAtom);
   const pathsWithValidMoves = useAtomValue(pathsWithValidMovesAtom);
+  const [animatingExitPath, setAnimatingExitPath] = useAtom(animatingExitPathAtom);
+  const [animatingEntryId, setAnimatingEntryId] = useAtom(animatingEntryIdAtom);
 
   const node = React.useMemo(() => {
     try {
@@ -67,6 +70,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   if (!node) return null;
 
+  const nodeId = (node as any).id || '';
+
   const getChildId = (index: number): string => {
     try {
       const children = getChildren(node);
@@ -76,6 +81,28 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     } catch {}
     return `${path}/${index}`;
   };
+
+  // Local state to keep the entering node scaled down to 0 instantly on initial render
+  const [isScaledDown, setIsScaledDown] = React.useState(nodeId && nodeId === animatingEntryId);
+
+  React.useEffect(() => {
+    if (nodeId && nodeId === animatingEntryId) {
+      // 1. Force initial zero-scale mount before triggering transition
+      const triggerTimer = setTimeout(() => {
+        setIsScaledDown(false);
+      }, 50);
+
+      // 2. Clear global entry lock and reset atom once transition completes
+      const clearTimer = setTimeout(() => {
+        setAnimatingEntryId(null);
+      }, THEME_ANIMATIONS.TRANSITION_DURATION_MS + 100);
+
+      return () => {
+        clearTimeout(triggerTimer);
+        clearTimeout(clearTimer);
+      };
+    }
+  }, [nodeId, animatingEntryId, setAnimatingEntryId]);
 
   const isSelected = selectedPath === path;
   const isHovered = hoverPath === path || (hoverPath !== null && hoverPath.startsWith(`${path}/`));
@@ -137,7 +164,25 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
     const activeDropPath = getValidDropPath();
     if (activeDropPath) {
-      pushEquation(validDrops[activeDropPath]);
+      if (selectedPath) {
+        // Fetch the unique ID of the moving node
+        const movingNode = getNodeByPath(currentEq, selectedPath);
+        const movingId = movingNode ? (movingNode as any).id : null;
+
+        // Trigger the exit transition on the selected node
+        setAnimatingExitPath(selectedPath);
+
+        // Defer pushing the new equation until after the animation duration
+        setTimeout(() => {
+          if (movingId) {
+            setAnimatingEntryId(movingId);
+          }
+          pushEquation(validDrops[activeDropPath]);
+          setAnimatingExitPath(null);
+        }, THEME_ANIMATIONS.TRANSITION_DURATION_MS);
+      } else {
+        pushEquation(validDrops[activeDropPath]);
+      }
       return;
     }
 
@@ -185,9 +230,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       return (
         <div className="flex items-center px-[0.1em]">
           <span className="text-white/40 font-light text-[1.05em] select-none mr-[0.05em]">(</span>
-          <AnimatePresence mode="popLayout">
-            <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          </AnimatePresence>
+          <EquationNode path={`${path}/0`} key={getChildId(0)} />
           <span className="text-white/40 font-light text-[1.05em] select-none ml-[0.05em]">)</span>
         </div>
       );
@@ -201,9 +244,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         return (
           <div className="flex items-center gap-[0.05em]">
             <span className="text-indigo-300/90 font-bold select-none">{opSymbol}</span>
-            <AnimatePresence mode="popLayout">
-              <EquationNode path={`${path}/0`} key={getChildId(0)} />
-            </AnimatePresence>
+            <EquationNode path={`${path}/0`} key={getChildId(0)} />
           </div>
         );
       }
@@ -213,15 +254,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         return (
           <div className="flex flex-col items-center justify-center mx-[0.1em] my-[0.05em]">
             <div className="w-full text-center pb-[0.1em]">
-              <AnimatePresence mode="popLayout">
-                <EquationNode path={`${path}/0`} key={getChildId(0)} />
-              </AnimatePresence>
+              <EquationNode path={`${path}/0`} key={getChildId(0)} />
             </div>
             <div className="w-full border-t border-white/20 h-0" />
             <div className="w-full text-center pt-[0.1em]">
-              <AnimatePresence mode="popLayout">
-                <EquationNode path={`${path}/1`} key={getChildId(1)} />
-              </AnimatePresence>
+              <EquationNode path={`${path}/1`} key={getChildId(1)} />
             </div>
           </div>
         );
@@ -231,13 +268,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       if (opNode.op === '^') {
         return (
           <div className="flex items-start">
-            <AnimatePresence mode="popLayout">
-              <EquationNode path={`${path}/0`} key={getChildId(0)} />
-            </AnimatePresence>
+            <EquationNode path={`${path}/0`} key={getChildId(0)} />
             <div className="text-[0.65em] leading-none -mt-[0.2em] ml-[0.05em] scale-90 opacity-90">
-              <AnimatePresence mode="popLayout">
-                <EquationNode path={`${path}/1`} key={getChildId(1)} />
-              </AnimatePresence>
+              <EquationNode path={`${path}/1`} key={getChildId(1)} />
             </div>
           </div>
         );
@@ -253,13 +286,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
       return (
         <div className="flex items-center gap-[0.2em] flex-wrap justify-center py-[0.05em]">
-          <AnimatePresence mode="popLayout">
-            <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          </AnimatePresence>
+          <EquationNode path={`${path}/0`} key={getChildId(0)} />
           <span className="text-indigo-400 font-medium select-none text-[0.85em]">{opSymbol}</span>
-          <AnimatePresence mode="popLayout">
-            <EquationNode path={`${path}/1`} key={getChildId(1)} />
-          </AnimatePresence>
+          <EquationNode path={`${path}/1`} key={getChildId(1)} />
         </div>
       );
     }
@@ -273,9 +302,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
           <div className="flex items-stretch mx-[0.1em]">
             <span className="text-[1.25em] font-light font-serif mr-[-0.05em] select-none text-indigo-300 self-center">√</span>
             <div className="border-t border-l border-white/30 pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center">
-              <AnimatePresence mode="popLayout">
-                <EquationNode path={`${path}/0`} key={getChildId(0)} />
-              </AnimatePresence>
+              <EquationNode path={`${path}/0`} key={getChildId(0)} />
             </div>
           </div>
         );
@@ -286,9 +313,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         <div className="flex items-center gap-[0.05em]">
           <span className="text-purple-300 font-medium select-none text-[0.9em]">{nameStr}</span>
           <span className="text-white/40 mr-[0.05em]">(</span>
-          <AnimatePresence mode="popLayout">
-            <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          </AnimatePresence>
+          <EquationNode path={`${path}/0`} key={getChildId(0)} />
           <span className="text-white/40 ml-[0.05em]">)</span>
         </div>
       );
@@ -301,16 +326,39 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     ? (isSelected || isValidDrop || isSimplifiable)
     : (hasValidMoves || isSimplifiable);
 
-  const shouldBlockEvents = selectedPath ? false : !isInteractive;
+  const isGlobalAnimating = animatingExitPath !== null || animatingEntryId !== null;
+  const shouldBlockEvents = isGlobalAnimating || (selectedPath ? false : !isInteractive);
+
+  const isAnimatingExit = animatingExitPath === path;
+  let customStyle: React.CSSProperties = {
+    transition: 'all 150ms ease-in-out',
+  };
+
+  if (isAnimatingExit) {
+    customStyle = {
+      transform: 'scale(0)',
+      opacity: 0,
+      transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
+      pointerEvents: 'none',
+    };
+  } else if (isScaledDown) {
+    customStyle = {
+      transform: 'scale(0)',
+      opacity: 0,
+    };
+  } else if (nodeId && nodeId === animatingEntryId) {
+    customStyle = {
+      transform: 'scale(1)',
+      opacity: 1,
+      transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
+      pointerEvents: 'none',
+    };
+  }
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0 }}
-      transition={THEME_ANIMATIONS.LAYOUT_TRANSITION}
-      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${borderStyle} ${shouldBlockEvents ? 'pointer-events-none' : ''} ${THEME_TRANSITIONS.FAST}`}
+    <div
+      style={customStyle}
+      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${borderStyle} ${shouldBlockEvents ? 'pointer-events-none' : ''}`}
       onMouseEnter={() => setHoverPath(path)}
       onMouseLeave={() => setHoverPath(null)}
       onClick={handleNodeClick}
@@ -356,6 +404,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
           <span className="h-1.5 w-1.5 rounded-full bg-neutral-950 pointer-events-none" />
         </button>
       )}
-    </motion.div>
+    </div>
   );
 };

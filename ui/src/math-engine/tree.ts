@@ -32,17 +32,24 @@ export const getChildren = (node: math.MathNode): math.MathNode[] => {
  * Standardizes args or content properties.
  */
 export const cloneWithChildren = (node: math.MathNode, newChildren: math.MathNode[]): math.MathNode => {
+  let cloned: math.MathNode;
   if ('args' in node && Array.isArray((node as unknown as NodeWithArgs).args)) {
-    const cloned = node.clone() as unknown as NodeWithArgs;
-    cloned.args = newChildren;
-    return cloned;
+    const tempCloned = node.clone() as unknown as NodeWithArgs;
+    tempCloned.args = newChildren;
+    cloned = tempCloned;
+  } else if ('content' in node && (node as unknown as NodeWithContent).content) {
+    const tempCloned = node.clone() as unknown as NodeWithContent;
+    tempCloned.content = newChildren[0];
+    cloned = tempCloned;
+  } else {
+    cloned = node;
   }
-  if ('content' in node && (node as unknown as NodeWithContent).content) {
-    const cloned = node.clone() as unknown as NodeWithContent;
-    cloned.content = newChildren[0];
-    return cloned;
+
+  // Explicitly preserve stable IDs across clones
+  if ((node as any).id) {
+    (cloned as any).id = (node as any).id;
   }
-  return node;
+  return cloned;
 };
 
 /**

@@ -15,6 +15,7 @@ export const THEME_ANIMATIONS = {
     duration: 2.0, // Stretched to 2.0s for visual debugging, reduce later
     bounce: 0.2,   // Light organic bounce
   },
+  TRANSITION_DURATION_MS: 2000, // Central 2-second animation constant
 } as const;
 
 export const THEME_GLASS = {

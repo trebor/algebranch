@@ -106,7 +106,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   const isSelected = sourcePath === path;
   const isHovered = hoverPath === path || (hoverPath !== null && hoverPath.startsWith(`${path}/`));
-  const isTarget = path in targetPaths;
+  const isTarget = !!sourcePath && path in targetPaths;
   const isActive = activePaths.has(path);
   const isStatic = sourcePath
     ? (!isSelected && !isTarget)
@@ -150,6 +150,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   };
 
   const getTargetPath = (): string | null => {
+    if (!sourcePath) return null;
     if (isTarget) return path;
     const parts = path.split('/');
     for (let i = parts.length - 1; i > 0; i--) {
@@ -170,26 +171,22 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     }
 
     const activeTargetPath = getTargetPath();
-    if (activeTargetPath) {
-      if (sourcePath) {
-        // Fetch the unique ID of the moving node
-        const movingNode = getNodeByPath(currentEq, sourcePath);
-        const movingId = movingNode ? (movingNode as unknown as { id?: string }).id : null;
+    if (activeTargetPath && sourcePath) {
+      // Fetch the unique ID of the moving node
+      const movingNode = getNodeByPath(currentEq, sourcePath);
+      const movingId = movingNode ? (movingNode as unknown as { id?: string }).id : null;
 
-        // Trigger the exit transition on the selected node
-        setAnimatingExitPath(sourcePath);
+      // Trigger the exit transition on the selected node
+      setAnimatingExitPath(sourcePath);
 
-        // Defer pushing the new equation until after the animation duration
-        setTimeout(() => {
-          if (movingId) {
-            setAnimatingEntryId(movingId);
-          }
-          pushEquation(targetPaths[activeTargetPath]);
-          setAnimatingExitPath(null);
-        }, THEME_ANIMATIONS.TRANSITION_DURATION_MS);
-      } else {
+      // Defer pushing the new equation until after the animation duration
+      setTimeout(() => {
+        if (movingId) {
+          setAnimatingEntryId(movingId);
+        }
         pushEquation(targetPaths[activeTargetPath]);
-      }
+        setAnimatingExitPath(null);
+      }, THEME_ANIMATIONS.TRANSITION_DURATION_MS);
       return;
     }
 

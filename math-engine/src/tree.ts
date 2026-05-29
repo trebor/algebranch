@@ -200,7 +200,17 @@ export const getAllPaths = (eq: Equation): string[] => {
  */
 export const ensureNodeIds = (eq: Equation): Equation => {
   let counter = 0;
-  const generateId = () => `node_${Math.random().toString(36).substring(2, 9)}_${counter++}`;
+  // A simple deterministic hash of the equation's text representation to seed prefixes
+  const eqStr = `${eq.lhs ? eq.lhs.toString() : ''} = ${eq.rhs ? eq.rhs.toString() : ''}`;
+  let hash = 0;
+  for (let i = 0; i < eqStr.length; i++) {
+    hash = (hash << 5) - hash + eqStr.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  // Convert hash to positive base-36 string for a clean alphanumeric prefix
+  const hashPrefix = Math.abs(hash).toString(36);
+
+  const generateId = () => `node_${hashPrefix}_${counter++}`;
 
   const traverseAndAssign = (node: math.MathNode) => {
     if (!node) return;

@@ -394,6 +394,11 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
         return;
       }
 
+      // Strictly exclude moving a node onto itself
+      if (targetPath === sourcePath) {
+        return;
+      }
+
       // If it's a cross-equals move, the target path must be the root of the destination side
       const isCrossEquals = (
         (sourcePath.startsWith('lhs') && targetPath.startsWith('rhs')) ||

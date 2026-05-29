@@ -48,6 +48,7 @@ export const targetPathsAtom = atom<Record<string, Equation>>((get) => {
   const sourcePath = get(sourcePathAtom);
   if (sourcePath) {
     const moves = generateValidMoves(currentEq, sourcePath);
+    delete moves[sourcePath];
     Object.keys(moves).forEach((k) => {
       moves[k] = ensureNodeIds(moves[k]);
     });
@@ -57,6 +58,7 @@ export const targetPathsAtom = atom<Record<string, Equation>>((get) => {
   const hoverPath = get(hoverPathAtom);
   if (hoverPath) {
     const moves = generateValidMoves(currentEq, hoverPath);
+    delete moves[hoverPath];
     Object.keys(moves).forEach((k) => {
       moves[k] = ensureNodeIds(moves[k]);
     });

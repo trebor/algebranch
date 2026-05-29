@@ -178,14 +178,15 @@ export const solveForVariable = (
   nodeLHS: math.MathNode,
   nodeRHS: math.MathNode,
   solveVar: string,
-  scope: Record<string, number>
+  scope: Record<string, number>,
+  initialGuess: number = 1.0
 ): number | null => {
   const f = (x: number): number => {
     const localScope = { ...scope, [solveVar]: x };
     return evaluatePoint(nodeLHS, localScope) - evaluatePoint(nodeRHS, localScope);
   };
 
-  let x = 1.0; // Initial guess
+  let x = initialGuess; // Initial guess
   const maxIterations = 20;
   const tolerance = 1e-10;
   const h = 1e-5;
@@ -221,17 +222,24 @@ export const isEquationSatisfiedAtRoot = (
   variables: string[],
   scope: Record<string, number>
 ): boolean => {
-  let solved = false;
+  const guesses = [1.0, -1.0, 5.0, -5.0];
+  let hasCheckedAnyRoot = false;
+
   for (const solveVar of variables) {
-    const root = solveForVariable(eqSource.lhs, eqSource.rhs, solveVar, { ...scope });
-    if (root !== null) {
-      scope[solveVar] = root;
-      solved = true;
-      break;
+    for (const guess of guesses) {
+      const root = solveForVariable(eqSource.lhs, eqSource.rhs, solveVar, { ...scope }, guess);
+      if (root !== null && isFinite(root) && !isNaN(root)) {
+        hasCheckedAnyRoot = true;
+        const localScope = { ...scope, [solveVar]: root };
+        const dTarget = evaluatePoint(eqTarget.lhs, localScope) - evaluatePoint(eqTarget.rhs, localScope);
+        if (isNaN(dTarget) || !isFinite(dTarget) || Math.abs(dTarget) > 1e-5) {
+          return false;
+        }
+      }
     }
   }
 
-  if (!solved) {
+  if (!hasCheckedAnyRoot) {
     // Fallback for constant equations or equations with no real roots on the domain
     const d1 = evaluatePoint(eqSource.lhs, scope) - evaluatePoint(eqSource.rhs, scope);
     const d2 = evaluatePoint(eqTarget.lhs, scope) - evaluatePoint(eqTarget.rhs, scope);
@@ -241,9 +249,7 @@ export const isEquationSatisfiedAtRoot = (
     return Math.abs(d1 - d2) <= POINT_TOLERANCE;
   }
 
-  // Check if eqTarget is satisfied at this root
-  const dTarget = evaluatePoint(eqTarget.lhs, scope) - evaluatePoint(eqTarget.rhs, scope);
-  return !isNaN(dTarget) && isFinite(dTarget) && Math.abs(dTarget) <= 1e-6;
+  return true;
 };
 
 /**
@@ -378,6 +384,35 @@ export const isNeutralNode = (node: math.MathNode): boolean => {
 };
 
 /**
+ * Checks if a path is draggable (meaning it does not have any power '^' or function ancestor above it).
+ */
+export const isPathDraggable = (eq: Equation, sourcePath: string): boolean => {
+  if (!sourcePath.includes('/')) {
+    return true;
+  }
+
+  let currentPath = sourcePath;
+  while (currentPath.includes('/')) {
+    currentPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+    try {
+      const ancestor = getNodeByPath(eq, currentPath);
+      if (ancestor.type === 'FunctionNode') {
+        return false;
+      }
+      if (ancestor.type === 'OperatorNode') {
+        const opNode = ancestor as math.OperatorNode;
+        if (opNode.op === '^') {
+          return false;
+        }
+      }
+    } catch {
+      break;
+    }
+  }
+  return true;
+};
+
+/**
  * Generates all mathematically valid target equations for a selected node.
  * Maps destination path string to the resulting Equation.
  */
@@ -385,6 +420,10 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
   const moves: Record<string, Equation> = {};
 
   try {
+    if (!isPathDraggable(originalEq, sourcePath)) {
+      return moves;
+    }
+
     const { newEquation: tempEq, removedNode } = removeNodeAtPath(originalEq, sourcePath);
     const targetPaths = getAllPaths(tempEq);
     const excludedParents = getExcludedParentPaths(originalEq, sourcePath);

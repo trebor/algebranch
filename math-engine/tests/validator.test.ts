@@ -162,5 +162,25 @@ describe('Math Engine Validator & Simplifier', () => {
     const simplified = getSimplificationForPath(eq, 'lhs');
     expect(simplified).toBeNull();
   });
+
+  test('areEquationsEquivalent rejects non-equivalent non-linear equations sharing a root', () => {
+    // x ^ 2 - 4 = 0 has roots {2, -2}
+    // 2 - 4 + x = 0 (which is x - 2 = 0) has a single root {2}
+    // They are NOT equivalent because their solution sets differ
+    const eq1 = parseEquation('x ^ 2 - 4 = 0');
+    const eq2 = parseEquation('2 - 4 + x = 0');
+    expect(areEquationsEquivalent(eq1, eq2)).toBe(false);
+  });
+
+  test('generateValidMoves blocks dragging exponents or bases out of power nodes', () => {
+    const eq = parseEquation('x ^ 2 - 4 = 0');
+    // Path for '2' in 'x ^ 2' is 'lhs/0/1'
+    const movesExponent = generateValidMoves(eq, 'lhs/0/1');
+    expect(Object.keys(movesExponent).length).toBe(0);
+
+    // Path for 'x' in 'x ^ 2' is 'lhs/0/0'
+    const movesBase = generateValidMoves(eq, 'lhs/0/0');
+    expect(Object.keys(movesBase).length).toBe(0);
+  });
 });
 

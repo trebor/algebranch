@@ -181,6 +181,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     }
     return {
       ...displayStyle,
+      maxWidth: '200px', // Explicit starting max-width for smooth exit transition!
       transition: 'all 150ms ease-in-out',
     };
   };
@@ -420,6 +421,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   // Transition styling logic
   const isAnimatingExit = animatingExitPath === path;
   let customStyle: React.CSSProperties = {
+    maxWidth: '500px', // Explicit starting max-width for smooth exit transition!
     transition: 'all 150ms ease-in-out',
   };
 

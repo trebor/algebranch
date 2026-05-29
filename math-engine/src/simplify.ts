@@ -71,6 +71,10 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
     const node = getNodeByPath(eq, p);
     if (!node) return null;
 
+    const isDiff = (candidate: Equation): boolean => {
+      return candidate.lhs.toString() !== eq.lhs.toString() || candidate.rhs.toString() !== eq.rhs.toString();
+    };
+
     // 1. Try constant folding first (non-constant subtrees composed entirely of constants)
     if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
       try {
@@ -88,7 +92,7 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
         }
         if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
           const candidate = replaceNodeAtPath(eq, p, new math.ConstantNode(numVal));
-          if (areEquationsEquivalent(eq, candidate)) {
+          if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
             return candidate;
           }
         }
@@ -101,14 +105,14 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
     if (node.type === 'ParenthesisNode') {
       const paren = node as math.ParenthesisNode;
       const candidate = replaceNodeAtPath(eq, p, paren.content);
-      if (areEquationsEquivalent(eq, candidate)) {
+      if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
         return candidate;
       }
     }
 
     // 3. Try single removal of this node
     const singleCandidate = trySingleRemoval(eq, p);
-    if (singleCandidate && areEquationsEquivalent(eq, singleCandidate)) {
+    if (singleCandidate && isDiff(singleCandidate) && areEquationsEquivalent(eq, singleCandidate)) {
       return singleCandidate;
     }
 
@@ -118,7 +122,7 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
       const otherPath = allPaths[i];
       if (otherPath === p) continue;
       const doubleCandidate = tryDoubleRemoval(eq, p, otherPath);
-      if (doubleCandidate && areEquationsEquivalent(eq, doubleCandidate)) {
+      if (doubleCandidate && isDiff(doubleCandidate) && areEquationsEquivalent(eq, doubleCandidate)) {
         return doubleCandidate;
       }
     }
@@ -128,7 +132,7 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
       const simplifiedNode = math.simplify(node.toString());
       if (simplifiedNode.toString() !== node.toString()) {
         const candidate = replaceNodeAtPath(eq, p, simplifiedNode);
-        if (areEquationsEquivalent(eq, candidate)) {
+        if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
           return candidate;
         }
       }

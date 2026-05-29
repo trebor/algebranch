@@ -155,4 +155,12 @@ describe('Math Engine Validator & Simplifier', () => {
     const simplified4 = getSimplificationForPath(eq4, 'rhs');
     expect(simplified4).toBeNull();
   });
+
+  test('getSimplificationForPath rejects no-op simplifications for standalone zero nodes', () => {
+    const eq = parseEquation('0 = x + 13');
+    // Path for '0' is 'lhs'
+    const simplified = getSimplificationForPath(eq, 'lhs');
+    expect(simplified).toBeNull();
+  });
 });
+

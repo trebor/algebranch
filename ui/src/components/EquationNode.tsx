@@ -147,7 +147,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         ...displayStyle,
         transform: 'scale(0)',
         opacity: 0,
-        transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
+        maxWidth: '0px',
+        paddingLeft: 0,
+        paddingRight: 0,
+        marginLeft: 0,
+        marginRight: 0,
+        overflow: 'hidden',
+        transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, max-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, padding ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, margin ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
       };
     }
     if (isOpScaledDown) {
@@ -155,6 +161,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         ...displayStyle,
         transform: 'scale(0)',
         opacity: 0,
+        maxWidth: '0px',
+        paddingLeft: 0,
+        paddingRight: 0,
+        marginLeft: 0,
+        marginRight: 0,
+        overflow: 'hidden',
       };
     }
     if (isOperatorEntryAnimating) {
@@ -162,7 +174,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         ...displayStyle,
         transform: 'scale(1)',
         opacity: 1,
-        transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
+        maxWidth: '100px', // safe upper bound for operator symbols
+        overflow: 'hidden',
+        transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, max-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
       };
     }
     return {
@@ -413,20 +427,45 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     customStyle = {
       transform: 'scale(0)',
       opacity: 0,
-      transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
+      maxWidth: '0px',
+      paddingLeft: 0,
+      paddingRight: 0,
+      paddingTop: 0,
+      paddingBottom: 0,
+      marginLeft: 0,
+      marginRight: 0,
+      borderWidth: 0,
+      overflow: 'hidden',
       pointerEvents: 'none',
+      transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, max-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, padding ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, margin ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, border-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
     };
   } else if (isScaledDown) {
     customStyle = {
       transform: 'scale(0)',
       opacity: 0,
+      maxWidth: '0px',
+      paddingLeft: 0,
+      paddingRight: 0,
+      paddingTop: 0,
+      paddingBottom: 0,
+      marginLeft: 0,
+      marginRight: 0,
+      borderWidth: 0,
+      overflow: 'hidden',
     };
   } else if (nodeId && nodeId === animatingEntryId) {
     customStyle = {
       transform: 'scale(1)',
       opacity: 1,
-      transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
+      maxWidth: '300px', // safe upper bound
+      paddingLeft: '0.2em', // standard tailwind padding
+      paddingRight: '0.2em',
+      paddingTop: '0.2em',
+      paddingBottom: '0.2em',
+      borderWidth: '1px',
+      overflow: 'hidden',
       pointerEvents: 'none',
+      transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, max-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, padding ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, border-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
     };
   }
 

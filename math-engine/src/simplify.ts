@@ -122,6 +122,19 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
         return doubleCandidate;
       }
     }
+
+    // 5. Try mathjs built-in simplify for algebraic reductions (e.g. combining like terms: 3 * x - x -> 2 * x)
+    try {
+      const simplifiedNode = math.simplify(node.toString());
+      if (simplifiedNode.toString() !== node.toString()) {
+        const candidate = replaceNodeAtPath(eq, p, simplifiedNode);
+        if (areEquationsEquivalent(eq, candidate)) {
+          return candidate;
+        }
+      }
+    } catch {
+      // ignore
+    }
   } catch {
     // Graceful fallback
   }
@@ -196,6 +209,21 @@ export const autoSimplify = (eq: Equation): Equation => {
         currentEq = candidate;
         simplified = true;
         break; // Restart scan on the simplified tree
+      }
+
+      // Try mathjs built-in simplify for algebraic reductions (e.g. combining like terms)
+      try {
+        const simplifiedNode = math.simplify(node.toString());
+        if (simplifiedNode.toString() !== node.toString()) {
+          const candidate = replaceNodeAtPath(currentEq, paths[i], simplifiedNode);
+          if (areEquationsEquivalent(currentEq, candidate)) {
+            currentEq = candidate;
+            simplified = true;
+            break; // Restart scan on the simplified tree
+          }
+        }
+      } catch {
+        // ignore
       }
     }
 

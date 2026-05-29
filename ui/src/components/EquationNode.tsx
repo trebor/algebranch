@@ -473,6 +473,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   return (
     <div
+      data-flip-id={nodeId}
       style={customStyle}
       className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${semanticStyle} ${shouldBlockEvents ? 'pointer-events-none' : ''}`}
       onMouseEnter={() => setHoverPath(path)}

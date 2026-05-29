@@ -70,8 +70,34 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   const nodeId = node ? (node as unknown as { id?: string }).id || '' : '';
 
+  // 1. Detect if any direct child is currently entry-animating
+  const isOperatorEntryAnimating = React.useMemo(() => {
+    if (!node || !animatingEntryId) {
+      return false;
+    }
+    try {
+      const children = getChildren(node);
+      return children.some((child) => {
+        if (!child) return false;
+        const childId = (child as unknown as { id?: string }).id;
+        return childId === animatingEntryId;
+      });
+    } catch {
+      return false;
+    }
+  }, [node, animatingEntryId]);
+
+  // 2. Detect if any direct child is currently exit-animating
+  const isOperatorExitAnimating = React.useMemo(() => {
+    if (!animatingExitPath) {
+      return false;
+    }
+    return animatingExitPath === `${path}/0` || animatingExitPath === `${path}/1`;
+  }, [path, animatingExitPath]);
+
   // Local state to keep the entering node scaled down to 0 instantly on initial render
   const [isScaledDown, setIsScaledDown] = React.useState(!!(nodeId && nodeId === animatingEntryId));
+  const [isOpScaledDown, setIsOpScaledDown] = React.useState(isOperatorEntryAnimating);
 
   React.useEffect(() => {
     if (nodeId && nodeId === animatingEntryId) {
@@ -92,6 +118,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     }
   }, [nodeId, animatingEntryId, setAnimatingEntryId]);
 
+  React.useEffect(() => {
+    if (isOperatorEntryAnimating) {
+      const timer = setTimeout(() => {
+        setIsOpScaledDown(false);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOperatorEntryAnimating]);
+
   if (!node) return null;
 
   const getChildId = (index: number): string => {
@@ -102,6 +137,38 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       }
     } catch {}
     return `${path}/${index}`;
+  };
+
+  const getOpStyle = (isDivElement: boolean = false): React.CSSProperties => {
+    const displayStyle = isDivElement ? {} : { display: 'inline-block' };
+
+    if (isOperatorExitAnimating) {
+      return {
+        ...displayStyle,
+        transform: 'scale(0)',
+        opacity: 0,
+        transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
+      };
+    }
+    if (isOpScaledDown) {
+      return {
+        ...displayStyle,
+        transform: 'scale(0)',
+        opacity: 0,
+      };
+    }
+    if (isOperatorEntryAnimating) {
+      return {
+        ...displayStyle,
+        transform: 'scale(1)',
+        opacity: 1,
+        transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
+      };
+    }
+    return {
+      ...displayStyle,
+      transition: 'all 150ms ease-in-out',
+    };
   };
 
   const isSelected = sourcePath === path;
@@ -239,9 +306,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     if (node.type === 'ParenthesisNode') {
       return (
         <div className="flex items-center px-[0.1em]">
-          <span className={`font-light text-[1.05em] select-none mr-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`}>(</span>
+          <span className={`font-light text-[1.05em] select-none mr-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>(</span>
           <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          <span className={`font-light text-[1.05em] select-none ml-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`}>)</span>
+          <span className={`font-light text-[1.05em] select-none ml-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>)</span>
         </div>
       );
     }
@@ -253,7 +320,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         const opSymbol = opNode.op === '-' ? '−' : opNode.op;
         return (
           <div className="flex items-center gap-[0.05em]">
-            <span className={`font-bold select-none ${isStatic ? 'text-zinc-600' : 'text-indigo-300/90'}`}>{opSymbol}</span>
+            <span className={`font-bold select-none ${isStatic ? 'text-zinc-600' : 'text-indigo-300/90'}`} style={getOpStyle()}>{opSymbol}</span>
             <EquationNode path={`${path}/0`} key={getChildId(0)} />
           </div>
         );
@@ -266,7 +333,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
             <div className="w-full text-center pb-[0.1em]">
               <EquationNode path={`${path}/0`} key={getChildId(0)} />
             </div>
-            <div className="w-full border-t border-white/20 h-0" />
+            <div className="w-full border-t border-white/20 h-0" style={getOpStyle(true)} />
             <div className="w-full text-center pt-[0.1em]">
               <EquationNode path={`${path}/1`} key={getChildId(1)} />
             </div>
@@ -297,7 +364,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       return (
         <div className="flex items-center gap-[0.2em] flex-wrap justify-center py-[0.05em]">
           <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          <span className={`font-medium select-none text-[0.85em] ${isStatic ? 'text-zinc-600' : 'text-indigo-400'}`}>{opSymbol}</span>
+          <span className={`font-medium select-none text-[0.85em] ${isStatic ? 'text-zinc-600' : 'text-indigo-400'}`} style={getOpStyle()}>{opSymbol}</span>
           <EquationNode path={`${path}/1`} key={getChildId(1)} />
         </div>
       );
@@ -310,8 +377,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       if (nameStr === 'sqrt') {
         return (
           <div className="flex items-stretch mx-[0.1em]">
-            <span className={`text-[1.25em] font-light font-serif mr-[-0.05em] select-none self-center ${isStatic ? 'text-zinc-600' : 'text-indigo-300'}`}>√</span>
-            <div className={`border-t border-l pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center ${isStatic ? 'border-zinc-800' : 'border-white/30'}`}>
+            <span className={`text-[1.25em] font-light font-serif mr-[-0.05em] select-none self-center ${isStatic ? 'text-zinc-600' : 'text-indigo-300'}`} style={getOpStyle()}>√</span>
+            <div className={`border-t border-l pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center ${isStatic ? 'border-zinc-800' : 'border-white/30'}`} style={getOpStyle(true)}>
               <EquationNode path={`${path}/0`} key={getChildId(0)} />
             </div>
           </div>
@@ -321,10 +388,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       // Default fallback function renderer
       return (
         <div className="flex items-center gap-[0.05em]">
-          <span className={`font-medium select-none text-[0.9em] ${isStatic ? 'text-zinc-500' : 'text-purple-300'}`}>{nameStr}</span>
-          <span className={`mr-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`}>(</span>
+          <span className={`font-medium select-none text-[0.9em] ${isStatic ? 'text-zinc-500' : 'text-purple-300'}`} style={getOpStyle()}>{nameStr}</span>
+          <span className={`mr-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>(</span>
           <EquationNode path={`${path}/0`} key={getChildId(0)} />
-          <span className={`ml-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`}>)</span>
+          <span className={`ml-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>)</span>
         </div>
       );
     }

@@ -1,6 +1,6 @@
 import * as math from 'mathjs';
 import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath } from './tree';
-import { areEquationsEquivalent } from './validator';
+import { areEquationsEquivalent, getFunctionName } from './validator';
 
 /**
  * Tries to remove a single node at path 'p' from the equation.
@@ -63,6 +63,82 @@ export const isConstantSubtree = (node: math.MathNode): boolean => {
 };
 
 /**
+ * Helper to identify and simplify roots of matching powers (e.g. sqrt(x^2) -> x, nthRoot(x^3, 3) -> x).
+ */
+export const trySimplifyRootOfPower = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'FunctionNode') {
+    return null;
+  }
+  const funcNode = node as math.FunctionNode;
+  const nameStr = getFunctionName(funcNode);
+
+  if (nameStr === 'sqrt') {
+    if (funcNode.args.length === 1) {
+      let inner = funcNode.args[0];
+      while (inner.type === 'ParenthesisNode') {
+        inner = (inner as math.ParenthesisNode).content;
+      }
+      if (inner.type === 'OperatorNode') {
+        const opNode = inner as math.OperatorNode;
+        if (opNode.op === '^' && opNode.args.length === 2) {
+          let exponent = opNode.args[1];
+          while (exponent.type === 'ParenthesisNode') {
+            exponent = (exponent as math.ParenthesisNode).content;
+          }
+          if (exponent.type === 'ConstantNode' && Number((exponent as math.ConstantNode).value) === 2) {
+            return opNode.args[0];
+          }
+        }
+      }
+    }
+  }
+
+  if (nameStr === 'nthRoot') {
+    if (funcNode.args.length === 1) {
+      let inner = funcNode.args[0];
+      while (inner.type === 'ParenthesisNode') {
+        inner = (inner as math.ParenthesisNode).content;
+      }
+      if (inner.type === 'OperatorNode') {
+        const opNode = inner as math.OperatorNode;
+        if (opNode.op === '^' && opNode.args.length === 2) {
+          let exponent = opNode.args[1];
+          while (exponent.type === 'ParenthesisNode') {
+            exponent = (exponent as math.ParenthesisNode).content;
+          }
+          if (exponent.type === 'ConstantNode' && Number((exponent as math.ConstantNode).value) === 2) {
+            return opNode.args[0];
+          }
+        }
+      }
+    } else if (funcNode.args.length === 2) {
+      let inner = funcNode.args[0];
+      let degree = funcNode.args[1];
+      while (inner.type === 'ParenthesisNode') {
+        inner = (inner as math.ParenthesisNode).content;
+      }
+      while (degree.type === 'ParenthesisNode') {
+        degree = (degree as math.ParenthesisNode).content;
+      }
+      if (inner.type === 'OperatorNode') {
+        const opNode = inner as math.OperatorNode;
+        if (opNode.op === '^' && opNode.args.length === 2) {
+          let exponent = opNode.args[1];
+          while (exponent.type === 'ParenthesisNode') {
+            exponent = (exponent as math.ParenthesisNode).content;
+          }
+          if (exponent.toString() === degree.toString()) {
+            return opNode.args[0];
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+/**
  * Checks if a given path has a simplification opportunity.
  * Returns the simplified Equation if found, otherwise null.
  */
@@ -106,6 +182,15 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
       const paren = node as math.ParenthesisNode;
       const candidate = replaceNodeAtPath(eq, p, paren.content);
       if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
+        return candidate;
+      }
+    }
+
+    // 2.5 Try simplifying root of power (e.g. sqrt(x ^ 2) -> x)
+    const rootPowerSimplified = trySimplifyRootOfPower(node);
+    if (rootPowerSimplified) {
+      const candidate = replaceNodeAtPath(eq, p, rootPowerSimplified);
+      if (isDiff(candidate)) {
         return candidate;
       }
     }
@@ -205,6 +290,15 @@ export const autoSimplify = (eq: Equation): Equation => {
           simplified = true;
           break; // Restart scan on the simplified tree
         }
+      }
+
+      // Try root of power simplification (e.g. sqrt(x ^ 2) -> x)
+      const rootPowerSimplified = trySimplifyRootOfPower(node);
+      if (rootPowerSimplified) {
+        const candidate = replaceNodeAtPath(currentEq, paths[i], rootPowerSimplified);
+        currentEq = candidate;
+        simplified = true;
+        break; // Restart scan on the simplified tree
       }
 
       // Try removing the single node

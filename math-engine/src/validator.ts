@@ -111,6 +111,11 @@ export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>
     const nameStr = getFunctionName(funcNode);
 
     if (nameStr === 'sqrt') return Math.sqrt(args[0]);
+    if (nameStr === 'nthRoot') {
+      const base = args[0];
+      const degree = args[1] !== undefined ? args[1] : 2;
+      return Math.pow(base, 1 / degree);
+    }
     if (nameStr === 'sin') return Math.sin(args[0]);
     if (nameStr === 'cos') return Math.cos(args[0]);
     if (nameStr === 'log') return Math.log(args[0]);
@@ -165,6 +170,15 @@ export const evaluateInterval = (node: math.MathNode, scope: Record<string, Inte
     if (nameStr === 'sqrt') {
       const arg = evaluateInterval(funcNode.args[0], scope);
       return sqrtInterval(arg);
+    }
+    if (nameStr === 'nthRoot') {
+      const base = evaluateInterval(funcNode.args[0], scope);
+      let degree = 2;
+      if (funcNode.args.length === 2) {
+        const degreeInt = evaluateInterval(funcNode.args[1], scope);
+        degree = (degreeInt.min + degreeInt.max) / 2;
+      }
+      return createInterval(Math.pow(base.min, 1 / degree), Math.pow(base.max, 1 / degree));
     }
   }
   throw new Error(`Unsupported interval node type: ${node.type}`);

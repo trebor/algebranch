@@ -182,5 +182,42 @@ describe('Math Engine Validator & Simplifier', () => {
     const movesBase = generateValidMoves(eq, 'lhs/0/0');
     expect(Object.keys(movesBase).length).toBe(0);
   });
+
+  test('getSimplificationForPath simplifies roots of matching powers correctly', () => {
+    // 1. sqrt(x ^ 2) -> x
+    const eq1 = parseEquation('y = sqrt(x ^ 2)');
+    const simplified1 = getSimplificationForPath(eq1, 'rhs');
+    expect(simplified1).not.toBeNull();
+    expect(equationToString(simplified1!)).toBe('y = x');
+
+    // 2. nthRoot(x ^ 3, 3) -> x
+    const eq2 = parseEquation('y = nthRoot(x ^ 3, 3)');
+    const simplified2 = getSimplificationForPath(eq2, 'rhs');
+    expect(simplified2).not.toBeNull();
+    expect(equationToString(simplified2!)).toBe('y = x');
+
+    // 3. nthRoot(x ^ 2) -> x
+    const eq3 = parseEquation('y = nthRoot(x ^ 2)');
+    const simplified3 = getSimplificationForPath(eq3, 'rhs');
+    expect(simplified3).not.toBeNull();
+    expect(equationToString(simplified3!)).toBe('y = x');
+
+    // 4. nthRoot(x ^ n, n) -> x
+    const eq4 = parseEquation('y = nthRoot(x ^ n, n)');
+    const simplified4 = getSimplificationForPath(eq4, 'rhs');
+    expect(simplified4).not.toBeNull();
+    expect(equationToString(simplified4!)).toBe('y = x');
+
+    // 5. Does not simplify non-matching degree
+    const eq5 = parseEquation('y = nthRoot(x ^ 2, 3)');
+    const simplified5 = getSimplificationForPath(eq5, 'rhs');
+    expect(simplified5).toBeNull();
+  });
+
+  test('autoSimplify recursively simplifies roots of powers', () => {
+    const eq = parseEquation('y = sqrt((x + 2) ^ 2) - 2');
+    const simplified = autoSimplify(eq);
+    expect(equationToString(simplified)).toBe('y = x');
+  });
 });
 

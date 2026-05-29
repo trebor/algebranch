@@ -24,6 +24,21 @@ export const animatingExitPathAtom = atom<string | null>(null);
 // New base atom to track the stable ID of the node currently animating its entry
 export const animatingEntryIdAtom = atom<string | null>(null);
 
+export interface FlightState {
+  id: string;
+  html: string;
+  className: string;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  width: number;
+  height: number;
+}
+
+// Atom to track the active Bezier curve flight animation state
+export const flightStateAtom = atom<FlightState | null>(null);
+
 // Derived Atoms (Step 3: Transformations)
 
 /**

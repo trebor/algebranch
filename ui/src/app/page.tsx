@@ -6,6 +6,7 @@ import { EquationNode } from '../components/EquationNode';
 import { PreviewEquationNode } from '../components/PreviewEquationNode';
 import { Sidebar } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
+import { FlightCanvas } from '../components/FlightCanvas';
 import {
   currentEquationAtom,
   hoverPathAtom,
@@ -116,7 +117,7 @@ export default function Home() {
   }, [currentEq]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(30,27,75,0.8),rgba(10,10,12,1))] text-white font-sans">
+    <div className="relative flex h-screen w-screen overflow-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(30,27,75,0.8),rgba(10,10,12,1))] text-white font-sans">
       {/* Background neon grid effect */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none -z-10" />
 
@@ -236,6 +237,7 @@ export default function Home() {
           </div>
         </div>
       </main>
+      <FlightCanvas />
     </div>
   );
 }

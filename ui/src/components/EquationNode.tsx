@@ -14,6 +14,7 @@ import {
   reduciblePathsAtom,
   animatingExitPathAtom,
   animatingEntryIdAtom,
+  flightStateAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS, THEME_ANIMATIONS } from '../constants/theme';
 import { getNodeByPath, replaceNodeAtPath, getFunctionName, getChildren } from 'math-engine';
@@ -59,6 +60,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const activePaths = useAtomValue(activePathsAtom);
   const [animatingExitPath, setAnimatingExitPath] = useAtom(animatingExitPathAtom);
   const [animatingEntryId, setAnimatingEntryId] = useAtom(animatingEntryIdAtom);
+  const setFlightState = useSetAtom(flightStateAtom);
 
   const node = React.useMemo(() => {
     try {
@@ -258,6 +260,38 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       const movingNode = getNodeByPath(currentEq, sourcePath);
       const movingId = movingNode ? (movingNode as unknown as { id?: string }).id : null;
 
+      // Capture and measure DOM elements for the Bezier Hybrid Flight
+      if (movingId) {
+        const sourceEl = document.querySelector(`[data-flip-id="${movingId}"]`) as HTMLElement;
+        const targetNode = getNodeByPath(currentEq, activeTargetPath);
+        const targetId = targetNode ? (targetNode as unknown as { id?: string }).id : null;
+        const targetEl = targetId ? (document.querySelector(`[data-flip-id="${targetId}"]`) as HTMLElement) : null;
+
+        if (sourceEl && targetEl) {
+          const sourceRect = sourceEl.getBoundingClientRect();
+          const targetRect = targetEl.getBoundingClientRect();
+
+          const startX = sourceRect.left + window.scrollX;
+          const startY = sourceRect.top + window.scrollY;
+
+          // Target is centered inside the receptive target container card
+          const endX = targetRect.left + window.scrollX + (targetRect.width / 2) - (sourceRect.width / 2);
+          const endY = targetRect.top + window.scrollY + (targetRect.height / 2) - (sourceRect.height / 2);
+
+          setFlightState({
+            id: movingId,
+            html: sourceEl.innerHTML,
+            className: sourceEl.className,
+            startX,
+            startY,
+            endX,
+            endY,
+            width: sourceRect.width,
+            height: sourceRect.height,
+          });
+        }
+      }
+
       // Trigger the exit transition on the selected node
       setAnimatingExitPath(sourcePath);
 
@@ -268,6 +302,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         }
         pushEquation(targetPaths[activeTargetPath]);
         setAnimatingExitPath(null);
+        setFlightState(null); // Clear flight animation upon arrival!
       }, THEME_ANIMATIONS.TRANSITION_DURATION_MS);
       return;
     }

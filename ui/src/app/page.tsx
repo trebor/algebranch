@@ -12,6 +12,7 @@ import {
   hoverPathAtom,
   targetPathsAtom,
   hoverReducePathAtom,
+  animatingEntryIdAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { Sparkles, HelpCircle } from 'lucide-react';
@@ -22,6 +23,7 @@ export default function Home() {
   const targetPaths = useAtomValue(targetPathsAtom);
   const hoverReducePath = useAtomValue(hoverReducePathAtom);
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
+  const animatingEntryId = useAtomValue(animatingEntryIdAtom);
 
   const boundingBoxRef = React.useRef<Map<string, DOMRect>>(new Map());
 
@@ -48,6 +50,9 @@ export default function Home() {
     elements.forEach((el) => {
       const id = el.getAttribute('data-flip-id');
       if (!id) return;
+
+      // Skip the transposing node itself, as its motion is animated via FlightCanvas Bezier flight
+      if (id === animatingEntryId) return;
 
       const firstRect = firstRects.get(id);
       const lastRect = lastRects.get(id);

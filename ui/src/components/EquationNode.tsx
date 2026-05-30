@@ -12,11 +12,8 @@ import {
   activePathsAtom,
   hoverReducePathAtom,
   reduciblePathsAtom,
-  animatingExitPathAtom,
-  animatingEntryIdAtom,
-  flightStateAtom,
 } from '../store/equation';
-import { THEME_GLASS, THEME_TRANSITIONS, THEME_ANIMATIONS } from '../constants/theme';
+import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, replaceNodeAtPath, getFunctionName, getChildren } from 'math-engine';
 import { Sparkles } from 'lucide-react';
 
@@ -58,9 +55,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const pushEquation = useSetAtom(pushEquationAtom);
   const currentEq = useAtomValue(currentEquationAtom);
   const activePaths = useAtomValue(activePathsAtom);
-  const [animatingExitPath, setAnimatingExitPath] = useAtom(animatingExitPathAtom);
-  const [animatingEntryId, setAnimatingEntryId] = useAtom(animatingEntryIdAtom);
-  const setFlightState = useSetAtom(flightStateAtom);
 
   const node = React.useMemo(() => {
     try {
@@ -71,63 +65,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   }, [currentEq, path]);
 
   const nodeId = node ? (node as unknown as { id?: string }).id || '' : '';
-
-  // 1. Detect if any direct child is currently entry-animating
-  const isOperatorEntryAnimating = React.useMemo(() => {
-    if (!node || !animatingEntryId) {
-      return false;
-    }
-    try {
-      const children = getChildren(node);
-      return children.some((child) => {
-        if (!child) return false;
-        const childId = (child as unknown as { id?: string }).id;
-        return childId === animatingEntryId;
-      });
-    } catch {
-      return false;
-    }
-  }, [node, animatingEntryId]);
-
-  // 2. Detect if any direct child is currently exit-animating
-  const isOperatorExitAnimating = React.useMemo(() => {
-    if (!animatingExitPath) {
-      return false;
-    }
-    return animatingExitPath === `${path}/0` || animatingExitPath === `${path}/1`;
-  }, [path, animatingExitPath]);
-
-  // Local state to keep the entering node scaled down to 0 instantly on initial render
-  const [isScaledDown, setIsScaledDown] = React.useState(!!(nodeId && nodeId === animatingEntryId));
-  const [isOpScaledDown, setIsOpScaledDown] = React.useState(isOperatorEntryAnimating);
-
-  React.useEffect(() => {
-    if (nodeId && nodeId === animatingEntryId) {
-      // 1. Force initial zero-scale mount before triggering transition
-      const triggerTimer = setTimeout(() => {
-        setIsScaledDown(false);
-      }, 50);
-
-      // 2. Clear global entry lock and reset atom once transition completes
-      const clearTimer = setTimeout(() => {
-        setAnimatingEntryId(null);
-      }, THEME_ANIMATIONS.TRANSITION_DURATION_MS + 100);
-
-      return () => {
-        clearTimeout(triggerTimer);
-        clearTimeout(clearTimer);
-      };
-    }
-  }, [nodeId, animatingEntryId, setAnimatingEntryId]);
-
-  React.useEffect(() => {
-    if (isOperatorEntryAnimating) {
-      const timer = setTimeout(() => {
-        setIsOpScaledDown(false);
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isOperatorEntryAnimating]);
 
   if (!node) return null;
 
@@ -143,47 +80,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
   const getOpStyle = (isDivElement: boolean = false): React.CSSProperties => {
     const displayStyle = isDivElement ? {} : { display: 'inline-block' };
-
-    if (isOperatorExitAnimating) {
-      return {
-        ...displayStyle,
-        transform: 'scale(0)',
-        opacity: 0,
-        maxWidth: '0px',
-        paddingLeft: 0,
-        paddingRight: 0,
-        marginLeft: 0,
-        marginRight: 0,
-        overflow: 'hidden',
-        transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, max-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, padding ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, margin ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
-      };
-    }
-    if (isOpScaledDown) {
-      return {
-        ...displayStyle,
-        transform: 'scale(0)',
-        opacity: 0,
-        maxWidth: '0px',
-        paddingLeft: 0,
-        paddingRight: 0,
-        marginLeft: 0,
-        marginRight: 0,
-        overflow: 'hidden',
-      };
-    }
-    if (isOperatorEntryAnimating) {
-      return {
-        ...displayStyle,
-        transform: 'scale(1)',
-        opacity: 1,
-        maxWidth: '100px', // safe upper bound for operator symbols
-        overflow: 'hidden',
-        transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, max-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
-      };
-    }
     return {
       ...displayStyle,
-      maxWidth: '200px', // Explicit starting max-width for smooth exit transition!
+      maxWidth: '200px',
       transition: 'all 150ms ease-in-out',
     };
   };
@@ -250,60 +149,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     e.stopPropagation();
 
     if (isStatic) {
-      // Static nodes do not interact and block click propagation to parent elements
       return;
     }
 
     const activeTargetPath = getTargetPath();
     if (activeTargetPath && sourcePath) {
-      // Fetch the unique ID of the moving node
-      const movingNode = getNodeByPath(currentEq, sourcePath);
-      const movingId = movingNode ? (movingNode as unknown as { id?: string }).id : null;
-
-      // Capture and measure DOM elements for the Bezier Hybrid Flight
-      if (movingId) {
-        const sourceEl = document.querySelector(`[data-flip-id="${movingId}"]`) as HTMLElement;
-        const targetNode = getNodeByPath(currentEq, activeTargetPath);
-        const targetId = targetNode ? (targetNode as unknown as { id?: string }).id : null;
-        const targetEl = targetId ? (document.querySelector(`[data-flip-id="${targetId}"]`) as HTMLElement) : null;
-
-        if (sourceEl && targetEl) {
-          const sourceRect = sourceEl.getBoundingClientRect();
-          const targetRect = targetEl.getBoundingClientRect();
-
-          const startX = sourceRect.left + window.scrollX;
-          const startY = sourceRect.top + window.scrollY;
-
-          // Target is centered inside the receptive target container card
-          const endX = targetRect.left + window.scrollX + (targetRect.width / 2) - (sourceRect.width / 2);
-          const endY = targetRect.top + window.scrollY + (targetRect.height / 2) - (sourceRect.height / 2);
-
-          setFlightState({
-            id: movingId,
-            html: sourceEl.innerHTML,
-            className: sourceEl.className,
-            startX,
-            startY,
-            endX,
-            endY,
-            width: sourceRect.width,
-            height: sourceRect.height,
-          });
-        }
-      }
-
-      // Trigger the exit transition on the selected node
-      setAnimatingExitPath(sourcePath);
-
-      // Defer pushing the new equation until after the animation duration
-      setTimeout(() => {
-        if (movingId) {
-          setAnimatingEntryId(movingId);
-        }
-        pushEquation(targetPaths[activeTargetPath]);
-        setAnimatingExitPath(null);
-        setFlightState(null); // Clear flight animation upon arrival!
-      }, THEME_ANIMATIONS.TRANSITION_DURATION_MS);
+      pushEquation(targetPaths[activeTargetPath]);
       return;
     }
 
@@ -449,68 +300,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     return <span>{node.toString()}</span>;
   };
 
-  // Block clicks globally during active exit or entry transitions
-  const isGlobalAnimating = animatingExitPath !== null || animatingEntryId !== null;
-  const shouldBlockEvents = isGlobalAnimating;
-
-  // Transition styling logic
-  const isAnimatingExit = animatingExitPath === path;
-  let customStyle: React.CSSProperties = {
-    maxWidth: '500px', // Explicit starting max-width for smooth exit transition!
+  const customStyle: React.CSSProperties = {
+    maxWidth: '500px',
     transition: 'all 150ms ease-in-out',
   };
-
-  if (isAnimatingExit) {
-    customStyle = {
-      transform: 'scale(0)',
-      opacity: 0,
-      maxWidth: '0px',
-      paddingLeft: 0,
-      paddingRight: 0,
-      paddingTop: 0,
-      paddingBottom: 0,
-      marginLeft: 0,
-      marginRight: 0,
-      borderWidth: 0,
-      overflow: 'hidden',
-      pointerEvents: 'none',
-      transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, max-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, padding ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, margin ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, border-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
-    };
-  } else if (isScaledDown) {
-    customStyle = {
-      transform: 'scale(0)',
-      opacity: 0,
-      maxWidth: '0px',
-      paddingLeft: 0,
-      paddingRight: 0,
-      paddingTop: 0,
-      paddingBottom: 0,
-      marginLeft: 0,
-      marginRight: 0,
-      borderWidth: 0,
-      overflow: 'hidden',
-    };
-  } else if (nodeId && nodeId === animatingEntryId) {
-    customStyle = {
-      transform: 'scale(1)',
-      opacity: 1,
-      maxWidth: '300px', // safe upper bound
-      paddingLeft: '0.2em', // standard tailwind padding
-      paddingRight: '0.2em',
-      paddingTop: '0.2em',
-      paddingBottom: '0.2em',
-      borderWidth: '1px',
-      overflow: 'hidden',
-      pointerEvents: 'none',
-      transition: `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, opacity ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, max-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, padding ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out, border-width ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms ease-in-out`,
-    };
-  }
 
   return (
     <div
       data-flip-id={nodeId}
       style={customStyle}
-      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${semanticStyle} ${shouldBlockEvents ? 'pointer-events-none' : ''}`}
+      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${semanticStyle}`}
       onMouseEnter={() => setHoverPath(path)}
       onMouseLeave={() => setHoverPath(null)}
       onClick={handleNodeClick}

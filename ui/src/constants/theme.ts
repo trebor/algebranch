@@ -12,10 +12,10 @@ export const THEME_TRANSITIONS = {
 export const THEME_ANIMATIONS = {
   LAYOUT_TRANSITION: {
     type: 'spring',
-    duration: 2.0, // Stretched to 2.0s for visual debugging, reduce later
+    duration: 0.35, // Premium, extremely responsive duration
     bounce: 0.2,   // Light organic bounce
   },
-  TRANSITION_DURATION_MS: 2000, // Central 2-second animation constant
+  TRANSITION_DURATION_MS: 350, // Central 350ms animation constant
 } as const;
 
 export const THEME_GLASS = {

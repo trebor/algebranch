@@ -226,5 +226,18 @@ describe('Math Engine Validator & Simplifier', () => {
     const simplified = autoSimplify(eq);
     expect(equationToString(simplified)).toBe('y = x');
   });
+
+  test('getSimplificationForPath ignores non-simplifying commutative rearrangements', () => {
+    // 1. (y - 1) * 2 should NOT be simplified to 2 * (y - 1) since it's just a commutative swap
+    const eq1 = parseEquation('x + 4 = (y - 1) * 2');
+    const simplified1 = getSimplificationForPath(eq1, 'rhs');
+    expect(simplified1).toBeNull();
+
+    // 2. But actual algebraic reductions like 3 * x - x should still simplify to 2 * x
+    const eq2 = parseEquation('y = 3 * x - x');
+    const simplified2 = getSimplificationForPath(eq2, 'rhs');
+    expect(simplified2).not.toBeNull();
+    expect(equationToString(simplified2!)).toBe('y = 2 * x');
+  });
 });
 

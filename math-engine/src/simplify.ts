@@ -3,6 +3,19 @@ import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPa
 import { areEquationsEquivalent, getFunctionName } from './validator';
 
 /**
+ * Counts the total number of nodes in a mathematical syntax tree.
+ */
+const countNodes = (node: math.MathNode): number => {
+  let count = 0;
+  node.traverse((n) => {
+    if (n.type !== 'ParenthesisNode') {
+      count++;
+    }
+  });
+  return count;
+};
+
+/**
  * Tries to remove a single node at path 'p' from the equation.
  * Returns the new equation if successful, otherwise null.
  */
@@ -216,9 +229,12 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
     try {
       const simplifiedNode = math.simplify(node.toString());
       if (simplifiedNode.toString() !== node.toString()) {
-        const candidate = replaceNodeAtPath(eq, p, simplifiedNode);
-        if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
-          return candidate;
+        // Enforce complexity reduction to filter out non-simplifying reorderings (e.g. (y - 1) * 2 -> 2 * (y - 1))
+        if (countNodes(simplifiedNode) < countNodes(node)) {
+          const candidate = replaceNodeAtPath(eq, p, simplifiedNode);
+          if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
+            return candidate;
+          }
         }
       }
     } catch {
@@ -313,11 +329,14 @@ export const autoSimplify = (eq: Equation): Equation => {
       try {
         const simplifiedNode = math.simplify(node.toString());
         if (simplifiedNode.toString() !== node.toString()) {
-          const candidate = replaceNodeAtPath(currentEq, paths[i], simplifiedNode);
-          if (areEquationsEquivalent(currentEq, candidate)) {
-            currentEq = candidate;
-            simplified = true;
-            break; // Restart scan on the simplified tree
+          // Enforce complexity reduction to filter out non-simplifying reorderings (e.g. (y - 1) * 2 -> 2 * (y - 1))
+          if (countNodes(simplifiedNode) < countNodes(node)) {
+            const candidate = replaceNodeAtPath(currentEq, paths[i], simplifiedNode);
+            if (areEquationsEquivalent(currentEq, candidate)) {
+              currentEq = candidate;
+              simplified = true;
+              break; // Restart scan on the simplified tree
+            }
           }
         }
       } catch {

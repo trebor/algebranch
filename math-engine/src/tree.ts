@@ -293,10 +293,6 @@ export const stripRedundantParentheses = (
   return node;
 };
 
-/**
- * Recursively ensures every node in the equation tree has a stable unique ID.
- * Automatically strips redundant parenthesis before generating stable IDs.
- */
 export const ensureNodeIds = (eq: Equation): Equation => {
   // Strip redundant parenthesis across LHS and RHS trees
   const cleanedLhs = stripRedundantParentheses(eq.lhs, null, false);
@@ -316,12 +312,19 @@ export const ensureNodeIds = (eq: Equation): Equation => {
 
   const generateId = () => `node_${hashPrefix}_${counter++}`;
 
+  // Track all assigned unique IDs in this tree pass to prevent sibling duplicates
+  const seenIds = new Set<string>();
+
   const traverseAndAssign = (node: math.MathNode) => {
     if (!node) return;
     const nodeObj = node as unknown as Record<string, string>;
-    if (!nodeObj.id) {
+    
+    // Generate new unique ID if missing or if already assigned elsewhere in this tree
+    if (!nodeObj.id || seenIds.has(nodeObj.id)) {
       nodeObj.id = generateId();
     }
+    seenIds.add(nodeObj.id);
+
     const children = getChildren(node);
     children.forEach(traverseAndAssign);
   };

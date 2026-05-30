@@ -1,219 +1,167 @@
 'use client';
 
 import React from 'react';
-import { useSetAtom, useAtomValue } from 'jotai';
-import * as math from 'mathjs';
-import { Equation } from 'math-engine';
+import { useAtom, useSetAtom } from 'jotai';
+import { Equation, equationToString } from 'math-engine';
 import {
-  currentEquationAtom,
-  pushEquationAtom,
-  resetToEquationStringAtom,
+  historyAtom,
+  currentIndexAtom,
+  sourcePathAtom,
+  hoverPathAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { Sparkles, Terminal, ShieldAlert, Plus, Minus, X, Percent } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, BookOpen } from 'lucide-react';
 
 // Global Index Value Constants
-const CONST_POWER_TWO = 2;
+const INDEX_INCREMENT = 1;
+const DEFAULT_ZERO = 0;
+const COPIED_TIMEOUT = 2000;
 
 export const ControlPanel: React.FC = () => {
-  const currentEq = useAtomValue(currentEquationAtom);
-  const pushEquation = useSetAtom(pushEquationAtom);
-  const resetToEquation = useSetAtom(resetToEquationStringAtom);
+  const [history, setHistory] = useAtom(historyAtom);
+  const [currentIndex, setCurrentIndex] = useAtom(currentIndexAtom);
+  const setSourcePath = useSetAtom(sourcePathAtom);
+  const setHoverPath = useSetAtom(hoverPathAtom);
+  const [copiedIndex, setCopiedIndex] = React.useState<number | null>(null);
 
-  const [inputStr, setInputStr] = React.useState('');
-  const [errorStr, setErrorStr] = React.useState<string | null>(null);
+  const handleCopyStep = (e: React.MouseEvent, eq: Equation, idx: number) => {
+    e.stopPropagation();
+    const eqStr = equationToString(eq);
+    navigator.clipboard.writeText(eqStr).then(() => {
+      setCopiedIndex(idx);
+      setTimeout(() => {
+        setCopiedIndex(null);
+      }, COPIED_TIMEOUT);
+    });
+  };
 
-  // Global operations parameter state
-  const [termInput, setTermInput] = React.useState('');
+  const canUndo = currentIndex > DEFAULT_ZERO;
+  const canRedo = currentIndex < history.length - INDEX_INCREMENT;
 
-  const handleLoadCustom = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputStr.trim()) return;
-
-    try {
-      setErrorStr(null);
-      resetToEquation(inputStr);
-      setInputStr('');
-    } catch (err) {
-      setErrorStr(err instanceof Error ? err.message : String(err));
+  const handleUndo = () => {
+    if (canUndo) {
+      setCurrentIndex((prev) => prev - INDEX_INCREMENT);
+      setSourcePath(null);
+      setHoverPath(null);
     }
   };
 
-  const applyGlobalOp = (type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div') => {
-    try {
-      setErrorStr(null);
-      let nextLhs: math.MathNode;
-      let nextRhs: math.MathNode;
-
-      if (type === 'square') {
-        const exponentNode = new math.ConstantNode(CONST_POWER_TWO);
-        nextLhs = new math.OperatorNode('^', 'pow', [currentEq.lhs, exponentNode]);
-        nextRhs = new math.OperatorNode('^', 'pow', [currentEq.rhs, exponentNode]);
-      } else if (type === 'sqrt') {
-        nextLhs = new math.FunctionNode('sqrt', [currentEq.lhs]);
-        nextRhs = new math.FunctionNode('sqrt', [currentEq.rhs]);
-      } else {
-        // Operations requiring a custom parsed term
-        if (!termInput.trim()) {
-          setErrorStr('Please specify a term to apply to both sides (e.g. 5x).');
-          return;
-        }
-
-        const parsedTerm = math.parse(termInput.trim());
-
-        if (type === 'add') {
-          nextLhs = new math.OperatorNode('+', 'add', [currentEq.lhs, parsedTerm]);
-          nextRhs = new math.OperatorNode('+', 'add', [currentEq.rhs, parsedTerm]);
-        } else if (type === 'sub') {
-          nextLhs = new math.OperatorNode('-', 'subtract', [currentEq.lhs, parsedTerm]);
-          nextRhs = new math.OperatorNode('-', 'subtract', [currentEq.rhs, parsedTerm]);
-        } else if (type === 'mul') {
-          nextLhs = new math.OperatorNode('*', 'multiply', [currentEq.lhs, parsedTerm]);
-          nextRhs = new math.OperatorNode('*', 'multiply', [currentEq.rhs, parsedTerm]);
-        } else {
-          nextLhs = new math.OperatorNode('/', 'divide', [currentEq.lhs, parsedTerm]);
-          nextRhs = new math.OperatorNode('/', 'divide', [currentEq.rhs, parsedTerm]);
-        }
-      }
-
-      const nextEq: Equation = { lhs: nextLhs, rhs: nextRhs };
-      pushEquation(nextEq);
-      setTermInput('');
-    } catch (err) {
-      setErrorStr(`Failed to apply operation: ${err instanceof Error ? err.message : String(err)}`);
+  const handleRedo = () => {
+    if (canRedo) {
+      setCurrentIndex((prev) => prev + INDEX_INCREMENT);
+      setSourcePath(null);
+      setHoverPath(null);
     }
+  };
+
+  const handleResetAll = () => {
+    if (history.length > DEFAULT_ZERO) {
+      const initialEq = history[DEFAULT_ZERO];
+      setHistory([initialEq]);
+      setCurrentIndex(DEFAULT_ZERO);
+      setSourcePath(null);
+      setHoverPath(null);
+    }
+  };
+
+  const handleStepClick = (idx: number) => {
+    setCurrentIndex(idx);
+    setSourcePath(null);
+    setHoverPath(null);
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full select-none">
-      {/* 1. Custom Equation Loader */}
-      <div className={`p-5 ${THEME_GLASS.CARD}`}>
-        <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-          <Terminal className="text-indigo-400" size={16} />
-          <span>Load Equation Workspace</span>
-        </h3>
-        <form onSubmit={handleLoadCustom} className="flex gap-2">
-          <input
-            type="text"
-            value={inputStr}
-            onChange={(e) => setInputStr(e.target.value)}
-            placeholder="Type equation, e.g. 2x + 4 = 10"
-            className="flex-1 px-3 py-2 text-sm bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
-          />
+    <div className={`w-full h-full flex flex-col gap-6 p-5 ${THEME_GLASS.PANEL}`}>
+      {/* Sidebar Header with Timeline Actions */}
+      <div className="flex items-center justify-between border-b border-white/10 pb-4 shrink-0">
+        <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
+          <BookOpen className="text-indigo-400" size={18} />
+          <span>Derivations</span>
+        </h2>
+        <div className="flex items-center gap-1.5">
           <button
-            type="submit"
-            className={`px-4 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-95 ${THEME_TRANSITIONS.FAST}`}
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className={`p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+            title="Undo Step"
           >
-            Load
+            <ChevronLeft size={16} />
           </button>
-        </form>
-
-        <div className="mt-4 flex flex-col gap-1.5 border-t border-white/10 pt-3">
-          <span className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">
-            Quick Sample Presets
-          </span>
-          <div className="flex flex-col gap-2">
-            {[
-              { label: 'Linear Equation', eq: '3 * x + 5 = x + 13' },
-              { label: 'Multi-Variable Literal', eq: 'a * b + c = d' },
-              { label: 'Ratio & Fraction Group', eq: '(x + 4) / 2 = y - 1' },
-            ].map((sample) => (
-              <button
-                key={sample.eq}
-                type="button"
-                onClick={() => {
-                  try {
-                    setErrorStr(null);
-                    resetToEquation(sample.eq);
-                  } catch (err) {
-                    setErrorStr(err instanceof Error ? err.message : String(err));
-                  }
-                }}
-                className={`w-full text-left px-3 py-2 text-xs rounded-xl bg-white/5 border border-white/5 text-indigo-300 hover:text-white hover:bg-white/10 active:scale-98 transition-all flex items-center justify-between cursor-pointer group ${THEME_TRANSITIONS.FAST}`}
-              >
-                <span className="font-medium">{sample.label}</span>
-                <span className="font-mono text-[10px] text-zinc-400 group-hover:text-indigo-200 transition-colors">
-                  {sample.eq}
-                </span>
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={handleRedo}
+            disabled={!canRedo}
+            className={`p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+            title="Redo Step"
+          >
+            <ChevronRight size={16} />
+          </button>
+          <button
+            onClick={handleResetAll}
+            disabled={history.length <= INDEX_INCREMENT}
+            className={`p-1.5 rounded-lg border border-white/10 text-red-400 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+            title="Reset Derivation"
+          >
+            <RotateCcw size={16} />
+          </button>
         </div>
-
-        {errorStr && (
-          <div className="mt-3 flex items-start gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-2.5">
-            <ShieldAlert size={14} className="shrink-0 mt-0.5" />
-            <span className="break-all">{errorStr}</span>
-          </div>
-        )}
       </div>
 
-      {/* 2. Global Operations Panel */}
-      <div className={`p-5 ${THEME_GLASS.CARD} flex flex-col gap-4`}>
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <Sparkles className="text-indigo-400" size={16} />
-          <span>Global Operations (Both Sides)</span>
+      {/* Step History Timeline */}
+      <div className="flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto pr-1">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50 select-none shrink-0">
+          History Timeline
         </h3>
 
-        {/* Action button Grid */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => applyGlobalOp('square')}
-            className={`py-2 px-3 text-xs font-semibold rounded-xl border border-white/10 text-indigo-200 hover:text-white hover:bg-white/5 active:scale-98 ${THEME_TRANSITIONS.FAST}`}
-          >
-            Square ( )²
-          </button>
-          <button
-            onClick={() => applyGlobalOp('sqrt')}
-            className={`py-2 px-3 text-xs font-semibold rounded-xl border border-white/10 text-indigo-200 hover:text-white hover:bg-white/5 active:scale-98 ${THEME_TRANSITIONS.FAST}`}
-          >
-            Square Root √
-          </button>
-        </div>
+        <div className="flex flex-col gap-2 relative">
+          {history.map((eq: Equation, idx: number) => {
+            const isActive = idx === currentIndex;
+            const stepNum = idx;
 
-        <div className="border-t border-white/10 pt-4 flex flex-col gap-3">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={termInput}
-              onChange={(e) => setTermInput(e.target.value)}
-              placeholder="Specify term, e.g. 5x"
-              className="flex-1 px-3 py-2 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
-            />
-          </div>
+            return (
+              <div
+                key={idx}
+                onClick={() => handleStepClick(idx)}
+                className={`flex items-center justify-between gap-3 p-2.5 rounded-xl border cursor-pointer select-none transition-all duration-200 group/step shrink-0 ${
+                  isActive
+                    ? 'border-indigo-400/50 bg-indigo-500/10 shadow-lg shadow-indigo-500/5'
+                    : 'border-white/5 hover:border-white/10 bg-white/0 hover:bg-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center border font-bold text-xs shrink-0 ${
+                      isActive
+                        ? 'border-indigo-400 text-indigo-300 bg-indigo-500/20'
+                        : 'border-white/10 text-white/45'
+                    }`}
+                  >
+                    {stepNum}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">
+                      {idx === DEFAULT_ZERO ? 'Initial State' : `Step ${idx}`}
+                    </div>
+                    <div className="text-xs font-mono truncate text-indigo-100 font-medium">
+                      {equationToString(eq)}
+                    </div>
+                  </div>
+                </div>
 
-          {/* Inline operations grid */}
-          <div className="grid grid-cols-4 gap-1.5">
-            <button
-              onClick={() => applyGlobalOp('add')}
-              className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
-              title="Add term"
-            >
-              <Plus size={14} />
-            </button>
-            <button
-              onClick={() => applyGlobalOp('sub')}
-              className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
-              title="Subtract term"
-            >
-              <Minus size={14} />
-            </button>
-            <button
-              onClick={() => applyGlobalOp('mul')}
-              className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
-              title="Multiply by term"
-            >
-              <X size={14} />
-            </button>
-            <button
-              onClick={() => applyGlobalOp('div')}
-              className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
-              title="Divide by term"
-            >
-              <Percent size={14} className="rotate-45" />
-            </button>
-          </div>
+                {/* Hover copy button */}
+                <button
+                  onClick={(e) => handleCopyStep(e, eq, idx)}
+                  className={`p-1.5 rounded-lg border border-white/5 text-white/40 hover:text-white hover:bg-white/10 hover:border-white/15 opacity-0 group-hover/step:opacity-100 transition-all duration-150 shrink-0 cursor-pointer ${
+                    copiedIndex === idx ? 'text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10 opacity-100' : ''
+                  }`}
+                  title="Copy Equation"
+                >
+                  {copiedIndex === idx ? <Check size={12} /> : <Copy size={12} />}
+                </button>
+              </div>
+            );
+          })}
         </div>
-      </div>    </div>
+      </div>
+    </div>
   );
 };

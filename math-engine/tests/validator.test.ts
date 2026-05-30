@@ -1,4 +1,5 @@
-import { parseEquation, equationToString } from '../src/index';
+import * as math from 'mathjs';
+import { parseEquation, equationToString, Equation } from '../src/index';
 import { areEquationsEquivalent, generateValidMoves } from '../src/validator';
 import { autoSimplify, getSimplificationForPath } from '../src/simplify';
 
@@ -104,8 +105,14 @@ describe('Math Engine Validator & Simplifier', () => {
   });
 
   test('getSimplificationForPath identifies simplification opportunities correctly', () => {
-    // 1. Redundant parenthesis
-    const eq1 = parseEquation('(x) + 2 = 5');
+    // 1. Redundant parenthesis (manually constructed to bypass auto-stripping during parsing)
+    const eq1: Equation = {
+      lhs: new math.OperatorNode('+', 'add', [
+        new math.ParenthesisNode(new math.SymbolNode('x')),
+        new math.ConstantNode(2)
+      ]),
+      rhs: new math.ConstantNode(5)
+    };
     const simplified1 = getSimplificationForPath(eq1, 'lhs/0');
     expect(simplified1).not.toBeNull();
     expect(equationToString(simplified1!)).toBe('x + 2 = 5');

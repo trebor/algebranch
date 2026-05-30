@@ -31,14 +31,29 @@ export const THEME_GLASS = {
 
 export const MATH_PRESETS = [
   {
+    id: 'LINEAR_EQUATION_SIMPLE',
+    label: 'Basic Linear Equation',
+    equation: '2x + 4 = 10',
+  },
+  {
+    id: 'LINEAR_EQUATION_COMPLEX',
+    label: 'Linear Eq (Move & Solve)',
+    equation: '3 * x + 5 = x + 13',
+  },
+  {
     id: 'QUADRATIC_SOLVE',
-    label: 'Quadratic Equation Solution',
+    label: 'Quadratic Equation',
     equation: 'x^2 - 4 = 0',
   },
   {
-    id: 'LINEAR_EQUATION',
-    label: 'Basic Linear Equation',
-    equation: '2x + 4 = 10',
+    id: 'MULTI_VARIABLE_LITERAL',
+    label: 'Multi-Variable Literal',
+    equation: 'a * b + c = d',
+  },
+  {
+    id: 'RATIO_FRACTION_GROUP',
+    label: 'Ratio & Fraction Group',
+    equation: '(x + 4) / 2 = y - 1',
   },
   {
     id: 'IDEAL_GAS_LAW',

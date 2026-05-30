@@ -195,13 +195,117 @@ export const getAllPaths = (eq: Equation): string[] => {
 };
 
 /**
+ * Helper to determine operator precedence for redundant parenthesis detection.
+ */
+const getPrecedence = (node: math.MathNode): number => {
+  if (node.type === 'OperatorNode') {
+    const op = (node as math.OperatorNode).op;
+    if (op === '^') return 4;
+    if (op === '*' || op === '/') return 3;
+    if (op === '+' || op === '-') return 2;
+  }
+  if (node.type === 'ParenthesisNode') {
+    return 1;
+  }
+  return 100; // Atoms (Symbol, Constant, Function, etc.) have highest precedence
+};
+
+/**
+ * Recursively strips redundant parenthesis from a mathematical node structure.
+ */
+export const stripRedundantParentheses = (
+  node: math.MathNode,
+  parent: math.MathNode | null = null,
+  isRightChild: boolean = false
+): math.MathNode => {
+  if (!node) return node;
+
+  if (node.type === 'ParenthesisNode') {
+    const paren = node as math.ParenthesisNode;
+    const content = paren.content;
+
+    let redundant = false;
+
+    if (!parent) {
+      // 1. Root level nodes (LHS or RHS roots) never need outer parenthesis
+      redundant = true;
+    } else if (content.type === 'SymbolNode' || content.type === 'ConstantNode') {
+      // 2. Atoms inside parenthesis (e.g. (x) -> x, (5) -> 5)
+      redundant = true;
+    } else if (parent.type === 'ParenthesisNode') {
+      // 3. Double/nested parenthesis (e.g. ((x)) -> (x))
+      redundant = true;
+    } else if (parent.type === 'FunctionNode') {
+      // 4. Function arguments (e.g. sqrt((x + 2)) -> sqrt(x + 2))
+      redundant = true;
+    } else if (parent.type === 'OperatorNode') {
+      // 5. Operator precedence check
+      const parentOp = parent as math.OperatorNode;
+      const parentPrec = getPrecedence(parentOp);
+      const childPrec = getPrecedence(content);
+
+      if (childPrec > parentPrec) {
+        // Child has higher precedence, e.g. (a * b) + c -> a * b + c
+        redundant = true;
+      } else if (childPrec === parentPrec) {
+        // Same precedence (e.g. addition left-associativity)
+        if (!isRightChild) {
+          // Left child is always safe to strip for standard left-associative operators
+          redundant = true;
+        } else {
+          // Right child is associative (e.g. a + (b + c) -> a + b + c, a * (b * c) -> a * b * c)
+          const op = parentOp.op;
+          if (op === '+' || op === '*') {
+            redundant = true;
+          }
+        }
+      }
+    }
+
+    if (redundant) {
+      const stripped = stripRedundantParentheses(content, parent, isRightChild);
+      // Preserve stable unique ID if it was already assigned to the ParenthesisNode
+      const originalId = (node as unknown as { id?: string }).id;
+      if (originalId) {
+        (stripped as unknown as Record<string, string>).id = originalId;
+      }
+      return stripped;
+    }
+  }
+
+  // Recurse children
+  if ('args' in node && Array.isArray((node as unknown as NodeWithArgs).args)) {
+    const args = (node as unknown as NodeWithArgs).args;
+    const parentOp = node as math.OperatorNode;
+    const newArgs = args.map((child, idx) => {
+      const isRight = parentOp.type === 'OperatorNode' && idx > 0;
+      return stripRedundantParentheses(child, node, isRight);
+    });
+    return cloneWithChildren(node, newArgs);
+  }
+
+  if ('content' in node && (node as unknown as NodeWithContent).content) {
+    const content = (node as unknown as NodeWithContent).content;
+    const newContent = stripRedundantParentheses(content, node, false);
+    return cloneWithChildren(node, [newContent]);
+  }
+
+  return node;
+};
+
+/**
  * Recursively ensures every node in the equation tree has a stable unique ID.
- * Preserves existing IDs if they are already present.
+ * Automatically strips redundant parenthesis before generating stable IDs.
  */
 export const ensureNodeIds = (eq: Equation): Equation => {
+  // Strip redundant parenthesis across LHS and RHS trees
+  const cleanedLhs = stripRedundantParentheses(eq.lhs, null, false);
+  const cleanedRhs = stripRedundantParentheses(eq.rhs, null, false);
+  const cleanedEq: Equation = { lhs: cleanedLhs, rhs: cleanedRhs };
+
   let counter = 0;
   // A simple deterministic hash of the equation's text representation to seed prefixes
-  const eqStr = `${eq.lhs ? eq.lhs.toString() : ''} = ${eq.rhs ? eq.rhs.toString() : ''}`;
+  const eqStr = `${cleanedEq.lhs ? cleanedEq.lhs.toString() : ''} = ${cleanedEq.rhs ? cleanedEq.rhs.toString() : ''}`;
   let hash = 0;
   for (let i = 0; i < eqStr.length; i++) {
     hash = (hash << 5) - hash + eqStr.charCodeAt(i);
@@ -222,7 +326,7 @@ export const ensureNodeIds = (eq: Equation): Equation => {
     children.forEach(traverseAndAssign);
   };
 
-  traverseAndAssign(eq.lhs);
-  traverseAndAssign(eq.rhs);
-  return eq;
+  traverseAndAssign(cleanedEq.lhs);
+  traverseAndAssign(cleanedEq.rhs);
+  return cleanedEq;
 };

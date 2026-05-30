@@ -124,7 +124,7 @@ export default function Home() {
       <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse" />
       <div className="absolute bottom-10 left-1/4 w-96 h-96 bg-sky-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
 
-      {/* 1. Timeline & Presets Sidebar */}
+      {/* 1. Left Control Sidebar (Loader, Global Operations, Presets Library) */}
       <Sidebar />
 
       {/* Main workspace section */}
@@ -230,7 +230,7 @@ export default function Home() {
             </footer>
           </div>
 
-          {/* Right Control & Operations Sidebar */}
+          {/* Right History & Derivations Sidebar */}
           <div className="w-80 flex flex-col shrink-0">
             <ControlPanel />
           </div>

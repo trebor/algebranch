@@ -1,5 +1,5 @@
 import * as math from 'mathjs';
-import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath } from './tree';
+import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, ensureNodeIds } from './tree';
 import { areEquationsEquivalent, getFunctionName } from './validator';
 
 /**
@@ -152,10 +152,93 @@ export const trySimplifyRootOfPower = (node: math.MathNode): math.MathNode | nul
 };
 
 /**
+ * Identifies distribution opportunities (e.g. a * (b + c) -> a * b + a * c, or (b + c) / a -> b / a + c / a)
+ * and returns the expanded mathematical node.
+ */
+export const tryDistribution = (node: math.MathNode): math.MathNode | null => {
+  if (!node) return null;
+
+  // Case 1: Multiplication, e.g. a * (b + c) or (b + c) * a
+  if (node.type === 'OperatorNode' && (node as math.OperatorNode).op === '*') {
+    const opNode = node as math.OperatorNode;
+    const left = opNode.args[0];
+    const right = opNode.args[1];
+
+    // Subcase 1A: a * (b + c) or a * (b - c)
+    let rightContent = right;
+    while (rightContent.type === 'ParenthesisNode') {
+      rightContent = (rightContent as math.ParenthesisNode).content;
+    }
+    if (rightContent.type === 'OperatorNode' && ((rightContent as math.OperatorNode).op === '+' || (rightContent as math.OperatorNode).op === '-')) {
+      const innerOp = rightContent as math.OperatorNode;
+      const a = left;
+      const b = innerOp.args[0];
+      const c = innerOp.args[1];
+      const op = innerOp.op;
+
+      const term1 = new math.OperatorNode('*', 'multiply', [a, b]);
+      const term2 = new math.OperatorNode('*', 'multiply', [a, c]);
+      return new math.OperatorNode(op, op === '+' ? 'add' : 'subtract', [
+        new math.ParenthesisNode(term1),
+        new math.ParenthesisNode(term2),
+      ]);
+    }
+
+    // Subcase 1B: (b + c) * a or (b - c) * a
+    let leftContent = left;
+    while (leftContent.type === 'ParenthesisNode') {
+      leftContent = (leftContent as math.ParenthesisNode).content;
+    }
+    if (leftContent.type === 'OperatorNode' && ((leftContent as math.OperatorNode).op === '+' || (leftContent as math.OperatorNode).op === '-')) {
+      const innerOp = leftContent as math.OperatorNode;
+      const a = right;
+      const b = innerOp.args[0];
+      const c = innerOp.args[1];
+      const op = innerOp.op;
+
+      const term1 = new math.OperatorNode('*', 'multiply', [b, a]);
+      const term2 = new math.OperatorNode('*', 'multiply', [c, a]);
+      return new math.OperatorNode(op, op === '+' ? 'add' : 'subtract', [
+        new math.ParenthesisNode(term1),
+        new math.ParenthesisNode(term2),
+      ]);
+    }
+  }
+
+  // Case 2: Division, e.g. (b + c) / a or (b - c) / a
+  if (node.type === 'OperatorNode' && (node as math.OperatorNode).op === '/') {
+    const opNode = node as math.OperatorNode;
+    const left = opNode.args[0];
+    const right = opNode.args[1];
+
+    let leftContent = left;
+    while (leftContent.type === 'ParenthesisNode') {
+      leftContent = (leftContent as math.ParenthesisNode).content;
+    }
+    if (leftContent.type === 'OperatorNode' && ((leftContent as math.OperatorNode).op === '+' || (leftContent as math.OperatorNode).op === '-')) {
+      const innerOp = leftContent as math.OperatorNode;
+      const a = right;
+      const b = innerOp.args[0];
+      const c = innerOp.args[1];
+      const op = innerOp.op;
+
+      const term1 = new math.OperatorNode('/', 'divide', [b, a]);
+      const term2 = new math.OperatorNode('/', 'divide', [c, a]);
+      return new math.OperatorNode(op, op === '+' ? 'add' : 'subtract', [
+        new math.ParenthesisNode(term1),
+        new math.ParenthesisNode(term2),
+      ]);
+    }
+  }
+
+  return null;
+};
+
+/**
  * Checks if a given path has a simplification opportunity.
  * Returns the simplified Equation if found, otherwise null.
  */
-export const getSimplificationForPath = (eq: Equation, p: string): Equation | null => {
+const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null => {
   try {
     const node = getNodeByPath(eq, p);
     if (!node) return null;
@@ -208,6 +291,15 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
       }
     }
 
+    // 2.7 Try algebraic distribution, e.g. a * (b + c) -> a * b + a * c
+    const distributedNode = tryDistribution(node);
+    if (distributedNode) {
+      const candidate = replaceNodeAtPath(eq, p, distributedNode);
+      if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
+        return candidate;
+      }
+    }
+
     // 3. Try single removal of this node
     const singleCandidate = trySingleRemoval(eq, p);
     if (singleCandidate && isDiff(singleCandidate) && areEquationsEquivalent(eq, singleCandidate)) {
@@ -245,6 +337,11 @@ export const getSimplificationForPath = (eq: Equation, p: string): Equation | nu
   }
 
   return null;
+};
+
+export const getSimplificationForPath = (eq: Equation, p: string): Equation | null => {
+  const result = getSimplificationForPathRaw(eq, p);
+  return result ? ensureNodeIds(result) : null;
 };
 
 /**
@@ -315,6 +412,17 @@ export const autoSimplify = (eq: Equation): Equation => {
         currentEq = candidate;
         simplified = true;
         break; // Restart scan on the simplified tree
+      }
+
+      // Try algebraic distribution, e.g. a * (b + c) -> a * b + a * c
+      const distributedNode = tryDistribution(node);
+      if (distributedNode) {
+        const candidate = replaceNodeAtPath(currentEq, paths[i], distributedNode);
+        if (areEquationsEquivalent(currentEq, candidate)) {
+          currentEq = candidate;
+          simplified = true;
+          break; // Restart scan on the simplified tree
+        }
       }
 
       // Try removing the single node

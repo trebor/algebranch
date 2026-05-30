@@ -228,8 +228,8 @@ describe('Math Engine Validator & Simplifier', () => {
   });
 
   test('getSimplificationForPath ignores non-simplifying commutative rearrangements', () => {
-    // 1. (y - 1) * 2 should NOT be simplified to 2 * (y - 1) since it's just a commutative swap
-    const eq1 = parseEquation('x + 4 = (y - 1) * 2');
+    // 1. y * 2 should NOT be simplified to 2 * y since it's just a commutative swap
+    const eq1 = parseEquation('x + 4 = y * 2');
     const simplified1 = getSimplificationForPath(eq1, 'rhs');
     expect(simplified1).toBeNull();
 
@@ -238,6 +238,33 @@ describe('Math Engine Validator & Simplifier', () => {
     const simplified2 = getSimplificationForPath(eq2, 'rhs');
     expect(simplified2).not.toBeNull();
     expect(equationToString(simplified2!)).toBe('y = 2 * x');
+  });
+
+  test('getSimplificationForPath identifies distribution opportunities correctly', () => {
+    // 1. a * (b + c) -> a * b + a * c
+    const eq1 = parseEquation('y = 2 * (x + 3)');
+    const simplified1 = getSimplificationForPath(eq1, 'rhs');
+    expect(simplified1).not.toBeNull();
+    expect(equationToString(simplified1!)).toBe('y = 2 * x + 2 * 3');
+
+    // 2. (b - c) * a -> b * a - c * a
+    const eq2 = parseEquation('y = (x - 4) * 3');
+    const simplified2 = getSimplificationForPath(eq2, 'rhs');
+    expect(simplified2).not.toBeNull();
+    expect(equationToString(simplified2!)).toBe('y = x * 3 - 4 * 3');
+
+    // 3. (b + c) / a -> b / a + c / a
+    const eq3 = parseEquation('y = (x + 6) / 2');
+    const simplified3 = getSimplificationForPath(eq3, 'rhs');
+    expect(simplified3).not.toBeNull();
+    expect(equationToString(simplified3!)).toBe('y = x / 2 + 6 / 2');
+  });
+
+  test('autoSimplify recursively simplifies and distributes terms', () => {
+    // autoSimplify will distribute 2 * (x + 3) to 2 * x + 2 * 3, then constant fold 2 * 3 to 6!
+    const eq = parseEquation('y = 2 * (x + 3)');
+    const simplified = autoSimplify(eq);
+    expect(equationToString(simplified)).toBe('y = 2 * x + 6');
   });
 });
 

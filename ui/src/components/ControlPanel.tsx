@@ -1,46 +1,51 @@
 'use client';
 
 import React from 'react';
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import { Equation, equationToString } from 'math-engine';
 import {
-  historyAtom,
-  currentIndexAtom,
+  historyTreeAtom,
+  currentNodeIdAtom,
+  treeLayoutAtom,
   sourcePathAtom,
   hoverPathAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, BookOpen } from 'lucide-react';
 
-// Global Index Value Constants
-const INDEX_INCREMENT = 1;
-const DEFAULT_ZERO = 0;
 const COPIED_TIMEOUT = 2000;
 
 export const ControlPanel: React.FC = () => {
-  const [history, setHistory] = useAtom(historyAtom);
-  const [currentIndex, setCurrentIndex] = useAtom(currentIndexAtom);
+  const [tree, setTree] = useAtom(historyTreeAtom);
+  const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
   const setSourcePath = useSetAtom(sourcePathAtom);
   const setHoverPath = useSetAtom(hoverPathAtom);
-  const [copiedIndex, setCopiedIndex] = React.useState<number | null>(null);
+  const layout = useAtomValue(treeLayoutAtom);
 
-  const handleCopyStep = (e: React.MouseEvent, eq: Equation, idx: number) => {
+  const [copiedId, setCopiedId] = React.useState<string | null>(null);
+  const [hoveredId, setHoveredId] = React.useState<string | null>(null);
+
+  const handleCopyStep = (e: React.MouseEvent, node: Equation, id: string) => {
     e.stopPropagation();
-    const eqStr = equationToString(eq);
+    const eqStr = equationToString(node);
     navigator.clipboard.writeText(eqStr).then(() => {
-      setCopiedIndex(idx);
+      setCopiedId(id);
       setTimeout(() => {
-        setCopiedIndex(null);
+        setCopiedId(null);
       }, COPIED_TIMEOUT);
     });
   };
 
-  const canUndo = currentIndex > DEFAULT_ZERO;
-  const canRedo = currentIndex < history.length - INDEX_INCREMENT;
+  // Undo moves to the parent step
+  const activeNode = tree[currentNodeId];
+  const canUndo = activeNode && activeNode.parentId !== null;
+  
+  // Redo moves to the last spawned child of the active step
+  const canRedo = activeNode && activeNode.childrenIds.length > 0;
 
   const handleUndo = () => {
-    if (canUndo) {
-      setCurrentIndex((prev) => prev - INDEX_INCREMENT);
+    if (canUndo && activeNode.parentId) {
+      setCurrentNodeId(activeNode.parentId);
       setSourcePath(null);
       setHoverPath(null);
     }
@@ -48,27 +53,70 @@ export const ControlPanel: React.FC = () => {
 
   const handleRedo = () => {
     if (canRedo) {
-      setCurrentIndex((prev) => prev + INDEX_INCREMENT);
+      setCurrentNodeId(activeNode.childrenIds[activeNode.childrenIds.length - 1]);
       setSourcePath(null);
       setHoverPath(null);
     }
   };
 
   const handleResetAll = () => {
-    if (history.length > DEFAULT_ZERO) {
-      const initialEq = history[DEFAULT_ZERO];
-      setHistory([initialEq]);
-      setCurrentIndex(DEFAULT_ZERO);
+    if (Object.keys(tree).length > 1) {
+      const rootNode = tree["0"];
+      setTree({
+        "0": {
+          id: "0",
+          equation: rootNode.equation,
+          parentId: null,
+          childrenIds: [],
+          label: "Initial",
+          timestamp: rootNode.timestamp,
+        }
+      });
+      setCurrentNodeId("0");
       setSourcePath(null);
       setHoverPath(null);
     }
   };
 
-  const handleStepClick = (idx: number) => {
-    setCurrentIndex(idx);
+  const handleStepClick = (id: string) => {
+    setCurrentNodeId(id);
     setSourcePath(null);
     setHoverPath(null);
   };
+
+  // Compute permanent chronological indices for visual rendering
+  const sortedNodes = React.useMemo(() => {
+    return Object.values(tree).sort((a, b) => a.timestamp - b.timestamp);
+  }, [tree]);
+
+  const stepIndices = React.useMemo(() => {
+    const indices = new Map<string, number>();
+    sortedNodes.forEach((n, idx) => indices.set(n.id, idx));
+    return indices;
+  }, [sortedNodes]);
+
+  const layoutNodes = Object.values(layout);
+  const maxDepth = Math.max(...layoutNodes.map(n => n.depth), 0);
+  const maxColumn = Math.max(...layoutNodes.map(n => n.column), 0);
+
+  // SVG grid sizing
+  const svgWidth = 80 + maxColumn * 75;
+  const svgHeight = 72 + maxDepth * 72;
+
+  // Build the link connections
+  const connections = React.useMemo(() => {
+    const links: { parent: { x: number; y: number; id: string }; child: { x: number; y: number; id: string; isActive: boolean } }[] = [];
+    layoutNodes.forEach((node) => {
+      if (node.parentId !== null && layout[node.parentId]) {
+        const parent = layout[node.parentId];
+        links.push({
+          parent: { x: parent.x, y: parent.y, id: parent.id },
+          child: { x: node.x, y: node.y, id: node.id, isActive: node.id === currentNodeId || parent.id === currentNodeId },
+        });
+      }
+    });
+    return links;
+  }, [layoutNodes, layout, currentNodeId]);
 
   return (
     <div className={`w-full h-full flex flex-col gap-6 p-5 ${THEME_GLASS.PANEL}`}>
@@ -83,7 +131,7 @@ export const ControlPanel: React.FC = () => {
             onClick={handleUndo}
             disabled={!canUndo}
             className={`p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
-            title="Undo Step"
+            title="Undo (Parent Step)"
           >
             <ChevronLeft size={16} />
           </button>
@@ -91,75 +139,120 @@ export const ControlPanel: React.FC = () => {
             onClick={handleRedo}
             disabled={!canRedo}
             className={`p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
-            title="Redo Step"
+            title="Redo (Child Step)"
           >
             <ChevronRight size={16} />
           </button>
           <button
             onClick={handleResetAll}
-            disabled={history.length <= INDEX_INCREMENT}
+            disabled={Object.keys(tree).length <= 1}
             className={`p-1.5 rounded-lg border border-white/10 text-red-400 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
-            title="Reset Derivation"
+            title="Reset Derivation Tree"
           >
             <RotateCcw size={16} />
           </button>
         </div>
       </div>
 
-      {/* Step History Timeline */}
-      <div className="flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto pr-1">
+      {/* Step History Tree Section */}
+      <div className="flex-1 flex flex-col gap-3 min-h-0">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50 select-none shrink-0">
-          History Timeline
+          Derivations Tree
         </h3>
 
-        <div className="flex flex-col gap-2 relative">
-          {history.map((eq: Equation, idx: number) => {
-            const isActive = idx === currentIndex;
-            const stepNum = idx;
+        {/* Scrollable grid area for the Tree */}
+        <div className="flex-1 overflow-auto pr-1 relative border border-white/5 rounded-2xl bg-black/10 shadow-inner">
+          <div 
+            style={{ width: `${svgWidth}px`, height: `${svgHeight}px`, minWidth: '100%' }}
+            className="relative"
+          >
+            {/* SVG Connection Lines */}
+            <svg 
+              style={{ width: `${svgWidth}px`, height: `${svgHeight}px` }} 
+              className="absolute inset-0 pointer-events-none z-0"
+            >
+              {connections.map(({ parent, child }) => {
+                const startX = parent.x + 20; // 40px bubble center
+                const startY = parent.y + 20;
+                const endX = child.x + 20;
+                const endY = child.y + 20;
 
-            return (
-              <div
-                key={idx}
-                onClick={() => handleStepClick(idx)}
-                className={`flex items-center justify-between gap-3 p-2.5 rounded-xl border cursor-pointer select-none transition-all duration-200 group/step shrink-0 ${
-                  isActive
-                    ? 'border-indigo-400/50 bg-indigo-500/10 shadow-lg shadow-indigo-500/5'
-                    : 'border-white/5 hover:border-white/10 bg-white/0 hover:bg-white/5'
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center border font-bold text-xs shrink-0 ${
-                      isActive
-                        ? 'border-indigo-400 text-indigo-300 bg-indigo-500/20'
-                        : 'border-white/10 text-white/45'
-                    }`}
-                  >
-                    {stepNum}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">
-                      {idx === DEFAULT_ZERO ? 'Initial State' : `Step ${idx}`}
-                    </div>
-                    <div className="text-xs font-mono truncate text-indigo-100 font-medium">
-                      {equationToString(eq)}
-                    </div>
-                  </div>
-                </div>
+                const cp1y = startY + (endY - startY) * 0.45;
+                const cp2y = startY + (endY - startY) * 0.55;
 
-                {/* Hover copy button */}
-                <button
-                  onClick={(e) => handleCopyStep(e, eq, idx)}
-                  className={`p-1.5 rounded-lg border border-white/5 text-white/40 hover:text-white hover:bg-white/10 hover:border-white/15 opacity-0 group-hover/step:opacity-100 transition-all duration-150 shrink-0 cursor-pointer ${
-                    copiedIndex === idx ? 'text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10 opacity-100' : ''
+                const d = `M ${startX} ${startY} C ${startX} ${cp1y}, ${endX} ${cp2y}, ${endX} ${endY}`;
+                return (
+                  <path
+                    key={`${parent.id}-${child.id}`}
+                    d={d}
+                    fill="none"
+                    stroke={child.isActive ? "rgba(129, 140, 248, 0.6)" : "rgba(255, 255, 255, 0.12)"}
+                    strokeWidth={child.isActive ? 2.5 : 1.5}
+                    className="transition-all duration-300"
+                  />
+                );
+              })}
+            </svg>
+
+            {/* Tree Node Bubbles */}
+            {layoutNodes.map((node) => {
+              const isActive = node.id === currentNodeId;
+              const stepNum = stepIndices.get(node.id) ?? 0;
+              const isCopied = copiedId === node.id;
+
+              return (
+                <div
+                  key={node.id}
+                  style={{
+                    position: 'absolute',
+                    left: `${node.x}px`,
+                    top: `${node.y}px`,
+                    width: '40px',
+                    height: '40px',
+                  }}
+                  onMouseEnter={() => setHoveredId(node.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  onClick={() => handleStepClick(node.id)}
+                  className={`z-10 rounded-full flex items-center justify-center border font-bold text-xs select-none cursor-pointer transition-all duration-300 relative group/node ${
+                    isActive
+                      ? 'border-indigo-400 text-indigo-300 bg-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.4)] scale-105'
+                      : 'border-white/10 hover:border-white/20 bg-neutral-900 hover:bg-neutral-800 text-white/50 hover:text-white/80'
                   }`}
-                  title="Copy Equation"
                 >
-                  {copiedIndex === idx ? <Check size={12} /> : <Copy size={12} />}
-                </button>
-              </div>
-            );
-          })}
+                  {/* Subtle inner pulse for the active node */}
+                  {isActive && (
+                    <span className="absolute inset-0 rounded-full bg-indigo-400/10 animate-ping pointer-events-none" />
+                  )}
+
+                  {stepNum}
+
+                  {/* Floating Glassmorphic Tooltip */}
+                  {hoveredId === node.id && (
+                    <div 
+                      className="absolute bottom-[115%] left-1/2 -translate-x-1/2 z-30 w-56 p-3 rounded-xl border border-white/10 bg-neutral-950/95 backdrop-blur-md shadow-2xl flex flex-col gap-1.5 pointer-events-auto select-text text-left animate-in fade-in duration-200"
+                      onClick={(e) => e.stopPropagation()} // Prevents selection click when clicking tooltip
+                    >
+                      <div className="text-indigo-400 font-bold tracking-wider uppercase text-[8px] flex items-center justify-between">
+                        <span>{node.label}</span>
+                        <button
+                          onClick={(e) => handleCopyStep(e, node.equation, node.id)}
+                          className={`p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white cursor-pointer transition-colors ${
+                            isCopied ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : ''
+                          }`}
+                          title="Copy Equation"
+                        >
+                          {isCopied ? <Check size={8} /> : <Copy size={8} />}
+                        </button>
+                      </div>
+                      <div className="text-[11px] font-mono text-indigo-50 font-semibold break-all leading-tight">
+                        {equationToString(node.equation)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

@@ -155,6 +155,17 @@ export const ControlPanel: React.FC = () => {
 
   const svgHeight = 40 + maxDepth * 76 + cardHeight;
 
+  // Compute the path of ancestor node IDs from the root up to the active node pointer
+  const activePathSet = React.useMemo(() => {
+    const pathSet = new Set<string>();
+    let currentId: string | null = currentNodeId;
+    while (currentId !== null) {
+      pathSet.add(currentId);
+      currentId = tree[currentId]?.parentId ?? null;
+    }
+    return pathSet;
+  }, [tree, currentNodeId]);
+
   // Build the link connections
   const connections = React.useMemo(() => {
     const links: { 
@@ -164,14 +175,15 @@ export const ControlPanel: React.FC = () => {
     visualNodes.forEach((node) => {
       if (node.parentId !== null && visualNodesMap[node.parentId]) {
         const parent = visualNodesMap[node.parentId];
+        const isActiveLink = activePathSet.has(parent.id) && activePathSet.has(node.id);
         links.push({
           parent: { x: parent.x, y: parent.y, width: parent.width, id: parent.id },
-          child: { x: node.x, y: node.y, width: node.width, id: node.id, isActive: node.id === currentNodeId || parent.id === currentNodeId },
+          child: { x: node.x, y: node.y, width: node.width, id: node.id, isActive: isActiveLink },
         });
       }
     });
     return links;
-  }, [visualNodes, visualNodesMap, currentNodeId]);
+  }, [visualNodes, visualNodesMap, activePathSet]);
 
   return (
     <div className={`w-full h-full flex flex-col gap-6 p-5 ${THEME_GLASS.PANEL}`}>

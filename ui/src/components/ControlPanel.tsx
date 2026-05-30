@@ -98,17 +98,44 @@ export const ControlPanel: React.FC = () => {
   const layoutNodes = Object.values(layout);
   const maxDepth = Math.max(...layoutNodes.map(n => n.depth), 0);
   const maxColumn = Math.max(...layoutNodes.map(n => n.column), 0);
+  const numColumns = maxColumn + 1;
+
+  // Split container width or scroll if too many columns
+  const containerWidth = 240; // Printable area inside sidebar
+  const minColWidth = 110;
+  const colWidth = Math.max(minColWidth, containerWidth / numColumns);
+  const cardWidth = colWidth - 12; // 12px gap spacing
+  const cardHeight = 44; // Sleek rectangular height
+
+  // Recalculate dynamic visual nodes coordinates in the component!
+  const visualNodes = React.useMemo(() => {
+    return layoutNodes.map(node => {
+      const x = 16 + node.column * colWidth; // 16px padding left
+      const y = 20 + node.depth * 76; // 76px ROW_HEIGHT
+      return {
+        ...node,
+        x,
+        y,
+      };
+    });
+  }, [layoutNodes, colWidth]);
+
+  const visualNodesMap = React.useMemo(() => {
+    const map: Record<string, typeof visualNodes[0]> = {};
+    visualNodes.forEach(n => map[n.id] = n);
+    return map;
+  }, [visualNodes]);
 
   // SVG grid sizing
-  const svgWidth = 80 + maxColumn * 75;
-  const svgHeight = 72 + maxDepth * 72;
+  const svgWidth = 32 + numColumns * colWidth;
+  const svgHeight = 40 + maxDepth * 76 + cardHeight;
 
   // Build the link connections
   const connections = React.useMemo(() => {
     const links: { parent: { x: number; y: number; id: string }; child: { x: number; y: number; id: string; isActive: boolean } }[] = [];
-    layoutNodes.forEach((node) => {
-      if (node.parentId !== null && layout[node.parentId]) {
-        const parent = layout[node.parentId];
+    visualNodes.forEach((node) => {
+      if (node.parentId !== null && visualNodesMap[node.parentId]) {
+        const parent = visualNodesMap[node.parentId];
         links.push({
           parent: { x: parent.x, y: parent.y, id: parent.id },
           child: { x: node.x, y: node.y, id: node.id, isActive: node.id === currentNodeId || parent.id === currentNodeId },
@@ -116,7 +143,7 @@ export const ControlPanel: React.FC = () => {
       }
     });
     return links;
-  }, [layoutNodes, layout, currentNodeId]);
+  }, [visualNodes, visualNodesMap, currentNodeId]);
 
   return (
     <div className={`w-full h-full flex flex-col gap-6 p-5 ${THEME_GLASS.PANEL}`}>
@@ -172,10 +199,11 @@ export const ControlPanel: React.FC = () => {
               className="absolute inset-0 pointer-events-none z-0"
             >
               {connections.map(({ parent, child }) => {
-                const startX = parent.x + 20; // 40px bubble center
-                const startY = parent.y + 20;
-                const endX = child.x + 20;
-                const endY = child.y + 20;
+                // Connect parent bottom-center to child top-center
+                const startX = parent.x + cardWidth / 2;
+                const startY = parent.y + cardHeight;
+                const endX = child.x + cardWidth / 2;
+                const endY = child.y;
 
                 const cp1y = startY + (endY - startY) * 0.45;
                 const cp2y = startY + (endY - startY) * 0.55;
@@ -195,7 +223,7 @@ export const ControlPanel: React.FC = () => {
             </svg>
 
             {/* Tree Node Bubbles */}
-            {layoutNodes.map((node) => {
+            {visualNodes.map((node) => {
               const isActive = node.id === currentNodeId;
               const stepNum = stepIndices.get(node.id) ?? 0;
               const isCopied = copiedId === node.id;
@@ -207,24 +235,36 @@ export const ControlPanel: React.FC = () => {
                     position: 'absolute',
                     left: `${node.x}px`,
                     top: `${node.y}px`,
-                    width: '40px',
-                    height: '40px',
+                    width: `${cardWidth}px`,
+                    height: `${cardHeight}px`,
                   }}
                   onMouseEnter={() => setHoveredId(node.id)}
                   onMouseLeave={() => setHoveredId(null)}
                   onClick={() => handleStepClick(node.id)}
-                  className={`z-10 rounded-full flex items-center justify-center border font-bold text-xs select-none cursor-pointer transition-all duration-300 relative group/node ${
+                  className={`z-10 rounded-xl flex flex-col items-center justify-center border select-none cursor-pointer transition-all duration-300 relative group/node p-1.5 ${
                     isActive
-                      ? 'border-indigo-400 text-indigo-300 bg-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.4)] scale-105'
-                      : 'border-white/10 hover:border-white/20 bg-neutral-900 hover:bg-neutral-800 text-white/50 hover:text-white/80'
+                      ? 'border-indigo-400/85 text-indigo-300 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.25)] scale-[1.02]'
+                      : 'border-white/5 hover:border-white/12 bg-neutral-950/80 hover:bg-neutral-900/90 text-white/55 hover:text-white/85 shadow-md'
                   }`}
                 >
-                  {/* Subtle inner pulse for the active node */}
-                  {isActive && (
-                    <span className="absolute inset-0 rounded-full bg-indigo-400/10 animate-ping pointer-events-none" />
-                  )}
+                  {/* Step index badge on top-left */}
+                  <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
+                    isActive 
+                      ? 'bg-indigo-600 border-indigo-400 text-indigo-100'
+                      : 'bg-neutral-900 border-white/10 text-white/60'
+                  }`}>
+                    {stepNum}
+                  </span>
 
-                  {stepNum}
+                  {/* Truncated Equation Label */}
+                  <span className="text-[10px] font-mono truncate max-w-full text-indigo-50 font-semibold px-1">
+                    {equationToString(node.equation)}
+                  </span>
+
+                  {/* Operation category subtitle */}
+                  <span className="text-[7px] text-white/35 font-sans font-medium uppercase tracking-wide truncate max-w-full -mt-0.5">
+                    {node.label}
+                  </span>
 
                   {/* Floating Glassmorphic Tooltip */}
                   {hoveredId === node.id && (

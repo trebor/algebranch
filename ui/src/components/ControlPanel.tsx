@@ -285,13 +285,8 @@ export const ControlPanel: React.FC = () => {
                   </span>
 
                   {/* Truncated Equation Label */}
-                  <span className="text-[10px] font-mono truncate max-w-full text-indigo-50 font-semibold px-1">
+                  <span className="text-[11px] font-mono truncate max-w-full text-indigo-50 font-semibold px-2 text-center">
                     {equationToString(node.equation)}
-                  </span>
-
-                  {/* Operation category subtitle */}
-                  <span className="text-[7px] text-white/35 font-sans font-medium uppercase tracking-wide truncate max-w-full -mt-0.5">
-                    {node.label}
                   </span>
 
                   {/* Floating Glassmorphic Tooltip */}

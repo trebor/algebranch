@@ -97,28 +97,48 @@ export const ControlPanel: React.FC = () => {
 
   const layoutNodes = Object.values(layout);
   const maxDepth = Math.max(...layoutNodes.map(n => n.depth), 0);
-  const maxColumn = Math.max(...layoutNodes.map(n => n.column), 0);
-  const numColumns = maxColumn + 1;
-
-  // Split container width or scroll if too many columns
-  const containerWidth = 240; // Printable area inside sidebar
-  const minColWidth = 110;
-  const colWidth = Math.max(minColWidth, containerWidth / numColumns);
-  const cardWidth = colWidth - 12; // 12px gap spacing
   const cardHeight = 44; // Sleek rectangular height
 
-  // Recalculate dynamic visual nodes coordinates in the component!
+  // Recalculate dynamic visual nodes coordinates row-by-row!
   const visualNodes = React.useMemo(() => {
+    // 1. Group nodes by depth (row)
+    const nodesByDepth: Record<number, typeof layoutNodes> = {};
+    layoutNodes.forEach(node => {
+      if (!nodesByDepth[node.depth]) {
+        nodesByDepth[node.depth] = [];
+      }
+      nodesByDepth[node.depth].push(node);
+    });
+
+    // 2. Sort each depth left-to-right by their logical column assignment
+    Object.keys(nodesByDepth).forEach(depthStr => {
+      const d = Number(depthStr);
+      nodesByDepth[d].sort((a, b) => a.column - b.column);
+    });
+
+    // 3. Compute dynamic position and width on a row-by-row basis
+    const containerWidth = 240; // Printable area inside sidebar
+    const minColWidth = 110;
+
     return layoutNodes.map(node => {
-      const x = 16 + node.column * colWidth; // 16px padding left
+      const rowNodes = nodesByDepth[node.depth] || [node];
+      const rowNodeCount = rowNodes.length;
+      const sortedIdx = rowNodes.findIndex(n => n.id === node.id);
+      
+      const rowColWidth = Math.max(minColWidth, containerWidth / rowNodeCount);
+      const cardWidth = rowColWidth - 12; // 12px gap spacing
+      
+      const x = 16 + sortedIdx * rowColWidth; // 16px padding left
       const y = 20 + node.depth * 76; // 76px ROW_HEIGHT
+
       return {
         ...node,
         x,
         y,
+        width: cardWidth,
       };
     });
-  }, [layoutNodes, colWidth]);
+  }, [layoutNodes]);
 
   const visualNodesMap = React.useMemo(() => {
     const map: Record<string, typeof visualNodes[0]> = {};
@@ -127,18 +147,26 @@ export const ControlPanel: React.FC = () => {
   }, [visualNodes]);
 
   // SVG grid sizing
-  const svgWidth = 32 + numColumns * colWidth;
+  const svgWidth = React.useMemo(() => {
+    if (visualNodes.length === 0) return 260;
+    const maxRight = Math.max(...visualNodes.map(n => n.x + n.width));
+    return maxRight + 16; // 16px padding right
+  }, [visualNodes]);
+
   const svgHeight = 40 + maxDepth * 76 + cardHeight;
 
   // Build the link connections
   const connections = React.useMemo(() => {
-    const links: { parent: { x: number; y: number; id: string }; child: { x: number; y: number; id: string; isActive: boolean } }[] = [];
+    const links: { 
+      parent: { x: number; y: number; width: number; id: string }; 
+      child: { x: number; y: number; width: number; id: string; isActive: boolean } 
+    }[] = [];
     visualNodes.forEach((node) => {
       if (node.parentId !== null && visualNodesMap[node.parentId]) {
         const parent = visualNodesMap[node.parentId];
         links.push({
-          parent: { x: parent.x, y: parent.y, id: parent.id },
-          child: { x: node.x, y: node.y, id: node.id, isActive: node.id === currentNodeId || parent.id === currentNodeId },
+          parent: { x: parent.x, y: parent.y, width: parent.width, id: parent.id },
+          child: { x: node.x, y: node.y, width: node.width, id: node.id, isActive: node.id === currentNodeId || parent.id === currentNodeId },
         });
       }
     });
@@ -199,10 +227,10 @@ export const ControlPanel: React.FC = () => {
               className="absolute inset-0 pointer-events-none z-0"
             >
               {connections.map(({ parent, child }) => {
-                // Connect parent bottom-center to child top-center
-                const startX = parent.x + cardWidth / 2;
+                // Connect parent bottom-center to child top-center dynamically
+                const startX = parent.x + parent.width / 2;
                 const startY = parent.y + cardHeight;
-                const endX = child.x + cardWidth / 2;
+                const endX = child.x + child.width / 2;
                 const endY = child.y;
 
                 const cp1y = startY + (endY - startY) * 0.45;
@@ -235,7 +263,7 @@ export const ControlPanel: React.FC = () => {
                     position: 'absolute',
                     left: `${node.x}px`,
                     top: `${node.y}px`,
-                    width: `${cardWidth}px`,
+                    width: `${node.width}px`,
                     height: `${cardHeight}px`,
                   }}
                   onMouseEnter={() => setHoveredId(node.id)}

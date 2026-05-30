@@ -2,23 +2,20 @@
 
 import React from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
-import * as math from 'mathjs';
-import { Equation } from 'math-engine';
 import {
   currentEquationAtom,
   pushEquationAtom,
   resetToEquationStringAtom,
+  applyGlobalOpAtom,
 } from '../store/equation';
 import { MATH_PRESETS, THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Hash, Play, BookOpen, Sparkles } from 'lucide-react';
-
-// Global Index Value Constants
-const CONST_POWER_TWO = 2;
 
 export const Sidebar: React.FC = () => {
   const currentEq = useAtomValue(currentEquationAtom);
   const pushEquation = useSetAtom(pushEquationAtom);
   const resetToEquation = useSetAtom(resetToEquationStringAtom);
+  const applyGlobalOp = useSetAtom(applyGlobalOpAtom);
 
   const [inputStr, setInputStr] = React.useState('');
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
@@ -37,45 +34,10 @@ export const Sidebar: React.FC = () => {
     }
   };
 
-  const applyGlobalOp = (type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div') => {
+  const handleApplyGlobalOp = (type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div') => {
     try {
       setErrorStr(null);
-      let nextLhs: math.MathNode;
-      let nextRhs: math.MathNode;
-
-      if (type === 'square') {
-        const exponentNode = new math.ConstantNode(CONST_POWER_TWO);
-        nextLhs = new math.OperatorNode('^', 'pow', [currentEq.lhs, exponentNode]);
-        nextRhs = new math.OperatorNode('^', 'pow', [currentEq.rhs, exponentNode]);
-      } else if (type === 'sqrt') {
-        nextLhs = new math.FunctionNode('sqrt', [currentEq.lhs]);
-        nextRhs = new math.FunctionNode('sqrt', [currentEq.rhs]);
-      } else {
-        // Operations requiring a custom parsed term
-        if (!termInput.trim()) {
-          setErrorStr('Please specify a term to apply to both sides (e.g. 5x).');
-          return;
-        }
-
-        const parsedTerm = math.parse(termInput.trim());
-
-        if (type === 'add') {
-          nextLhs = new math.OperatorNode('+', 'add', [currentEq.lhs, parsedTerm]);
-          nextRhs = new math.OperatorNode('+', 'add', [currentEq.rhs, parsedTerm]);
-        } else if (type === 'sub') {
-          nextLhs = new math.OperatorNode('-', 'subtract', [currentEq.lhs, parsedTerm]);
-          nextRhs = new math.OperatorNode('-', 'subtract', [currentEq.rhs, parsedTerm]);
-        } else if (type === 'mul') {
-          nextLhs = new math.OperatorNode('*', 'multiply', [currentEq.lhs, parsedTerm]);
-          nextRhs = new math.OperatorNode('*', 'multiply', [currentEq.rhs, parsedTerm]);
-        } else {
-          nextLhs = new math.OperatorNode('/', 'divide', [currentEq.lhs, parsedTerm]);
-          nextRhs = new math.OperatorNode('/', 'divide', [currentEq.rhs, parsedTerm]);
-        }
-      }
-
-      const nextEq: Equation = { lhs: nextLhs, rhs: nextRhs };
-      pushEquation(nextEq);
+      applyGlobalOp({ type, term: termInput });
       setTermInput('');
     } catch (err) {
       setErrorStr(`Failed to apply operation: ${err instanceof Error ? err.message : String(err)}`);
@@ -141,13 +103,13 @@ export const Sidebar: React.FC = () => {
         {/* Action button Grid */}
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => applyGlobalOp('square')}
+            onClick={() => handleApplyGlobalOp('square')}
             className={`py-1.5 px-3.5 text-[11px] font-semibold rounded-xl border border-white/10 text-indigo-200 hover:text-white hover:bg-white/5 active:scale-98 ${THEME_TRANSITIONS.FAST}`}
           >
             Square ( )²
           </button>
           <button
-            onClick={() => applyGlobalOp('sqrt')}
+            onClick={() => handleApplyGlobalOp('sqrt')}
             className={`py-1.5 px-3.5 text-[11px] font-semibold rounded-xl border border-white/10 text-indigo-200 hover:text-white hover:bg-white/5 active:scale-98 ${THEME_TRANSITIONS.FAST}`}
           >
             Square Root √
@@ -168,28 +130,28 @@ export const Sidebar: React.FC = () => {
           {/* Inline operations grid */}
           <div className="grid grid-cols-4 gap-1.5">
             <button
-              onClick={() => applyGlobalOp('add')}
+              onClick={() => handleApplyGlobalOp('add')}
               className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
               title="Add term"
             >
               <Plus size={12} />
             </button>
             <button
-              onClick={() => applyGlobalOp('sub')}
+              onClick={() => handleApplyGlobalOp('sub')}
               className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
               title="Subtract term"
             >
               <Minus size={12} />
             </button>
             <button
-              onClick={() => applyGlobalOp('mul')}
+              onClick={() => handleApplyGlobalOp('mul')}
               className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
               title="Multiply by term"
             >
               <X size={12} />
             </button>
             <button
-              onClick={() => applyGlobalOp('div')}
+              onClick={() => handleApplyGlobalOp('div')}
               className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
               title="Divide by term"
             >

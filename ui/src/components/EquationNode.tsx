@@ -12,9 +12,10 @@ import {
   activePathsAtom,
   hoverReducePathAtom,
   reduciblePathsAtom,
+  toggleRootSignAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { getNodeByPath, replaceNodeAtPath, getFunctionName, getChildren } from 'math-engine';
+import { getNodeByPath, getFunctionName, getChildren } from 'math-engine';
 import { Sparkles } from 'lucide-react';
 
 interface EquationNodeProps {
@@ -55,6 +56,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const pushEquation = useSetAtom(pushEquationAtom);
   const currentEq = useAtomValue(currentEquationAtom);
   const activePaths = useAtomValue(activePathsAtom);
+  const toggleRootSign = useSetAtom(toggleRootSignAtom);
 
   const node = React.useMemo(() => {
     try {
@@ -106,30 +108,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     }
   };
 
-  // Toggle Root Sign (Positive/Negative branches)
+  // Toggle Root Sign (+/- branches) via global action
   const handleToggleRootSign = (e: React.MouseEvent) => {
     e.stopPropagation();
-    try {
-      const targetNode = getNodeByPath(currentEq, path);
-      let nextNode: math.MathNode;
-
-      if (
-        targetNode.type === 'OperatorNode' &&
-        (targetNode as math.OperatorNode).op === '-' &&
-        (targetNode as math.OperatorNode).isUnary()
-      ) {
-        // Toggle negative root to positive: -sqrt(x) -> sqrt(x)
-        nextNode = (targetNode as math.OperatorNode).args[0];
-      } else {
-        // Toggle positive root to negative: sqrt(x) -> -sqrt(x)
-        nextNode = new math.OperatorNode('-', 'subtract', [targetNode]);
-      }
-
-      const nextEq = replaceNodeAtPath(currentEq, path, nextNode);
-      pushEquation(nextEq);
-    } catch (err) {
-      console.error('Failed to toggle root sign:', err);
-    }
+    toggleRootSign(path);
   };
 
   const getTargetPath = (): string | null => {

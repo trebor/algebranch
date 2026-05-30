@@ -1,5 +1,6 @@
 import { atom } from 'jotai';
-import { Equation, parseEquation, generateValidMoves, getAllPaths, getSimplificationForPath, ensureNodeIds } from 'math-engine';
+import { Equation, parseEquation, generateValidMoves, getAllPaths, getSimplificationForPath, ensureNodeIds, getNodeByPath, replaceNodeAtPath } from 'math-engine';
+import * as math from 'mathjs';
 
 // Global Initial Value Constants
 const INITIAL_EQUATION_STRING = '3 * x + 5 = x + 13';
@@ -175,5 +176,84 @@ export const resetToEquationStringAtom = atom(
       console.error('Failed to reset equation:', err);
       throw err;
     }
+  }
+);
+
+/**
+ * Action: Toggles the sign of a square root at the specified path (+/-).
+ */
+export const toggleRootSignAtom = atom(
+  null,
+  (get, set, path: string) => {
+    const currentEq = get(currentEquationAtom);
+    if (!currentEq) return;
+
+    try {
+      const targetNode = getNodeByPath(currentEq, path);
+      let nextNode: math.MathNode;
+
+      if (
+        targetNode.type === 'OperatorNode' &&
+        (targetNode as math.OperatorNode).op === '-' &&
+        (targetNode as math.OperatorNode).isUnary()
+      ) {
+        // Toggle negative root to positive: -sqrt(x) -> sqrt(x)
+        nextNode = (targetNode as math.OperatorNode).args[0];
+      } else {
+        // Toggle positive root to negative: sqrt(x) -> -sqrt(x)
+        nextNode = new math.OperatorNode('-', 'subtract', [targetNode]);
+      }
+
+      const nextEq = replaceNodeAtPath(currentEq, path, nextNode);
+      set(pushEquationAtom, nextEq);
+    } catch (err) {
+      console.error('Failed to toggle root sign in store action:', err);
+    }
+  }
+);
+
+/**
+ * Action: Applies an algebraic operation to both sides of the active equation simultaneously.
+ */
+export const applyGlobalOpAtom = atom(
+  null,
+  (get, set, { type, term }: { type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div'; term?: string }) => {
+    const currentEq = get(currentEquationAtom);
+    if (!currentEq) return;
+
+    let nextLhs: math.MathNode;
+    let nextRhs: math.MathNode;
+
+    if (type === 'square') {
+      const exponentNode = new math.ConstantNode(2);
+      nextLhs = new math.OperatorNode('^', 'pow', [currentEq.lhs, exponentNode]);
+      nextRhs = new math.OperatorNode('^', 'pow', [currentEq.rhs, exponentNode]);
+    } else if (type === 'sqrt') {
+      nextLhs = new math.FunctionNode('sqrt', [currentEq.lhs]);
+      nextRhs = new math.FunctionNode('sqrt', [currentEq.rhs]);
+    } else {
+      if (!term || !term.trim()) {
+        throw new Error('Please specify a term to apply to both sides (e.g. 5x).');
+      }
+
+      const parsedTerm = math.parse(term.trim());
+
+      if (type === 'add') {
+        nextLhs = new math.OperatorNode('+', 'add', [currentEq.lhs, parsedTerm]);
+        nextRhs = new math.OperatorNode('+', 'add', [currentEq.rhs, parsedTerm]);
+      } else if (type === 'sub') {
+        nextLhs = new math.OperatorNode('-', 'subtract', [currentEq.lhs, parsedTerm]);
+        nextRhs = new math.OperatorNode('-', 'subtract', [currentEq.rhs, parsedTerm]);
+      } else if (type === 'mul') {
+        nextLhs = new math.OperatorNode('*', 'multiply', [currentEq.lhs, parsedTerm]);
+        nextRhs = new math.OperatorNode('*', 'multiply', [currentEq.rhs, parsedTerm]);
+      } else {
+        nextLhs = new math.OperatorNode('/', 'divide', [currentEq.lhs, parsedTerm]);
+        nextRhs = new math.OperatorNode('/', 'divide', [currentEq.rhs, parsedTerm]);
+      }
+    }
+
+    const nextEq: Equation = { lhs: nextLhs, rhs: nextRhs };
+    set(pushEquationAtom, nextEq);
   }
 );

@@ -3,7 +3,7 @@
 import React from 'react';
 import { useSetAtom, useAtomValue } from 'jotai';
 import * as math from 'mathjs';
-import { autoSimplify, Equation } from 'math-engine';
+import { Equation } from 'math-engine';
 import {
   currentEquationAtom,
   pushEquationAtom,
@@ -14,7 +14,6 @@ import { Sparkles, Terminal, ShieldAlert, Plus, Minus, X, Percent } from 'lucide
 
 // Global Index Value Constants
 const CONST_POWER_TWO = 2;
-const SIMULATION_DURATION = 800; // ms scanning duration
 
 export const ControlPanel: React.FC = () => {
   const currentEq = useAtomValue(currentEquationAtom);
@@ -26,7 +25,6 @@ export const ControlPanel: React.FC = () => {
 
   // Global operations parameter state
   const [termInput, setTermInput] = React.useState('');
-  const [isSimplifying, setIsSimplifying] = React.useState(false);
 
   const handleLoadCustom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,23 +82,6 @@ export const ControlPanel: React.FC = () => {
     } catch (err) {
       setErrorStr(`Failed to apply operation: ${err instanceof Error ? err.message : String(err)}`);
     }
-  };
-
-  const handleAutoSimplify = () => {
-    setIsSimplifying(true);
-
-    // Simulate standard scanning animation
-    setTimeout(() => {
-      try {
-        setErrorStr(null);
-        const simplified = autoSimplify(currentEq);
-        pushEquation(simplified); // Push to step timeline
-      } catch (err) {
-        setErrorStr(`Auto-Simplify failed: ${err instanceof Error ? err.message : String(err)}`);
-      } finally {
-        setIsSimplifying(false);
-      }
-    }, SIMULATION_DURATION);
   };
 
   return (
@@ -233,24 +214,6 @@ export const ControlPanel: React.FC = () => {
             </button>
           </div>
         </div>
-      </div>
-
-      {/* 3. Auto-Simplify Pass */}
-      <button
-        onClick={handleAutoSimplify}
-        disabled={isSimplifying}
-        className={`w-full py-3 bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-indigo-500/25 active:scale-98 transition-all flex items-center justify-center gap-2 group disabled:opacity-50`}
-      >
-        <Sparkles size={16} className={`${isSimplifying ? 'animate-spin' : 'group-hover:rotate-12 transition-transform'}`} />
-        <span>{isSimplifying ? 'Analyzing Redundancies...' : 'Run Automated Simplifier'}</span>
-      </button>
-
-      {/* Visual scanning backdrop in DOM when simplifying */}
-      {isSimplifying && (
-        <div className="fixed inset-0 bg-indigo-950/20 backdrop-blur-[1px] flex items-center justify-center z-50 pointer-events-none">
-          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_49%,rgba(99,102,241,0.15)_50%,transparent_51%)] bg-[size:100%_20px] animate-[pulse_1s_infinite] select-none" />
-        </div>
-      )}
-    </div>
+      </div>    </div>
   );
 };

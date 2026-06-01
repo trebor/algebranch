@@ -1,0 +1,16 @@
+{
+  "name": "algebranch-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive Algebraic Derivation Monorepo",
+  "workspaces": [
+    "math-engine",
+    "ui"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=ui",
+    "build": "npm run build --workspace=ui",
+    "test": "npm run test --workspace=math-engine",
+    "lint": "npm run lint --workspace=ui"
+  }
+}

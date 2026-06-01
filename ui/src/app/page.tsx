@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
 import { PreviewEquationNode } from '../components/PreviewEquationNode';
 import { Sidebar } from '../components/Sidebar';
@@ -26,7 +26,7 @@ export default function Home() {
   const hoverPath = useAtomValue(hoverPathAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
   const hoverReducePath = useAtomValue(hoverReducePathAtom);
-  const sourcePath = useAtomValue(sourcePathAtom);
+  const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
 
   const syncMathState = useSetAtom(syncMathStateAtom);
 
@@ -59,6 +59,19 @@ export default function Home() {
       active = false;
     };
   }, [currentEq, sourcePath, syncMathState]);
+
+  // Escape key global listener to deselect/back out of active selections
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && sourcePath !== null) {
+        setSourcePath(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [sourcePath, setSourcePath]);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
 

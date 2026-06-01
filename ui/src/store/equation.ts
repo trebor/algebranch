@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString } from 'math-engine';
+import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, deserializeEquation } from 'math-engine';
 import * as math from 'mathjs';
 
 // Global Initial Value Constants
@@ -275,3 +275,27 @@ export const applyGlobalOpAtom = atom(
     set(pushEquationAtom, nextEq, label);
   }
 );
+
+/**
+ * Action: Atomically synchronizes the server-side math state (active, reducible, and target paths)
+ * by deserializing their serialized AST objects back into mathjs Equation trees.
+ */
+export const syncMathStateAtom = atom(
+  null,
+  (_get, set, { activePaths, reduciblePaths, targetPaths }: { activePaths: string[]; reduciblePaths: Record<string, any>; targetPaths: Record<string, any> }) => {
+    set(activePathsAtom, new Set<string>(activePaths));
+
+    const parsedReducible: Record<string, Equation> = {};
+    Object.keys(reduciblePaths).forEach((k) => {
+      parsedReducible[k] = deserializeEquation(reduciblePaths[k]);
+    });
+    set(reduciblePathsAtom, parsedReducible);
+
+    const parsedTargets: Record<string, Equation> = {};
+    Object.keys(targetPaths).forEach((k) => {
+      parsedTargets[k] = deserializeEquation(targetPaths[k]);
+    });
+    set(targetPathsAtom, parsedTargets);
+  }
+);
+

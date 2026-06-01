@@ -12,12 +12,14 @@ import {
   targetPathsAtom,
   hoverReducePathAtom,
   sourcePathAtom,
-  activePathsAtom,
-  reduciblePathsAtom,
+  syncMathStateAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { Sparkles, HelpCircle } from 'lucide-react';
-import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation } from 'math-engine';
+import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation } from 'math-engine';
+
+// Local Constants
+const API_MATH_ENDPOINT = '/api/math';
 
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
@@ -26,9 +28,7 @@ export default function Home() {
   const hoverReducePath = useAtomValue(hoverReducePathAtom);
   const sourcePath = useAtomValue(sourcePathAtom);
 
-  const setActivePaths = useSetAtom(activePathsAtom);
-  const setReduciblePaths = useSetAtom(reduciblePathsAtom);
-  const setTargetPaths = useSetAtom(targetPathsAtom);
+  const syncMathState = useSetAtom(syncMathStateAtom);
 
   React.useEffect(() => {
     if (!currentEq) return;
@@ -38,7 +38,7 @@ export default function Home() {
       try {
         const eqStr = equationToString(currentEq);
         const serializedEq = serializeEquation(currentEq);
-        const res = await fetch('/api/math', {
+        const res = await fetch(API_MATH_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'sync-state', eqStr, serializedEq, sourcePath })
@@ -47,19 +47,8 @@ export default function Home() {
 
         if (!active) return;
 
-        setActivePaths(new Set(data.activePaths));
-
-        const parsedReducible: Record<string, Equation> = {};
-        Object.keys(data.reduciblePaths).forEach(k => {
-          parsedReducible[k] = deserializeEquation(data.reduciblePaths[k]);
-        });
-        setReduciblePaths(parsedReducible);
-
-        const parsedTargets: Record<string, Equation> = {};
-        Object.keys(data.targetPaths).forEach(k => {
-          parsedTargets[k] = deserializeEquation(data.targetPaths[k]);
-        });
-        setTargetPaths(parsedTargets);
+        // Atomically synchronize state inside Jotai store action
+        syncMathState(data);
       } catch (err) {
         console.error('Failed to sync math state from server:', err);
       }
@@ -69,7 +58,7 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, [currentEq, sourcePath, setActivePaths, setReduciblePaths, setTargetPaths]);
+  }, [currentEq, sourcePath, syncMathState]);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
 

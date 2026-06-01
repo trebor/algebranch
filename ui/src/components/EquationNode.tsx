@@ -9,7 +9,7 @@ import {
   targetPathsAtom,
   pushEquationAtom,
   currentEquationAtom,
-  activePathsAtom,
+  candidatePathsAtom,
   hoverReducePathAtom,
   reduciblePathsAtom,
   toggleRootSignAtom,
@@ -55,7 +55,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const targetPaths = useAtomValue(targetPathsAtom);
   const pushEquation = useSetAtom(pushEquationAtom);
   const currentEq = useAtomValue(currentEquationAtom);
-  const activePaths = useAtomValue(activePathsAtom);
+  const candidatePaths = useAtomValue(candidatePathsAtom);
   const toggleRootSign = useSetAtom(toggleRootSignAtom);
 
   const node = React.useMemo(() => {
@@ -92,10 +92,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const isSelected = sourcePath === path;
   const isHovered = hoverPath === path || (hoverPath !== null && hoverPath.startsWith(`${path}/`));
   const isTarget = !!sourcePath && path in targetPaths;
-  const isActive = activePaths.has(path);
+  const isCandidate = candidatePaths.has(path);
   const isStatic = sourcePath
     ? (!isSelected && !isTarget)
-    : !isActive;
+    : !isCandidate;
 
   const reducedEq = reduciblePaths[path];
   const isReducible = !!reducedEq;
@@ -149,8 +149,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   };
 
   // Styling hooks
-  const canClick = sourcePath ? (isSelected || isTarget) : isActive;
-  const canHover = sourcePath ? (isSelected || isTarget) : isActive;
+  const canClick = sourcePath ? (isSelected || isTarget) : isCandidate;
+  const canHover = sourcePath ? (isSelected || isTarget) : isCandidate;
 
   const semanticStyle = isSelected
     ? THEME_GLASS.SOURCE
@@ -161,8 +161,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     : (isHovered && canHover)
     ? THEME_GLASS.CARD_HOVER
     : canClick
-    ? THEME_GLASS.CARD_ACTIVE
-    : THEME_GLASS.CARD_ACTIVE + ' cursor-default';
+    ? THEME_GLASS.CARD_CANDIDATE
+    : THEME_GLASS.CARD_CANDIDATE + ' cursor-default';
 
   // Recursive Render logic depending on Node type
   const renderContent = () => {

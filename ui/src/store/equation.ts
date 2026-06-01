@@ -48,7 +48,7 @@ export const hoverPathAtom = atom<string | null>(null);
 export const hoverReducePathAtom = atom<string | null>(null);
 
 // Dynamic Server-Synchronized Atoms
-export const activePathsAtom = atom<Set<string>>(new Set<string>());
+export const candidatePathsAtom = atom<Set<string>>(new Set<string>());
 export const targetPathsAtom = atom<Record<string, Equation>>({});
 export const reduciblePathsAtom = atom<Record<string, Equation>>({});
 
@@ -277,13 +277,13 @@ export const applyGlobalOpAtom = atom(
 );
 
 /**
- * Action: Atomically synchronizes the server-side math state (active, reducible, and target paths)
+ * Action: Atomically synchronizes the server-side math state (candidate, reducible, and target paths)
  * by deserializing their serialized AST objects back into mathjs Equation trees.
  */
 export const syncMathStateAtom = atom(
   null,
   (_get, set, { activePaths, reduciblePaths, targetPaths }: { activePaths: string[]; reduciblePaths: Record<string, any>; targetPaths: Record<string, any> }) => {
-    set(activePathsAtom, new Set<string>(activePaths));
+    set(candidatePathsAtom, new Set<string>(activePaths));
 
     const parsedReducible: Record<string, Equation> = {};
     Object.keys(reduciblePaths).forEach((k) => {

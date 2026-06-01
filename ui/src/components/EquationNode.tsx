@@ -90,12 +90,26 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   };
 
   const isSelected = sourcePath === path;
-  const isHovered = hoverPath === path || (hoverPath !== null && hoverPath.startsWith(`${path}/`));
+  const isHovered = hoverPath === path;
   const isTarget = !!sourcePath && path in targetPaths;
   const isCandidate = candidatePaths.has(path);
   const isStatic = sourcePath
     ? (!isSelected && !isTarget)
     : !isCandidate;
+
+  // Determine if the user is hovering over any candidate node (or inside one)
+  const isHoveringAnyCandidate = React.useMemo(() => {
+    if (hoverPath === null) return false;
+    if (candidatePaths.has(hoverPath)) return true;
+    const parts = hoverPath.split('/');
+    for (let i = parts.length - 1; i > 0; i--) {
+      const ancestorPath = parts.slice(0, i).join('/');
+      if (candidatePaths.has(ancestorPath)) {
+        return true;
+      }
+    }
+    return false;
+  }, [hoverPath, candidatePaths]);
 
   const reducedEq = reduciblePaths[path];
   const isReducible = !!reducedEq;
@@ -152,14 +166,18 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const canClick = sourcePath ? (isSelected || isTarget) : isCandidate;
   const canHover = sourcePath ? (isSelected || isTarget) : isCandidate;
 
+  // Only dim candidate nodes if the user is actively hovering over *some* valid candidate.
+  // Otherwise, if they hover static parts of the expression, keep all candidates bright (scan mode).
+  const isHighlightedCandidate = isCandidate && !sourcePath && (!isHoveringAnyCandidate || isHovered);
+
   const semanticStyle = isSelected
     ? THEME_GLASS.SOURCE
     : isTarget
     ? THEME_GLASS.TARGET
     : isStatic
     ? THEME_GLASS.STATIC + ' select-none'
-    : (isHovered && canHover)
-    ? THEME_GLASS.CARD_HOVER
+    : isHighlightedCandidate
+    ? THEME_GLASS.CARD_CANDIDATE_SCAN
     : canClick
     ? THEME_GLASS.CARD_CANDIDATE
     : THEME_GLASS.CARD_CANDIDATE + ' cursor-default';
@@ -293,7 +311,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       style={customStyle}
       className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${semanticStyle}`}
       onMouseEnter={() => setHoverPath(path)}
-      onMouseLeave={() => setHoverPath(null)}
+      onMouseLeave={() => {
+        const lastSlash = path.lastIndexOf('/');
+        const parentPath = lastSlash !== -1 ? path.substring(0, lastSlash) : null;
+        setHoverPath(parentPath);
+      }}
       onClick={handleNodeClick}
     >
       {renderContent()}

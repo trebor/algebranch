@@ -17,7 +17,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { Sparkles, HelpCircle } from 'lucide-react';
-import { Equation, parseEquation, ensureNodeIds, equationToString } from 'math-engine';
+import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation } from 'math-engine';
 
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
@@ -37,10 +37,11 @@ export default function Home() {
     const syncState = async () => {
       try {
         const eqStr = equationToString(currentEq);
+        const serializedEq = serializeEquation(currentEq);
         const res = await fetch('/api/math', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sync-state', eqStr, sourcePath })
+          body: JSON.stringify({ action: 'sync-state', eqStr, serializedEq, sourcePath })
         });
         const data = await res.json();
 
@@ -50,13 +51,13 @@ export default function Home() {
 
         const parsedReducible: Record<string, Equation> = {};
         Object.keys(data.reduciblePaths).forEach(k => {
-          parsedReducible[k] = ensureNodeIds(parseEquation(data.reduciblePaths[k]));
+          parsedReducible[k] = deserializeEquation(data.reduciblePaths[k]);
         });
         setReduciblePaths(parsedReducible);
 
         const parsedTargets: Record<string, Equation> = {};
         Object.keys(data.targetPaths).forEach(k => {
-          parsedTargets[k] = ensureNodeIds(parseEquation(data.targetPaths[k]));
+          parsedTargets[k] = deserializeEquation(data.targetPaths[k]);
         });
         setTargetPaths(parsedTargets);
       } catch (err) {

@@ -6,7 +6,10 @@ import {
   autoSimplify, 
   parseEquation, 
   equationToString,
-  Equation
+  Equation,
+  serializeEquation,
+  deserializeEquation,
+  SerializedEquation
 } from '../../../math-engine/index';
 import * as math from 'mathjs';
 
@@ -16,8 +19,14 @@ export async function POST(req: NextRequest) {
     const { action } = body;
 
     if (action === 'sync-state') {
-      const { eqStr, sourcePath } = body;
-      const eq = parseEquation(eqStr);
+      const { eqStr, serializedEq, sourcePath } = body;
+      
+      let eq: Equation;
+      if (serializedEq) {
+        eq = deserializeEquation(serializedEq);
+      } else {
+        eq = parseEquation(eqStr);
+      }
       
       // 1. Traverse the AST to get all node paths
       const allNodePaths: string[] = [];
@@ -44,24 +53,24 @@ export async function POST(req: NextRequest) {
       });
 
       // 3. Get reducible paths (nodes that can be simplified or distributed)
-      const reduciblePaths: Record<string, string> = {};
+      const reduciblePaths: Record<string, SerializedEquation> = {};
       allNodePaths.forEach((path) => {
         try {
           const simplified = getSimplificationForPath(eq, path);
           if (simplified) {
-            reduciblePaths[path] = equationToString(simplified);
+            reduciblePaths[path] = serializeEquation(simplified);
           }
         } catch {}
       });
 
       // 4. Get target paths (valid drop targets for selected sourcePath)
-      const targetPaths: Record<string, string> = {};
+      const targetPaths: Record<string, SerializedEquation> = {};
       if (sourcePath) {
         try {
           const moves = generateValidMoves(eq, sourcePath);
           delete moves[sourcePath];
           Object.keys(moves).forEach((k) => {
-            targetPaths[k] = equationToString(moves[k]);
+            targetPaths[k] = serializeEquation(moves[k]);
           });
         } catch {}
       }

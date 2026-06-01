@@ -379,3 +379,92 @@ export const getFunctionName = (node: math.FunctionNode): string => {
   }
   return '';
 };
+
+export interface SerializedNode {
+  type: string;
+  id?: string;
+  value?: any;
+  name?: string;
+  op?: string;
+  fn?: string;
+  args?: SerializedNode[];
+  content?: SerializedNode;
+}
+
+export interface SerializedEquation {
+  lhs: SerializedNode;
+  rhs: SerializedNode;
+}
+
+export const serializeNode = (node: math.MathNode): SerializedNode => {
+  if (!node) {
+    throw new Error('Cannot serialize a null or undefined node');
+  }
+  const serialized: SerializedNode = {
+    type: node.type,
+    id: (node as any).id,
+  };
+
+  if (node.type === 'ConstantNode') {
+    serialized.value = (node as math.ConstantNode).value;
+  } else if (node.type === 'SymbolNode') {
+    serialized.name = (node as math.SymbolNode).name;
+  } else if (node.type === 'ParenthesisNode') {
+    serialized.content = serializeNode((node as math.ParenthesisNode).content);
+  } else if (node.type === 'OperatorNode') {
+    const opNode = node as math.OperatorNode;
+    serialized.op = opNode.op;
+    serialized.fn = opNode.fn;
+    serialized.args = opNode.args.map((child) => serializeNode(child));
+  } else if (node.type === 'FunctionNode') {
+    const funcNode = node as math.FunctionNode;
+    serialized.name = getFunctionName(funcNode);
+    serialized.args = funcNode.args.map((child) => serializeNode(child));
+  }
+
+  return serialized;
+};
+
+export const serializeEquation = (eq: Equation): SerializedEquation => {
+  return {
+    lhs: serializeNode(eq.lhs),
+    rhs: serializeNode(eq.rhs),
+  };
+};
+
+export const deserializeNode = (sNode: SerializedNode): math.MathNode => {
+  if (!sNode) {
+    throw new Error('Cannot deserialize a null or undefined serialized node');
+  }
+  let node: math.MathNode;
+
+  if (sNode.type === 'ConstantNode') {
+    node = new math.ConstantNode(sNode.value);
+  } else if (sNode.type === 'SymbolNode') {
+    node = new math.SymbolNode(sNode.name!);
+  } else if (sNode.type === 'ParenthesisNode') {
+    const content = deserializeNode(sNode.content!);
+    node = new math.ParenthesisNode(content);
+  } else if (sNode.type === 'OperatorNode') {
+    const args = sNode.args!.map((child) => deserializeNode(child));
+    node = new math.OperatorNode(sNode.op! as any, sNode.fn! as any, args);
+  } else if (sNode.type === 'FunctionNode') {
+    const args = sNode.args!.map((child) => deserializeNode(child));
+    node = new math.FunctionNode(sNode.name!, args);
+  } else {
+    throw new Error(`Unsupported node type during deserialization: ${sNode.type}`);
+  }
+
+  if (sNode.id) {
+    (node as any).id = sNode.id;
+  }
+  return node;
+};
+
+export const deserializeEquation = (sEq: SerializedEquation): Equation => {
+  return {
+    lhs: deserializeNode(sEq.lhs),
+    rhs: deserializeNode(sEq.rhs),
+  };
+};
+

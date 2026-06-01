@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface TooltipProps {
   readonly content: React.ReactNode;
@@ -14,44 +15,80 @@ interface TooltipProps {
 }
 
 /**
- * A premium, reusable glassmorphic Tooltip wrapper.
- * Supports rich React.ReactNode content (e.g. templates, buttons, text blocks).
- * Uses a safe hover-retention gap (150ms) so you can hover inside the tooltip to click elements (WCAG 1.4.13 compliant).
- * Performs auto-alignment on the fly to center tooltips relative to the viewport.
- * Dynamically promotes wrapper z-index (to zIndex: 100) when active to resolve absolute stacking contexts.
+ * A premium, reusable, layout-safe glassmorphic Tooltip wrapper.
+ * Uses React Portals to render directly into document.body, making it 100% immune to parent overflow: hidden/auto clipping.
+ * Employs position: fixed and CSS transform calculations for layout-agnostic, pinpoint accuracy.
+ * Promotes stacking layer automatically with scroll-capture listener to dismiss tooltips on viewport scrolling.
+ * Compliant with WCAG 1.4.13 (Dismissible, Hoverable, and Persistent).
  */
 export const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,
   position = 'top',
-  delay = 150, // Snappy 150ms default delay for high responsiveness
+  delay = 150, // Snappy 150ms default delay
   className = '',
   wrapperClassName = '',
   style,
   autoAlign = true,
 }) => {
+  const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [calculatedPosition, setCalculatedPosition] = useState<'top' | 'bottom' | 'left' | 'right'>(position);
+  const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [showTimeoutId, setShowTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [hideTimeoutId, setHideTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
+  // Safely mount to prevent SSR hydration mismatches
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Dismiss tooltip instantly upon scrolling any container in the viewport
+  useEffect(() => {
+    if (!isVisible) return;
+    const handleScroll = () => {
+      setIsVisible(false);
+    };
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isVisible]);
+
   const showTooltip = (e: React.MouseEvent<any> | React.FocusEvent<any>) => {
-    // Perform dynamic vertical/horizontal alignment on the fly
-    if (autoAlign) {
-      try {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const triggerCenterX = rect.left + rect.width / 2;
-        const viewportWidth = window.innerWidth;
+    try {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const triggerCenterX = rect.left + rect.width / 2;
+      const triggerCenterY = rect.top + rect.height / 2;
+      const viewportWidth = window.innerWidth;
+      
+      const optimalDir = autoAlign 
+        ? (triggerCenterX > viewportWidth / 2 ? 'left' : 'right') 
+        : position;
         
-        // If trigger horizontal center is on the right half of the screen, open left.
-        // If on the left half, open right. This always forces them towards the center of the screen!
-        const optimalDir = triggerCenterX > viewportWidth / 2 ? 'left' : 'right';
-        setCalculatedPosition(optimalDir);
-      } catch (err) {
-        console.error('Failed to compute dynamic tooltip position:', err);
+      setCalculatedPosition(optimalDir);
+
+      const offset = 8; // Pixels visual offset gap
+      let top = 0;
+      let left = 0;
+
+      if (optimalDir === 'left') {
+        top = triggerCenterY;
+        left = rect.left - offset;
+      } else if (optimalDir === 'right') {
+        top = triggerCenterY;
+        left = rect.right + offset;
+      } else if (optimalDir === 'top') {
+        top = rect.top - offset;
+        left = triggerCenterX;
+      } else {
+        top = rect.bottom + offset;
+        left = triggerCenterX;
       }
-    } else {
-      setCalculatedPosition(position);
+
+      setCoords({ top, left });
+    } catch (err) {
+      console.error('Failed to compute dynamic tooltip position:', err);
     }
 
     if (hideTimeoutId) {
@@ -71,7 +108,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       setShowTimeoutId(null);
     }
     if (hideTimeoutId) return;
-    // Set a tiny 150ms delay before hiding to let the cursor cross the gap into the popover safely!
+    // Tiny 150ms hover-bridge gap to cross from trigger into tooltip popover safely
     const id = setTimeout(() => {
       setIsVisible(false);
       setHideTimeoutId(null);
@@ -86,15 +123,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     }
   };
 
-  // Position classes relative to trigger container
-  const positionClasses = {
-    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-    right: 'left-full top-1/2 -translate-y-1/2 ml-2',
-  };
-
-  // Directional arrow classes (subtle peak pointing to active trigger)
+  // Directional arrow classes
   const arrowClasses = {
     top: 'absolute top-full left-1/2 -translate-x-1/2 border-t-neutral-950/95 border-x-transparent border-b-transparent',
     bottom: 'absolute bottom-full left-1/2 -translate-x-1/2 border-b-neutral-950/95 border-x-transparent border-t-transparent',
@@ -102,7 +131,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     right: 'absolute right-full top-1/2 -translate-y-1/2 border-r-neutral-950/95 border-y-transparent border-l-transparent',
   };
 
-  // Safely merge and inject mouse event triggers on the child
+  // Safely clone children to inject events
   const trigger = React.cloneElement(children, {
     onMouseEnter: (e: React.MouseEvent) => {
       showTooltip(e);
@@ -129,7 +158,6 @@ export const Tooltip: React.FC<TooltipProps> = ({
       }
     },
     onClick: (e: React.MouseEvent) => {
-      // Hide instantly on click unless we prevent it
       if (!children.props.onClick || children.props.onClick(e) !== false) {
         setIsVisible(false);
         if (showTimeoutId) clearTimeout(showTimeoutId);
@@ -140,29 +168,37 @@ export const Tooltip: React.FC<TooltipProps> = ({
     },
   });
 
-  // Outermost container style (supports inline overrides and dynamic z-index stacking context promotion)
-  const dynamicStyle: React.CSSProperties = {
-    ...style,
-    ...(isVisible ? { zIndex: 100 } : {}), // Boost z-index to 100 when active to force stack to the top!
-  };
+  const tooltipPortal = isVisible && mounted && typeof document !== 'undefined' && createPortal(
+    <div
+      onMouseEnter={cancelHide}
+      onMouseLeave={hideTooltip}
+      style={{
+        position: 'fixed',
+        left: `${coords.left}px`,
+        top: `${coords.top}px`,
+        transform: 
+          calculatedPosition === 'left' ? 'translate(-100%, -50%)' :
+          calculatedPosition === 'right' ? 'translate(0, -50%)' :
+          calculatedPosition === 'top' ? 'translate(-50%, -100%)' :
+          'translate(-50%, 0)',
+        zIndex: 9999, // Guarantee absolute topmost visual layer
+      }}
+      className={`pointer-events-auto select-text rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 shadow-2xl transition-all duration-150 animate-in fade-in zoom-in-95 ${className}`}
+      role="tooltip"
+    >
+      {content}
+      <div className={`border-4 ${arrowClasses[calculatedPosition]}`} />
+    </div>,
+    document.body
+  );
 
   return (
     <div
       className={`relative inline-flex items-center justify-center ${wrapperClassName}`}
-      style={dynamicStyle}
+      style={style}
     >
       {trigger}
-      {isVisible && (
-        <div
-          onMouseEnter={cancelHide}
-          onMouseLeave={hideTooltip}
-          className={`absolute z-50 pointer-events-auto select-text rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 shadow-2xl transition-all duration-150 animate-in fade-in zoom-in-95 ${positionClasses[calculatedPosition]} ${className}`}
-          role="tooltip"
-        >
-          {content}
-          <div className={`border-4 ${arrowClasses[calculatedPosition]}`} />
-        </div>
-      )}
+      {tooltipPortal}
     </div>
   );
 };

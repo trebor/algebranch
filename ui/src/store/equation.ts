@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { Equation, parseEquation, generateValidMoves, getAllPaths, getSimplificationForPath, ensureNodeIds, getNodeByPath, replaceNodeAtPath } from 'math-engine';
+import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString } from 'math-engine';
 import * as math from 'mathjs';
 
 // Global Initial Value Constants
@@ -47,6 +47,11 @@ export const sourcePathAtom = atom<string | null>(null);
 export const hoverPathAtom = atom<string | null>(null);
 export const hoverReducePathAtom = atom<string | null>(null);
 
+// Dynamic Server-Synchronized Atoms
+export const activePathsAtom = atom<Set<string>>(new Set<string>());
+export const targetPathsAtom = atom<Record<string, Equation>>({});
+export const reduciblePathsAtom = atom<Record<string, Equation>>({});
+
 // Derived Atoms
 
 /**
@@ -93,92 +98,6 @@ export const treeLayoutAtom = atom<Record<string, VisualTreeNode>>((get) => {
 
   traverse("0", 0, null);
   return result;
-});
-
-/**
- * Computes all valid drop targets reactively when a node is selected.
- */
-export const targetPathsAtom = atom<Record<string, Equation>>((get) => {
-  const currentEq = get(currentEquationAtom);
-  if (!currentEq) {
-    return {};
-  }
-
-  const sourcePath = get(sourcePathAtom);
-  if (sourcePath) {
-    const moves = generateValidMoves(currentEq, sourcePath);
-    delete moves[sourcePath];
-    Object.keys(moves).forEach((k) => {
-      moves[k] = ensureNodeIds(moves[k]);
-    });
-    return moves;
-  }
-
-  const hoverPath = get(hoverPathAtom);
-  if (hoverPath) {
-    const moves = generateValidMoves(currentEq, hoverPath);
-    delete moves[hoverPath];
-    Object.keys(moves).forEach((k) => {
-      moves[k] = ensureNodeIds(moves[k]);
-    });
-    return moves;
-  }
-
-  return {};
-});
-
-/**
- * Computes the set of all paths in the current equation that are active (have valid transformations).
- */
-export const activePathsAtom = atom<Set<string>>((get) => {
-  const currentEq = get(currentEquationAtom);
-  const activePaths = new Set<string>();
-
-  if (!currentEq) {
-    return activePaths;
-  }
-
-  const allPaths = getAllPaths(currentEq);
-
-  allPaths.forEach((path) => {
-    try {
-      const moves = generateValidMoves(currentEq, path);
-      if (Object.keys(moves).length > 0) {
-        activePaths.add(path);
-      }
-    } catch {
-      // Graceful fallback
-    }
-  });
-
-  return activePaths;
-});
-
-/**
- * Computes all paths that have reduction opportunities, mapping paths to the reduced equation.
- */
-export const reduciblePathsAtom = atom<Record<string, Equation>>((get) => {
-  const currentEq = get(currentEquationAtom);
-  const reducible: Record<string, Equation> = {};
-
-  if (!currentEq) {
-    return reducible;
-  }
-
-  const allPaths = getAllPaths(currentEq);
-
-  allPaths.forEach((path) => {
-    try {
-      const simplified = getSimplificationForPath(currentEq, path);
-      if (simplified) {
-        reducible[path] = ensureNodeIds(simplified);
-      }
-    } catch {
-      // Graceful fallback
-    }
-  });
-
-  return reducible;
 });
 
 /**

@@ -20,7 +20,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "math-engine": ["./src/math-engine"]
+      "math-engine": ["./src/math-engine/client.ts"]
     }
   },
   "include": [

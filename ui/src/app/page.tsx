@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useAtomValue } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
 import { PreviewEquationNode } from '../components/PreviewEquationNode';
 import { Sidebar } from '../components/Sidebar';
@@ -11,15 +11,65 @@ import {
   hoverPathAtom,
   targetPathsAtom,
   hoverReducePathAtom,
+  sourcePathAtom,
+  activePathsAtom,
+  reduciblePathsAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { Sparkles, HelpCircle } from 'lucide-react';
+import { Equation, parseEquation, ensureNodeIds, equationToString } from 'math-engine';
 
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
   const hoverPath = useAtomValue(hoverPathAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
   const hoverReducePath = useAtomValue(hoverReducePathAtom);
+  const sourcePath = useAtomValue(sourcePathAtom);
+
+  const setActivePaths = useSetAtom(activePathsAtom);
+  const setReduciblePaths = useSetAtom(reduciblePathsAtom);
+  const setTargetPaths = useSetAtom(targetPathsAtom);
+
+  React.useEffect(() => {
+    if (!currentEq) return;
+
+    let active = true;
+    const syncState = async () => {
+      try {
+        const eqStr = equationToString(currentEq);
+        const res = await fetch('/api/math', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'sync-state', eqStr, sourcePath })
+        });
+        const data = await res.json();
+
+        if (!active) return;
+
+        setActivePaths(new Set(data.activePaths));
+
+        const parsedReducible: Record<string, Equation> = {};
+        Object.keys(data.reduciblePaths).forEach(k => {
+          parsedReducible[k] = ensureNodeIds(parseEquation(data.reduciblePaths[k]));
+        });
+        setReduciblePaths(parsedReducible);
+
+        const parsedTargets: Record<string, Equation> = {};
+        Object.keys(data.targetPaths).forEach(k => {
+          parsedTargets[k] = ensureNodeIds(parseEquation(data.targetPaths[k]));
+        });
+        setTargetPaths(parsedTargets);
+      } catch (err) {
+        console.error('Failed to sync math state from server:', err);
+      }
+    };
+
+    syncState();
+    return () => {
+      active = false;
+    };
+  }, [currentEq, sourcePath, setActivePaths, setReduciblePaths, setTargetPaths]);
+
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
 
   const boundingBoxRef = React.useRef<Map<string, DOMRect>>(new Map());

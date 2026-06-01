@@ -10,12 +10,15 @@ interface TooltipProps {
   readonly className?: string; // Optional popover class overrides
   readonly wrapperClassName?: string; // Optional wrapper container class overrides
   readonly style?: React.CSSProperties; // Optional wrapper container styles
+  readonly autoAlign?: boolean; // Dynamic horizontal screen alignment
 }
 
 /**
  * A premium, reusable glassmorphic Tooltip wrapper.
  * Supports rich React.ReactNode content (e.g. templates, buttons, text blocks).
  * Uses a safe hover-retention gap (150ms) so you can hover inside the tooltip to click elements (WCAG 1.4.13 compliant).
+ * Performs auto-alignment on the fly to center tooltips relative to the viewport.
+ * Dynamically promotes wrapper z-index (to zIndex: 100) when active to resolve absolute stacking contexts.
  */
 export const Tooltip: React.FC<TooltipProps> = ({
   content,
@@ -25,12 +28,32 @@ export const Tooltip: React.FC<TooltipProps> = ({
   className = '',
   wrapperClassName = '',
   style,
+  autoAlign = true,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [calculatedPosition, setCalculatedPosition] = useState<'top' | 'bottom' | 'left' | 'right'>(position);
   const [showTimeoutId, setShowTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [hideTimeoutId, setHideTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
-  const showTooltip = () => {
+  const showTooltip = (e: React.MouseEvent<any> | React.FocusEvent<any>) => {
+    // Perform dynamic vertical/horizontal alignment on the fly
+    if (autoAlign) {
+      try {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const triggerCenterX = rect.left + rect.width / 2;
+        const viewportWidth = window.innerWidth;
+        
+        // If trigger horizontal center is on the right half of the screen, open left.
+        // If on the left half, open right. This always forces them towards the center of the screen!
+        const optimalDir = triggerCenterX > viewportWidth / 2 ? 'left' : 'right';
+        setCalculatedPosition(optimalDir);
+      } catch (err) {
+        console.error('Failed to compute dynamic tooltip position:', err);
+      }
+    } else {
+      setCalculatedPosition(position);
+    }
+
     if (hideTimeoutId) {
       clearTimeout(hideTimeoutId);
       setHideTimeoutId(null);
@@ -82,7 +105,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   // Safely merge and inject mouse event triggers on the child
   const trigger = React.cloneElement(children, {
     onMouseEnter: (e: React.MouseEvent) => {
-      showTooltip();
+      showTooltip(e);
       if (children.props.onMouseEnter) {
         children.props.onMouseEnter(e);
       }
@@ -94,7 +117,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       }
     },
     onFocus: (e: React.FocusEvent) => {
-      setIsVisible(true);
+      showTooltip(e);
       if (children.props.onFocus) {
         children.props.onFocus(e);
       }
@@ -117,21 +140,27 @@ export const Tooltip: React.FC<TooltipProps> = ({
     },
   });
 
+  // Outermost container style (supports inline overrides and dynamic z-index stacking context promotion)
+  const dynamicStyle: React.CSSProperties = {
+    ...style,
+    ...(isVisible ? { zIndex: 100 } : {}), // Boost z-index to 100 when active to force stack to the top!
+  };
+
   return (
     <div
       className={`relative inline-flex items-center justify-center ${wrapperClassName}`}
-      style={style}
+      style={dynamicStyle}
     >
       {trigger}
       {isVisible && (
         <div
           onMouseEnter={cancelHide}
           onMouseLeave={hideTooltip}
-          className={`absolute z-50 pointer-events-auto select-text rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 shadow-2xl transition-all duration-150 animate-in fade-in zoom-in-95 ${positionClasses[position]} ${className}`}
+          className={`absolute z-50 pointer-events-auto select-text rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 shadow-2xl transition-all duration-150 animate-in fade-in zoom-in-95 ${positionClasses[calculatedPosition]} ${className}`}
           role="tooltip"
         >
           {content}
-          <div className={`border-4 ${arrowClasses[position]}`} />
+          <div className={`border-4 ${arrowClasses[calculatedPosition]}`} />
         </div>
       )}
     </div>

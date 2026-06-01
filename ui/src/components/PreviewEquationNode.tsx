@@ -4,7 +4,7 @@ import React from 'react';
 import { useAtomValue } from 'jotai';
 import * as math from 'mathjs';
 import { previewEquationAtom } from '../store/equation';
-import { getNodeByPath, getFunctionName } from 'math-engine';
+import { getNodeByPath, getFunctionName } from 'math-engine-client';
 
 interface PreviewEquationNodeProps {
   readonly path: string;

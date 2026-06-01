@@ -20,7 +20,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "math-engine": ["./src/math-engine/client.ts"]
+      "math-engine-client": ["./src/math-engine-client.ts"]
     }
   },
   "include": [
@@ -29,8 +29,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts",
-    "src/math-engine/**/*"
+    "**/*.mts"
   ],
   "exclude": ["node_modules"]
 }

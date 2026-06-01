@@ -10,7 +10,7 @@ import {
   serializeEquation,
   deserializeEquation,
   SerializedEquation
-} from '../../../math-engine/index';
+} from 'math-engine';
 import * as math from 'mathjs';
 
 export async function POST(req: NextRequest) {

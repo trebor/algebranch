@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, deserializeEquation } from 'math-engine';
+import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, deserializeEquation } from 'math-engine-client';
 import * as math from 'mathjs';
 
 // Global Initial Value Constants

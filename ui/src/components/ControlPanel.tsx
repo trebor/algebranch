@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAtom, useSetAtom, useAtomValue } from 'jotai';
-import { Equation, equationToString } from 'math-engine';
+import { Equation, equationToString } from 'math-engine-client';
 import {
   historyTreeAtom,
   currentNodeIdAtom,

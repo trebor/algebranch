@@ -15,7 +15,7 @@ import {
   toggleRootSignAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { getNodeByPath, getFunctionName, getChildren } from 'math-engine';
+import { getNodeByPath, getFunctionName, getChildren } from 'math-engine-client';
 import { Sparkles } from 'lucide-react';
 
 interface EquationNodeProps {

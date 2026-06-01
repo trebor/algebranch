@@ -16,7 +16,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { Sparkles, HelpCircle } from 'lucide-react';
-import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation } from 'math-engine';
+import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation } from 'math-engine-client';
 
 // Local Constants
 const API_MATH_ENDPOINT = '/api/math';

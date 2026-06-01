@@ -467,4 +467,3 @@ export const deserializeEquation = (sEq: SerializedEquation): Equation => {
     rhs: deserializeNode(sEq.rhs),
   };
 };
-

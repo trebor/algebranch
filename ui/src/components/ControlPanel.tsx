@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useAtom, useSetAtom, useAtomValue } from 'jotai';
+import { Tooltip } from './Tooltip';
 import { Equation, equationToString } from 'math-engine-client';
 import {
   historyTreeAtom,
@@ -194,30 +195,33 @@ export const ControlPanel: React.FC = () => {
           <span>Derivations</span>
         </h2>
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={handleUndo}
-            disabled={!canUndo}
-            className={`p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
-            title="Undo (Parent Step)"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            onClick={handleRedo}
-            disabled={!canRedo}
-            className={`p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
-            title="Redo (Child Step)"
-          >
-            <ChevronRight size={16} />
-          </button>
-          <button
-            onClick={handleResetAll}
-            disabled={Object.keys(tree).length <= 1}
-            className={`p-1.5 rounded-lg border border-white/10 text-red-400 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
-            title="Reset Derivation Tree"
-          >
-            <RotateCcw size={16} />
-          </button>
+          <Tooltip content="Undo step">
+            <button
+              onClick={handleUndo}
+              disabled={!canUndo}
+              className={`p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+            >
+              <ChevronLeft size={16} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Redo step">
+            <button
+              onClick={handleRedo}
+              disabled={!canRedo}
+              className={`p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Reset derivation">
+            <button
+              onClick={handleResetAll}
+              disabled={Object.keys(tree).length <= 1}
+              className={`p-1.5 rounded-lg border border-white/10 text-red-400 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+            >
+              <RotateCcw size={16} />
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -309,15 +313,16 @@ export const ControlPanel: React.FC = () => {
                     >
                       <div className="text-indigo-400 font-bold tracking-wider uppercase text-[8px] flex items-center justify-between">
                         <span>{node.label}</span>
-                        <button
-                          onClick={(e) => handleCopyStep(e, node.equation, node.id)}
-                          className={`p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white cursor-pointer transition-colors ${
-                            isCopied ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : ''
-                          }`}
-                          title="Copy Equation"
-                        >
-                          {isCopied ? <Check size={8} /> : <Copy size={8} />}
-                        </button>
+                        <Tooltip content="Copy Equation">
+                          <button
+                            onClick={(e) => handleCopyStep(e, node.equation, node.id)}
+                            className={`p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white cursor-pointer transition-colors ${
+                              isCopied ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : ''
+                            }`}
+                          >
+                            {isCopied ? <Check size={8} /> : <Copy size={8} />}
+                          </button>
+                        </Tooltip>
                       </div>
                       <div className="text-[11px] font-mono text-indigo-50 font-semibold break-all leading-tight">
                         {equationToString(node.equation)}

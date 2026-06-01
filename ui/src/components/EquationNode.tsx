@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { Tooltip } from './Tooltip';
 import * as math from 'mathjs';
 import {
   sourcePathAtom,
@@ -323,14 +324,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       {/* Hover selection controls toolbar */}
       {isSelected && canToggleRoot(node) && (
         <div className="absolute -top-[2em] left-1/2 -translate-x-1/2 flex items-center gap-[0.1em] bg-neutral-900 border border-white/10 rounded-[1em] px-[0.6em] py-[0.2em] z-30 shadow-lg text-[0.55em] whitespace-nowrap">
-          <button
-            onClick={handleToggleRootSign}
-            className="p-[0.1em] hover:bg-white/10 text-indigo-400 hover:text-indigo-300 rounded-[1em] transition-colors flex items-center gap-[0.2em] cursor-pointer"
-            title="Toggle root branch (+/- sign)"
-          >
-            <Sparkles size={10} />
-            <span>± Sign</span>
-          </button>
+          <Tooltip content="Toggle root sign (±)">
+            <button
+              onClick={handleToggleRootSign}
+              className="p-[0.1em] hover:bg-white/10 text-indigo-400 hover:text-indigo-300 rounded-[1em] transition-colors flex items-center gap-[0.2em] cursor-pointer"
+            >
+              <Sparkles size={10} />
+              <span>± Sign</span>
+            </button>
+          </Tooltip>
         </div>
       )}
 
@@ -341,23 +343,24 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
       {/* Reduce Dot */}
       {isReducible && (
-        <button
-          className={`absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full bg-amber-400 border border-neutral-950 flex items-center justify-center cursor-pointer shadow-md hover:bg-amber-300 transition-colors z-20 group ${THEME_TRANSITIONS.FAST}`}
-          onMouseEnter={(e) => {
-            e.stopPropagation();
-            setHoverReducePath(path);
-          }}
-          onMouseLeave={(e) => {
-            e.stopPropagation();
-            setHoverReducePath(null);
-          }}
-          onClick={handleReduceClick}
-          title="Reduce this term"
-        >
-          {/* Subtle pulse effect inside the dot */}
-          <span className="absolute inset-0 rounded-full bg-amber-400/40 animate-ping group-hover:opacity-0 pointer-events-none" />
-          <span className="h-1.5 w-1.5 rounded-full bg-neutral-950 pointer-events-none" />
-        </button>
+        <Tooltip content="Reduce this term" position="top">
+          <button
+            className={`absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full bg-amber-400 border border-neutral-950 flex items-center justify-center cursor-pointer shadow-md hover:bg-amber-300 transition-colors z-20 group ${THEME_TRANSITIONS.FAST}`}
+            onMouseEnter={(e) => {
+              e.stopPropagation();
+              setHoverReducePath(path);
+            }}
+            onMouseLeave={(e) => {
+              e.stopPropagation();
+              setHoverReducePath(null);
+            }}
+            onClick={handleReduceClick}
+          >
+            {/* Subtle pulse effect inside the dot */}
+            <span className="absolute inset-0 rounded-full bg-amber-400/40 animate-ping group-hover:opacity-0 pointer-events-none" />
+            <span className="h-1.5 w-1.5 rounded-full bg-neutral-950 pointer-events-none" />
+          </button>
+        </Tooltip>
       )}
     </div>
   );

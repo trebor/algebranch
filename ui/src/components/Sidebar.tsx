@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
+import { Tooltip } from './Tooltip';
 import {
   currentEquationAtom,
   pushEquationAtom,
@@ -129,34 +130,38 @@ export const Sidebar: React.FC = () => {
 
           {/* Inline operations grid */}
           <div className="grid grid-cols-4 gap-1.5">
-            <button
-              onClick={() => handleApplyGlobalOp('add')}
-              className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
-              title="Add term"
-            >
-              <Plus size={12} />
-            </button>
-            <button
-              onClick={() => handleApplyGlobalOp('sub')}
-              className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
-              title="Subtract term"
-            >
-              <Minus size={12} />
-            </button>
-            <button
-              onClick={() => handleApplyGlobalOp('mul')}
-              className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
-              title="Multiply by term"
-            >
-              <X size={12} />
-            </button>
-            <button
-              onClick={() => handleApplyGlobalOp('div')}
-              className={`p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90`}
-              title="Divide by term"
-            >
-              <Percent size={12} className="rotate-45" />
-            </button>
+            <Tooltip content="Add term">
+              <button
+                onClick={() => handleApplyGlobalOp('add')}
+                className="p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer"
+              >
+                <Plus size={12} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Subtract term">
+              <button
+                onClick={() => handleApplyGlobalOp('sub')}
+                className="p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer"
+              >
+                <Minus size={12} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Multiply by term">
+              <button
+                onClick={() => handleApplyGlobalOp('mul')}
+                className="p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Divide by term">
+              <button
+                onClick={() => handleApplyGlobalOp('div')}
+                className="p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer"
+              >
+                <Percent size={12} className="rotate-45" />
+              </button>
+            </Tooltip>
           </div>
         </div>
       </div>

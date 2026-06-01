@@ -3,38 +3,64 @@
 import React, { useState } from 'react';
 
 interface TooltipProps {
-  readonly content: string;
+  readonly content: React.ReactNode;
   readonly children: React.ReactElement<any>;
   readonly position?: 'top' | 'bottom' | 'left' | 'right';
   readonly delay?: number; // Delay in milliseconds before showing
+  readonly className?: string; // Optional popover class overrides
+  readonly wrapperClassName?: string; // Optional wrapper container class overrides
+  readonly style?: React.CSSProperties; // Optional wrapper container styles
 }
 
 /**
  * A premium, reusable glassmorphic Tooltip wrapper.
- * Uses cloneElement to inject mouse triggers directly to prevent disrupting CSS layouts.
+ * Supports rich React.ReactNode content (e.g. templates, buttons, text blocks).
+ * Uses a safe hover-retention gap (150ms) so you can hover inside the tooltip to click elements (WCAG 1.4.13 compliant).
  */
 export const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,
   position = 'top',
   delay = 150, // Snappy 150ms default delay for high responsiveness
+  className = '',
+  wrapperClassName = '',
+  style,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [showTimeoutId, setShowTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [hideTimeoutId, setHideTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   const showTooltip = () => {
+    if (hideTimeoutId) {
+      clearTimeout(hideTimeoutId);
+      setHideTimeoutId(null);
+    }
+    if (showTimeoutId) return;
     const id = setTimeout(() => {
       setIsVisible(true);
     }, delay);
-    setTimeoutId(id);
+    setShowTimeoutId(id);
   };
 
   const hideTooltip = () => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      setTimeoutId(null);
+    if (showTimeoutId) {
+      clearTimeout(showTimeoutId);
+      setShowTimeoutId(null);
     }
-    setIsVisible(false);
+    if (hideTimeoutId) return;
+    // Set a tiny 150ms delay before hiding to let the cursor cross the gap into the popover safely!
+    const id = setTimeout(() => {
+      setIsVisible(false);
+      setHideTimeoutId(null);
+    }, 150);
+    setHideTimeoutId(id);
+  };
+
+  const cancelHide = () => {
+    if (hideTimeoutId) {
+      clearTimeout(hideTimeoutId);
+      setHideTimeoutId(null);
+    }
   };
 
   // Position classes relative to trigger container
@@ -80,19 +106,28 @@ export const Tooltip: React.FC<TooltipProps> = ({
       }
     },
     onClick: (e: React.MouseEvent) => {
-      hideTooltip(); // Snappily dismiss tooltip on clicking the target
-      if (children.props.onClick) {
-        children.props.onClick(e);
+      // Hide instantly on click unless we prevent it
+      if (!children.props.onClick || children.props.onClick(e) !== false) {
+        setIsVisible(false);
+        if (showTimeoutId) clearTimeout(showTimeoutId);
+        if (hideTimeoutId) clearTimeout(hideTimeoutId);
+        setShowTimeoutId(null);
+        setHideTimeoutId(null);
       }
     },
   });
 
   return (
-    <div className="relative inline-flex items-center justify-center">
+    <div
+      className={`relative inline-flex items-center justify-center ${wrapperClassName}`}
+      style={style}
+    >
       {trigger}
       {isVisible && (
         <div
-          className={`absolute z-50 pointer-events-none select-none text-[9px] font-medium tracking-wide uppercase whitespace-nowrap rounded-md border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 px-2 py-1 shadow-2xl transition-all duration-150 animate-in fade-in zoom-in-95 ${positionClasses[position]}`}
+          onMouseEnter={cancelHide}
+          onMouseLeave={hideTooltip}
+          className={`absolute z-50 pointer-events-auto select-text rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 shadow-2xl transition-all duration-150 animate-in fade-in zoom-in-95 ${positionClasses[position]} ${className}`}
           role="tooltip"
         >
           {content}

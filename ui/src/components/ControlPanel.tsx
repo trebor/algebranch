@@ -24,7 +24,6 @@ export const ControlPanel: React.FC = () => {
   const layout = useAtomValue(treeLayoutAtom);
 
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
-  const [hoveredId, setHoveredId] = React.useState<string | null>(null);
 
   const handleCopyStep = (e: React.MouseEvent, node: Equation, id: string) => {
     e.stopPropagation();
@@ -273,44 +272,20 @@ export const ControlPanel: React.FC = () => {
               const isCopied = copiedId === node.id;
 
               return (
-                <div
+                <Tooltip
                   key={node.id}
+                  position="right"
+                  delay={300} // Snappy but deliberate 300ms hover delay to prevent jitter
+                  wrapperClassName="z-10 absolute"
                   style={{
-                    position: 'absolute',
                     left: `${node.x}px`,
                     top: `${node.y}px`,
                     width: `${node.width}px`,
                     height: `${cardHeight}px`,
                   }}
-                  onMouseEnter={() => setHoveredId(node.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                  onClick={() => handleStepClick(node.id)}
-                  className={`z-10 rounded-xl flex flex-col items-center justify-center border select-none cursor-pointer transition-all duration-300 relative group/node p-1.5 ${
-                    isActive
-                      ? 'border-indigo-400/85 text-indigo-300 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.25)] scale-[1.02]'
-                      : 'border-white/5 hover:border-white/12 bg-neutral-950/80 hover:bg-neutral-900/90 text-white/55 hover:text-white/85 shadow-md'
-                  }`}
-                >
-                  {/* Step index badge on top-left */}
-                  <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-indigo-600 border-indigo-400 text-indigo-100'
-                      : 'bg-neutral-900 border-white/10 text-white/60'
-                  }`}>
-                    {stepNum}
-                  </span>
-
-                  {/* Truncated Equation Label */}
-                  <span className="text-[11px] font-mono truncate max-w-full text-indigo-50 font-semibold px-2 text-center">
-                    {equationToString(node.equation)}
-                  </span>
-
-                  {/* Floating Glassmorphic Tooltip */}
-                  {hoveredId === node.id && (
-                    <div 
-                      className="absolute bottom-[115%] left-1/2 -translate-x-1/2 z-30 w-56 p-3 rounded-xl border border-white/10 bg-neutral-950/95 backdrop-blur-md shadow-2xl flex flex-col gap-1.5 pointer-events-auto select-text text-left animate-in fade-in duration-200"
-                      onClick={(e) => e.stopPropagation()} // Prevents selection click when clicking tooltip
-                    >
+                  className="w-56 p-3 z-50 text-left lowercase-none normal-case flex flex-col gap-1.5 pointer-events-auto"
+                  content={
+                    <>
                       <div className="text-indigo-400 font-bold tracking-wider uppercase text-[8px] flex items-center justify-between">
                         <span>{node.label}</span>
                         <Tooltip content="Copy Equation">
@@ -327,9 +302,32 @@ export const ControlPanel: React.FC = () => {
                       <div className="text-[11px] font-mono text-indigo-50 font-semibold break-all leading-tight">
                         {equationToString(node.equation)}
                       </div>
-                    </div>
-                  )}
-                </div>
+                    </>
+                  }
+                >
+                  <div
+                    onClick={() => handleStepClick(node.id)}
+                    className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none cursor-pointer transition-all duration-300 relative group/node p-1.5 ${
+                      isActive
+                        ? 'border-indigo-400/85 text-indigo-300 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.25)] scale-[1.02]'
+                        : 'border-white/5 hover:border-white/12 bg-neutral-950/80 hover:bg-neutral-900/90 text-white/55 hover:text-white/85 shadow-md'
+                    }`}
+                  >
+                    {/* Step index badge on top-left */}
+                    <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-indigo-600 border-indigo-400 text-indigo-100'
+                        : 'bg-neutral-900 border-white/10 text-white/60'
+                    }`}>
+                      {stepNum}
+                    </span>
+
+                    {/* Truncated Equation Label */}
+                    <span className="text-[11px] font-mono truncate max-w-full text-indigo-50 font-semibold px-2 text-center">
+                      {equationToString(node.equation)}
+                    </span>
+                  </div>
+                </Tooltip>
               );
             })}
           </div>

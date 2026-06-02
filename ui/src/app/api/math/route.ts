@@ -15,7 +15,8 @@ import {
   HIGH_SCHOOL_IDENTITIES,
   matchPattern,
   instantiatePattern,
-  replaceNodeAtPath
+  replaceNodeAtPath,
+  tryExpressAsPower
 } from 'math-engine';
 import * as math from 'mathjs';
 
@@ -102,6 +103,25 @@ export async function POST(req: NextRequest) {
                 };
                 break; // Use the first matching identity rule for this node
               }
+            }
+          }
+        } catch {}
+
+        // Try expressing perfect power constants (e.g. 9 -> 3^2, 8 -> 2^3)
+        try {
+          const node = getNodeByPath(eq, path);
+          const powerForm = tryExpressAsPower(node);
+          if (powerForm) {
+            const newEq = replaceNodeAtPath(eq, path, powerForm);
+            if (areEquationsEquivalent(eq, newEq)) {
+              const exponent = ((powerForm as math.OperatorNode).args[1] as math.ConstantNode).value;
+              const label = exponent === 2 ? 'Express as Square' : 'Express as Cube';
+              reduciblePathsRaw[path] = {
+                simplified: newEq,
+                serialized: serializeEquation(newEq),
+                type: 'identity',
+                label
+              };
             }
           }
         } catch {}

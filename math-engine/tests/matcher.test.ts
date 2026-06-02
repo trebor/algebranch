@@ -1,5 +1,5 @@
 import * as math from 'mathjs';
-import { matchPattern, instantiatePattern, WildcardBindings } from '../src/matcher';
+import { matchPattern, instantiatePattern, tryExpressAsPower, WildcardBindings } from '../src/matcher';
 
 const parse = (str: string) => math.parse(str);
 const cleanString = (node: math.MathNode) => node.toString().replace(/\s+/g, '');
@@ -133,36 +133,30 @@ describe('Algebraic Pattern Matcher', () => {
   });
 
   describe('Perfect Power Constant Matching', () => {
-    test('should match _B^2 against constant 9 and bind _B = 3', () => {
-      const pattern = parse('_B^2');
+    test('should express 9 as 3^2', () => {
       const target = parse('9');
-      const bindings = matchPattern(pattern, target);
-      expect(bindings).not.toBeNull();
-      expect(bindings?.['_B']?.toString()).toBe('3');
+      const result = tryExpressAsPower(target);
+      expect(result).not.toBeNull();
+      expect(result?.toString()).toBe('3 ^ 2');
     });
 
-    test('should match _B^3 against constant 8 and bind _B = 2', () => {
-      const pattern = parse('_B^3');
+    test('should express 8 as 2^3', () => {
       const target = parse('8');
-      const bindings = matchPattern(pattern, target);
-      expect(bindings).not.toBeNull();
-      expect(bindings?.['_B']?.toString()).toBe('2');
+      const result = tryExpressAsPower(target);
+      expect(result).not.toBeNull();
+      expect(result?.toString()).toBe('2 ^ 3');
     });
 
-    test('should fail to match _B^2 against constant 7 (not a perfect square)', () => {
-      const pattern = parse('_B^2');
+    test('should return null for non-perfect square constant 7', () => {
       const target = parse('7');
-      const bindings = matchPattern(pattern, target);
-      expect(bindings).toBeNull();
+      const result = tryExpressAsPower(target);
+      expect(result).toBeNull();
     });
 
-    test('should match difference of squares pattern against x^2 - 16', () => {
-      const pattern = parse('_A^2 - _B^2');
-      const target = parse('x^2 - 16');
-      const bindings = matchPattern(pattern, target);
-      expect(bindings).not.toBeNull();
-      expect(bindings?.['_A']?.toString()).toBe('x');
-      expect(bindings?.['_B']?.toString()).toBe('4');
+    test('should return null for non-constant variables', () => {
+      const target = parse('x');
+      const result = tryExpressAsPower(target);
+      expect(result).toBeNull();
     });
   });
 });

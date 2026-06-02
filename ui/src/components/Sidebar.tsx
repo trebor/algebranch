@@ -39,9 +39,10 @@ export const Sidebar: React.FC = () => {
   const deleteSession = useSetAtom(deleteSessionAtom);
   const presetCategories = useAtomValue(presetCategoriesAtom);
 
-  const [activeTab, setActiveTab] = React.useState<'saved' | 'presets'>('saved');
+  const [activeTab, setActiveTab] = React.useState<'saved' | 'presets'>('presets');
   const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>({
-    'Linear Equations': true, // expand linear category by default
+    'Linear Equations': true,
+    'Algebraic Identities': true, // expand algebraic identities by default for convenience
   });
 
   const toggleCategory = (categoryName: string) => {

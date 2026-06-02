@@ -5,9 +5,9 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 ---
 
 ## 📈 Current Progress Summary
-* **Total Tasks**: 24
+* **Total Tasks**: 25
 * **Completed**: 16
-* **Remaining**: 8
+* **Remaining**: 9
 
 ---
 
@@ -30,6 +30,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Animated neon-rose electrical dashed flow lines on loop target hover.
 - [x] Selection parent redirect (go back one step just before the loop to explore a new path).
 - [x] Single Active Node Highlight Contrast (selected node glows indigo, parent steps are high-contrast black glass).
+- [ ] Reevaluate where to navigate to in the history when a loop is detected.
 - [ ] Change the color of the highlight in the history of the current/active item (currently feels too red/error-like).
 
 

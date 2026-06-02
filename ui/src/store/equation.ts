@@ -241,7 +241,7 @@ export const pushEquationAtom = atom(
 
     set(historyTreeAtom, updatedTree);
     
-    if (loopAncestorId && loopAncestorId !== currentNodeId) {
+    if (loopAncestorId) {
       // Loop detected! Go back one step just before the loop (select the parent node) to let the user explore a different path
       set(currentNodeIdAtom, currentNodeId);
     } else {

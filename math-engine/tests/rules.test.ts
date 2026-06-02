@@ -88,4 +88,19 @@ describe('High School Rewrite Identities Tests', () => {
     const rewritten = instantiatePattern(rule.targetPattern, bindings!);
     expect(cleanString(rewritten)).toBe('(a+3)^2');
   });
+
+  test('should match and verify perfect square identity on LHS of equation (a^2 + 2*a*3 + 3^2 = 25)', () => {
+    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
+    const eq = parseEquation('a^2 + 2 * a * 3 + 3^2 = 25');
+    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'perfect_square_factor_plus')!;
+    const node = eq.lhs;
+
+    const bindings = matchPattern(rule.sourcePattern, node);
+    expect(bindings).not.toBeNull();
+
+    const instantiated = instantiatePattern(rule.targetPattern, bindings!);
+    const newEq = replaceNodeAtPath(eq, 'lhs', instantiated);
+    
+    expect(areEquationsEquivalent(eq, newEq)).toBe(true);
+  });
 });

@@ -9,8 +9,9 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=ui",
-    "build": "npm run build --workspace=ui",
+    "build": "npm run build --workspace=math-engine && npm run build --workspace=ui",
     "test": "npm run test --workspace=math-engine",
-    "lint": "npm run lint --workspace=ui"
+    "lint": "npm run lint --workspace=ui",
+    "prepare": "npm run build --workspace=math-engine"
   }
 }

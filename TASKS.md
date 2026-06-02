@@ -5,9 +5,9 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 ---
 
 ## 📈 Current Progress Summary
-* **Total Tasks**: 20
+* **Total Tasks**: 21
 * **Completed**: 11
-* **Remaining**: 9
+* **Remaining**: 10
 
 ---
 
@@ -29,11 +29,12 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Selection parent redirect (go back one step just before the loop to explore a new path).
 - [x] Single Active Node Highlight Contrast (selected node glows indigo, parent steps are high-contrast black glass).
 
-### 🎬 3. Animations & Motion Design
+### 🎬 3. Animations & Visual Node Polish
 - [x] Synchronized Operator scale exit/entry transitions.
 - [x] Bounding box layout-width adjustments (pop-free reflows).
 - [x] Unified 350ms FLIP transition engine for all transpositions, reductions, and timeline jumps.
 - [ ] Speculative preview transition finesses (optional - minor adjustments).
+- [ ] Make square root (sqrt) and nthRoot expressions prettier with premium styling.
 
 ### 🌐 4. Local Persistence & URL Sharing
 - [ ] Use local storage to persist derivation history trees on the browser.

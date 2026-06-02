@@ -64,7 +64,7 @@ export const Sidebar: React.FC = () => {
       setErrorStr(null);
       resetToEquation(inputStr);
       setInputStr('');
-      setActiveTab('saved');
+      // setActiveTab('saved');
     } catch (err) {
       setErrorStr(err instanceof Error ? err.message : String(err));
     }
@@ -84,7 +84,7 @@ export const Sidebar: React.FC = () => {
     try {
       setErrorStr(null);
       resetToEquation(eqStr);
-      setActiveTab('saved');
+      // setActiveTab('saved');
     } catch (err) {
       setErrorStr(`Error loading preset: ${err instanceof Error ? err.message : String(err)}`);
     }

@@ -122,7 +122,11 @@ export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>
     if (nameStr === 'cot') return 1 / Math.tan(args[0]);
     if (nameStr === 'sec') return 1 / Math.cos(args[0]);
     if (nameStr === 'csc') return 1 / Math.sin(args[0]);
-    if (nameStr === 'log') return Math.log(args[0]);
+    if (nameStr === 'log') {
+      const val = args[0];
+      const base = args[1] !== undefined ? args[1] : Math.E;
+      return Math.log(val) / Math.log(base);
+    }
   }
   throw new Error(`Unsupported point node type: ${node.type}`);
 };

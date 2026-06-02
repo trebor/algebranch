@@ -55,7 +55,41 @@ const ALL_RULE_TEST_CASES: RuleTestCase[] = [
   { ruleId: 'trig_csc_def', input: 'csc(x)', expected: '1/sin(x)' },
   { ruleId: 'trig_csc_def_reverse', input: '1 / sin(x)', expected: 'csc(x)' },
   { ruleId: 'trig_double_sin', input: 'sin(2 * x)', expected: '2*sin(x)*cos(x)' },
-  { ruleId: 'trig_double_sin_reverse', input: '2 * sin(x) * cos(x)', expected: 'sin(2*x)' }
+  { ruleId: 'trig_double_sin_reverse', input: '2 * sin(x) * cos(x)', expected: 'sin(2*x)' },
+
+  // New High School Algebraic and Trig Rules
+  { ruleId: 'cube_sum_factor', input: 'x^3 + 3 * x^2 * y + 3 * x * y^2 + y^3', expected: '(x+y)^3' },
+  { ruleId: 'cube_sum_expand', input: '(x + y)^3', expected: 'x^3+3*x^2*y+3*x*y^2+y^3' },
+  { ruleId: 'cube_diff_factor', input: 'x^3 - 3 * x^2 * y + 3 * x * y^2 - y^3', expected: '(x-y)^3' },
+  { ruleId: 'cube_diff_expand', input: '(x - y)^3', expected: 'x^3-3*x^2*y+3*x*y^2-y^3' },
+  { ruleId: 'exponent_sqrt', input: 'sqrt(x)', expected: 'x^(1/2)' },
+  { ruleId: 'exponent_sqrt_reverse', input: 'x^(1/2)', expected: 'sqrt(x)' },
+  { ruleId: 'exponent_nthRoot', input: 'nthRoot(x, n)', expected: 'x^(1/n)' },
+  { ruleId: 'exponent_nthRoot_reverse', input: 'x^(1/n)', expected: 'nthRoot(x,n)' },
+  { ruleId: 'log_change_base', input: 'log(x, y)', expected: 'log(x)/log(y)' },
+  { ruleId: 'log_change_base_reverse', input: 'log(x) / log(y)', expected: 'log(x,y)' },
+  { ruleId: 'trig_cot_def', input: 'cot(x)', expected: 'cos(x)/sin(x)' },
+  { ruleId: 'trig_cot_def_reverse', input: 'cos(x) / sin(x)', expected: 'cot(x)' },
+  { ruleId: 'trig_cot_reciprocal', input: 'cot(x)', expected: '1/tan(x)' },
+  { ruleId: 'trig_cot_reciprocal_reverse', input: '1 / tan(x)', expected: 'cot(x)' },
+  { ruleId: 'trig_tan_reciprocal', input: 'tan(x)', expected: '1/cot(x)' },
+  { ruleId: 'trig_tan_reciprocal_reverse', input: '1 / cot(x)', expected: 'tan(x)' },
+  { ruleId: 'trig_pythagorean_cos_sq', input: '1 - sin(x)^2', expected: 'cos(x)^2' },
+  { ruleId: 'trig_pythagorean_cos_sq_reverse', input: 'cos(x)^2', expected: '1-sin(x)^2' },
+  { ruleId: 'trig_pythagorean_sin_sq', input: '1 - cos(x)^2', expected: 'sin(x)^2' },
+  { ruleId: 'trig_pythagorean_sin_sq_reverse', input: 'sin(x)^2', expected: '1-cos(x)^2' },
+  { ruleId: 'trig_pythagorean_tan_sec', input: 'tan(x)^2 + 1', expected: 'sec(x)^2' },
+  { ruleId: 'trig_pythagorean_tan_sec_reverse', input: 'sec(x)^2 - 1', expected: 'tan(x)^2' },
+  { ruleId: 'trig_pythagorean_cot_csc', input: '1 + cot(x)^2', expected: 'csc(x)^2' },
+  { ruleId: 'trig_pythagorean_cot_csc_reverse', input: 'csc(x)^2 - 1', expected: 'cot(x)^2' },
+  { ruleId: 'trig_double_cos_form1', input: 'cos(2 * x)', expected: 'cos(x)^2-sin(x)^2' },
+  { ruleId: 'trig_double_cos_form1_reverse', input: 'cos(x)^2 - sin(x)^2', expected: 'cos(2*x)' },
+  { ruleId: 'trig_double_cos_form2', input: 'cos(2 * x)', expected: '2*cos(x)^2-1' },
+  { ruleId: 'trig_double_cos_form2_reverse', input: '2 * cos(x)^2 - 1', expected: 'cos(2*x)' },
+  { ruleId: 'trig_double_cos_form3', input: 'cos(2 * x)', expected: '1-2*sin(x)^2' },
+  { ruleId: 'trig_double_cos_form3_reverse', input: '1 - 2 * sin(x)^2', expected: 'cos(2*x)' },
+  { ruleId: 'trig_double_tan', input: 'tan(2 * x)', expected: '(2*tan(x))/(1-tan(x)^2)' },
+  { ruleId: 'trig_double_tan_reverse', input: '(2 * tan(x)) / (1 - tan(x)^2)', expected: 'tan(2*x)' }
 ];
 
 describe('Exhaustive Bidirectional Identity Rules Verification', () => {

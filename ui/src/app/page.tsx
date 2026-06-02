@@ -24,7 +24,8 @@ import {
   INITIAL_EQUATION_STRING,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
-import { Sparkles, HelpCircle, Share2, Check } from 'lucide-react';
+import Image from 'next/image';
+import { HelpCircle, Share2, Check } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
 
 // Local Constants
@@ -402,9 +403,14 @@ export default function Home() {
         {/* Top Header */}
         <header className="h-16 border-b border-white/10 px-8 flex items-center justify-between select-none">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
-              <Sparkles size={16} className="text-white" />
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Algebranch Logo"
+              width={36}
+              height={36}
+              priority
+              className="h-9 w-9 object-contain rounded-full"
+            />
             <div>
               <h1 className="text-base font-bold text-white tracking-wide">Algebranch</h1>
               <p className="text-[10px] text-indigo-300 font-semibold tracking-wider uppercase">

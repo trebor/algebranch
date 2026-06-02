@@ -68,7 +68,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
         
       setCalculatedPosition(optimalDir);
 
-      const offset = 8; // Pixels visual offset gap
+      const offset = 12; // Pixels visual offset gap (increased from 8px for better breathing room)
       let top = 0;
       let left = 0;
 
@@ -168,6 +168,18 @@ export const Tooltip: React.FC<TooltipProps> = ({
     },
   });
 
+  const hasPointerEvents = className.includes('pointer-events-auto');
+  const pointerClass = hasPointerEvents ? 'pointer-events-auto' : 'pointer-events-none';
+
+  const hasPadding = className.includes('p-') || className.includes('px-') || className.includes('py-');
+  const paddingClass = hasPadding ? '' : 'px-3 py-1.5';
+
+  const hasWidth = className.includes('w-') || className.includes('max-w-');
+  const widthClass = hasWidth ? '' : 'max-w-[200px] text-center';
+
+  const hasTextSize = className.includes('text-');
+  const textClass = hasTextSize ? '' : 'text-xs';
+
   const tooltipPortal = isVisible && mounted && typeof document !== 'undefined' && createPortal(
     <div
       onMouseEnter={cancelHide}
@@ -183,7 +195,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           'translate(-50%, 0)',
         zIndex: 9999, // Guarantee absolute topmost visual layer
       }}
-      className={`pointer-events-auto select-text rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 shadow-2xl transition-all duration-150 animate-in fade-in zoom-in-95 ${className}`}
+      className={`${pointerClass} ${paddingClass} ${widthClass} ${textClass} select-text rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 shadow-2xl transition-all duration-150 animate-in fade-in zoom-in-95 ${className}`}
       role="tooltip"
     >
       {content}

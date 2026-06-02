@@ -6,8 +6,8 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 
 ## 📈 Current Progress Summary
 * **Total Tasks**: 22
-* **Completed**: 15
-* **Remaining**: 7
+* **Completed**: 16
+* **Remaining**: 6
 
 ---
 
@@ -19,7 +19,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Standardize candidate/source/target nomenclature.
 - [x] Filter out commutative & associative duplicates in simplify suggestions.
 - [x] Implement context-aware mouse target cursor indicators.
-- [ ] Expand preset library to include multi-field stock equations (Physics, Science fields, complexity levels).
+- [x] Expand preset library to include multi-field stock equations (Physics, Science fields, complexity levels).
 
 ### 🎨 2. History Tree Layout & Loop UI
 - [x] Render beautiful curved SVG S-bezier connection lines.

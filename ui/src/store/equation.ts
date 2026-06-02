@@ -1,6 +1,7 @@
 import { atom } from 'jotai';
 import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
 import * as math from 'mathjs';
+import { Preset, PRESET_LIST } from '../constants/presets';
 
 // Global Initial Value Constants
 export const INITIAL_EQUATION_STRING = '3 * x + 5 = x + 13';
@@ -85,6 +86,31 @@ export const currentNodeIdAtom = atom<string>("0");
 // Saved sessions state
 export const savedSessionsAtom = atom<SavedSession[]>([]);
 export const currentSessionIdAtom = atom<string>("session_initial");
+
+// Presets state atoms
+export const presetsAtom = atom<Preset[]>(PRESET_LIST);
+
+export interface PresetCategoryGroup {
+  category: string;
+  presets: Preset[];
+}
+
+export const presetCategoriesAtom = atom<PresetCategoryGroup[]>((get) => {
+  const presets = get(presetsAtom);
+  const groups: Record<string, Preset[]> = {};
+  
+  presets.forEach((p) => {
+    if (!groups[p.category]) {
+      groups[p.category] = [];
+    }
+    groups[p.category].push(p);
+  });
+
+  return Object.entries(groups).map(([category, items]) => ({
+    category,
+    presets: items,
+  }));
+});
 
 export const sourcePathAtom = atom<string | null>(null);
 export const hoverPathAtom = atom<string | null>(null);

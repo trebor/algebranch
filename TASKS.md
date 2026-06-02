@@ -5,9 +5,9 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 ---
 
 ## 📈 Current Progress Summary
-* **Total Tasks**: 25
+* **Total Tasks**: 26
 * **Completed**: 16
-* **Remaining**: 9
+* **Remaining**: 10
 
 ---
 
@@ -41,6 +41,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [ ] Speculative preview transition finesses (optional - minor adjustments).
 - [ ] Make square root (sqrt) and nthRoot expressions prettier with premium styling.
 - [ ] Scale math expressions to fit their allotted screen spaces dynamically (for both active workspace and preview panels).
+- [ ] Cut off long numbers after the decimal point in floating point numbers (e.g. limit rendering of constants to 4 decimal places).
 
 ### 🌐 4. Local Persistence & URL Sharing
 - [x] Use local storage to persist derivation history trees on the browser.

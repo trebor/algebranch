@@ -191,7 +191,7 @@ export default function Home() {
             <div>
               <h1 className="text-base font-bold text-white tracking-wide">Algebranch</h1>
               <p className="text-[10px] text-indigo-300 font-semibold tracking-wider uppercase">
-                Interactive Algebraic Derivation
+                Interactive Algebraic Steps
               </p>
             </div>
           </div>
@@ -243,7 +243,7 @@ export default function Home() {
                   <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
                     isSpeculative ? 'text-emerald-400' : 'text-zinc-500'
                   }`}>
-                    <span>Derivation Preview</span>
+                    <span>Preview</span>
                     {isSpeculative && (
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
                     )}

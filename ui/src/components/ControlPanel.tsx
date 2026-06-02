@@ -230,7 +230,7 @@ export const ControlPanel: React.FC = () => {
       <div className="flex items-center justify-between border-b border-white/10 pb-4 shrink-0">
         <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
           <BookOpen className="text-indigo-400" size={18} />
-          <span>Derivation History</span>
+          <span>History</span>
         </h2>
         <div className="flex items-center gap-1.5">
           <Tooltip content="Undo step">
@@ -251,7 +251,7 @@ export const ControlPanel: React.FC = () => {
               <ChevronRight size={16} />
             </button>
           </Tooltip>
-          <Tooltip content="Reset derivation">
+          <Tooltip content="Reset history">
             <button
               onClick={handleResetAll}
               disabled={Object.keys(tree).length <= 1}

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Algebranch - Interactive Algebraic Derivation",
-  description: "An interactive step-by-step mathematical derivation and algebraic manipulation system.",
+  title: "Algebranch - Interactive Algebraic Steps",
+  description: "An interactive step-by-step mathematical exploration and algebraic manipulation system.",
 };
 
 export default function RootLayout({

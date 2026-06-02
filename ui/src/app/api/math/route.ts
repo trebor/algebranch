@@ -9,7 +9,9 @@ import {
   Equation,
   serializeEquation,
   deserializeEquation,
-  SerializedEquation
+  SerializedEquation,
+  getNodeByPath,
+  tryDistribution
 } from 'math-engine';
 import * as math from 'mathjs';
 
@@ -53,14 +55,71 @@ export async function POST(req: NextRequest) {
       });
 
       // 3. Get reducible paths (nodes that can be simplified or distributed)
-      const reduciblePaths: Record<string, SerializedEquation> = {};
+      const reduciblePathsRaw: Record<string, { simplified: Equation; serialized: SerializedEquation; type: 'reduce' | 'distribute' }> = {};
       allNodePaths.forEach((path) => {
         try {
           const simplified = getSimplificationForPath(eq, path);
           if (simplified) {
-            reduciblePaths[path] = serializeEquation(simplified);
+            const node = getNodeByPath(eq, path);
+            const isDist = !!tryDistribution(node);
+            
+            reduciblePathsRaw[path] = {
+              simplified,
+              serialized: serializeEquation(simplified),
+              type: isDist ? 'distribute' : 'reduce'
+            };
           }
         } catch {}
+      });
+
+      // Deduplicate reducible paths: if multiple paths result in the same simplified equation,
+      // choose the single most specific/relevant path to avoid overlapping simplify handles.
+      // We use a strict mathematical canonicalizer to group functionally identical equations
+      // (e.g. y * 2 - 6 and 2 * y - 6) together under a unified normal form key.
+      const reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' }> = {};
+      const simplifiedToStringMap = new Map<string, string[]>();
+
+      const getCanonicalKey = (eqVal: Equation): string => {
+        try {
+          const canonicalLhs = math.simplify(eqVal.lhs.toString()).toString();
+          const canonicalRhs = math.simplify(eqVal.rhs.toString()).toString();
+          return `${canonicalLhs} = ${canonicalRhs}`;
+        } catch {
+          return equationToString(eqVal);
+        }
+      };
+
+      Object.keys(reduciblePathsRaw).forEach((path) => {
+        const item = reduciblePathsRaw[path];
+        const eqStrKey = getCanonicalKey(item.simplified);
+        if (!simplifiedToStringMap.has(eqStrKey)) {
+          simplifiedToStringMap.set(eqStrKey, []);
+        }
+        simplifiedToStringMap.get(eqStrKey)!.push(path);
+      });
+
+      simplifiedToStringMap.forEach((paths, _) => {
+        paths.sort((a, b) => {
+          const nodeA = getNodeByPath(eq, a);
+          const nodeB = getNodeByPath(eq, b);
+          
+          const isOpA = nodeA.type === 'OperatorNode' || nodeA.type === 'FunctionNode';
+          const isOpB = nodeB.type === 'OperatorNode' || nodeB.type === 'FunctionNode';
+          
+          // Prefer Operator/Function nodes over leaf Constant/Symbol nodes
+          if (isOpA && !isOpB) return -1;
+          if (!isOpA && isOpB) return 1;
+          
+          // Prefer deeper paths (more specific subtrees)
+          return b.split('/').length - a.split('/').length;
+        });
+        
+        const bestPath = paths[0];
+        const bestItem = reduciblePathsRaw[bestPath];
+        reduciblePaths[bestPath] = {
+          equation: bestItem.serialized,
+          type: bestItem.type
+        };
       });
 
       // 4. Get target paths (valid drop targets for selected sourcePath)

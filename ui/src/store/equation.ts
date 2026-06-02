@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, deserializeEquation } from 'math-engine-client';
+import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
 import * as math from 'mathjs';
 
 // Global Initial Value Constants
@@ -46,11 +46,17 @@ export const currentNodeIdAtom = atom<string>("0");
 export const sourcePathAtom = atom<string | null>(null);
 export const hoverPathAtom = atom<string | null>(null);
 export const hoverReducePathAtom = atom<string | null>(null);
+export const hoveredLoopTargetIdAtom = atom<string | null>(null);
+
+export interface ReduciblePathInfo {
+  equation: Equation;
+  type: 'reduce' | 'distribute';
+}
 
 // Dynamic Server-Synchronized Atoms
 export const candidatePathsAtom = atom<Set<string>>(new Set<string>());
 export const targetPathsAtom = atom<Record<string, Equation>>({});
-export const reduciblePathsAtom = atom<Record<string, Equation>>({});
+export const reduciblePathsAtom = atom<Record<string, ReduciblePathInfo>>({});
 
 // Derived Atoms
 
@@ -108,7 +114,7 @@ export const previewEquationAtom = atom<Equation>((get) => {
   const reducible = get(reduciblePathsAtom);
 
   if (hoverReducePath && hoverReducePath in reducible) {
-    return reducible[hoverReducePath];
+    return reducible[hoverReducePath].equation;
   }
 
   const hoverPath = get(hoverPathAtom);
@@ -120,6 +126,44 @@ export const previewEquationAtom = atom<Equation>((get) => {
   return get(currentEquationAtom);
 });
 
+const normalizeAST = (node: math.MathNode): math.MathNode => {
+  if (!node) return node;
+
+  if (node.type === 'OperatorNode') {
+    const opNode = node as math.OperatorNode;
+    const normalizedArgs = opNode.args.map(arg => normalizeAST(arg));
+    if (opNode.op === '+' || opNode.op === '*') {
+      // Commutative sorting of arguments based on their string representation
+      normalizedArgs.sort((a, b) => a.toString().localeCompare(b.toString()));
+    }
+    return new math.OperatorNode(opNode.op, opNode.fn, normalizedArgs);
+  }
+
+  if (node.type === 'ParenthesisNode') {
+    const parenNode = node as math.ParenthesisNode;
+    return new math.ParenthesisNode(normalizeAST(parenNode.content));
+  }
+
+  if (node.type === 'FunctionNode') {
+    const fnNode = node as math.FunctionNode;
+    const normalizedArgs = fnNode.args.map(arg => normalizeAST(arg));
+    return new math.FunctionNode(getFunctionName(fnNode), normalizedArgs);
+  }
+
+  return node;
+};
+
+// Canonicalization Helper to detect structurally & commutatively identical equations in history
+export const getCanonicalKey = (eqVal: Equation): string => {
+  try {
+    const normLhs = normalizeAST(eqVal.lhs);
+    const normRhs = normalizeAST(eqVal.rhs);
+    return `${normLhs.toString()} = ${normRhs.toString()}`;
+  } catch {
+    return equationToString(eqVal);
+  }
+};
+
 // Write-only Actions
 
 /**
@@ -130,16 +174,51 @@ export const pushEquationAtom = atom(
   (get, set, newEq: Equation, stepLabel?: string) => {
     const tree = get(historyTreeAtom);
     const currentNodeId = get(currentNodeIdAtom);
+    const activeNode = tree[currentNodeId];
     
-    // Automatically determine label based on active interactions
+    // Check if any existing child of the active node is canonically equivalent to newEq
+    const newCanonical = getCanonicalKey(newEq);
+    if (activeNode) {
+      const existingChildId = activeNode.childrenIds.find(childId => {
+        const childNode = tree[childId];
+        return childNode && getCanonicalKey(childNode.equation) === newCanonical;
+      });
+      
+      if (existingChildId) {
+        // Canonical match found! Select the existing branch node instead of duplicating it
+        set(currentNodeIdAtom, existingChildId);
+        set(sourcePathAtom, null);
+        set(hoverPathAtom, null);
+        set(hoverReducePathAtom, null);
+        set(hoveredLoopTargetIdAtom, null);
+        return;
+      }
+    }
+
     let label = stepLabel || "Move";
     if (!stepLabel) {
-      if (get(hoverReducePathAtom)) {
-        label = "Reduce";
+      const hoverReducePath = get(hoverReducePathAtom);
+      if (hoverReducePath) {
+        const reducible = get(reduciblePathsAtom);
+        const actionType = hoverReducePath && reducible[hoverReducePath]?.type;
+        label = actionType === 'distribute' ? 'Distribute' : 'Reduce';
       } else if (get(sourcePathAtom)) {
         label = "Transpose";
       }
     }
+
+    // Find the earliest node in the entire history tree that is canonically equivalent to newEq (Loop Detection)
+    let loopAncestorId: string | null = null;
+    let earliestTimestamp = Infinity;
+    
+    Object.values(tree).forEach(node => {
+      if (getCanonicalKey(node.equation) === newCanonical) {
+        if (node.timestamp < earliestTimestamp) {
+          earliestTimestamp = node.timestamp;
+          loopAncestorId = node.id;
+        }
+      }
+    });
 
     const newId = `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newNode: HistoryNode = {
@@ -161,10 +240,19 @@ export const pushEquationAtom = atom(
     };
 
     set(historyTreeAtom, updatedTree);
-    set(currentNodeIdAtom, newId);
+    
+    if (loopAncestorId && loopAncestorId !== currentNodeId) {
+      // Loop detected! Go back one step just before the loop (select the parent node) to let the user explore a different path
+      set(currentNodeIdAtom, currentNodeId);
+    } else {
+      // Normal state progression: select the newly created node
+      set(currentNodeIdAtom, newId);
+    }
+
     set(sourcePathAtom, null);
     set(hoverPathAtom, null);
     set(hoverReducePathAtom, null);
+    set(hoveredLoopTargetIdAtom, null);
   }
 );
 
@@ -190,6 +278,7 @@ export const resetToEquationStringAtom = atom(
       set(sourcePathAtom, null);
       set(hoverPathAtom, null);
       set(hoverReducePathAtom, null);
+      set(hoveredLoopTargetIdAtom, null);
     } catch (err) {
       console.error('Failed to reset equation:', err);
       throw err;
@@ -282,12 +371,19 @@ export const applyGlobalOpAtom = atom(
  */
 export const syncMathStateAtom = atom(
   null,
-  (_get, set, { activePaths, reduciblePaths, targetPaths }: { activePaths: string[]; reduciblePaths: Record<string, any>; targetPaths: Record<string, any> }) => {
+  (_get, set, { activePaths, reduciblePaths, targetPaths }: { 
+    activePaths: string[]; 
+    reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' }>; 
+    targetPaths: Record<string, SerializedEquation> 
+  }) => {
     set(candidatePathsAtom, new Set<string>(activePaths));
 
-    const parsedReducible: Record<string, Equation> = {};
+    const parsedReducible: Record<string, ReduciblePathInfo> = {};
     Object.keys(reduciblePaths).forEach((k) => {
-      parsedReducible[k] = deserializeEquation(reduciblePaths[k]);
+      parsedReducible[k] = {
+        equation: deserializeEquation(reduciblePaths[k].equation),
+        type: reduciblePaths[k].type
+      };
     });
     set(reduciblePathsAtom, parsedReducible);
 

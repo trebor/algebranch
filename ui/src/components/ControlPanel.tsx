@@ -10,9 +10,11 @@ import {
   treeLayoutAtom,
   sourcePathAtom,
   hoverPathAtom,
+  hoveredLoopTargetIdAtom,
+  getCanonicalKey,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, BookOpen } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, BookOpen, Infinity } from 'lucide-react';
 
 const COPIED_TIMEOUT = 2000;
 
@@ -24,6 +26,7 @@ export const ControlPanel: React.FC = () => {
   const layout = useAtomValue(treeLayoutAtom);
 
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
+  const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
 
   const handleCopyStep = (e: React.MouseEvent, node: Equation, id: string) => {
     e.stopPropagation();
@@ -96,6 +99,42 @@ export const ControlPanel: React.FC = () => {
   }, [sortedNodes]);
 
   const layoutNodes = Object.values(layout);
+
+  // Heuristic Loop Detection: Map each nodeId to the earliest canonically equivalent ancestor node (if a loop exists)
+  const loopAncestorMap = React.useMemo(() => {
+    const map = new Map<string, { id: string; stepIndex: number; label: string }>();
+
+    layoutNodes.forEach((node) => {
+      const nodeIdx = stepIndices.get(node.id) ?? 0;
+      const nodeCanonical = getCanonicalKey(node.equation);
+      
+      // Find the earliest node in the tree that is canonically equivalent to this node
+      let earliestNode: typeof sortedNodes[0] | null = null;
+      let earliestIdx = nodeIdx;
+
+      for (const otherNode of sortedNodes) {
+        if (otherNode.id === node.id) continue;
+        const otherIdx = stepIndices.get(otherNode.id) ?? 0;
+        if (otherIdx < earliestIdx) {
+          if (getCanonicalKey(otherNode.equation) === nodeCanonical) {
+            earliestIdx = otherIdx;
+            earliestNode = otherNode;
+          }
+        }
+      }
+
+      if (earliestNode) {
+        map.set(node.id, {
+          id: earliestNode.id,
+          stepIndex: earliestIdx,
+          label: earliestNode.label,
+        });
+      }
+    });
+
+    return map;
+  }, [sortedNodes, stepIndices, layoutNodes]);
+
   const maxDepth = Math.max(...layoutNodes.map(n => n.depth), 0);
   const cardHeight = 44; // Sleek rectangular height
 
@@ -191,7 +230,7 @@ export const ControlPanel: React.FC = () => {
       <div className="flex items-center justify-between border-b border-white/10 pb-4 shrink-0">
         <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
           <BookOpen className="text-indigo-400" size={18} />
-          <span>Derivations</span>
+          <span>Derivation History</span>
         </h2>
         <div className="flex items-center gap-1.5">
           <Tooltip content="Undo step">
@@ -225,10 +264,7 @@ export const ControlPanel: React.FC = () => {
       </div>
 
       {/* Step History Tree Section */}
-      <div className="flex-1 flex flex-col gap-3 min-h-0">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50 select-none shrink-0">
-          Derivations Tree
-        </h3>
+      <div className="flex-1 flex flex-col min-h-0">
 
         {/* Scrollable grid area for the Tree */}
         <div className="flex-1 overflow-auto pr-1 relative border border-white/5 rounded-2xl bg-black/10 shadow-inner">
@@ -241,6 +277,13 @@ export const ControlPanel: React.FC = () => {
               style={{ width: `${svgWidth}px`, height: `${svgHeight}px` }} 
               className="absolute inset-0 pointer-events-none z-0"
             >
+              <style>{`
+                @keyframes dash {
+                  to {
+                    stroke-dashoffset: -1000;
+                  }
+                }
+              `}</style>
               {connections.map(({ parent, child }) => {
                 // Connect parent bottom-center to child top-center dynamically
                 const startX = parent.x + parent.width / 2;
@@ -263,13 +306,106 @@ export const ControlPanel: React.FC = () => {
                   />
                 );
               })}
+
+              {/* Dynamic loop-connecting dashed line (Echo high-fidelity curve) */}
+              {hoveredLoopTargetId && visualNodes.map(node => {
+                const loopAncestor = loopAncestorMap.get(node.id);
+                if (loopAncestor && hoveredLoopTargetId === loopAncestor.id) {
+                  const ancestor = visualNodesMap[loopAncestor.id];
+                  if (ancestor) {
+                    const startX = ancestor.x + ancestor.width / 2;
+                    const startY = ancestor.y + cardHeight;
+                    const endX = node.x + node.width / 2;
+                    const endY = node.y;
+
+                    const cp1y = startY + (endY - startY) * 0.45;
+                    const cp2y = startY + (endY - startY) * 0.55;
+                    const dStr = `M ${startX} ${startY} C ${startX} ${cp1y}, ${endX} ${cp2y}, ${endX} ${endY}`;
+
+                    return (
+                      <path
+                        key={`loop-${ancestor.id}-${node.id}`}
+                        d={dStr}
+                        fill="none"
+                        stroke="rgba(244, 63, 94, 0.85)"
+                        strokeWidth={2.5}
+                        strokeDasharray="5, 5"
+                        className="transition-all duration-300 animate-dash"
+                        style={{
+                          animation: 'dash 30s linear infinite',
+                        }}
+                      />
+                    );
+                  }
+                }
+                return null;
+              })}
             </svg>
 
             {/* Tree Node Bubbles */}
             {visualNodes.map((node) => {
-              const isActive = node.id === currentNodeId;
-              const stepNum = stepIndices.get(node.id) ?? 0;
+              const loopAncestor = loopAncestorMap.get(node.id);
+              const isActive = activePathSet.has(node.id);
+              const isCurrent = currentNodeId === node.id;
+              const isLoopHighlight = hoveredLoopTargetId === node.id || (loopAncestor && hoveredLoopTargetId === loopAncestor.id);
               const isCopied = copiedId === node.id;
+              const stepNum = stepIndices.get(node.id) ?? 0;
+
+              if (loopAncestor) {
+                // Render Compact Loop Terminal Bubble!
+                return (
+                  <Tooltip
+                    key={node.id}
+                    position="right"
+                    delay={300} // Snappy but deliberate 300ms hover delay to prevent jitter
+                    wrapperClassName="z-10 absolute"
+                    style={{
+                      left: `${node.x + (node.width - 44) / 2}px`, // Center the 44px bubble in the column
+                      top: `${node.y}px`,
+                      width: `44px`,
+                      height: `${cardHeight}px`,
+                    }}
+                    className="w-56 p-3 z-50 text-left lowercase-none normal-case flex flex-col gap-1.5 pointer-events-auto"
+                    content={
+                      <div className="flex flex-col gap-0.5 text-rose-300 font-semibold p-1">
+                        <div className="flex items-center gap-1 uppercase tracking-wider text-[8px] font-bold text-rose-400">
+                          <Infinity size={10} />
+                          <span>Loop Detected</span>
+                        </div>
+                        <div className="text-[10px] lowercase-none normal-case leading-tight">
+                          This action leads back to <strong>Step {loopAncestor.stepIndex} ({loopAncestor.label})</strong>.
+                        </div>
+                        <div className="text-[9px] text-white/40 mt-1 italic">
+                          Click to select and return to Step {loopAncestor.stepIndex}.
+                        </div>
+                      </div>
+                    }
+                  >
+                    <div
+                      onClick={() => handleStepClick(loopAncestor.id)} // Selects and jumps back to the original ancestor!
+                      onMouseEnter={() => setHoveredLoopTargetId(loopAncestor.id)}
+                      onMouseLeave={() => setHoveredLoopTargetId(null)}
+                      className={`w-11 h-11 rounded-full flex items-center justify-center border select-none cursor-pointer transition-all duration-300 relative group/node ${
+                        isLoopHighlight
+                          ? 'border-rose-500 bg-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.45)] scale-[1.05]'
+                          : 'border-rose-500/40 hover:border-rose-500/80 bg-rose-950/60 hover:bg-rose-950/80 text-rose-400 hover:text-rose-300 shadow-md shadow-rose-950/20'
+                      }`}
+                    >
+                      {/* Step index badge on top-left */}
+                      <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
+                        isLoopHighlight
+                          ? 'bg-rose-600 border-rose-400 text-rose-100'
+                          : 'bg-rose-950 border-rose-500/30 text-rose-400'
+                      }`}>
+                        {stepNum}
+                      </span>
+
+                      {/* Infinite Loop Icon in Center */}
+                      <Infinity size={18} className="stroke-[2.5]" />
+                    </div>
+                  </Tooltip>
+                );
+              }
 
               return (
                 <Tooltip
@@ -307,15 +443,25 @@ export const ControlPanel: React.FC = () => {
                 >
                   <div
                     onClick={() => handleStepClick(node.id)}
+                    onMouseEnter={() => {
+                      setHoveredLoopTargetId(node.id);
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredLoopTargetId(null);
+                    }}
                     className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none cursor-pointer transition-all duration-300 relative group/node p-1.5 ${
-                      isActive
+                      isLoopHighlight
+                        ? 'border-rose-500/80 text-rose-300 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.35)] scale-[1.02]'
+                        : isCurrent
                         ? 'border-indigo-400/85 text-indigo-300 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.25)] scale-[1.02]'
                         : 'border-white/5 hover:border-white/12 bg-neutral-950/80 hover:bg-neutral-900/90 text-white/55 hover:text-white/85 shadow-md'
                     }`}
                   >
                     {/* Step index badge on top-left */}
                     <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
-                      isActive 
+                      isLoopHighlight
+                        ? 'bg-rose-600 border-rose-400 text-rose-100'
+                        : isCurrent 
                         ? 'bg-indigo-600 border-indigo-400 text-indigo-100'
                         : 'bg-neutral-900 border-white/10 text-white/60'
                     }`}>
@@ -323,9 +469,20 @@ export const ControlPanel: React.FC = () => {
                     </span>
 
                     {/* Truncated Equation Label */}
-                    <span className="text-[11px] font-mono truncate max-w-full text-indigo-50 font-semibold px-2 text-center">
+                    <span className="text-[11px] font-mono truncate max-w-full text-indigo-50 font-semibold pl-2 pr-5 text-center">
                       {equationToString(node.equation)}
                     </span>
+
+                    {/* Hover Copy Button */}
+                    <button
+                      onClick={(e) => handleCopyStep(e, node.equation, node.id)}
+                      className={`absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-md border border-white/5 bg-neutral-950 text-white/40 hover:text-white hover:bg-white/10 hover:border-white/15 opacity-0 group-hover/node:opacity-100 transition-all duration-150 z-20 cursor-pointer ${
+                        isCopied ? 'text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10 opacity-100' : ''
+                      }`}
+                      title="Copy Equation"
+                    >
+                      {isCopied ? <Check size={10} /> : <Copy size={10} />}
+                    </button>
                   </div>
                 </Tooltip>
               );

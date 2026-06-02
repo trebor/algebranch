@@ -192,9 +192,14 @@ export const Tooltip: React.FC<TooltipProps> = ({
     document.body
   );
 
+  const isAbsoluteOrFixed = wrapperClassName.includes('absolute') || wrapperClassName.includes('fixed');
+  const baseWrapperClass = isAbsoluteOrFixed
+    ? 'inline-flex items-center justify-center'
+    : 'relative inline-flex items-center justify-center';
+
   return (
     <div
-      className={`relative inline-flex items-center justify-center ${wrapperClassName}`}
+      className={`${baseWrapperClass} ${wrapperClassName}`}
       style={style}
     >
       {trigger}

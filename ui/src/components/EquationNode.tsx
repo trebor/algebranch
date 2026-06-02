@@ -17,7 +17,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, getFunctionName, getChildren } from 'math-engine-client';
-import { Sparkles, Zap } from 'lucide-react';
+import { Sparkles, Zap, Split } from 'lucide-react';
 
 interface EquationNodeProps {
   readonly path: string;
@@ -112,8 +112,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     return false;
   }, [hoverPath, candidatePaths]);
 
-  const reducedEq = reduciblePaths[path];
-  const isReducible = !!reducedEq;
+  const reducibleInfo = reduciblePaths[path];
+  const isReducible = !!reducibleInfo;
+  const reducedEq = reducibleInfo?.equation;
+  const reductionType = reducibleInfo?.type || 'reduce';
 
   const handleReduceClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -344,12 +346,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       {/* Reduce Dot */}
       {isReducible && (
         <Tooltip
-          content="Reduce this term"
+          content={reductionType === 'distribute' ? "Distribute this term" : "Reduce this term"}
           position="top"
           wrapperClassName="absolute -top-2 -right-2 z-20"
         >
           <button
-            className={`h-5 w-5 rounded-full bg-amber-400 border border-amber-500/80 flex items-center justify-center cursor-pointer shadow-md hover:bg-amber-300 transition-colors relative group`}
+            className={`h-5 w-5 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-colors relative group ${
+              reductionType === 'distribute'
+                ? 'bg-purple-600 border border-purple-500/80 hover:bg-purple-500 text-white'
+                : 'bg-amber-400 border border-amber-500/80 hover:bg-amber-300 text-neutral-950'
+            }`}
             onMouseEnter={(e) => {
               e.stopPropagation();
               setHoverReducePath(path);
@@ -361,8 +367,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
             onClick={handleReduceClick}
           >
             {/* Subtle pulse effect inside the dot */}
-            <span className="absolute inset-0 rounded-full bg-amber-400/40 animate-ping group-hover:opacity-0 pointer-events-none" />
-            <Zap size={10} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
+            <span className={`absolute inset-0 rounded-full animate-ping group-hover:opacity-0 pointer-events-none ${
+              reductionType === 'distribute' ? 'bg-purple-500/40' : 'bg-amber-400/40'
+            }`} />
+            {reductionType === 'distribute' ? (
+              <Split size={10} className="text-white stroke-[2.5]" />
+            ) : (
+              <Zap size={10} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
+            )}
           </button>
         </Tooltip>
       )}

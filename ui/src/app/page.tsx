@@ -396,7 +396,7 @@ export default function Home() {
       <div className="absolute bottom-10 left-1/4 w-96 h-96 bg-sky-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
 
       {/* Top Header */}
-      <header className="h-16 border-b border-white/10 px-8 flex items-center justify-between select-none shrink-0 w-full z-30">
+      <header className="h-16 px-8 flex items-center justify-between select-none shrink-0 w-full z-30">
         <div className="flex items-center gap-3">
           <Image
             src="/logo.png"
@@ -445,7 +445,7 @@ export default function Home() {
         {/* Main workspace section */}
         <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
           {/* Central Workspace Area */}
-          <div className="flex-1 flex gap-6 p-8 min-h-0">
+          <div className="flex-1 flex gap-6 px-8 pb-8 pt-0 min-h-0">
             {/* Equation Editor Canvas */}
             <div className="flex-1 flex flex-col gap-6 min-w-0">
               <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>

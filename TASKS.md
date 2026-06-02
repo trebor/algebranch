@@ -6,8 +6,8 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 
 ## 📈 Current Progress Summary
 * **Total Tasks**: 21
-* **Completed**: 11
-* **Remaining**: 10
+* **Completed**: 14
+* **Remaining**: 7
 
 ---
 
@@ -37,9 +37,9 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [ ] Make square root (sqrt) and nthRoot expressions prettier with premium styling.
 
 ### 🌐 4. Local Persistence & URL Sharing
-- [ ] Use local storage to persist derivation history trees on the browser.
-- [ ] Implement real-time URL state synchronization (sharing active equations easily via URL).
-- [ ] Design a premium "Share" button in the workspace to copy the shareable link to the clipboard.
+- [x] Use local storage to persist derivation history trees on the browser.
+- [x] Implement real-time URL state synchronization (sharing active equations easily via URL).
+- [x] Design a premium "Share" button in the workspace to copy the shareable link to the clipboard.
 
 ### 🚀 5. Production Polish & Publishing Prep
 - [ ] Multi-device responsive dashboard layouts (mobile/tablet check).

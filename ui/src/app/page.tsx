@@ -13,13 +13,47 @@ import {
   hoverReducePathAtom,
   sourcePathAtom,
   syncMathStateAtom,
+  historyTreeAtom,
+  currentNodeIdAtom,
+  HistoryNode,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
-import { Sparkles, HelpCircle } from 'lucide-react';
-import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation } from 'math-engine-client';
+import { Sparkles, HelpCircle, Share2, Check } from 'lucide-react';
+import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
 
 // Local Constants
 const API_MATH_ENDPOINT = '/api/math';
+
+interface SerializedHistoryNode {
+  id: string;
+  equation: SerializedEquation;
+  parentId: string | null;
+  childrenIds: string[];
+  label: string;
+  timestamp: number;
+}
+
+const serializeTree = (tree: Record<string, HistoryNode>): Record<string, SerializedHistoryNode> => {
+  const serialized: Record<string, SerializedHistoryNode> = {};
+  Object.keys(tree).forEach(id => {
+    serialized[id] = {
+      ...tree[id],
+      equation: serializeEquation(tree[id].equation)
+    };
+  });
+  return serialized;
+};
+
+const deserializeTree = (serialized: Record<string, SerializedHistoryNode>): Record<string, HistoryNode> => {
+  const tree: Record<string, HistoryNode> = {};
+  Object.keys(serialized).forEach(id => {
+    tree[id] = {
+      ...serialized[id],
+      equation: deserializeEquation(serialized[id].equation)
+    };
+  });
+  return tree;
+};
 
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
@@ -27,8 +61,91 @@ export default function Home() {
   const targetPaths = useAtomValue(targetPathsAtom);
   const hoverReducePath = useAtomValue(hoverReducePathAtom);
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
+  
+  const [tree, setTree] = useAtom(historyTreeAtom);
+  const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
+  const [sharedCopied, setSharedCopied] = React.useState(false);
 
   const syncMathState = useSetAtom(syncMathStateAtom);
+
+  // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
+  React.useEffect(() => {
+    // 1. Check URL query string precedence
+    const params = new URLSearchParams(window.location.search);
+    const urlEq = params.get('eq');
+    
+    if (urlEq) {
+      try {
+        const cleanEqStr = decodeURIComponent(urlEq);
+        const newEq = ensureNodeIds(parseEquation(cleanEqStr));
+        setTree({
+          "0": {
+            id: "0",
+            equation: newEq,
+            parentId: null,
+            childrenIds: [],
+            label: "Initial",
+            timestamp: Date.now(),
+          }
+        });
+        setCurrentNodeId("0");
+        return;
+      } catch (err) {
+        console.error('Failed to parse equation from URL query parameter:', err);
+      }
+    }
+    
+    // 2. Check local storage
+    try {
+      const savedTreeRaw = localStorage.getItem('algebranch_history_tree');
+      const savedNodeId = localStorage.getItem('algebranch_current_node_id');
+      if (savedTreeRaw && savedNodeId) {
+        const parsedRaw = JSON.parse(savedTreeRaw);
+        const deserializedTree = deserializeTree(parsedRaw);
+        setTree(deserializedTree);
+        setCurrentNodeId(savedNodeId);
+      }
+    } catch (err) {
+      console.error('Failed to load history from local storage:', err);
+    }
+  }, [setTree, setCurrentNodeId]);
+
+  // Save derivation steps to local storage and update address bar URL reactively
+  React.useEffect(() => {
+    if (!tree || !currentNodeId || !tree[currentNodeId]) return;
+
+    // 1. Save serialized history tree and pointer to local storage
+    try {
+      const serialized = serializeTree(tree);
+      localStorage.setItem('algebranch_history_tree', JSON.stringify(serialized));
+      localStorage.setItem('algebranch_current_node_id', currentNodeId);
+    } catch (err) {
+      console.error('Failed to save history to local storage:', err);
+    }
+
+    // 2. Update address bar URL query parameter reactively
+    try {
+      const currentEqVal = tree[currentNodeId].equation;
+      const eqStr = equationToString(currentEqVal);
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('eq') !== eqStr) {
+        params.set('eq', eqStr);
+        window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+      }
+    } catch (err) {
+      console.error('Failed to update URL search parameter:', err);
+    }
+  }, [tree, currentNodeId]);
+
+  const handleShare = () => {
+    const shareUrl = window.location.href;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setSharedCopied(true);
+      setTimeout(() => {
+        setSharedCopied(false);
+      }, 2000);
+    });
+  };
 
   React.useEffect(() => {
     if (!currentEq) return;
@@ -195,9 +312,27 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-white/50 bg-white/5 px-3 py-1.5 border border-white/10 rounded-full">
-            <HelpCircle size={14} className="text-indigo-400" />
-            <span>Click nodes to select. Click green slots to relocate.</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs text-white/50 bg-white/5 px-3 py-1.5 border border-white/10 rounded-full">
+              <HelpCircle size={14} className="text-indigo-400" />
+              <span>Click nodes to select. Click green slots to relocate.</span>
+            </div>
+            <button
+              onClick={handleShare}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group`}
+            >
+              {sharedCopied ? (
+                <>
+                  <Check size={13} className="text-emerald-400" />
+                  <span className="text-emerald-400 font-bold">Link Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 size={13} className="text-indigo-400 group-hover:scale-110 transition-transform" />
+                  <span>Share</span>
+                </>
+              )}
+            </button>
           </div>
         </header>
 

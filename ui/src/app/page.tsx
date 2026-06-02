@@ -449,9 +449,6 @@ export default function Home() {
             {/* 1. Active Derivation Workspace (Top 2/3) */}
             <div className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
               <div className="flex flex-col items-center justify-center gap-2">
-                <span className="text-[10px] text-indigo-400 font-semibold tracking-wider uppercase select-none">
-                  Active Workspace
-                </span>
                 <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full">
                   {/* LHS Term Tree */}
                   <div className="flex justify-end min-w-[5em]">

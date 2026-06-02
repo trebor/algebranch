@@ -1,320 +1,99 @@
 import * as math from 'mathjs';
 import { HIGH_SCHOOL_IDENTITIES } from '../src/rules';
 import { matchPattern, instantiatePattern } from '../src/matcher';
+import { parseEquation, replaceNodeAtPath, areEquationsEquivalent } from '../src';
 
 const cleanString = (node: math.MathNode) => node.toString().replace(/\s+/g, '');
 
-describe('High School Rewrite Identities Tests', () => {
-  test('should factor difference of squares (x^2 - 3^2)', () => {
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'diff_squares_factor')!;
-    expect(rule).toBeDefined();
+interface RuleTestCase {
+  ruleId: string;
+  input: string;
+  expected: string;
+}
 
-    const target = math.parse('x^2 - 3^2');
-    const bindings = matchPattern(rule.sourcePattern, target);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_A']?.toString()).toBe('x');
-    expect(bindings?.['_B']?.toString()).toBe('3');
+const ALL_RULE_TEST_CASES: RuleTestCase[] = [
+  // 1. Polynomials & Factoring
+  { ruleId: 'diff_squares_factor', input: 'x^2 - 3^2', expected: '(x-3)*(x+3)' },
+  { ruleId: 'diff_squares_expand', input: '(x - 3) * (x + 3)', expected: 'x^2-3^2' },
+  { ruleId: 'perfect_square_factor_plus', input: 'x^2 + 2 * x * 3 + 3^2', expected: '(x+3)^2' },
+  { ruleId: 'perfect_square_expand_plus', input: '(x + 3)^2', expected: 'x^2+2*x*3+3^2' },
+  { ruleId: 'perfect_square_factor_minus', input: 'x^2 - 2 * x * 3 + 3^2', expected: '(x-3)^2' },
+  { ruleId: 'perfect_square_expand_minus', input: '(x - 3)^2', expected: 'x^2-2*x*3+3^2' },
+  { ruleId: 'sum_cubes_factor', input: 'x^3 + 2^3', expected: '(x+2)*(x^2-x*2+2^2)' },
+  { ruleId: 'sum_cubes_expand', input: '(x + 2) * (x^2 - x * 2 + 2^2)', expected: 'x^3+2^3' },
+  { ruleId: 'diff_cubes_factor', input: 'x^3 - 2^3', expected: '(x-2)*(x^2+x*2+2^2)' },
+  { ruleId: 'diff_cubes_expand', input: '(x - 2) * (x^2 + x * 2 + 2^2)', expected: 'x^3-2^3' },
 
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    expect(cleanString(rewritten)).toBe('(x-3)*(x+3)');
+  // 2. Exponent Rules
+  { ruleId: 'exponent_product', input: 'x^2 * x^3', expected: 'x^(2+3)' },
+  { ruleId: 'exponent_product_reverse', input: 'x^(2 + 3)', expected: 'x^2*x^3' },
+  { ruleId: 'exponent_quotient', input: 'x^5 / x^2', expected: 'x^(5-2)' },
+  { ruleId: 'exponent_quotient_reverse', input: 'x^(5 - 2)', expected: 'x^5/x^2' },
+  { ruleId: 'exponent_power_of_power', input: '(x^2)^3', expected: 'x^(2*3)' },
+  { ruleId: 'exponent_power_of_power_reverse', input: 'x^(2 * 3)', expected: '(x^2)^3' },
+  { ruleId: 'exponent_power_of_product', input: '(x * y)^3', expected: 'x^3*y^3' },
+  { ruleId: 'exponent_power_of_product_reverse', input: 'x^3 * y^3', expected: '(x*y)^3' },
+  { ruleId: 'exponent_power_of_quotient', input: '(x / y)^3', expected: 'x^3/y^3' },
+  { ruleId: 'exponent_power_of_quotient_reverse', input: 'x^3 / y^3', expected: '(x/y)^3' },
+  { ruleId: 'exponent_negative', input: 'x^-3', expected: '1/x^3' },
+  { ruleId: 'exponent_negative_reverse', input: '1 / x^3', expected: 'x^(-3)' },
+
+  // 3. Logarithm Rules
+  { ruleId: 'log_product', input: 'log(x * y)', expected: 'log(x)+log(y)' },
+  { ruleId: 'log_product_reverse', input: 'log(x) + log(y)', expected: 'log(x*y)' },
+  { ruleId: 'log_quotient', input: 'log(x / y)', expected: 'log(x)-log(y)' },
+  { ruleId: 'log_quotient_reverse', input: 'log(x) - log(y)', expected: 'log(x/y)' },
+  { ruleId: 'log_power', input: 'log(x^3)', expected: '3*log(x)' },
+  { ruleId: 'log_power_reverse', input: '3 * log(x)', expected: 'log(x^3)' },
+
+  // 4. Trigonometric Identities
+  { ruleId: 'trig_pythagorean', input: 'sin(x)^2 + cos(x)^2', expected: '1' },
+  { ruleId: 'trig_tan_def', input: 'tan(x)', expected: 'sin(x)/cos(x)' },
+  { ruleId: 'trig_tan_def_reverse', input: 'sin(x) / cos(x)', expected: 'tan(x)' },
+  { ruleId: 'trig_sec_def', input: 'sec(x)', expected: '1/cos(x)' },
+  { ruleId: 'trig_sec_def_reverse', input: '1 / cos(x)', expected: 'sec(x)' },
+  { ruleId: 'trig_csc_def', input: 'csc(x)', expected: '1/sin(x)' },
+  { ruleId: 'trig_csc_def_reverse', input: '1 / sin(x)', expected: 'csc(x)' },
+  { ruleId: 'trig_double_sin', input: 'sin(2 * x)', expected: '2*sin(x)*cos(x)' },
+  { ruleId: 'trig_double_sin_reverse', input: '2 * sin(x) * cos(x)', expected: 'sin(2*x)' }
+];
+
+describe('Exhaustive Bidirectional Identity Rules Verification', () => {
+  test('should verify existence of test case for every identity in the registry', () => {
+    const registryIds = HIGH_SCHOOL_IDENTITIES.map(r => r.id);
+    const testIds = ALL_RULE_TEST_CASES.map(tc => tc.ruleId);
+
+    registryIds.forEach(id => {
+      expect(testIds).toContain(id);
+    });
   });
 
-  test('should expand difference of squares back to standard polynomial form', () => {
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'diff_squares_expand')!;
-    expect(rule).toBeDefined();
+  ALL_RULE_TEST_CASES.forEach(({ ruleId, input, expected }) => {
+    test(`Rule [${ruleId}]: matches input "${input}", instantiates target, and preserves mathematical equivalence`, () => {
+      const rule = HIGH_SCHOOL_IDENTITIES.find(r => r.id === ruleId);
+      expect(rule).toBeDefined();
+      const activeRule = rule!;
 
-    const target = math.parse('(y - 5) * (y + 5)');
-    const bindings = matchPattern(rule.sourcePattern, target);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_A']?.toString()).toBe('y');
-    expect(bindings?.['_B']?.toString()).toBe('5');
+      // 1. Parse and match input pattern
+      const targetNode = math.parse(input);
+      const bindings = matchPattern(activeRule.sourcePattern, targetNode);
+      expect(bindings).not.toBeNull();
 
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    expect(cleanString(rewritten)).toBe('y^2-5^2');
-  });
+      // 2. Instantiate and verify rewritten string matches expected representation
+      const rewrittenNode = instantiatePattern(activeRule.targetPattern, bindings!);
+      expect(cleanString(rewrittenNode)).toBe(expected);
 
-  test('should simplify Pythagorean trigonometric identity sin(theta)^2 + cos(theta)^2 -> 1', () => {
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'trig_pythagorean')!;
-    expect(rule).toBeDefined();
-
-    const target = math.parse('sin(x)^2 + cos(x)^2');
-    const bindings = matchPattern(rule.sourcePattern, target);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_theta']?.toString()).toBe('x');
-
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    expect(rewritten.toString()).toBe('1');
-  });
-
-  test('should factor perfect square sums (x^2 + 2*x*y + y^2)', () => {
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'perfect_square_factor_plus')!;
-    expect(rule).toBeDefined();
-
-    const target = math.parse('a^2 + 2 * a * b + b^2');
-    const bindings = matchPattern(rule.sourcePattern, target);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_A']?.toString()).toBe('a');
-    expect(bindings?.['_B']?.toString()).toBe('b');
-
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    expect(cleanString(rewritten)).toBe('(a+b)^2');
-  });
-
-  test('should apply product of powers rule', () => {
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_product')!;
-    expect(rule).toBeDefined();
-
-    const target = math.parse('x^2 * x^3');
-    const bindings = matchPattern(rule.sourcePattern, target);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_x']?.toString()).toBe('x');
-    expect(bindings?.['_A']?.toString()).toBe('2');
-    expect(bindings?.['_B']?.toString()).toBe('3');
-
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    expect(cleanString(rewritten)).toBe('x^(2+3)');
-  });
-
-  test('should factor perfect square sum with constant (a^2 + 2*a*3 + 3^2)', () => {
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'perfect_square_factor_plus')!;
-    expect(rule).toBeDefined();
-
-    const target = math.parse('a^2 + 2 * a * 3 + 3^2');
-    const bindings = matchPattern(rule.sourcePattern, target);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_A']?.toString()).toBe('a');
-    expect(bindings?.['_B']?.toString()).toBe('3');
-
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    expect(cleanString(rewritten)).toBe('(a+3)^2');
-  });
-
-  test('should match and verify perfect square identity on LHS of equation (a^2 + 2*a*3 + 3^2 = 25)', () => {
-    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
-    const eq = parseEquation('a^2 + 2 * a * 3 + 3^2 = 25');
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'perfect_square_factor_plus')!;
-    const node = eq.lhs;
-
-    const bindings = matchPattern(rule.sourcePattern, node);
-    expect(bindings).not.toBeNull();
-
-    const instantiated = instantiatePattern(rule.targetPattern, bindings!);
-    const newEq = replaceNodeAtPath(eq, 'lhs', instantiated);
-    
-    expect(areEquationsEquivalent(eq, newEq)).toBe(true);
-  });
-
-  test('should factor exponent out of product (a^3 * b^3)', () => {
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_power_of_product_reverse')!;
-    expect(rule).toBeDefined();
-
-    const target = math.parse('a^3 * b^3');
-    const bindings = matchPattern(rule.sourcePattern, target);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_x']?.toString()).toBe('a');
-    expect(bindings?.['_y']?.toString()).toBe('b');
-    expect(bindings?.['_A']?.toString()).toBe('3');
-
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    expect(cleanString(rewritten)).toBe('(a*b)^3');
-  });
-
-  test('should distribute exponent to quotient ((a / b)^3)', () => {
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_power_of_quotient')!;
-    expect(rule).toBeDefined();
-
-    const target = math.parse('(a / b)^3');
-    const bindings = matchPattern(rule.sourcePattern, target);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_x']?.toString()).toBe('a');
-    expect(bindings?.['_y']?.toString()).toBe('b');
-    expect(bindings?.['_A']?.toString()).toBe('3');
-
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    expect(cleanString(rewritten)).toBe('a^3/b^3');
-  });
-
-  test('should factor exponent out of quotient (a^3 / b^3)', () => {
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_power_of_quotient_reverse')!;
-    expect(rule).toBeDefined();
-
-    const target = math.parse('a^3 / b^3');
-    const bindings = matchPattern(rule.sourcePattern, target);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_x']?.toString()).toBe('a');
-    expect(bindings?.['_y']?.toString()).toBe('b');
-    expect(bindings?.['_A']?.toString()).toBe('3');
-
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    expect(cleanString(rewritten)).toBe('(a/b)^3');
-  });
-
-  test('should expand log of product and condense it back', () => {
-    const forwardRule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'log_product')!;
-    const reverseRule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'log_product_reverse')!;
-    expect(forwardRule).toBeDefined();
-    expect(reverseRule).toBeDefined();
-
-    // Forward: log(x * y) -> log(x) + log(y)
-    const targetForward = math.parse('log(x * y)');
-    const bindingsF = matchPattern(forwardRule.sourcePattern, targetForward);
-    expect(bindingsF).not.toBeNull();
-    const expanded = instantiatePattern(forwardRule.targetPattern, bindingsF!);
-    expect(cleanString(expanded)).toBe('log(x)+log(y)');
-
-    // Reverse: log(x) + log(y) -> log(x * y)
-    const bindingsR = matchPattern(reverseRule.sourcePattern, expanded);
-    expect(bindingsR).not.toBeNull();
-    const condensed = instantiatePattern(reverseRule.targetPattern, bindingsR!);
-    expect(cleanString(condensed)).toBe('log(x*y)');
-  });
-
-  test('should condense log difference using reverse quotient rule', () => {
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'log_quotient_reverse')!;
-    expect(rule).toBeDefined();
-
-    const target = math.parse('log(a) - log(b)');
-    const bindings = matchPattern(rule.sourcePattern, target);
-    expect(bindings).not.toBeNull();
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    expect(cleanString(rewritten)).toBe('log(a/b)');
-  });
-
-  test('should condense log power using reverse power rule', () => {
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'log_power_reverse')!;
-    expect(rule).toBeDefined();
-
-    const target = math.parse('3 * log(z)');
-    const bindings = matchPattern(rule.sourcePattern, target);
-    expect(bindings).not.toBeNull();
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    expect(cleanString(rewritten)).toBe('log(z^3)');
-  });
-
-  test('should match and verify tangent quotient identity (tan(x) -> sin(x)/cos(x))', () => {
-    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
-    const eq = parseEquation('tan(x) = y');
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'trig_tan_def')!;
-    expect(rule).toBeDefined();
-
-    const bindings = matchPattern(rule.sourcePattern, eq.lhs);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_theta']?.toString()).toBe('x');
-
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    const newEq = replaceNodeAtPath(eq, 'lhs', rewritten);
-    expect(areEquationsEquivalent(eq, newEq)).toBe(true);
-  });
-
-  test('should match and verify reverse tangent quotient identity (sin(x)/cos(x) -> tan(x))', () => {
-    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
-    const eq = parseEquation('sin(x)/cos(x) = y');
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'trig_tan_def_reverse')!;
-    expect(rule).toBeDefined();
-
-    const bindings = matchPattern(rule.sourcePattern, eq.lhs);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_theta']?.toString()).toBe('x');
-
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    const newEq = replaceNodeAtPath(eq, 'lhs', rewritten);
-    expect(areEquationsEquivalent(eq, newEq)).toBe(true);
-  });
-
-  test('should match and verify reverse secant identity (1/cos(x) -> sec(x))', () => {
-    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
-    const eq = parseEquation('1/cos(x) = y');
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'trig_sec_def_reverse')!;
-    expect(rule).toBeDefined();
-
-    const bindings = matchPattern(rule.sourcePattern, eq.lhs);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_theta']?.toString()).toBe('x');
-
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    const newEq = replaceNodeAtPath(eq, 'lhs', rewritten);
-    expect(areEquationsEquivalent(eq, newEq)).toBe(true);
-  });
-
-  test('should match and verify reverse sum/difference of cubes expansion', () => {
-    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
-    const eq1 = parseEquation('(x + 2) * (x^2 - 2 * x + 2^2) = y');
-    const rule1 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'sum_cubes_expand')!;
-    expect(rule1).toBeDefined();
-
-    const bindings1 = matchPattern(rule1.sourcePattern, eq1.lhs);
-    expect(bindings1).not.toBeNull();
-    const rewritten1 = instantiatePattern(rule1.targetPattern, bindings1!);
-    const newEq1 = replaceNodeAtPath(eq1, 'lhs', rewritten1);
-    expect(areEquationsEquivalent(eq1, newEq1)).toBe(true);
-
-    const eq2 = parseEquation('(x - 3) * (x^2 + 3 * x + 3^2) = y');
-    const rule2 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'diff_cubes_expand')!;
-    expect(rule2).toBeDefined();
-
-    const bindings2 = matchPattern(rule2.sourcePattern, eq2.lhs);
-    expect(bindings2).not.toBeNull();
-    const rewritten2 = instantiatePattern(rule2.targetPattern, bindings2!);
-    const newEq2 = replaceNodeAtPath(eq2, 'lhs', rewritten2);
-    expect(areEquationsEquivalent(eq2, newEq2)).toBe(true);
-  });
-
-  test('should match and verify reverse exponent rules (splitting exponents)', () => {
-    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
-    
-    // Product of Powers Reverse
-    const eq1 = parseEquation('x^(a + b) = y');
-    const rule1 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_product_reverse')!;
-    expect(rule1).toBeDefined();
-    const bindings1 = matchPattern(rule1.sourcePattern, eq1.lhs);
-    expect(bindings1).not.toBeNull();
-    const rewritten1 = instantiatePattern(rule1.targetPattern, bindings1!);
-    const newEq1 = replaceNodeAtPath(eq1, 'lhs', rewritten1);
-    expect(areEquationsEquivalent(eq1, newEq1)).toBe(true);
-
-    // Quotient of Powers Reverse
-    const eq2 = parseEquation('x^(a - b) = y');
-    const rule2 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_quotient_reverse')!;
-    expect(rule2).toBeDefined();
-    const bindings2 = matchPattern(rule2.sourcePattern, eq2.lhs);
-    expect(bindings2).not.toBeNull();
-    const rewritten2 = instantiatePattern(rule2.targetPattern, bindings2!);
-    const newEq2 = replaceNodeAtPath(eq2, 'lhs', rewritten2);
-    expect(areEquationsEquivalent(eq2, newEq2)).toBe(true);
-
-    // Power of a Power Reverse
-    const eq3 = parseEquation('x^(a * b) = y');
-    const rule3 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_power_of_power_reverse')!;
-    expect(rule3).toBeDefined();
-    const bindings3 = matchPattern(rule3.sourcePattern, eq3.lhs);
-    expect(bindings3).not.toBeNull();
-    const rewritten3 = instantiatePattern(rule3.targetPattern, bindings3!);
-    const newEq3 = replaceNodeAtPath(eq3, 'lhs', rewritten3);
-    expect(areEquationsEquivalent(eq3, newEq3)).toBe(true);
-
-    // Negative Exponent Reverse
-    const eq4 = parseEquation('1 / x^3 = y');
-    const rule4 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_negative_reverse')!;
-    expect(rule4).toBeDefined();
-    const bindings4 = matchPattern(rule4.sourcePattern, eq4.lhs);
-    expect(bindings4).not.toBeNull();
-    const rewritten4 = instantiatePattern(rule4.targetPattern, bindings4!);
-    const newEq4 = replaceNodeAtPath(eq4, 'lhs', rewritten4);
-    expect(areEquationsEquivalent(eq4, newEq4)).toBe(true);
-  });
-
-  test('should match and verify reverse double angle sine identity', () => {
-    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
-    const eq = parseEquation('2 * sin(x) * cos(x) = y');
-    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'trig_double_sin_reverse')!;
-    expect(rule).toBeDefined();
-
-    const bindings = matchPattern(rule.sourcePattern, eq.lhs);
-    expect(bindings).not.toBeNull();
-    expect(bindings?.['_theta']?.toString()).toBe('x');
-
-    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
-    const newEq = replaceNodeAtPath(eq, 'lhs', rewritten);
-    expect(areEquationsEquivalent(eq, newEq)).toBe(true);
+      // 3. Assemble full equations and verify mathematical equivalence
+      const eqSource = parseEquation(`${input} = 10`);
+      const eqTarget = replaceNodeAtPath(eqSource, 'lhs', rewrittenNode);
+      
+      const isEquiv = areEquationsEquivalent(eqSource, eqTarget);
+      if (!isEquiv) {
+        throw new Error(
+          `Rule [${ruleId}] produced mathematically non-equivalent rewrite: "${input}" -> "${expected}"`
+        );
+      }
+      expect(isEquiv).toBe(true);
+    });
   });
 });

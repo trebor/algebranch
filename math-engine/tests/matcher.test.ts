@@ -131,4 +131,38 @@ describe('Algebraic Pattern Matcher', () => {
       expect(cleanString(result)).toBe('(x+1-y)*(x+1+y)');
     });
   });
+
+  describe('Perfect Power Constant Matching', () => {
+    test('should match _B^2 against constant 9 and bind _B = 3', () => {
+      const pattern = parse('_B^2');
+      const target = parse('9');
+      const bindings = matchPattern(pattern, target);
+      expect(bindings).not.toBeNull();
+      expect(bindings?.['_B']?.toString()).toBe('3');
+    });
+
+    test('should match _B^3 against constant 8 and bind _B = 2', () => {
+      const pattern = parse('_B^3');
+      const target = parse('8');
+      const bindings = matchPattern(pattern, target);
+      expect(bindings).not.toBeNull();
+      expect(bindings?.['_B']?.toString()).toBe('2');
+    });
+
+    test('should fail to match _B^2 against constant 7 (not a perfect square)', () => {
+      const pattern = parse('_B^2');
+      const target = parse('7');
+      const bindings = matchPattern(pattern, target);
+      expect(bindings).toBeNull();
+    });
+
+    test('should match difference of squares pattern against x^2 - 16', () => {
+      const pattern = parse('_A^2 - _B^2');
+      const target = parse('x^2 - 16');
+      const bindings = matchPattern(pattern, target);
+      expect(bindings).not.toBeNull();
+      expect(bindings?.['_A']?.toString()).toBe('x');
+      expect(bindings?.['_B']?.toString()).toBe('4');
+    });
+  });
 });

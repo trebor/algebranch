@@ -104,6 +104,43 @@ export function matchPattern(
   const unwrappedPattern = unwrap(pattern);
   const unwrappedTarget = unwrap(target);
 
+  // Special check: if pattern is a power node like _B^2 or _B^3 and target is a constant number,
+  // we can check if target is a perfect power.
+  if (
+    unwrappedPattern.type === 'OperatorNode' &&
+    (unwrappedPattern as math.OperatorNode).op === '^' &&
+    unwrappedTarget.type === 'ConstantNode'
+  ) {
+    const opP = unwrappedPattern as math.OperatorNode;
+    const baseP = opP.args[0];
+    const expP = opP.args[1];
+    
+    if (isWildcard(baseP) && expP && expP.type === 'ConstantNode') {
+      const expVal = (expP as math.ConstantNode).value;
+      const targetVal = (unwrappedTarget as math.ConstantNode).value;
+      
+      if (typeof expVal === 'number' && Number.isInteger(expVal) && expVal > 0 && typeof targetVal === 'number' && targetVal >= 0) {
+        const rootVal = Math.pow(targetVal, 1 / expVal);
+        const roundedRoot = Math.round(rootVal);
+        if (Math.abs(rootVal - roundedRoot) < 1e-9) {
+          const name = (baseP as math.SymbolNode).name;
+          const existing = bindings[name];
+          const newBoundNode = new math.ConstantNode(roundedRoot);
+          if (existing) {
+            if (areNodesStructurallyEqual(existing, newBoundNode)) {
+              return bindings;
+            }
+            return null;
+          }
+          return {
+            ...bindings,
+            [name]: newBoundNode
+          };
+        }
+      }
+    }
+  }
+
   if (unwrappedPattern.type !== unwrappedTarget.type) {
     return null;
   }

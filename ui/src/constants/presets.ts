@@ -268,6 +268,13 @@ export const PRESET_LIST: Preset[] = [
     category: 'Algebraic Identities',
   },
   {
+    id: 'id_diff_squares_factor_constant',
+    label: 'Difference of Squares (Constant)',
+    equation: 'x^2 - 9 = y',
+    description: 'Factor x^2 - 9 by recognizing 9 as a perfect square (3^2).',
+    category: 'Algebraic Identities',
+  },
+  {
     id: 'id_diff_squares_expand',
     label: 'Difference of Squares (Expand)',
     equation: '(x - 4) * (x + 4) = 9',

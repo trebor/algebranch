@@ -176,38 +176,9 @@ export const pushEquationAtom = atom(
     const currentNodeId = get(currentNodeIdAtom);
     const activeNode = tree[currentNodeId];
     
-    // Check if any existing child of the active node is canonically equivalent to newEq
     const newCanonical = getCanonicalKey(newEq);
-    if (activeNode) {
-      const existingChildId = activeNode.childrenIds.find(childId => {
-        const childNode = tree[childId];
-        return childNode && getCanonicalKey(childNode.equation) === newCanonical;
-      });
-      
-      if (existingChildId) {
-        // Canonical match found! Select the existing branch node instead of duplicating it
-        set(currentNodeIdAtom, existingChildId);
-        set(sourcePathAtom, null);
-        set(hoverPathAtom, null);
-        set(hoverReducePathAtom, null);
-        set(hoveredLoopTargetIdAtom, null);
-        return;
-      }
-    }
 
-    let label = stepLabel || "Move";
-    if (!stepLabel) {
-      const hoverReducePath = get(hoverReducePathAtom);
-      if (hoverReducePath) {
-        const reducible = get(reduciblePathsAtom);
-        const actionType = hoverReducePath && reducible[hoverReducePath]?.type;
-        label = actionType === 'distribute' ? 'Distribute' : 'Reduce';
-      } else if (get(sourcePathAtom)) {
-        label = "Transpose";
-      }
-    }
-
-    // Find the earliest node in the entire history tree that is canonically equivalent to newEq (Loop Detection)
+    // 1. Find the earliest node in the entire history tree that is canonically equivalent to newEq (Loop Detection)
     let loopAncestorId: string | null = null;
     let earliestTimestamp = Infinity;
     
@@ -219,6 +190,53 @@ export const pushEquationAtom = atom(
         }
       }
     });
+
+    // 2. Check if a child matching this canonical key already exists
+    let existingChildId: string | undefined;
+    if (activeNode) {
+      existingChildId = activeNode.childrenIds.find(childId => {
+        const childNode = tree[childId];
+        return childNode && getCanonicalKey(childNode.equation) === newCanonical;
+      });
+    }
+
+    if (loopAncestorId) {
+      // Loop Detected!
+      if (existingChildId) {
+        // If the loop node child already exists, keep selection on the parent (bounce back) and do nothing else
+        set(sourcePathAtom, null);
+        set(hoverPathAtom, null);
+        set(hoverReducePathAtom, null);
+        set(hoveredLoopTargetIdAtom, null);
+        return;
+      }
+      
+      // Otherwise, we need to create the loop node under the parent, but keep the active selection on the parent (bounce back)
+    } else {
+      // Normal state progression (No Loop)
+      if (existingChildId) {
+        // Transition down the existing progress branch node
+        set(currentNodeIdAtom, existingChildId);
+        set(sourcePathAtom, null);
+        set(hoverPathAtom, null);
+        set(hoverReducePathAtom, null);
+        set(hoveredLoopTargetIdAtom, null);
+        return;
+      }
+    }
+
+    // Node creation path (either a new loop bubble or a new progress node)
+    let label = stepLabel || "Move";
+    if (!stepLabel) {
+      const hoverReducePath = get(hoverReducePathAtom);
+      if (hoverReducePath) {
+        const reducible = get(reduciblePathsAtom);
+        const actionType = hoverReducePath && reducible[hoverReducePath]?.type;
+        label = actionType === 'distribute' ? 'Distribute' : 'Reduce';
+      } else if (get(sourcePathAtom)) {
+        label = "Transpose";
+      }
+    }
 
     const newId = `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newNode: HistoryNode = {
@@ -242,10 +260,10 @@ export const pushEquationAtom = atom(
     set(historyTreeAtom, updatedTree);
     
     if (loopAncestorId) {
-      // Loop detected! Go back one step just before the loop (select the parent node) to let the user explore a different path
+      // Loop detected: select the parent node (the step just before the loop) to bounce the user back
       set(currentNodeIdAtom, currentNodeId);
     } else {
-      // Normal state progression: select the newly created node
+      // Normal state progression: select the newly created progress node
       set(currentNodeIdAtom, newId);
     }
 

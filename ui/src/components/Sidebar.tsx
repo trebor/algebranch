@@ -35,6 +35,7 @@ export const Sidebar: React.FC = () => {
 
   const savedSessions = useAtomValue(savedSessionsAtom);
   const currentSessionId = useAtomValue(currentSessionIdAtom);
+  const currentSession = savedSessions.find(s => s.id === currentSessionId);
   const loadSession = useSetAtom(loadSessionAtom);
   const deleteSession = useSetAtom(deleteSessionAtom);
   const presetCategories = useAtomValue(presetCategoriesAtom);
@@ -55,6 +56,7 @@ export const Sidebar: React.FC = () => {
   const [inputStr, setInputStr] = React.useState('');
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
   const [termInput, setTermInput] = React.useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
 
   const handleLoadCustom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,47 +102,19 @@ export const Sidebar: React.FC = () => {
           <span>Recent</span>
         </h3>
 
-        {/* Unified Recent Workspaces Dropdown */}
-        {savedSessions.length > 0 && (
-          <div className="flex gap-2 items-center">
-            <select
-              value={currentSessionId}
-              onChange={(e) => loadSession(e.target.value)}
-              className="flex-1 px-3 py-1.5 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 transition-all font-sans cursor-pointer"
-            >
-              {[...savedSessions]
-                .sort((a, b) => b.timestamp - a.timestamp)
-                .map((session) => (
-                  <option key={session.id} value={session.id}>
-                    {session.name} ({formatTimestamp(session.timestamp)})
-                  </option>
-                ))}
-            </select>
-            <Tooltip content="Delete workspace">
-              <button
-                onClick={() => deleteSession(currentSessionId)}
-                disabled={savedSessions.length <= 1}
-                className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
-              >
-                <Trash2 size={13} />
-              </button>
-            </Tooltip>
-          </div>
-        )}
-
         {/* Load New Equation Form */}
-        <form onSubmit={handleLoadCustom} className="flex gap-2 border-t border-white/5 pt-3">
+        <form onSubmit={handleLoadCustom} className="flex gap-2">
           <input
             type="text"
             value={inputStr}
             onChange={(e) => setInputStr(e.target.value)}
             placeholder="New equation, e.g. 2x + 4 = 10"
-            className="flex-1 px-3 py-1.5 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
+            className="flex-1 h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
           />
           <Tooltip content="Load new equation">
             <button
               type="submit"
-              className={`px-3 py-1.5 text-[10px] font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-95 ${THEME_TRANSITIONS.FAST} flex items-center justify-center p-2`}
+              className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-95 transition-all duration-150 cursor-pointer"
             >
               <Plus size={13} />
             </button>
@@ -151,6 +125,71 @@ export const Sidebar: React.FC = () => {
           <div className="flex items-start gap-2 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-2 animate-[fadeIn_0.2s_ease-out]">
             <ShieldAlert size={12} className="shrink-0 mt-0.5" />
             <span className="break-all">{errorStr}</span>
+          </div>
+        )}
+
+        {/* Unified Recent Workspaces Dropdown */}
+        {savedSessions.length > 0 && (
+          <div className="flex gap-2 items-center relative border-t border-white/5 pt-3">
+            <div className="flex-1 relative">
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2"
+              >
+                <span className="truncate flex-1 text-left">
+                  {currentSession?.name || 'Select equation...'}
+                </span>
+                <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isDropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40 cursor-default" 
+                    onClick={() => setIsDropdownOpen(false)} 
+                  />
+                  <div className="absolute left-0 right-0 mt-1.5 bg-neutral-950/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl overflow-y-auto max-h-60 z-50 py-1 animate-[fadeIn_0.15s_ease-out]">
+                    {[...savedSessions]
+                      .sort((a, b) => b.timestamp - a.timestamp)
+                      .map((session) => {
+                        const isActive = session.id === currentSessionId;
+                        return (
+                          <button
+                            key={session.id}
+                            type="button"
+                            onClick={() => {
+                              loadSession(session.id);
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-xs flex justify-between items-center gap-4 hover:bg-indigo-600/20 transition-colors cursor-pointer ${
+                              isActive ? 'text-indigo-300 bg-indigo-600/5 font-semibold' : 'text-white/70'
+                            }`}
+                          >
+                            <span className="truncate font-mono flex-1">
+                              {session.name}
+                            </span>
+                            <span className="text-[10px] text-white/30 whitespace-nowrap font-sans shrink-0">
+                              {formatTimestamp(session.timestamp)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <Tooltip content="Delete workspace">
+              <button
+                type="button"
+                onClick={() => deleteSession(currentSessionId)}
+                disabled={savedSessions.length <= 1}
+                className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl border border-white/10 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <Trash2 size={13} />
+              </button>
+            </Tooltip>
           </div>
         )}
       </div>

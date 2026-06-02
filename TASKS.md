@@ -5,8 +5,8 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 ---
 
 ## 📈 Current Progress Summary
-* **Total Tasks**: 21
-* **Completed**: 14
+* **Total Tasks**: 22
+* **Completed**: 15
 * **Remaining**: 7
 
 ---
@@ -38,6 +38,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 
 ### 🌐 4. Local Persistence & URL Sharing
 - [x] Use local storage to persist derivation history trees on the browser.
+- [x] Symmetrically integrate Saved Workspaces Library into Left Sidebar with tab switcher.
 - [x] Implement real-time URL state synchronization (sharing active equations easily via URL).
 - [x] Design a premium "Share" button in the workspace to copy the shareable link to the clipboard.
 

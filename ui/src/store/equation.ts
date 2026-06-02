@@ -1,9 +1,9 @@
 import { atom } from 'jotai';
-import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
+import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
 import * as math from 'mathjs';
 
 // Global Initial Value Constants
-const INITIAL_EQUATION_STRING = '3 * x + 5 = x + 13';
+export const INITIAL_EQUATION_STRING = '3 * x + 5 = x + 13';
 
 // Tree Interface Definition
 export interface HistoryNode {
@@ -14,6 +14,45 @@ export interface HistoryNode {
   label: string;
   timestamp: number;
 }
+
+export interface SerializedHistoryNode {
+  id: string;
+  equation: SerializedEquation;
+  parentId: string | null;
+  childrenIds: string[];
+  label: string;
+  timestamp: number;
+}
+
+export interface SavedSession {
+  id: string;
+  name: string;
+  timestamp: number;
+  tree: Record<string, SerializedHistoryNode>;
+  currentNodeId: string;
+}
+
+export const serializeTree = (tree: Record<string, HistoryNode>): Record<string, SerializedHistoryNode> => {
+  const serialized: Record<string, SerializedHistoryNode> = {};
+  Object.keys(tree).forEach(id => {
+    serialized[id] = {
+      ...tree[id],
+      equation: serializeEquation(tree[id].equation)
+    };
+  });
+  return serialized;
+};
+
+export const deserializeTree = (serialized: Record<string, SerializedHistoryNode>): Record<string, HistoryNode> => {
+  const tree: Record<string, HistoryNode> = {};
+  Object.keys(serialized).forEach(id => {
+    tree[id] = {
+      ...serialized[id],
+      equation: deserializeEquation(serialized[id].equation)
+    };
+  });
+  return tree;
+};
 
 export interface VisualTreeNode extends HistoryNode {
   depth: number;
@@ -42,6 +81,10 @@ export const historyTreeAtom = atom<Record<string, HistoryNode>>({
 });
 
 export const currentNodeIdAtom = atom<string>("0");
+
+// Saved sessions state
+export const savedSessionsAtom = atom<SavedSession[]>([]);
+export const currentSessionIdAtom = atom<string>("session_initial");
 
 export const sourcePathAtom = atom<string | null>(null);
 export const hoverPathAtom = atom<string | null>(null);
@@ -275,14 +318,17 @@ export const pushEquationAtom = atom(
 );
 
 /**
- * Resets the entire store to a new starting equation string.
+ * Action: Create a new blank session.
  */
-export const resetToEquationStringAtom = atom(
+export const createNewSessionAtom = atom(
   null,
-  (_get, set, eqStr: string) => {
+  (get, set, initialEqStr?: string) => {
+    const eqStr = initialEqStr || INITIAL_EQUATION_STRING;
+    const newId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     try {
       const newEq = ensureNodeIds(parseEquation(eqStr));
-      set(historyTreeAtom, {
+      const newTree: Record<string, HistoryNode> = {
         "0": {
           id: "0",
           equation: newEq,
@@ -291,16 +337,109 @@ export const resetToEquationStringAtom = atom(
           label: "Initial",
           timestamp: Date.now(),
         }
-      });
+      };
+
+      set(historyTreeAtom, newTree);
       set(currentNodeIdAtom, "0");
+      set(currentSessionIdAtom, newId);
       set(sourcePathAtom, null);
       set(hoverPathAtom, null);
       set(hoverReducePathAtom, null);
       set(hoveredLoopTargetIdAtom, null);
+
+      // Add to saved sessions list immediately
+      const sessions = get(savedSessionsAtom);
+      const newSession: SavedSession = {
+        id: newId,
+        name: eqStr,
+        timestamp: Date.now(),
+        tree: serializeTree(newTree),
+        currentNodeId: "0",
+      };
+      const updatedSessions = [newSession, ...sessions];
+      set(savedSessionsAtom, updatedSessions);
+
+      try {
+        localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
+        localStorage.setItem('algebranch_current_session_id', newId);
+      } catch (err) {
+        console.error('Failed to save sessions to localStorage:', err);
+      }
     } catch (err) {
-      console.error('Failed to reset equation:', err);
-      throw err;
+      console.error('Failed to create new session:', err);
     }
+  }
+);
+
+/**
+ * Action: Load a specific session by ID.
+ */
+export const loadSessionAtom = atom(
+  null,
+  (get, set, sessionId: string) => {
+    const sessions = get(savedSessionsAtom);
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    try {
+      const deserialized = deserializeTree(session.tree);
+      set(historyTreeAtom, deserialized);
+      set(currentNodeIdAtom, session.currentNodeId);
+      set(currentSessionIdAtom, sessionId);
+      set(sourcePathAtom, null);
+      set(hoverPathAtom, null);
+      set(hoverReducePathAtom, null);
+      set(hoveredLoopTargetIdAtom, null);
+
+      try {
+        localStorage.setItem('algebranch_current_session_id', sessionId);
+      } catch (err) {
+        console.error('Failed to save active session ID:', err);
+      }
+    } catch (err) {
+      console.error('Failed to load session:', err);
+    }
+  }
+);
+
+/**
+ * Action: Delete a specific session by ID.
+ */
+export const deleteSessionAtom = atom(
+  null,
+  (get, set, sessionId: string) => {
+    const sessions = get(savedSessionsAtom);
+    const updatedSessions = sessions.filter(s => s.id !== sessionId);
+    set(savedSessionsAtom, updatedSessions);
+
+    // Save updated sessions to localStorage immediately
+    try {
+      localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
+    } catch (err) {
+      console.error('Failed to save sessions after deletion:', err);
+    }
+
+    const currentSessionId = get(currentSessionIdAtom);
+    if (currentSessionId === sessionId) {
+      if (updatedSessions.length > 0) {
+        // Load the most recent session
+        const nextSession = updatedSessions[0];
+        set(loadSessionAtom, nextSession.id);
+      } else {
+        // Create a new blank session
+        set(createNewSessionAtom);
+      }
+    }
+  }
+);
+
+/**
+ * Resets the entire store to a new starting equation string.
+ */
+export const resetToEquationStringAtom = atom(
+  null,
+  (_get, set, eqStr: string) => {
+    set(createNewSessionAtom, eqStr);
   }
 );
 

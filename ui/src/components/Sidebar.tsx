@@ -1,22 +1,45 @@
 'use client';
 
 import React from 'react';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Tooltip } from './Tooltip';
 import {
   currentEquationAtom,
   pushEquationAtom,
   resetToEquationStringAtom,
   applyGlobalOpAtom,
+  savedSessionsAtom,
+  currentSessionIdAtom,
+  loadSessionAtom,
+  deleteSessionAtom,
+  createNewSessionAtom,
 } from '../store/equation';
 import { MATH_PRESETS, THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Hash, Play, BookOpen, Sparkles } from 'lucide-react';
+import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Hash, Play, BookOpen, Sparkles, Trash2, FolderGit2 } from 'lucide-react';
+
+const formatTimestamp = (ts: number): string => {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'Just now';
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
 
 export const Sidebar: React.FC = () => {
   const currentEq = useAtomValue(currentEquationAtom);
   const pushEquation = useSetAtom(pushEquationAtom);
   const resetToEquation = useSetAtom(resetToEquationStringAtom);
   const applyGlobalOp = useSetAtom(applyGlobalOpAtom);
+
+  const savedSessions = useAtomValue(savedSessionsAtom);
+  const currentSessionId = useAtomValue(currentSessionIdAtom);
+  const loadSession = useSetAtom(loadSessionAtom);
+  const deleteSession = useSetAtom(deleteSessionAtom);
+  const createNewSession = useSetAtom(createNewSessionAtom);
+
+  const [activeTab, setActiveTab] = React.useState<'saved' | 'presets'>('saved');
 
   const [inputStr, setInputStr] = React.useState('');
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
@@ -166,33 +189,128 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Unified Presets Library */}
-      <div className="flex-1 flex flex-col gap-2.5 min-h-0 border-t border-white/10 pt-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50 select-none flex items-center gap-1 shrink-0">
-          <Hash size={12} className="text-indigo-400" />
-          <span>Presets Library</span>
-        </h3>
+      {/* 3. Library & Sessions Tabs */}
+      <div className="flex-1 flex flex-col gap-3 min-h-0 border-t border-white/10 pt-4">
+        {/* Tab Header Selector */}
+        <div className="flex bg-neutral-950/40 p-1 border border-white/5 rounded-xl shrink-0">
+          <button
+            onClick={() => setActiveTab('saved')}
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'saved'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-white/50 hover:text-white/80'
+            }`}
+          >
+            <FolderGit2 size={12} />
+            <span>Saved Workspaces</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('presets')}
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'presets'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-white/50 hover:text-white/80'
+            }`}
+          >
+            <Hash size={12} />
+            <span>Presets Library</span>
+          </button>
+        </div>
+
+        {/* New Session Action */}
+        <button
+          onClick={() => {
+            try {
+              createNewSession();
+              setActiveTab('saved');
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10 text-xs font-semibold text-indigo-300 hover:text-indigo-200 rounded-xl transition-all cursor-pointer shadow-sm select-none shrink-0"
+        >
+          <Plus size={13} />
+          <span>New Workspace Session</span>
+        </button>
+
+        {/* Tab Content List Container */}
         <div className="flex-1 flex flex-col gap-2 overflow-y-auto pr-1">
-          {MATH_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              onClick={() => handlePresetSelect(preset.equation)}
-              className="flex items-center justify-between text-left p-2.5 rounded-xl border border-white/5 bg-white/0 hover:bg-white/5 hover:border-white/10 group transition-all duration-200 shrink-0"
-            >
-              <div className="flex-1 min-w-0 pr-2">
-                <div className="text-xs text-indigo-300 font-semibold group-hover:text-indigo-200 transition-colors">
-                  {preset.label}
+          {activeTab === 'presets' ? (
+            MATH_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => handlePresetSelect(preset.equation)}
+                className="flex items-center justify-between text-left p-2.5 rounded-xl border border-white/5 bg-white/0 hover:bg-white/5 hover:border-white/10 group transition-all duration-200 shrink-0"
+              >
+                <div className="flex-1 min-w-0 pr-2">
+                  <div className="text-xs text-indigo-300 font-semibold group-hover:text-indigo-200 transition-colors">
+                    {preset.label}
+                  </div>
+                  <div className="text-xs font-mono text-white/70 group-hover:text-white transition-colors truncate">
+                    {preset.equation}
+                  </div>
                 </div>
-                <div className="text-xs font-mono text-white/70 group-hover:text-white transition-colors truncate">
-                  {preset.equation}
-                </div>
+                <Play
+                  size={11}
+                  className="text-white/20 group-hover:text-indigo-400 group-hover:translate-x-0.5 transform transition-all duration-200 shrink-0"
+                />
+              </button>
+            ))
+          ) : (
+            savedSessions.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-4 border border-dashed border-white/5 rounded-xl text-white/30 text-xs gap-1.5 select-none my-auto">
+                <FolderGit2 size={24} className="text-white/20" />
+                <span>No saved workspaces yet</span>
+                <span className="text-[10px] text-white/20">Derivations are auto-saved here</span>
               </div>
-              <Play
-                size={11}
-                className="text-white/20 group-hover:text-indigo-400 group-hover:translate-x-0.5 transform transition-all duration-200 shrink-0"
-              />
-            </button>
-          ))}
+            ) : (
+              savedSessions.map((session) => {
+                const isActive = session.id === currentSessionId;
+                const nodeCount = Object.keys(session.tree).length;
+                return (
+                  <div
+                    key={session.id}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border group transition-all duration-200 shrink-0 ${
+                      isActive
+                        ? 'border-indigo-500/40 bg-indigo-600/10'
+                        : 'border-white/5 bg-white/0 hover:bg-white/5 hover:border-white/10'
+                    }`}
+                  >
+                    <button
+                      onClick={() => loadSession(session.id)}
+                      className="flex-1 text-left min-w-0 pr-2 cursor-pointer"
+                    >
+                      <div className={`text-xs font-semibold truncate ${isActive ? 'text-indigo-200' : 'text-indigo-300 group-hover:text-indigo-200'}`}>
+                        {session.name}
+                      </div>
+                      <div className="text-[10px] text-white/40 flex items-center gap-1.5 mt-0.5 select-none">
+                        <span>{nodeCount} {nodeCount === 1 ? 'step' : 'steps'}</span>
+                        <span>•</span>
+                        <span>{formatTimestamp(session.timestamp)}</span>
+                      </div>
+                    </button>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isActive && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse mr-1" title="Active session" />
+                      )}
+                      <Tooltip content="Delete workspace">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSession(session.id);
+                          }}
+                          className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  </div>
+                );
+              })
+            )
+          )}
         </div>
       </div>
     </div>

@@ -16,6 +16,12 @@ import {
   historyTreeAtom,
   currentNodeIdAtom,
   HistoryNode,
+  savedSessionsAtom,
+  currentSessionIdAtom,
+  SavedSession,
+  serializeTree,
+  deserializeTree,
+  INITIAL_EQUATION_STRING,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { Sparkles, HelpCircle, Share2, Check } from 'lucide-react';
@@ -23,37 +29,6 @@ import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEqua
 
 // Local Constants
 const API_MATH_ENDPOINT = '/api/math';
-
-interface SerializedHistoryNode {
-  id: string;
-  equation: SerializedEquation;
-  parentId: string | null;
-  childrenIds: string[];
-  label: string;
-  timestamp: number;
-}
-
-const serializeTree = (tree: Record<string, HistoryNode>): Record<string, SerializedHistoryNode> => {
-  const serialized: Record<string, SerializedHistoryNode> = {};
-  Object.keys(tree).forEach(id => {
-    serialized[id] = {
-      ...tree[id],
-      equation: serializeEquation(tree[id].equation)
-    };
-  });
-  return serialized;
-};
-
-const deserializeTree = (serialized: Record<string, SerializedHistoryNode>): Record<string, HistoryNode> => {
-  const tree: Record<string, HistoryNode> = {};
-  Object.keys(serialized).forEach(id => {
-    tree[id] = {
-      ...serialized[id],
-      equation: deserializeEquation(serialized[id].equation)
-    };
-  });
-  return tree;
-};
 
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
@@ -65,12 +40,26 @@ export default function Home() {
   const [tree, setTree] = useAtom(historyTreeAtom);
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
   const [sharedCopied, setSharedCopied] = React.useState(false);
+  const [savedSessions, setSavedSessions] = useAtom(savedSessionsAtom);
+  const [currentSessionId, setCurrentSessionId] = useAtom(currentSessionIdAtom);
 
   const syncMathState = useSetAtom(syncMathStateAtom);
 
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
-    // 1. Check URL query string precedence
+    // 1. First, load the library list of saved sessions
+    let sessions: SavedSession[] = [];
+    try {
+      const savedSessionsRaw = localStorage.getItem('algebranch_saved_sessions');
+      if (savedSessionsRaw) {
+        sessions = JSON.parse(savedSessionsRaw);
+        setSavedSessions(sessions);
+      }
+    } catch (err) {
+      console.error('Failed to load saved sessions list:', err);
+    }
+
+    // 2. Check URL query string precedence (if sharing)
     const params = new URLSearchParams(window.location.search);
     const urlEq = params.get('eq');
     
@@ -78,7 +67,7 @@ export default function Home() {
       try {
         const cleanEqStr = decodeURIComponent(urlEq);
         const newEq = ensureNodeIds(parseEquation(cleanEqStr));
-        setTree({
+        const newTree: Record<string, HistoryNode> = {
           "0": {
             id: "0",
             equation: newEq,
@@ -87,16 +76,56 @@ export default function Home() {
             label: "Initial",
             timestamp: Date.now(),
           }
-        });
+        };
+
+        // Create a new session for the shared link so it doesn't overwrite existing work
+        const newSessionId = `session_shared_${Date.now()}`;
+        setTree(newTree);
         setCurrentNodeId("0");
+        setCurrentSessionId(newSessionId);
+
+        // Add this new shared session to the library list
+        const newSession: SavedSession = {
+          id: newSessionId,
+          name: cleanEqStr,
+          timestamp: Date.now(),
+          tree: serializeTree(newTree),
+          currentNodeId: "0",
+        };
+        const updated = [newSession, ...sessions];
+        setSavedSessions(updated);
+        localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
+        localStorage.setItem('algebranch_current_session_id', newSessionId);
         return;
       } catch (err) {
         console.error('Failed to parse equation from URL query parameter:', err);
       }
     }
     
-    // 2. Check local storage
+    // 3. Otherwise, check if there was a saved active session
     try {
+      const savedSessionId = localStorage.getItem('algebranch_current_session_id');
+      if (savedSessionId && sessions.length > 0) {
+        const activeSession = sessions.find(s => s.id === savedSessionId);
+        if (activeSession) {
+          setTree(deserializeTree(activeSession.tree));
+          setCurrentNodeId(activeSession.currentNodeId);
+          setCurrentSessionId(savedSessionId);
+          return;
+        }
+      }
+
+      // Fallback: If no active session found but we have sessions in the list, load the first one
+      if (sessions.length > 0) {
+        const activeSession = sessions[0];
+        setTree(deserializeTree(activeSession.tree));
+        setCurrentNodeId(activeSession.currentNodeId);
+        setCurrentSessionId(activeSession.id);
+        localStorage.setItem('algebranch_current_session_id', activeSession.id);
+        return;
+      }
+
+      // 4. Legacy migration fallback: Check old workspace storage keys (backward compatibility)
       const savedTreeRaw = localStorage.getItem('algebranch_history_tree');
       const savedNodeId = localStorage.getItem('algebranch_current_node_id');
       if (savedTreeRaw && savedNodeId) {
@@ -104,21 +133,92 @@ export default function Home() {
         const deserializedTree = deserializeTree(parsedRaw);
         setTree(deserializedTree);
         setCurrentNodeId(savedNodeId);
+        
+        // Migrate legacy workspace into a new session
+        const initialEqStr = equationToString(deserializedTree["0"].equation);
+        const legacySessionId = `session_migrated_${Date.now()}`;
+        const newSession: SavedSession = {
+          id: legacySessionId,
+          name: initialEqStr,
+          timestamp: Date.now(),
+          tree: parsedRaw,
+          currentNodeId: savedNodeId,
+        };
+        const updated = [newSession, ...sessions];
+        setSavedSessions(updated);
+        setCurrentSessionId(legacySessionId);
+        localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
+        localStorage.setItem('algebranch_current_session_id', legacySessionId);
+        return;
       }
     } catch (err) {
       console.error('Failed to load history from local storage:', err);
     }
-  }, [setTree, setCurrentNodeId]);
+
+    // 5. Default starting state if everything is empty
+    const defaultId = "session_initial";
+    setCurrentSessionId(defaultId);
+    const initialTree: Record<string, HistoryNode> = {
+      "0": {
+        id: "0",
+        equation: parseEquation(INITIAL_EQUATION_STRING),
+        parentId: null,
+        childrenIds: [],
+        label: "Initial",
+        timestamp: Date.now(),
+      }
+    };
+    const defaultSession: SavedSession = {
+      id: defaultId,
+      name: INITIAL_EQUATION_STRING,
+      timestamp: Date.now(),
+      tree: serializeTree(initialTree),
+      currentNodeId: "0",
+    };
+    setSavedSessions([defaultSession]);
+    localStorage.setItem('algebranch_saved_sessions', JSON.stringify([defaultSession]));
+    localStorage.setItem('algebranch_current_session_id', defaultId);
+
+  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId]);
 
   // Save derivation steps to local storage and update address bar URL reactively
   React.useEffect(() => {
-    if (!tree || !currentNodeId || !tree[currentNodeId]) return;
+    if (!tree || !currentNodeId || !tree[currentNodeId] || !currentSessionId) return;
 
-    // 1. Save serialized history tree and pointer to local storage
+    // 1. Save active workspace to the current session's entry in savedSessions library
     try {
       const serialized = serializeTree(tree);
+      const startEq = tree["0"]?.equation;
+      const sessionName = startEq ? equationToString(startEq) : INITIAL_EQUATION_STRING;
+
+      // Update the active session in our list
+      setSavedSessions(prevSessions => {
+        const index = prevSessions.findIndex(s => s.id === currentSessionId);
+        const updatedSession: SavedSession = {
+          id: currentSessionId,
+          name: sessionName,
+          timestamp: Date.now(),
+          tree: serialized,
+          currentNodeId,
+        };
+
+        let nextSessions = [...prevSessions];
+        if (index > -1) {
+          nextSessions[index] = updatedSession;
+        } else {
+          // It's a new session, prepend it
+          nextSessions = [updatedSession, ...nextSessions];
+        }
+
+        // Write the list to localStorage
+        localStorage.setItem('algebranch_saved_sessions', JSON.stringify(nextSessions));
+        return nextSessions;
+      });
+
+      // Also maintain the legacy/single active workspace key for other references
       localStorage.setItem('algebranch_history_tree', JSON.stringify(serialized));
       localStorage.setItem('algebranch_current_node_id', currentNodeId);
+      localStorage.setItem('algebranch_current_session_id', currentSessionId);
     } catch (err) {
       console.error('Failed to save history to local storage:', err);
     }
@@ -135,7 +235,7 @@ export default function Home() {
     } catch (err) {
       console.error('Failed to update URL search parameter:', err);
     }
-  }, [tree, currentNodeId]);
+  }, [tree, currentNodeId, currentSessionId, setSavedSessions]);
 
   const handleShare = () => {
     const shareUrl = window.location.href;

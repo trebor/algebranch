@@ -15,7 +15,7 @@ import {
   presetCategoriesAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Hash, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight } from 'lucide-react';
+import { History, ShieldAlert, Plus, Minus, X, Percent, Hash, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight } from 'lucide-react';
 
 const formatTimestamp = (ts: number): string => {
   const diff = Date.now() - ts;
@@ -93,30 +93,62 @@ export const Sidebar: React.FC = () => {
   return (
     <div className={`w-80 h-full flex flex-col gap-4 p-4 ${THEME_GLASS.PANEL}`}>
 
-      {/* 1. Custom Equation Loader */}
-      <div className={`p-4 shrink-0 ${THEME_GLASS.CARD}`}>
-        <h3 className="text-xs font-bold text-white mb-2.5 flex items-center gap-2 select-none">
-          <Terminal className="text-indigo-400" size={14} />
-          <span>Load Equation Workspace</span>
+      {/* 1. Recent Workspaces Card */}
+      <div className={`p-4 shrink-0 flex flex-col gap-3 ${THEME_GLASS.CARD}`}>
+        <h3 className="text-xs font-bold text-white flex items-center gap-2 select-none">
+          <History className="text-indigo-400" size={14} />
+          <span>Recent</span>
         </h3>
-        <form onSubmit={handleLoadCustom} className="flex gap-2">
+
+        {/* Unified Recent Workspaces Dropdown */}
+        {savedSessions.length > 0 && (
+          <div className="flex gap-2 items-center">
+            <select
+              value={currentSessionId}
+              onChange={(e) => loadSession(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 transition-all font-sans cursor-pointer"
+            >
+              {[...savedSessions]
+                .sort((a, b) => b.timestamp - a.timestamp)
+                .map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.name} ({formatTimestamp(session.timestamp)})
+                  </option>
+                ))}
+            </select>
+            <Tooltip content="Delete workspace">
+              <button
+                onClick={() => deleteSession(currentSessionId)}
+                disabled={savedSessions.length <= 1}
+                className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
+              >
+                <Trash2 size={13} />
+              </button>
+            </Tooltip>
+          </div>
+        )}
+
+        {/* Load New Equation Form */}
+        <form onSubmit={handleLoadCustom} className="flex gap-2 border-t border-white/5 pt-3">
           <input
             type="text"
             value={inputStr}
             onChange={(e) => setInputStr(e.target.value)}
-            placeholder="Type equation, e.g. 2x + 4 = 10"
+            placeholder="New equation, e.g. 2x + 4 = 10"
             className="flex-1 px-3 py-1.5 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
           />
-          <button
-            type="submit"
-            className={`px-3 py-1.5 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-95 ${THEME_TRANSITIONS.FAST}`}
-          >
-            Load
-          </button>
+          <Tooltip content="Load new equation">
+            <button
+              type="submit"
+              className={`px-3 py-1.5 text-[10px] font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-95 ${THEME_TRANSITIONS.FAST} flex items-center justify-center p-2`}
+            >
+              <Plus size={13} />
+            </button>
+          </Tooltip>
         </form>
 
         {errorStr && (
-          <div className="mt-2.5 flex items-start gap-2 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-2">
+          <div className="flex items-start gap-2 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-2 animate-[fadeIn_0.2s_ease-out]">
             <ShieldAlert size={12} className="shrink-0 mt-0.5" />
             <span className="break-all">{errorStr}</span>
           </div>
@@ -127,7 +159,7 @@ export const Sidebar: React.FC = () => {
       <div className={`p-4 shrink-0 ${THEME_GLASS.CARD} flex flex-col gap-3`}>
         <h3 className="text-xs font-bold text-white flex items-center gap-2 select-none">
           <Sparkles className="text-indigo-400" size={14} />
-          <span>Global Operations (Both Sides)</span>
+          <span>Global Operations</span>
         </h3>
 
         {/* Action button Grid */}
@@ -195,142 +227,65 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Library & Sessions Tabs */}
+      {/* 3. Presets Library */}
       <div className="flex-1 flex flex-col gap-3 min-h-0 border-t border-white/10 pt-4">
-        {/* Tab Header Selector */}
-        <div className="flex bg-neutral-950/40 p-1 border border-white/5 rounded-xl shrink-0">
-          <button
-            onClick={() => setActiveTab('saved')}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'saved'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-white/50 hover:text-white/80'
-            }`}
-          >
-            <FolderGit2 size={12} />
-            <span>Saved Workspaces</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('presets')}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'presets'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-white/50 hover:text-white/80'
-            }`}
-          >
-            <Hash size={12} />
-            <span>Presets Library</span>
-          </button>
-        </div>
+        <h3 className="text-xs font-bold text-white flex items-center gap-2 select-none px-1">
+          <FolderGit2 className="text-indigo-400" size={14} />
+          <span>Presets</span>
+        </h3>
 
         {/* Tab Content List Container */}
         <div className="flex-1 flex flex-col gap-2 overflow-y-auto pr-1">
-          {activeTab === 'presets' ? (
-            presetCategories.map((group) => {
-              const isExpanded = !!expandedCategories[group.category];
-              return (
-                <div key={group.category} className="flex flex-col gap-1.5 mb-2.5 shrink-0">
-                  {/* Category Header */}
-                  <button
-                    onClick={() => toggleCategory(group.category)}
-                    className="w-full flex items-center justify-between py-1.5 px-2 bg-neutral-900/40 hover:bg-neutral-900/60 border border-white/5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-indigo-300 hover:text-indigo-200 transition-all select-none cursor-pointer"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                      <span>{group.category}</span>
-                    </div>
-                    <span className="text-[9px] text-white/30 bg-white/5 px-1.5 py-0.5 rounded-full">
-                      {group.presets.length}
-                    </span>
-                  </button>
+          {presetCategories.map((group) => {
+            const isExpanded = !!expandedCategories[group.category];
+            return (
+              <div key={group.category} className="flex flex-col gap-1.5 mb-2.5 shrink-0">
+                {/* Category Header */}
+                <button
+                  onClick={() => toggleCategory(group.category)}
+                  className="w-full flex items-center justify-between py-1.5 px-2 bg-neutral-900/40 hover:bg-neutral-900/60 border border-white/5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-indigo-300 hover:text-indigo-200 transition-all select-none cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                    <span>{group.category}</span>
+                  </div>
+                  <span className="text-[9px] text-white/30 bg-white/5 px-1.5 py-0.5 rounded-full">
+                    {group.presets.length}
+                  </span>
+                </button>
 
-                  {/* Category Items (Collapsible) */}
-                  {isExpanded && (
-                    <div className="flex flex-col gap-1.5 pl-1.5 border-l border-white/5 ml-1.5 mt-1 animate-[fadeIn_0.2s_ease-out]">
-                      {group.presets.map((preset) => (
-                        <Tooltip
-                          key={preset.id}
-                          content={preset.description}
-                        >
-                          <button
-                            onClick={() => handlePresetSelect(preset.equation)}
-                            className="w-full flex items-center justify-between text-left p-2.5 rounded-xl border border-white/5 bg-white/0 hover:bg-white/5 hover:border-white/10 group transition-all duration-200 cursor-pointer shrink-0"
-                          >
-                            <div className="flex-1 min-w-0 pr-2">
-                              <div className="text-xs text-indigo-300 font-semibold group-hover:text-indigo-200 transition-colors">
-                                {preset.label}
-                              </div>
-                              <div className="text-xs font-mono text-white/70 group-hover:text-white transition-colors truncate">
-                                {preset.equation}
-                              </div>
-                            </div>
-                            <Play
-                              size={11}
-                              className="text-white/20 group-hover:text-indigo-400 group-hover:translate-x-0.5 transform transition-all duration-200 shrink-0"
-                            />
-                          </button>
-                        </Tooltip>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          ) : (
-            savedSessions.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-4 border border-dashed border-white/5 rounded-xl text-white/30 text-xs gap-1.5 select-none my-auto">
-                <FolderGit2 size={24} className="text-white/20" />
-                <span>No saved workspaces yet</span>
-                <span className="text-[10px] text-white/20">Derivations are auto-saved here</span>
-              </div>
-            ) : (
-              savedSessions.map((session) => {
-                const isActive = session.id === currentSessionId;
-                const nodeCount = Object.keys(session.tree).length;
-                return (
-                  <div
-                    key={session.id}
-                    className={`flex items-center justify-between p-2.5 rounded-xl border group transition-all duration-200 shrink-0 ${
-                      isActive
-                        ? 'border-indigo-500/40 bg-indigo-600/10'
-                        : 'border-white/5 bg-white/0 hover:bg-white/5 hover:border-white/10'
-                    }`}
-                  >
-                    <button
-                      onClick={() => loadSession(session.id)}
-                      className="flex-1 text-left min-w-0 pr-2 cursor-pointer"
-                    >
-                      <div className={`text-xs font-semibold truncate ${isActive ? 'text-indigo-200' : 'text-indigo-300 group-hover:text-indigo-200'}`}>
-                        {session.name}
-                      </div>
-                      <div className="text-[10px] text-white/40 flex items-center gap-1.5 mt-0.5 select-none">
-                        <span>{nodeCount} {nodeCount === 1 ? 'step' : 'steps'}</span>
-                        <span>•</span>
-                        <span>{formatTimestamp(session.timestamp)}</span>
-                      </div>
-                    </button>
-
-                    <div className="flex items-center gap-1 shrink-0">
-                      {isActive && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse mr-1" title="Active session" />
-                      )}
-                      <Tooltip content="Delete workspace">
+                {/* Category Items (Collapsible) */}
+                {isExpanded && (
+                  <div className="flex flex-col gap-1.5 pl-1.5 border-l border-white/5 ml-1.5 mt-1 animate-[fadeIn_0.2s_ease-out]">
+                    {group.presets.map((preset) => (
+                      <Tooltip
+                        key={preset.id}
+                        content={preset.description}
+                      >
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteSession(session.id);
-                          }}
-                          className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                          onClick={() => handlePresetSelect(preset.equation)}
+                          className="w-full flex items-center justify-between text-left p-2.5 rounded-xl border border-white/5 bg-white/0 hover:bg-white/5 hover:border-white/10 group transition-all duration-200 cursor-pointer shrink-0"
                         >
-                          <Trash2 size={12} />
+                          <div className="flex-1 min-w-0 pr-2">
+                            <div className="text-xs text-indigo-300 font-semibold group-hover:text-indigo-200 transition-colors">
+                              {preset.label}
+                            </div>
+                            <div className="text-xs font-mono text-white/70 group-hover:text-white transition-colors truncate">
+                              {preset.equation}
+                            </div>
+                          </div>
+                          <Play
+                            size={11}
+                            className="text-white/20 group-hover:text-indigo-400 group-hover:translate-x-0.5 transform transition-all duration-200 shrink-0"
+                          />
                         </button>
                       </Tooltip>
-                    </div>
+                    ))}
                   </div>
-                );
-              })
-            )
-          )}
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

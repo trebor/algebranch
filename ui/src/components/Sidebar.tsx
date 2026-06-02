@@ -92,6 +92,18 @@ export const Sidebar: React.FC = () => {
     }
   };
 
+  const triggerTooltipContent = currentSession ? (
+    <div className="flex flex-col gap-1 text-left max-w-xs select-none">
+      <span className="text-[9px] text-white/30 uppercase tracking-wider font-semibold">Full Expression</span>
+      <span className="font-mono text-xs text-indigo-300 break-all">{currentSession.name}</span>
+      <div className="border-t border-white/5 my-0.5" />
+      <div className="text-[10px] text-white/40 flex items-center gap-1.5">
+        <span>Last used:</span>
+        <span className="text-indigo-300 font-medium">{formatTimestamp(currentSession.timestamp)}</span>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className={`w-80 h-full flex flex-col gap-4 p-4 relative z-30 ${THEME_GLASS.PANEL}`}>
 
@@ -139,18 +151,36 @@ export const Sidebar: React.FC = () => {
             <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
               Recents
             </span>
-            <div className="flex gap-2 items-center relative">
-              <div className="flex-1 relative">
-                <button
-                  type="button"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2"
-                >
-                  <span className="truncate flex-1 text-left">
-                    {currentSession?.name || 'Select equation...'}
-                  </span>
-                  <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
+            <div className="flex gap-2 items-center relative min-w-0">
+              <div className="flex-1 min-w-0 relative">
+                {!isDropdownOpen && currentSession ? (
+                  <Tooltip 
+                    content={triggerTooltipContent} 
+                    wrapperClassName="w-full min-w-0"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
+                    >
+                      <span className="truncate flex-1 text-left">
+                        {currentSession.name}
+                      </span>
+                      <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  </Tooltip>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
+                  >
+                    <span className="truncate flex-1 text-left">
+                      {currentSession?.name || 'Select equation...'}
+                    </span>
+                    <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
 
                 {isDropdownOpen && (
                   <>

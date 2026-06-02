@@ -12,6 +12,7 @@ import {
   currentEquationAtom,
   candidatePathsAtom,
   hoverReducePathAtom,
+  hoverReduceIndexAtom,
   reduciblePathsAtom,
   toggleRootSignAtom,
 } from '../store/equation';
@@ -52,6 +53,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
   const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
+  const [hoverReduceIndex, setHoverReduceIndex] = useAtom(hoverReduceIndexAtom);
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
   const pushEquation = useSetAtom(pushEquationAtom);
@@ -112,18 +114,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     return false;
   }, [hoverPath, candidatePaths]);
 
-  const reducibleInfo = reduciblePaths[path];
-  const isReducible = !!reducibleInfo;
-  const reducedEq = reducibleInfo?.equation;
-  const reductionType = reducibleInfo?.type || 'reduce';
-
-  const handleReduceClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (reducedEq) {
-      pushEquation(reducedEq);
-      setHoverReducePath(null);
-    }
-  };
+  const actions = reduciblePaths[path] || [];
+  const isReducible = actions.length > 0;
 
   // Toggle Root Sign (+/- branches) via global action
   const handleToggleRootSign = (e: React.MouseEvent) => {
@@ -186,7 +178,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     : THEME_GLASS.CARD_CANDIDATE + ' cursor-default';
 
   // Highlight identity-reducible nodes with a delicate glowing indigo border when hovered
-  const isIdentityHovered = isReducible && reductionType === 'identity' && (isHovered || hoverReducePath === path);
+  const hasIdentityAction = actions.some((a) => a.type === 'identity');
+  const isHoveredActionIdentity = hoverReducePath === path && hoverReduceIndex !== null && actions[hoverReduceIndex]?.type === 'identity';
+  const isIdentityHovered = isReducible && (hasIdentityAction && isHovered || isHoveredActionIdentity);
   if (isIdentityHovered) {
     semanticStyle = 'border-indigo-400/80 bg-indigo-500/10 text-indigo-100 shadow-[0_0_15px_rgba(99,102,241,0.45)] cursor-pointer';
   }
@@ -314,11 +308,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     transition: 'all 150ms ease-in-out',
   };
 
+  const paddingClass = isReducible ? 'pt-[1.4rem] pb-[0.2em] px-[0.4em]' : 'p-[0.2em]';
+
   return (
     <div
       data-flip-id={nodeId}
       style={customStyle}
-      className={`relative inline-flex items-center justify-center p-[0.2em] border rounded-[0.4em] select-none ${semanticStyle}`}
+      className={`relative inline-flex items-center justify-center border rounded-[0.4em] select-none ${semanticStyle} ${paddingClass}`}
       onMouseEnter={() => setHoverPath(path)}
       onMouseLeave={() => {
         const lastSlash = path.lastIndexOf('/');
@@ -349,48 +345,65 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
         <div className="absolute -inset-0.5 bg-emerald-400/20 blur-md rounded-lg -z-10 animate-pulse" />
       )}
 
-      {/* Reduce Dot */}
+      {/* Compact Inline Operations Toolbar */}
       {isReducible && (
-        <Tooltip
-          content={reducibleInfo.label || (reductionType === 'distribute' ? "Distribute this term" : reductionType === 'identity' ? "Apply identity" : "Reduce this term")}
-          position="top"
-          wrapperClassName="absolute -top-2 -right-2 z-20"
-        >
-          <button
-            className={`h-5 w-5 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-colors relative group ${
-              reductionType === 'distribute'
-                ? 'bg-purple-600 border border-purple-500/80 hover:bg-purple-500 text-white'
-                : reductionType === 'identity'
-                ? 'bg-indigo-600 border border-indigo-500/80 hover:bg-indigo-500 text-white'
-                : 'bg-amber-400 border border-amber-500/80 hover:bg-amber-300 text-neutral-950'
-            }`}
-            onMouseEnter={(e) => {
-              e.stopPropagation();
-              setHoverReducePath(path);
-            }}
-            onMouseLeave={(e) => {
-              e.stopPropagation();
-              setHoverReducePath(null);
-            }}
-            onClick={handleReduceClick}
-          >
-            {/* Subtle pulse effect inside the dot */}
-            <span className={`absolute inset-0 rounded-full animate-ping group-hover:opacity-0 pointer-events-none ${
-              reductionType === 'distribute' 
-                ? 'bg-purple-500/40' 
-                : reductionType === 'identity'
-                ? 'bg-indigo-500/40'
-                : 'bg-amber-400/40'
-            }`} />
-            {reductionType === 'distribute' ? (
-              <Split size={10} className="text-white stroke-[2.5]" />
-            ) : reductionType === 'identity' ? (
-              <Sparkles size={10} className="text-white stroke-[2.5]" />
-            ) : (
-              <Zap size={10} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
-            )}
-          </button>
-        </Tooltip>
+        <div className="absolute top-1 right-1 flex items-center gap-1 z-20 bg-neutral-950/40 backdrop-blur-sm rounded px-1 py-0.5 border border-white/5 shadow-sm">
+          {actions.map((action, index) => {
+            const type = action.type;
+            const label = action.label || (type === 'distribute' ? "Distribute this term" : type === 'identity' ? "Apply identity" : "Reduce this term");
+            
+            const isActionHovered = hoverReducePath === path && hoverReduceIndex === index;
+
+            return (
+              <Tooltip
+                key={index}
+                content={label}
+                position="top"
+              >
+                <button
+                  className={`h-[18px] w-[18px] md:h-[16px] md:w-[16px] rounded-full flex items-center justify-center cursor-pointer shadow-sm transition-all duration-150 relative group ${
+                    type === 'distribute'
+                      ? 'bg-purple-600 border border-purple-500/80 hover:bg-purple-500 text-white'
+                      : type === 'identity'
+                      ? 'bg-indigo-600 border border-indigo-500/80 hover:bg-indigo-500 text-white'
+                      : 'bg-amber-400 border border-amber-500/80 hover:bg-amber-300 text-neutral-950'
+                  } ${isActionHovered ? 'scale-110 ring-2 ring-white/50' : ''}`}
+                  onMouseEnter={(e) => {
+                    e.stopPropagation();
+                    setHoverReducePath(path);
+                    setHoverReduceIndex(index);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.stopPropagation();
+                    setHoverReducePath(null);
+                    setHoverReduceIndex(null);
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    pushEquation(action.equation, action.type === 'identity' ? (action.label || 'Apply Identity') : (action.type === 'distribute' ? 'Distribute' : 'Reduce'));
+                    setHoverReducePath(null);
+                    setHoverReduceIndex(null);
+                  }}
+                >
+                  <span className={`absolute inset-0 rounded-full animate-ping group-hover:opacity-0 pointer-events-none ${
+                    type === 'distribute' 
+                      ? 'bg-purple-500/40' 
+                      : type === 'identity'
+                      ? 'bg-indigo-500/40'
+                      : 'bg-amber-400/40'
+                  }`} />
+                  {type === 'distribute' ? (
+                    <Split size={8} className="text-white stroke-[2.5]" />
+                  ) : type === 'identity' ? (
+                    <Sparkles size={8} className="text-white stroke-[2.5]" />
+                  ) : (
+                    <Zap size={8} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
+                  )}
+                </button>
+              </Tooltip>
+            );
+          })}
+        </div>
       )}
     </div>
   );

@@ -115,9 +115,10 @@ export const presetCategoriesAtom = atom<PresetCategoryGroup[]>((get) => {
 export const sourcePathAtom = atom<string | null>(null);
 export const hoverPathAtom = atom<string | null>(null);
 export const hoverReducePathAtom = atom<string | null>(null);
+export const hoverReduceIndexAtom = atom<number | null>(null);
 export const hoveredLoopTargetIdAtom = atom<string | null>(null);
 
-export interface ReduciblePathInfo {
+export interface ReducibleActionInfo {
   equation: Equation;
   type: 'reduce' | 'distribute' | 'identity';
   label?: string;
@@ -126,7 +127,7 @@ export interface ReduciblePathInfo {
 // Dynamic Server-Synchronized Atoms
 export const candidatePathsAtom = atom<Set<string>>(new Set<string>());
 export const targetPathsAtom = atom<Record<string, Equation>>({});
-export const reduciblePathsAtom = atom<Record<string, ReduciblePathInfo>>({});
+export const reduciblePathsAtom = atom<Record<string, ReducibleActionInfo[]>>({});
 
 // Derived Atoms
 
@@ -181,10 +182,16 @@ export const treeLayoutAtom = atom<Record<string, VisualTreeNode>>((get) => {
  */
 export const previewEquationAtom = atom<Equation>((get) => {
   const hoverReducePath = get(hoverReducePathAtom);
+  const hoverReduceIndex = get(hoverReduceIndexAtom);
   const reducible = get(reduciblePathsAtom);
 
   if (hoverReducePath && hoverReducePath in reducible) {
-    return reducible[hoverReducePath].equation;
+    const actions = reducible[hoverReducePath];
+    const index = hoverReduceIndex !== null ? hoverReduceIndex : 0;
+    const action = actions[index];
+    if (action) {
+      return action.equation;
+    }
   }
 
   const hoverPath = get(hoverPathAtom);
@@ -277,6 +284,7 @@ export const pushEquationAtom = atom(
         set(sourcePathAtom, null);
         set(hoverPathAtom, null);
         set(hoverReducePathAtom, null);
+        set(hoverReduceIndexAtom, null);
         set(hoveredLoopTargetIdAtom, null);
         return;
       }
@@ -290,6 +298,7 @@ export const pushEquationAtom = atom(
         set(sourcePathAtom, null);
         set(hoverPathAtom, null);
         set(hoverReducePathAtom, null);
+        set(hoverReduceIndexAtom, null);
         set(hoveredLoopTargetIdAtom, null);
         return;
       }
@@ -299,13 +308,19 @@ export const pushEquationAtom = atom(
     let label = stepLabel || "Move";
     if (!stepLabel) {
       const hoverReducePath = get(hoverReducePathAtom);
+      const hoverReduceIndex = get(hoverReduceIndexAtom);
       if (hoverReducePath) {
         const reducible = get(reduciblePathsAtom);
-        const actionType = hoverReducePath && reducible[hoverReducePath]?.type;
-        if (actionType === 'identity') {
-          label = reducible[hoverReducePath]?.label || 'Apply Identity';
-        } else {
-          label = actionType === 'distribute' ? 'Distribute' : 'Reduce';
+        const actions = reducible[hoverReducePath];
+        const index = hoverReduceIndex !== null ? hoverReduceIndex : 0;
+        const action = actions?.[index];
+        if (action) {
+          const actionType = action.type;
+          if (actionType === 'identity') {
+            label = action.label || 'Apply Identity';
+          } else {
+            label = actionType === 'distribute' ? 'Distribute' : 'Reduce';
+          }
         }
       } else if (get(sourcePathAtom)) {
         label = "Transpose";
@@ -344,6 +359,7 @@ export const pushEquationAtom = atom(
     set(sourcePathAtom, null);
     set(hoverPathAtom, null);
     set(hoverReducePathAtom, null);
+    set(hoverReduceIndexAtom, null);
     set(hoveredLoopTargetIdAtom, null);
   }
 );
@@ -376,6 +392,7 @@ export const createNewSessionAtom = atom(
       set(sourcePathAtom, null);
       set(hoverPathAtom, null);
       set(hoverReducePathAtom, null);
+      set(hoverReduceIndexAtom, null);
       set(hoveredLoopTargetIdAtom, null);
 
       // Add to saved sessions list immediately
@@ -420,6 +437,7 @@ export const loadSessionAtom = atom(
       set(sourcePathAtom, null);
       set(hoverPathAtom, null);
       set(hoverReducePathAtom, null);
+      set(hoverReduceIndexAtom, null);
       set(hoveredLoopTargetIdAtom, null);
 
       try {
@@ -561,18 +579,18 @@ export const syncMathStateAtom = atom(
   null,
   (_get, set, { activePaths, reduciblePaths, targetPaths }: { 
     activePaths: string[]; 
-    reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' | 'identity'; label?: string }>; 
+    reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' | 'identity'; label?: string }[]>; 
     targetPaths: Record<string, SerializedEquation> 
   }) => {
     set(candidatePathsAtom, new Set<string>(activePaths));
 
-    const parsedReducible: Record<string, ReduciblePathInfo> = {};
+    const parsedReducible: Record<string, ReducibleActionInfo[]> = {};
     Object.keys(reduciblePaths).forEach((k) => {
-      parsedReducible[k] = {
-        equation: deserializeEquation(reduciblePaths[k].equation),
-        type: reduciblePaths[k].type,
-        label: reduciblePaths[k].label
-      };
+      parsedReducible[k] = reduciblePaths[k].map(item => ({
+        equation: deserializeEquation(item.equation),
+        type: item.type,
+        label: item.label
+      }));
     });
     set(reduciblePathsAtom, parsedReducible);
 

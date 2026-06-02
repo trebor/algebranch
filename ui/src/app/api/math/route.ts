@@ -60,15 +60,14 @@ export async function POST(req: NextRequest) {
       });
 
       // 3. Get reducible paths (nodes that can be simplified, distributed, or rewritten using algebraic identities)
-      const reduciblePathsRaw: Record<
-        string,
-        {
-          simplified: Equation;
-          serialized: SerializedEquation;
-          type: 'reduce' | 'distribute' | 'identity';
-          label?: string;
-        }
-      > = {};
+      interface RawReduction {
+        path: string;
+        simplified: Equation;
+        serialized: SerializedEquation;
+        type: 'reduce' | 'distribute' | 'identity';
+        label?: string;
+      }
+      const rawReductions: RawReduction[] = [];
 
       allNodePaths.forEach((path) => {
         // Try standard simplification/distribution
@@ -77,16 +76,16 @@ export async function POST(req: NextRequest) {
           if (simplified) {
             const node = getNodeByPath(eq, path);
             const isDist = !!tryDistribution(node);
-            
-            reduciblePathsRaw[path] = {
+            rawReductions.push({
+              path,
               simplified,
               serialized: serializeEquation(simplified),
               type: isDist ? 'distribute' : 'reduce'
-            };
+            });
           }
         } catch {}
 
-        // Try high-school algebraic identity matches (overwriting generic ones on the same node path if matched)
+        // Try high-school algebraic identity matches
         try {
           const node = getNodeByPath(eq, path);
           for (const rule of HIGH_SCHOOL_IDENTITIES) {
@@ -95,13 +94,13 @@ export async function POST(req: NextRequest) {
               const instantiated = instantiatePattern(rule.targetPattern, bindings);
               const newEq = replaceNodeAtPath(eq, path, instantiated);
               if (areEquationsEquivalent(eq, newEq)) {
-                reduciblePathsRaw[path] = {
+                rawReductions.push({
+                  path,
                   simplified: newEq,
                   serialized: serializeEquation(newEq),
                   type: 'identity',
                   label: rule.name
-                };
-                break; // Use the first matching identity rule for this node
+                });
               }
             }
           }
@@ -116,12 +115,13 @@ export async function POST(req: NextRequest) {
             if (areEquationsEquivalent(eq, newEq)) {
               const exponent = ((powerForm as math.OperatorNode).args[1] as math.ConstantNode).value;
               const label = exponent === 2 ? 'Express as Square' : 'Express as Cube';
-              reduciblePathsRaw[path] = {
+              rawReductions.push({
+                path,
                 simplified: newEq,
                 serialized: serializeEquation(newEq),
                 type: 'identity',
                 label
-              };
+              });
             }
           }
         } catch {}
@@ -137,9 +137,9 @@ export async function POST(req: NextRequest) {
           equation: SerializedEquation;
           type: 'reduce' | 'distribute' | 'identity';
           label?: string;
-        }
+        }[]
       > = {};
-      const simplifiedToStringMap = new Map<string, string[]>();
+      const simplifiedToStringMap = new Map<string, RawReduction[]>();
 
       const getCanonicalKey = (eqVal: Equation): string => {
         try {
@@ -151,19 +151,18 @@ export async function POST(req: NextRequest) {
         }
       };
 
-      Object.keys(reduciblePathsRaw).forEach((path) => {
-        const item = reduciblePathsRaw[path];
-        const eqStrKey = getCanonicalKey(item.simplified);
+      rawReductions.forEach((red) => {
+        const eqStrKey = getCanonicalKey(red.simplified);
         if (!simplifiedToStringMap.has(eqStrKey)) {
           simplifiedToStringMap.set(eqStrKey, []);
         }
-        simplifiedToStringMap.get(eqStrKey)!.push(path);
+        simplifiedToStringMap.get(eqStrKey)!.push(red);
       });
 
-      simplifiedToStringMap.forEach((paths, _) => {
-        paths.sort((a, b) => {
-          const nodeA = getNodeByPath(eq, a);
-          const nodeB = getNodeByPath(eq, b);
+      simplifiedToStringMap.forEach((reds, _) => {
+        reds.sort((a, b) => {
+          const nodeA = getNodeByPath(eq, a.path);
+          const nodeB = getNodeByPath(eq, b.path);
           
           const isOpA = nodeA.type === 'OperatorNode' || nodeA.type === 'FunctionNode';
           const isOpB = nodeB.type === 'OperatorNode' || nodeB.type === 'FunctionNode';
@@ -173,16 +172,18 @@ export async function POST(req: NextRequest) {
           if (!isOpA && isOpB) return 1;
           
           // Prefer deeper paths (more specific subtrees)
-          return b.split('/').length - a.split('/').length;
+          return b.path.split('/').length - a.path.split('/').length;
         });
         
-        const bestPath = paths[0];
-        const bestItem = reduciblePathsRaw[bestPath];
-        reduciblePaths[bestPath] = {
-          equation: bestItem.serialized,
-          type: bestItem.type,
-          label: bestItem.label
-        };
+        const bestRed = reds[0];
+        if (!reduciblePaths[bestRed.path]) {
+          reduciblePaths[bestRed.path] = [];
+        }
+        reduciblePaths[bestRed.path].push({
+          equation: bestRed.serialized,
+          type: bestRed.type,
+          label: bestRed.label
+        });
       });
 
       // 4. Get target paths (valid drop targets for selected sourcePath)

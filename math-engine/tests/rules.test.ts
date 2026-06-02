@@ -103,4 +103,49 @@ describe('High School Rewrite Identities Tests', () => {
     
     expect(areEquationsEquivalent(eq, newEq)).toBe(true);
   });
+
+  test('should factor exponent out of product (a^3 * b^3)', () => {
+    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_power_of_product_reverse')!;
+    expect(rule).toBeDefined();
+
+    const target = math.parse('a^3 * b^3');
+    const bindings = matchPattern(rule.sourcePattern, target);
+    expect(bindings).not.toBeNull();
+    expect(bindings?.['_x']?.toString()).toBe('a');
+    expect(bindings?.['_y']?.toString()).toBe('b');
+    expect(bindings?.['_A']?.toString()).toBe('3');
+
+    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
+    expect(cleanString(rewritten)).toBe('(a*b)^3');
+  });
+
+  test('should distribute exponent to quotient ((a / b)^3)', () => {
+    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_power_of_quotient')!;
+    expect(rule).toBeDefined();
+
+    const target = math.parse('(a / b)^3');
+    const bindings = matchPattern(rule.sourcePattern, target);
+    expect(bindings).not.toBeNull();
+    expect(bindings?.['_x']?.toString()).toBe('a');
+    expect(bindings?.['_y']?.toString()).toBe('b');
+    expect(bindings?.['_A']?.toString()).toBe('3');
+
+    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
+    expect(cleanString(rewritten)).toBe('a^3/b^3');
+  });
+
+  test('should factor exponent out of quotient (a^3 / b^3)', () => {
+    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_power_of_quotient_reverse')!;
+    expect(rule).toBeDefined();
+
+    const target = math.parse('a^3 / b^3');
+    const bindings = matchPattern(rule.sourcePattern, target);
+    expect(bindings).not.toBeNull();
+    expect(bindings?.['_x']?.toString()).toBe('a');
+    expect(bindings?.['_y']?.toString()).toBe('b');
+    expect(bindings?.['_A']?.toString()).toBe('3');
+
+    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
+    expect(cleanString(rewritten)).toBe('(a/b)^3');
+  });
 });

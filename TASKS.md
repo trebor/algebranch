@@ -5,9 +5,9 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 ---
 
 ## 📈 Current Progress Summary
-* **Total Tasks**: 16
+* **Total Tasks**: 20
 * **Completed**: 11
-* **Remaining**: 5
+* **Remaining**: 9
 
 ---
 
@@ -19,6 +19,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Standardize candidate/source/target nomenclature.
 - [x] Filter out commutative & associative duplicates in simplify suggestions.
 - [x] Implement context-aware mouse target cursor indicators.
+- [ ] Expand preset library to include multi-field stock equations (Physics, Science fields, complexity levels).
 
 ### 🎨 2. History Tree Layout & Loop UI
 - [x] Render beautiful curved SVG S-bezier connection lines.
@@ -34,7 +35,12 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Unified 350ms FLIP transition engine for all transpositions, reductions, and timeline jumps.
 - [ ] Speculative preview transition finesses (optional - minor adjustments).
 
-### 🚀 4. Production Polish & Publishing Prep
+### 🌐 4. Local Persistence & URL Sharing
+- [ ] Use local storage to persist derivation history trees on the browser.
+- [ ] Implement real-time URL state synchronization (sharing active equations easily via URL).
+- [ ] Design a premium "Share" button in the workspace to copy the shareable link to the clipboard.
+
+### 🚀 5. Production Polish & Publishing Prep
 - [ ] Multi-device responsive dashboard layouts (mobile/tablet check).
 - [ ] Add a visual guide/interactive onboarding walkthrough for new users.
 - [ ] Optimize serverless Vercel function cold starts and caching headers.

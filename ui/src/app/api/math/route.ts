@@ -142,13 +142,7 @@ export async function POST(req: NextRequest) {
       const simplifiedToStringMap = new Map<string, RawReduction[]>();
 
       const getCanonicalKey = (eqVal: Equation): string => {
-        try {
-          const canonicalLhs = math.simplify(eqVal.lhs.toString()).toString();
-          const canonicalRhs = math.simplify(eqVal.rhs.toString()).toString();
-          return `${canonicalLhs} = ${canonicalRhs}`;
-        } catch {
-          return equationToString(eqVal);
-        }
+        return equationToString(eqVal);
       };
 
       rawReductions.forEach((red) => {

@@ -21,6 +21,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Implement context-aware mouse target cursor indicators.
 - [x] Expand preset library to include multi-field stock equations (Physics, Science fields, complexity levels).
 - [ ] Develop a mechanism for equation substitution / combining expressions (e.g. replacing E with m * c^2).
+- [ ] Think hard about parentheses in the AST (parsing, matching, formatting, and structural redundant stripping).
 
 ### 🎨 2. History Tree Layout & Loop UI
 - [x] Render beautiful curved SVG S-bezier connection lines.

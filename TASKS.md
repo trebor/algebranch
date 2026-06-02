@@ -29,6 +29,8 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Animated neon-rose electrical dashed flow lines on loop target hover.
 - [x] Selection parent redirect (go back one step just before the loop to explore a new path).
 - [x] Single Active Node Highlight Contrast (selected node glows indigo, parent steps are high-contrast black glass).
+- [ ] Change the color of the highlight in the history of the current/active item (currently feels too red/error-like).
+
 
 ### 🎬 3. Animations & Visual Node Polish
 - [x] Synchronized Operator scale exit/entry transitions.

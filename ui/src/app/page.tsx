@@ -195,10 +195,18 @@ export default function Home() {
       // Update the active session in our list
       setSavedSessions(prevSessions => {
         const index = prevSessions.findIndex(s => s.id === currentSessionId);
+        
+        let timestamp = Date.now();
+        if (index > -1) {
+          const existing = prevSessions[index];
+          const isTreeDifferent = JSON.stringify(existing.tree) !== JSON.stringify(serialized);
+          timestamp = isTreeDifferent ? Date.now() : existing.timestamp;
+        }
+
         const updatedSession: SavedSession = {
           id: currentSessionId,
           name: sessionName,
-          timestamp: Date.now(),
+          timestamp,
           tree: serialized,
           currentNodeId,
         };

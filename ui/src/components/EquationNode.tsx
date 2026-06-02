@@ -249,8 +249,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       if (opNode.op === '^') {
         return (
           <div className="flex items-start">
-            <EquationNode path={`${path}/0`} key={getChildId(0)} />
-            <div className="text-[0.65em] leading-none -mt-[0.2em] ml-[0.05em] scale-90 opacity-90">
+            <div className="mt-[0.6em]">
+              <EquationNode path={`${path}/0`} key={getChildId(0)} />
+            </div>
+            <div className="text-[0.65em] leading-none -mt-[0.1em] ml-[0.05em] scale-90 opacity-90">
               <EquationNode path={`${path}/1`} key={getChildId(1)} />
             </div>
           </div>

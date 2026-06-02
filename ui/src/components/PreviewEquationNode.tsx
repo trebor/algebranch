@@ -79,8 +79,10 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       if (opNode.op === '^') {
         return (
           <div className="flex items-start">
-            <PreviewEquationNode path={`${path}/0`} />
-            <div className="text-[0.65em] leading-none -mt-[0.2em] ml-[0.05em] scale-90 opacity-70">
+            <div className="mt-[0.6em]">
+              <PreviewEquationNode path={`${path}/0`} />
+            </div>
+            <div className="text-[0.65em] leading-none -mt-[0.1em] ml-[0.05em] scale-90 opacity-70">
               <PreviewEquationNode path={`${path}/1`} />
             </div>
           </div>

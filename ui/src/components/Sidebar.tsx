@@ -93,10 +93,10 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <div className={`w-80 h-full flex flex-col gap-4 p-4 ${THEME_GLASS.PANEL}`}>
+    <div className={`w-80 h-full flex flex-col gap-4 p-4 relative z-30 ${THEME_GLASS.PANEL}`}>
 
       {/* 1. Workspace Card */}
-      <div className={`p-4 shrink-0 flex flex-col gap-3 ${THEME_GLASS.CARD}`}>
+      <div className={`p-4 shrink-0 flex flex-col gap-3 relative z-20 ${THEME_GLASS.CARD}`}>
         <h3 className="text-xs font-bold text-white flex items-center gap-2 select-none">
           <Terminal className="text-indigo-400" size={14} />
           <span>Workspace</span>

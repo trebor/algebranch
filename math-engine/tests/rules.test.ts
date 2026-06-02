@@ -74,4 +74,18 @@ describe('High School Rewrite Identities Tests', () => {
     const rewritten = instantiatePattern(rule.targetPattern, bindings!);
     expect(cleanString(rewritten)).toBe('x^(2+3)');
   });
+
+  test('should factor perfect square sum with constant (a^2 + 2*a*3 + 3^2)', () => {
+    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'perfect_square_factor_plus')!;
+    expect(rule).toBeDefined();
+
+    const target = math.parse('a^2 + 2 * a * 3 + 3^2');
+    const bindings = matchPattern(rule.sourcePattern, target);
+    expect(bindings).not.toBeNull();
+    expect(bindings?.['_A']?.toString()).toBe('a');
+    expect(bindings?.['_B']?.toString()).toBe('3');
+
+    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
+    expect(cleanString(rewritten)).toBe('(a+3)^2');
+  });
 });

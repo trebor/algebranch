@@ -17,36 +17,6 @@ const unwrap = (node: math.MathNode): math.MathNode => {
   return current;
 };
 
-const compareStringsASCII = (s1: string, s2: string): number => {
-  const minLen = Math.min(s1.length, s2.length);
-  for (let i = 0; i < minLen; i++) {
-    const c1 = s1.charCodeAt(i);
-    const c2 = s2.charCodeAt(i);
-    if (c1 !== c2) {
-      return c1 - c2;
-    }
-  }
-  return s1.length - s2.length;
-};
-
-const compareNodesForCommutative = (a: math.MathNode, b: math.MathNode): number => {
-  const unwrappedA = unwrap(a);
-  const unwrappedB = unwrap(b);
-
-  const getScore = (n: math.MathNode): number => {
-    if (n.type === 'ConstantNode') return 0;
-    return 1;
-  };
-
-  const scoreA = getScore(unwrappedA);
-  const scoreB = getScore(unwrappedB);
-
-  if (scoreA !== scoreB) {
-    return scoreB - scoreA;
-  }
-
-  return compareStringsASCII(unwrappedA.toString(), unwrappedB.toString());
-};
 
 const areNodesStructurallyEqual = (a: math.MathNode, b: math.MathNode): boolean => {
   const unwrappedA = unwrap(a);
@@ -132,19 +102,27 @@ export function matchPattern(
 
     // Support commutative operations: + and *
     if (opP.op === '+' || opP.op === '*') {
-      const sortedArgsP = [...opP.args].sort(compareNodesForCommutative);
-      const sortedArgsT = [...opT.args].sort(compareNodesForCommutative);
-
-      let currentBindings = { ...bindings };
-      for (let i = 0; i < sortedArgsP.length; i++) {
-        const next = matchPattern(sortedArgsP[i], sortedArgsT[i], currentBindings);
-        if (next) {
-          currentBindings = next;
-        } else {
-          return null;
+      if (opP.args.length === 2) {
+        // Try matching 1-to-1 directly first: Pattern[0] with Target[0], Pattern[1] with Target[1]
+        const bindings1 = matchPattern(opP.args[0], opT.args[0], bindings);
+        if (bindings1) {
+          const finalBindings = matchPattern(opP.args[1], opT.args[1], bindings1);
+          if (finalBindings) {
+            return finalBindings;
+          }
         }
+
+        // Try matching cross-wise: Pattern[0] with Target[1], Pattern[1] with Target[0]
+        const bindings2 = matchPattern(opP.args[0], opT.args[1], bindings);
+        if (bindings2) {
+          const finalBindings = matchPattern(opP.args[1], opT.args[0], bindings2);
+          if (finalBindings) {
+            return finalBindings;
+          }
+        }
+
+        return null;
       }
-      return currentBindings;
     }
 
     // Normal non-commutative operator matching

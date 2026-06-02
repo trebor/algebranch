@@ -52,8 +52,9 @@ describe('Algebraic Pattern Matcher', () => {
       const target = parse('x + y');
       const bindings = matchPattern(pattern, target);
       expect(bindings).not.toBeNull();
-      expect(bindings?.['_A']?.toString()).toBe('x');
-      expect(bindings?.['_B']?.toString()).toBe('y');
+      const a = bindings?.['_A']?.toString();
+      const b = bindings?.['_B']?.toString();
+      expect((a === 'x' && b === 'y') || (a === 'y' && b === 'x')).toBe(true);
     });
 
     test('should match commutative addition order 2', () => {
@@ -61,8 +62,9 @@ describe('Algebraic Pattern Matcher', () => {
       const target = parse('y + x');
       const bindings = matchPattern(pattern, target);
       expect(bindings).not.toBeNull();
-      expect(bindings?.['_A']?.toString()).toBe('x');
-      expect(bindings?.['_B']?.toString()).toBe('y');
+      const a = bindings?.['_A']?.toString();
+      const b = bindings?.['_B']?.toString();
+      expect((a === 'x' && b === 'y') || (a === 'y' && b === 'x')).toBe(true);
     });
 
     test('should match commutative multiplication', () => {
@@ -70,8 +72,9 @@ describe('Algebraic Pattern Matcher', () => {
       const target = parse('3 * x');
       const bindings = matchPattern(pattern, target);
       expect(bindings).not.toBeNull();
-      expect(bindings?.['_A']?.toString()).toBe('x');
-      expect(bindings?.['_B']?.toString()).toBe('3');
+      const a = bindings?.['_A']?.toString();
+      const b = bindings?.['_B']?.toString();
+      expect((a === 'x' && b === '3') || (a === '3' && b === 'x')).toBe(true);
     });
   });
 

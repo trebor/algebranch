@@ -396,7 +396,7 @@ export default function Home() {
       <div className="absolute bottom-10 left-1/4 w-96 h-96 bg-sky-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
 
       {/* Top Header */}
-      <header className="h-16 px-8 flex items-center justify-between select-none shrink-0 w-full z-30">
+      <header className="h-16 px-4 flex items-center justify-between select-none shrink-0 w-full z-30">
         <div className="flex items-center gap-3">
           <Image
             src="/logo.png"
@@ -437,92 +437,86 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Under-header Layout (Sidebar + Main Workspace) */}
-      <div className="flex-1 flex w-full overflow-hidden min-h-0 relative z-20">
+      {/* Under-header Layout (Sidebar + Main Workspace + Right Sidebar) */}
+      <div className="flex-1 flex w-full overflow-hidden min-h-0 relative z-20 gap-4 px-4 pb-4 pt-0">
         {/* 1. Left Control Sidebar (Loader, Global Operations, Presets Library) */}
         <Sidebar />
 
         {/* Main workspace section */}
         <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-          {/* Central Workspace Area */}
-          <div className="flex-1 flex gap-6 px-8 pb-8 pt-0 min-h-0">
-            {/* Equation Editor Canvas */}
-            <div className="flex-1 flex flex-col gap-6 min-w-0">
-              <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
-                
-                {/* 1. Active Derivation Workspace (Top 50%) */}
-                <div className="active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <span className="text-[10px] text-indigo-400 font-semibold tracking-wider uppercase select-none">
-                      Active Workspace
-                    </span>
-                    <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full">
-                      {/* LHS Term Tree */}
-                      <div className="flex justify-end min-w-[5em]">
-                        <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />
-                      </div>
-
-                      {/* Equals Operator sign */}
-                      <span className="text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black">
-                        =
-                      </span>
-
-                      {/* RHS Term Tree */}
-                      <div className="flex justify-start min-w-[5em]">
-                        <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
-                      </div>
-                    </div>
+          <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
+            
+            {/* 1. Active Derivation Workspace (Top 50%) */}
+            <div className="active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
+              <div className="flex flex-col items-center justify-center gap-2">
+                <span className="text-[10px] text-indigo-400 font-semibold tracking-wider uppercase select-none">
+                  Active Workspace
+                </span>
+                <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full">
+                  {/* LHS Term Tree */}
+                  <div className="flex justify-end min-w-[5em]">
+                    <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />
                   </div>
-                </div>
 
-                {/* Elegant Dashed Separator */}
-                <div className="w-11/12 border-t border-dashed border-white/10 shrink-0 self-center" />
+                  {/* Equals Operator sign */}
+                  <span className="text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black">
+                    =
+                  </span>
 
-                {/* 2. Speculative Preview Workspace (Bottom 50%) */}
-                <div className="flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
-                  <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 ${
-                    isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
-                  }`}>
-                    <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
-                      isSpeculative ? 'text-emerald-400' : 'text-zinc-500'
-                    }`}>
-                      <span>Preview</span>
-                      {isSpeculative && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                      )}
-                    </span>
-                    
-                    <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full pointer-events-none select-none">
-                      {/* LHS Preview Term Tree */}
-                      <div className="flex justify-end min-w-[5em]">
-                        <PreviewEquationNode path="lhs" />
-                      </div>
-
-                      {/* Equals Operator sign */}
-                      <span className={`text-[1.2em] font-light font-mono select-none px-[0.6em] py-[0.2em] border rounded-[0.4em] transition-all duration-300 ${
-                        isSpeculative
-                          ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
-                          : 'text-zinc-600 border-zinc-500/10 bg-zinc-500/5'
-                      }`}>
-                        =
-                      </span>
-
-                      {/* RHS Preview Term Tree */}
-                      <div className="flex justify-start min-w-[5em]">
-                        <PreviewEquationNode path="rhs" />
-                      </div>
-                    </div>
+                  {/* RHS Term Tree */}
+                  <div className="flex justify-start min-w-[5em]">
+                    <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right History & Derivations Sidebar */}
-            <div className="w-80 flex flex-col shrink-0">
-              <ControlPanel />
+            {/* Elegant Dashed Separator */}
+            <div className="w-11/12 border-t border-dashed border-white/10 shrink-0 self-center" />
+
+            {/* 2. Speculative Preview Workspace (Bottom 50%) */}
+            <div className="flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
+              <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 ${
+                isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
+              }`}>
+                <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
+                  isSpeculative ? 'text-emerald-400' : 'text-zinc-500'
+                }`}>
+                  <span>Preview</span>
+                  {isSpeculative && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                  )}
+                </span>
+                
+                <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full pointer-events-none select-none">
+                  {/* LHS Preview Term Tree */}
+                  <div className="flex justify-end min-w-[5em]">
+                    <PreviewEquationNode path="lhs" />
+                  </div>
+
+                  {/* Equals Operator sign */}
+                  <span className={`text-[1.2em] font-light font-mono select-none px-[0.6em] py-[0.2em] border rounded-[0.4em] transition-all duration-300 ${
+                    isSpeculative
+                      ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
+                      : 'text-zinc-600 border-zinc-500/10 bg-zinc-500/5'
+                  }`}>
+                    =
+                  </span>
+
+                  {/* RHS Preview Term Tree */}
+                  <div className="flex justify-start min-w-[5em]">
+                    <PreviewEquationNode path="rhs" />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </main>
+
+        {/* Right History & Derivations Sidebar */}
+        <div className="w-80 flex flex-col shrink-0">
+          <ControlPanel />
+        </div>
       </div>
     </div>
   );

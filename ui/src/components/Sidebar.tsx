@@ -91,7 +91,7 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <div className={`w-80 h-full flex flex-col gap-6 p-5 ${THEME_GLASS.PANEL}`}>
+    <div className={`w-80 h-full flex flex-col gap-4 p-4 ${THEME_GLASS.PANEL}`}>
 
       {/* 1. Custom Equation Loader */}
       <div className={`p-4 shrink-0 ${THEME_GLASS.CARD}`}>

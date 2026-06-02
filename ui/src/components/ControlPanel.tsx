@@ -225,7 +225,7 @@ export const ControlPanel: React.FC = () => {
   }, [visualNodes, visualNodesMap, activePathSet]);
 
   return (
-    <div className={`w-full h-full flex flex-col gap-6 p-5 ${THEME_GLASS.PANEL}`}>
+    <div className={`w-full h-full flex flex-col gap-4 p-4 ${THEME_GLASS.PANEL}`}>
       {/* Sidebar Header with Timeline Actions */}
       <div className="flex items-center justify-between border-b border-white/10 pb-4 shrink-0">
         <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">

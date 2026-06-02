@@ -446,8 +446,8 @@ export default function Home() {
         <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
           <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
             
-            {/* 1. Active Derivation Workspace (Top 50%) */}
-            <div className="active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
+            {/* 1. Active Derivation Workspace (Top 2/3) */}
+            <div className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
               <div className="flex flex-col items-center justify-center gap-2">
                 <span className="text-[10px] text-indigo-400 font-semibold tracking-wider uppercase select-none">
                   Active Workspace
@@ -474,8 +474,8 @@ export default function Home() {
             {/* Elegant Dashed Separator */}
             <div className="w-11/12 border-t border-dashed border-white/10 shrink-0 self-center" />
 
-            {/* 2. Speculative Preview Workspace (Bottom 50%) */}
-            <div className="flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
+            {/* 2. Speculative Preview Workspace (Bottom 1/3) */}
+            <div className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
               <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 ${
                 isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
               }`}>

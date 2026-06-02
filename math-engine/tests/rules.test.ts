@@ -205,4 +205,34 @@ describe('High School Rewrite Identities Tests', () => {
     const newEq = replaceNodeAtPath(eq, 'lhs', rewritten);
     expect(areEquationsEquivalent(eq, newEq)).toBe(true);
   });
+
+  test('should match and verify reverse tangent quotient identity (sin(x)/cos(x) -> tan(x))', () => {
+    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
+    const eq = parseEquation('sin(x)/cos(x) = y');
+    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'trig_tan_def_reverse')!;
+    expect(rule).toBeDefined();
+
+    const bindings = matchPattern(rule.sourcePattern, eq.lhs);
+    expect(bindings).not.toBeNull();
+    expect(bindings?.['_theta']?.toString()).toBe('x');
+
+    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
+    const newEq = replaceNodeAtPath(eq, 'lhs', rewritten);
+    expect(areEquationsEquivalent(eq, newEq)).toBe(true);
+  });
+
+  test('should match and verify reverse secant identity (1/cos(x) -> sec(x))', () => {
+    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
+    const eq = parseEquation('1/cos(x) = y');
+    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'trig_sec_def_reverse')!;
+    expect(rule).toBeDefined();
+
+    const bindings = matchPattern(rule.sourcePattern, eq.lhs);
+    expect(bindings).not.toBeNull();
+    expect(bindings?.['_theta']?.toString()).toBe('x');
+
+    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
+    const newEq = replaceNodeAtPath(eq, 'lhs', rewritten);
+    expect(areEquationsEquivalent(eq, newEq)).toBe(true);
+  });
 });

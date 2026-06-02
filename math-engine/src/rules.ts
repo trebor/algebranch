@@ -221,6 +221,14 @@ const RAW_RULES: RawRule[] = [
     description: 'Expresses tangent as sine divided by cosine.',
   },
   {
+    id: 'trig_tan_def_reverse',
+    name: 'Tangent Quotient Identity (Reverse)',
+    category: 'Trigonometric Identities',
+    sourcePatternStr: 'sin(_theta) / cos(_theta)',
+    targetPatternStr: 'tan(_theta)',
+    description: 'Rewrites sin/cos quotient as tangent.',
+  },
+  {
     id: 'trig_sec_def',
     name: 'Secant Reciprocal Identity',
     category: 'Trigonometric Identities',
@@ -229,12 +237,28 @@ const RAW_RULES: RawRule[] = [
     description: 'Expresses secant as the reciprocal of cosine.',
   },
   {
+    id: 'trig_sec_def_reverse',
+    name: 'Secant Reciprocal Identity (Reverse)',
+    category: 'Trigonometric Identities',
+    sourcePatternStr: '1 / cos(_theta)',
+    targetPatternStr: 'sec(_theta)',
+    description: 'Rewrites reciprocal of cosine as secant.',
+  },
+  {
     id: 'trig_csc_def',
     name: 'Cosecant Reciprocal Identity',
     category: 'Trigonometric Identities',
     sourcePatternStr: 'csc(_theta)',
     targetPatternStr: '1 / sin(_theta)',
     description: 'Expresses cosecant as the reciprocal of sine.',
+  },
+  {
+    id: 'trig_csc_def_reverse',
+    name: 'Cosecant Reciprocal Identity (Reverse)',
+    category: 'Trigonometric Identities',
+    sourcePatternStr: '1 / sin(_theta)',
+    targetPatternStr: 'csc(_theta)',
+    description: 'Rewrites reciprocal of sine as cosecant.',
   },
   {
     id: 'trig_double_sin',

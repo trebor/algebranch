@@ -148,4 +148,46 @@ describe('High School Rewrite Identities Tests', () => {
     const rewritten = instantiatePattern(rule.targetPattern, bindings!);
     expect(cleanString(rewritten)).toBe('(a/b)^3');
   });
+
+  test('should expand log of product and condense it back', () => {
+    const forwardRule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'log_product')!;
+    const reverseRule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'log_product_reverse')!;
+    expect(forwardRule).toBeDefined();
+    expect(reverseRule).toBeDefined();
+
+    // Forward: log(x * y) -> log(x) + log(y)
+    const targetForward = math.parse('log(x * y)');
+    const bindingsF = matchPattern(forwardRule.sourcePattern, targetForward);
+    expect(bindingsF).not.toBeNull();
+    const expanded = instantiatePattern(forwardRule.targetPattern, bindingsF!);
+    expect(cleanString(expanded)).toBe('log(x)+log(y)');
+
+    // Reverse: log(x) + log(y) -> log(x * y)
+    const bindingsR = matchPattern(reverseRule.sourcePattern, expanded);
+    expect(bindingsR).not.toBeNull();
+    const condensed = instantiatePattern(reverseRule.targetPattern, bindingsR!);
+    expect(cleanString(condensed)).toBe('log(x*y)');
+  });
+
+  test('should condense log difference using reverse quotient rule', () => {
+    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'log_quotient_reverse')!;
+    expect(rule).toBeDefined();
+
+    const target = math.parse('log(a) - log(b)');
+    const bindings = matchPattern(rule.sourcePattern, target);
+    expect(bindings).not.toBeNull();
+    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
+    expect(cleanString(rewritten)).toBe('log(a/b)');
+  });
+
+  test('should condense log power using reverse power rule', () => {
+    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'log_power_reverse')!;
+    expect(rule).toBeDefined();
+
+    const target = math.parse('3 * log(z)');
+    const bindings = matchPattern(rule.sourcePattern, target);
+    expect(bindings).not.toBeNull();
+    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
+    expect(cleanString(rewritten)).toBe('log(z^3)');
+  });
 });

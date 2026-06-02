@@ -178,6 +178,30 @@ const RAW_RULES: RawRule[] = [
     targetPatternStr: '_k * log(_A)',
     description: 'Moves the exponent inside a logarithm to a multiplier coefficient.',
   },
+  {
+    id: 'log_product_reverse',
+    name: 'Logarithm Product Rule (Reverse)',
+    category: 'Logarithm Rules',
+    sourcePatternStr: 'log(_A) + log(_B)',
+    targetPatternStr: 'log(_A * _B)',
+    description: 'Condenses the sum of two logarithms into the logarithm of their product.',
+  },
+  {
+    id: 'log_quotient_reverse',
+    name: 'Logarithm Quotient Rule (Reverse)',
+    category: 'Logarithm Rules',
+    sourcePatternStr: 'log(_A) - log(_B)',
+    targetPatternStr: 'log(_A / _B)',
+    description: 'Condenses the difference of two logarithms into the logarithm of their quotient.',
+  },
+  {
+    id: 'log_power_reverse',
+    name: 'Logarithm Power Rule (Reverse)',
+    category: 'Logarithm Rules',
+    sourcePatternStr: '_k * log(_A)',
+    targetPatternStr: 'log(_A^_k)',
+    description: 'Moves a multiplier coefficient outside a logarithm to the exponent of the argument.',
+  },
 
   // 4. Trigonometric Identities
   {

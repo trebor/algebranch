@@ -12,7 +12,6 @@ import {
   currentSessionIdAtom,
   loadSessionAtom,
   deleteSessionAtom,
-  createNewSessionAtom,
 } from '../store/equation';
 import { MATH_PRESETS, THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Hash, Play, BookOpen, Sparkles, Trash2, FolderGit2 } from 'lucide-react';
@@ -37,7 +36,6 @@ export const Sidebar: React.FC = () => {
   const currentSessionId = useAtomValue(currentSessionIdAtom);
   const loadSession = useSetAtom(loadSessionAtom);
   const deleteSession = useSetAtom(deleteSessionAtom);
-  const createNewSession = useSetAtom(createNewSessionAtom);
 
   const [activeTab, setActiveTab] = React.useState<'saved' | 'presets'>('saved');
 
@@ -53,6 +51,7 @@ export const Sidebar: React.FC = () => {
       setErrorStr(null);
       resetToEquation(inputStr);
       setInputStr('');
+      setActiveTab('saved');
     } catch (err) {
       setErrorStr(err instanceof Error ? err.message : String(err));
     }
@@ -72,6 +71,7 @@ export const Sidebar: React.FC = () => {
     try {
       setErrorStr(null);
       resetToEquation(eqStr);
+      setActiveTab('saved');
     } catch (err) {
       setErrorStr(`Error loading preset: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -216,22 +216,6 @@ export const Sidebar: React.FC = () => {
             <span>Presets Library</span>
           </button>
         </div>
-
-        {/* New Session Action */}
-        <button
-          onClick={() => {
-            try {
-              createNewSession();
-              setActiveTab('saved');
-            } catch (err) {
-              console.error(err);
-            }
-          }}
-          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10 text-xs font-semibold text-indigo-300 hover:text-indigo-200 rounded-xl transition-all cursor-pointer shadow-sm select-none shrink-0"
-        >
-          <Plus size={13} />
-          <span>New Workspace Session</span>
-        </button>
 
         {/* Tab Content List Container */}
         <div className="flex-1 flex flex-col gap-2 overflow-y-auto pr-1">

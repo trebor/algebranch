@@ -5,9 +5,9 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 ---
 
 ## 📈 Current Progress Summary
-* **Total Tasks**: 22
+* **Total Tasks**: 24
 * **Completed**: 16
-* **Remaining**: 6
+* **Remaining**: 8
 
 ---
 
@@ -20,6 +20,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Filter out commutative & associative duplicates in simplify suggestions.
 - [x] Implement context-aware mouse target cursor indicators.
 - [x] Expand preset library to include multi-field stock equations (Physics, Science fields, complexity levels).
+- [ ] Develop a mechanism for equation substitution / combining expressions (e.g. replacing E with m * c^2).
 
 ### 🎨 2. History Tree Layout & Loop UI
 - [x] Render beautiful curved SVG S-bezier connection lines.
@@ -35,6 +36,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Unified 350ms FLIP transition engine for all transpositions, reductions, and timeline jumps.
 - [ ] Speculative preview transition finesses (optional - minor adjustments).
 - [ ] Make square root (sqrt) and nthRoot expressions prettier with premium styling.
+- [ ] Scale math expressions to fit their allotted screen spaces dynamically (for both active workspace and preview panels).
 
 ### 🌐 4. Local Persistence & URL Sharing
 - [x] Use local storage to persist derivation history trees on the browser.

@@ -11,7 +11,11 @@ import {
   deserializeEquation,
   SerializedEquation,
   getNodeByPath,
-  tryDistribution
+  tryDistribution,
+  HIGH_SCHOOL_IDENTITIES,
+  matchPattern,
+  instantiatePattern,
+  replaceNodeAtPath
 } from 'math-engine';
 import * as math from 'mathjs';
 
@@ -54,9 +58,19 @@ export async function POST(req: NextRequest) {
         } catch {}
       });
 
-      // 3. Get reducible paths (nodes that can be simplified or distributed)
-      const reduciblePathsRaw: Record<string, { simplified: Equation; serialized: SerializedEquation; type: 'reduce' | 'distribute' }> = {};
+      // 3. Get reducible paths (nodes that can be simplified, distributed, or rewritten using algebraic identities)
+      const reduciblePathsRaw: Record<
+        string,
+        {
+          simplified: Equation;
+          serialized: SerializedEquation;
+          type: 'reduce' | 'distribute' | 'identity';
+          label?: string;
+        }
+      > = {};
+
       allNodePaths.forEach((path) => {
+        // Try standard simplification/distribution
         try {
           const simplified = getSimplificationForPath(eq, path);
           if (simplified) {
@@ -70,13 +84,41 @@ export async function POST(req: NextRequest) {
             };
           }
         } catch {}
+
+        // Try high-school algebraic identity matches (overwriting generic ones on the same node path if matched)
+        try {
+          const node = getNodeByPath(eq, path);
+          for (const rule of HIGH_SCHOOL_IDENTITIES) {
+            const bindings = matchPattern(rule.sourcePattern, node);
+            if (bindings) {
+              const instantiated = instantiatePattern(rule.targetPattern, bindings);
+              const newEq = replaceNodeAtPath(eq, path, instantiated);
+              if (areEquationsEquivalent(eq, newEq)) {
+                reduciblePathsRaw[path] = {
+                  simplified: newEq,
+                  serialized: serializeEquation(newEq),
+                  type: 'identity',
+                  label: rule.name
+                };
+                break; // Use the first matching identity rule for this node
+              }
+            }
+          }
+        } catch {}
       });
 
       // Deduplicate reducible paths: if multiple paths result in the same simplified equation,
       // choose the single most specific/relevant path to avoid overlapping simplify handles.
       // We use a strict mathematical canonicalizer to group functionally identical equations
       // (e.g. y * 2 - 6 and 2 * y - 6) together under a unified normal form key.
-      const reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' }> = {};
+      const reduciblePaths: Record<
+        string,
+        {
+          equation: SerializedEquation;
+          type: 'reduce' | 'distribute' | 'identity';
+          label?: string;
+        }
+      > = {};
       const simplifiedToStringMap = new Map<string, string[]>();
 
       const getCanonicalKey = (eqVal: Equation): string => {
@@ -118,7 +160,8 @@ export async function POST(req: NextRequest) {
         const bestItem = reduciblePathsRaw[bestPath];
         reduciblePaths[bestPath] = {
           equation: bestItem.serialized,
-          type: bestItem.type
+          type: bestItem.type,
+          label: bestItem.label
         };
       });
 

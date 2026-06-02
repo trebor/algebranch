@@ -51,7 +51,7 @@ const canToggleRoot = (eq: math.MathNode | unknown): boolean => {
 export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
-  const setHoverReducePath = useSetAtom(hoverReducePathAtom);
+  const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
   const pushEquation = useSetAtom(pushEquationAtom);
@@ -173,7 +173,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   // Otherwise, if they hover static parts of the expression, keep all candidates bright (scan mode).
   const isHighlightedCandidate = isCandidate && !sourcePath && (!isHoveringAnyCandidate || isHovered);
 
-  const semanticStyle = isSelected
+  let semanticStyle = isSelected
     ? THEME_GLASS.SOURCE
     : isTarget
     ? THEME_GLASS.TARGET
@@ -184,6 +184,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     : canClick
     ? THEME_GLASS.CARD_CANDIDATE
     : THEME_GLASS.CARD_CANDIDATE + ' cursor-default';
+
+  // Highlight identity-reducible nodes with a delicate glowing indigo border when hovered
+  const isIdentityHovered = isReducible && reductionType === 'identity' && (isHovered || hoverReducePath === path);
+  if (isIdentityHovered) {
+    semanticStyle = 'border-indigo-400/80 bg-indigo-500/10 text-indigo-100 shadow-[0_0_15px_rgba(99,102,241,0.45)] cursor-pointer';
+  }
 
   // Recursive Render logic depending on Node type
   const renderContent = () => {
@@ -346,7 +352,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       {/* Reduce Dot */}
       {isReducible && (
         <Tooltip
-          content={reductionType === 'distribute' ? "Distribute this term" : "Reduce this term"}
+          content={reducibleInfo.label || (reductionType === 'distribute' ? "Distribute this term" : reductionType === 'identity' ? "Apply identity" : "Reduce this term")}
           position="top"
           wrapperClassName="absolute -top-2 -right-2 z-20"
         >
@@ -354,6 +360,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
             className={`h-5 w-5 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-colors relative group ${
               reductionType === 'distribute'
                 ? 'bg-purple-600 border border-purple-500/80 hover:bg-purple-500 text-white'
+                : reductionType === 'identity'
+                ? 'bg-indigo-600 border border-indigo-500/80 hover:bg-indigo-500 text-white'
                 : 'bg-amber-400 border border-amber-500/80 hover:bg-amber-300 text-neutral-950'
             }`}
             onMouseEnter={(e) => {
@@ -368,10 +376,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
           >
             {/* Subtle pulse effect inside the dot */}
             <span className={`absolute inset-0 rounded-full animate-ping group-hover:opacity-0 pointer-events-none ${
-              reductionType === 'distribute' ? 'bg-purple-500/40' : 'bg-amber-400/40'
+              reductionType === 'distribute' 
+                ? 'bg-purple-500/40' 
+                : reductionType === 'identity'
+                ? 'bg-indigo-500/40'
+                : 'bg-amber-400/40'
             }`} />
             {reductionType === 'distribute' ? (
               <Split size={10} className="text-white stroke-[2.5]" />
+            ) : reductionType === 'identity' ? (
+              <Sparkles size={10} className="text-white stroke-[2.5]" />
             ) : (
               <Zap size={10} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
             )}

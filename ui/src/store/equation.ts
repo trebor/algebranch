@@ -119,7 +119,8 @@ export const hoveredLoopTargetIdAtom = atom<string | null>(null);
 
 export interface ReduciblePathInfo {
   equation: Equation;
-  type: 'reduce' | 'distribute';
+  type: 'reduce' | 'distribute' | 'identity';
+  label?: string;
 }
 
 // Dynamic Server-Synchronized Atoms
@@ -301,7 +302,11 @@ export const pushEquationAtom = atom(
       if (hoverReducePath) {
         const reducible = get(reduciblePathsAtom);
         const actionType = hoverReducePath && reducible[hoverReducePath]?.type;
-        label = actionType === 'distribute' ? 'Distribute' : 'Reduce';
+        if (actionType === 'identity') {
+          label = reducible[hoverReducePath]?.label || 'Apply Identity';
+        } else {
+          label = actionType === 'distribute' ? 'Distribute' : 'Reduce';
+        }
       } else if (get(sourcePathAtom)) {
         label = "Transpose";
       }
@@ -556,7 +561,7 @@ export const syncMathStateAtom = atom(
   null,
   (_get, set, { activePaths, reduciblePaths, targetPaths }: { 
     activePaths: string[]; 
-    reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' }>; 
+    reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' | 'identity'; label?: string }>; 
     targetPaths: Record<string, SerializedEquation> 
   }) => {
     set(candidatePathsAtom, new Set<string>(activePaths));
@@ -565,7 +570,8 @@ export const syncMathStateAtom = atom(
     Object.keys(reduciblePaths).forEach((k) => {
       parsedReducible[k] = {
         equation: deserializeEquation(reduciblePaths[k].equation),
-        type: reduciblePaths[k].type
+        type: reduciblePaths[k].type,
+        label: reduciblePaths[k].label
       };
     });
     set(reduciblePathsAtom, parsedReducible);

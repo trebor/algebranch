@@ -15,7 +15,7 @@ import {
   presetCategoriesAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Hash, Play, BookOpen, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Hash, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight } from 'lucide-react';
 
 const formatTimestamp = (ts: number): string => {
   const diff = Date.now() - ts;
@@ -92,13 +92,6 @@ export const Sidebar: React.FC = () => {
 
   return (
     <div className={`w-80 h-full flex flex-col gap-6 p-5 ${THEME_GLASS.PANEL}`}>
-      {/* Sidebar Header */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-4 shrink-0">
-        <BookOpen className="text-indigo-400" size={18} />
-        <h2 className="text-lg font-bold text-white select-none">
-          <span>Operations & Presets</span>
-        </h2>
-      </div>
 
       {/* 1. Custom Equation Loader */}
       <div className={`p-4 shrink-0 ${THEME_GLASS.CARD}`}>

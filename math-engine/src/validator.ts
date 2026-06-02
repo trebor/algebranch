@@ -118,6 +118,10 @@ export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>
     }
     if (nameStr === 'sin') return Math.sin(args[0]);
     if (nameStr === 'cos') return Math.cos(args[0]);
+    if (nameStr === 'tan') return Math.tan(args[0]);
+    if (nameStr === 'cot') return 1 / Math.tan(args[0]);
+    if (nameStr === 'sec') return 1 / Math.cos(args[0]);
+    if (nameStr === 'csc') return 1 / Math.sin(args[0]);
     if (nameStr === 'log') return Math.log(args[0]);
   }
   throw new Error(`Unsupported point node type: ${node.type}`);
@@ -179,6 +183,12 @@ export const evaluateInterval = (node: math.MathNode, scope: Record<string, Inte
         degree = (degreeInt.min + degreeInt.max) / 2;
       }
       return createInterval(Math.pow(base.min, 1 / degree), Math.pow(base.max, 1 / degree));
+    }
+    if (nameStr === 'sin' || nameStr === 'cos') {
+      return createInterval(-1, 1);
+    }
+    if (nameStr === 'tan' || nameStr === 'cot' || nameStr === 'sec' || nameStr === 'csc' || nameStr === 'log') {
+      return createInterval(-Infinity, Infinity);
     }
   }
   throw new Error(`Unsupported interval node type: ${node.type}`);

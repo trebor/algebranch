@@ -190,4 +190,19 @@ describe('High School Rewrite Identities Tests', () => {
     const rewritten = instantiatePattern(rule.targetPattern, bindings!);
     expect(cleanString(rewritten)).toBe('log(z^3)');
   });
+
+  test('should match and verify tangent quotient identity (tan(x) -> sin(x)/cos(x))', () => {
+    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
+    const eq = parseEquation('tan(x) = y');
+    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'trig_tan_def')!;
+    expect(rule).toBeDefined();
+
+    const bindings = matchPattern(rule.sourcePattern, eq.lhs);
+    expect(bindings).not.toBeNull();
+    expect(bindings?.['_theta']?.toString()).toBe('x');
+
+    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
+    const newEq = replaceNodeAtPath(eq, 'lhs', rewritten);
+    expect(areEquationsEquivalent(eq, newEq)).toBe(true);
+  });
 });

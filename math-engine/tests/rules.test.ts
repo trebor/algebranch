@@ -235,4 +235,86 @@ describe('High School Rewrite Identities Tests', () => {
     const newEq = replaceNodeAtPath(eq, 'lhs', rewritten);
     expect(areEquationsEquivalent(eq, newEq)).toBe(true);
   });
+
+  test('should match and verify reverse sum/difference of cubes expansion', () => {
+    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
+    const eq1 = parseEquation('(x + 2) * (x^2 - 2 * x + 2^2) = y');
+    const rule1 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'sum_cubes_expand')!;
+    expect(rule1).toBeDefined();
+
+    const bindings1 = matchPattern(rule1.sourcePattern, eq1.lhs);
+    expect(bindings1).not.toBeNull();
+    const rewritten1 = instantiatePattern(rule1.targetPattern, bindings1!);
+    const newEq1 = replaceNodeAtPath(eq1, 'lhs', rewritten1);
+    expect(areEquationsEquivalent(eq1, newEq1)).toBe(true);
+
+    const eq2 = parseEquation('(x - 3) * (x^2 + 3 * x + 3^2) = y');
+    const rule2 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'diff_cubes_expand')!;
+    expect(rule2).toBeDefined();
+
+    const bindings2 = matchPattern(rule2.sourcePattern, eq2.lhs);
+    expect(bindings2).not.toBeNull();
+    const rewritten2 = instantiatePattern(rule2.targetPattern, bindings2!);
+    const newEq2 = replaceNodeAtPath(eq2, 'lhs', rewritten2);
+    expect(areEquationsEquivalent(eq2, newEq2)).toBe(true);
+  });
+
+  test('should match and verify reverse exponent rules (splitting exponents)', () => {
+    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
+    
+    // Product of Powers Reverse
+    const eq1 = parseEquation('x^(a + b) = y');
+    const rule1 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_product_reverse')!;
+    expect(rule1).toBeDefined();
+    const bindings1 = matchPattern(rule1.sourcePattern, eq1.lhs);
+    expect(bindings1).not.toBeNull();
+    const rewritten1 = instantiatePattern(rule1.targetPattern, bindings1!);
+    const newEq1 = replaceNodeAtPath(eq1, 'lhs', rewritten1);
+    expect(areEquationsEquivalent(eq1, newEq1)).toBe(true);
+
+    // Quotient of Powers Reverse
+    const eq2 = parseEquation('x^(a - b) = y');
+    const rule2 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_quotient_reverse')!;
+    expect(rule2).toBeDefined();
+    const bindings2 = matchPattern(rule2.sourcePattern, eq2.lhs);
+    expect(bindings2).not.toBeNull();
+    const rewritten2 = instantiatePattern(rule2.targetPattern, bindings2!);
+    const newEq2 = replaceNodeAtPath(eq2, 'lhs', rewritten2);
+    expect(areEquationsEquivalent(eq2, newEq2)).toBe(true);
+
+    // Power of a Power Reverse
+    const eq3 = parseEquation('x^(a * b) = y');
+    const rule3 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_power_of_power_reverse')!;
+    expect(rule3).toBeDefined();
+    const bindings3 = matchPattern(rule3.sourcePattern, eq3.lhs);
+    expect(bindings3).not.toBeNull();
+    const rewritten3 = instantiatePattern(rule3.targetPattern, bindings3!);
+    const newEq3 = replaceNodeAtPath(eq3, 'lhs', rewritten3);
+    expect(areEquationsEquivalent(eq3, newEq3)).toBe(true);
+
+    // Negative Exponent Reverse
+    const eq4 = parseEquation('1 / x^3 = y');
+    const rule4 = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'exponent_negative_reverse')!;
+    expect(rule4).toBeDefined();
+    const bindings4 = matchPattern(rule4.sourcePattern, eq4.lhs);
+    expect(bindings4).not.toBeNull();
+    const rewritten4 = instantiatePattern(rule4.targetPattern, bindings4!);
+    const newEq4 = replaceNodeAtPath(eq4, 'lhs', rewritten4);
+    expect(areEquationsEquivalent(eq4, newEq4)).toBe(true);
+  });
+
+  test('should match and verify reverse double angle sine identity', () => {
+    const { parseEquation, replaceNodeAtPath, areEquationsEquivalent } = require('../src');
+    const eq = parseEquation('2 * sin(x) * cos(x) = y');
+    const rule = HIGH_SCHOOL_IDENTITIES.find((r) => r.id === 'trig_double_sin_reverse')!;
+    expect(rule).toBeDefined();
+
+    const bindings = matchPattern(rule.sourcePattern, eq.lhs);
+    expect(bindings).not.toBeNull();
+    expect(bindings?.['_theta']?.toString()).toBe('x');
+
+    const rewritten = instantiatePattern(rule.targetPattern, bindings!);
+    const newEq = replaceNodeAtPath(eq, 'lhs', rewritten);
+    expect(areEquationsEquivalent(eq, newEq)).toBe(true);
+  });
 });

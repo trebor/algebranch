@@ -86,7 +86,22 @@ const RAW_RULES: RawRule[] = [
     targetPatternStr: '(_A - _B) * (_A^2 + _A * _B + _B^2)',
     description: 'Factors the difference of two cubed terms.',
   },
-
+  {
+    id: 'sum_cubes_expand',
+    name: 'Expand Sum of Cubes Factors',
+    category: 'Polynomials & Factoring',
+    sourcePatternStr: '(_A + _B) * (_A^2 - _A * _B + _B^2)',
+    targetPatternStr: '_A^3 + _B^3',
+    description: 'Expands factored sum of cubes back to polynomial sum.',
+  },
+  {
+    id: 'diff_cubes_expand',
+    name: 'Expand Difference of Cubes Factors',
+    category: 'Polynomials & Factoring',
+    sourcePatternStr: '(_A - _B) * (_A^2 + _A * _B + _B^2)',
+    targetPatternStr: '_A^3 - _B^3',
+    description: 'Expands factored difference of cubes back to polynomial difference.',
+  },
   // 2. Exponent Rules
   {
     id: 'exponent_product',
@@ -97,6 +112,14 @@ const RAW_RULES: RawRule[] = [
     description: 'Combines multiplication of powers sharing the same base.',
   },
   {
+    id: 'exponent_product_reverse',
+    name: 'Product of Powers (Reverse)',
+    category: 'Exponent Rules',
+    sourcePatternStr: '_x^(_A + _B)',
+    targetPatternStr: '_x^_A * _x^_B',
+    description: 'Splits a summed exponent into a product of powers.',
+  },
+  {
     id: 'exponent_quotient',
     name: 'Quotient of Powers',
     category: 'Exponent Rules',
@@ -105,12 +128,28 @@ const RAW_RULES: RawRule[] = [
     description: 'Simplifies division of powers sharing the same base.',
   },
   {
+    id: 'exponent_quotient_reverse',
+    name: 'Quotient of Powers (Reverse)',
+    category: 'Exponent Rules',
+    sourcePatternStr: '_x^(_A - _B)',
+    targetPatternStr: '_x^_A / _x^_B',
+    description: 'Splits a subtracted exponent into a division of powers.',
+  },
+  {
     id: 'exponent_power_of_power',
     name: 'Power of a Power',
     category: 'Exponent Rules',
     sourcePatternStr: '(_x^_A)^_B',
     targetPatternStr: '_x^(_A * _B)',
     description: 'Simplifies a power raised to another exponent.',
+  },
+  {
+    id: 'exponent_power_of_power_reverse',
+    name: 'Power of a Power (Reverse)',
+    category: 'Exponent Rules',
+    sourcePatternStr: '_x^(_A * _B)',
+    targetPatternStr: '(_x^_A)^_B',
+    description: 'Splits a multiplied exponent into a power raised to an exponent.',
   },
   {
     id: 'exponent_power_of_product',
@@ -151,6 +190,14 @@ const RAW_RULES: RawRule[] = [
     sourcePatternStr: '_x^-_A',
     targetPatternStr: '1 / _x^_A',
     description: 'Expresses negative powers as reciprocals.',
+  },
+  {
+    id: 'exponent_negative_reverse',
+    name: 'Negative Exponent Rule (Reverse)',
+    category: 'Exponent Rules',
+    sourcePatternStr: '1 / _x^_A',
+    targetPatternStr: '_x^-_A',
+    description: 'Expresses fraction powers as negative exponents.',
   },
 
   // 3. Logarithm Rules
@@ -267,6 +314,14 @@ const RAW_RULES: RawRule[] = [
     sourcePatternStr: 'sin(2 * _theta)',
     targetPatternStr: '2 * sin(_theta) * cos(_theta)',
     description: 'Expands sine of a double angle.',
+  },
+  {
+    id: 'trig_double_sin_reverse',
+    name: 'Double Angle Sine (Reverse)',
+    category: 'Trigonometric Identities',
+    sourcePatternStr: '2 * sin(_theta) * cos(_theta)',
+    targetPatternStr: 'sin(2 * _theta)',
+    description: 'Condenses double angle sine product.',
   },
 ];
 

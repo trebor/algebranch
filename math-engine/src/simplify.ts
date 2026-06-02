@@ -244,7 +244,9 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
     if (!node) return null;
 
     const isDiff = (candidate: Equation): boolean => {
-      return candidate.lhs.toString() !== eq.lhs.toString() || candidate.rhs.toString() !== eq.rhs.toString();
+      const clean = (s: string) => s.replace(/[\s()]/g, '');
+      return clean(candidate.lhs.toString()) !== clean(eq.lhs.toString()) ||
+             clean(candidate.rhs.toString()) !== clean(eq.rhs.toString());
     };
 
     // 1. Try constant folding first (non-constant subtrees composed entirely of constants)
@@ -273,11 +275,10 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
       }
     }
 
-    // 2. Unpack redundant parenthesis at this path
     if (node.type === 'ParenthesisNode') {
       const paren = node as math.ParenthesisNode;
       const candidate = replaceNodeAtPath(eq, p, paren.content);
-      if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
+      if (areEquationsEquivalent(eq, candidate)) {
         return candidate;
       }
     }

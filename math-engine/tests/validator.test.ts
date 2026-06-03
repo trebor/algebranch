@@ -1,5 +1,5 @@
 import * as math from 'mathjs';
-import { parseEquation, equationToString, Equation } from '../src/index';
+import { parseEquation, equationToString, Equation, tryExpandPowerTerm, tryCombinePowerTerms } from '../src/index';
 import { areEquationsEquivalent, generateValidMoves } from '../src/validator';
 import { autoSimplify, getSimplificationForPath } from '../src/simplify';
 
@@ -265,6 +265,66 @@ describe('Math Engine Validator & Simplifier', () => {
     const eq = parseEquation('y = 2 * (x + 3)');
     const simplified = autoSimplify(eq);
     expect(equationToString(simplified)).toBe('y = 2 * x + 6');
+  });
+
+  test('getSimplificationForPath ignores no-op parenthesis reductions due to precedence', () => {
+    // (x - 3) * (x + 3) = y
+    // 'lhs/0' is the ParenthesisNode of (x - 3)
+    // 'lhs/1' is the ParenthesisNode of (x + 3)
+    const eq = parseEquation('(x - 3) * (x + 3) = y');
+    expect(getSimplificationForPath(eq, 'lhs/0')).toBeNull();
+    expect(getSimplificationForPath(eq, 'lhs/1')).toBeNull();
+  });
+
+  test('getSimplificationForPath constrains double removals to compatible inverse chains', () => {
+    // 1. Direct inverse cancellation of terms (compatible: same additive operator chain)
+    const eqCompatible = parseEquation('x + 2 - 2 = 5');
+    // First '2' is at 'lhs/0/1', second '2' is at 'lhs/1'
+    const simplifiedCompatible = getSimplificationForPath(eqCompatible, 'lhs/1');
+    expect(simplifiedCompatible).not.toBeNull();
+    expect(equationToString(simplifiedCompatible!)).toBe('x = 5');
+
+    // 2. Coincidental cancellation of factors nested under mixed operator boundaries (incompatible: mixed additive/multiplicative)
+    const eqIncompatible = parseEquation('x * x - 3 * x + x * 3 - 9 = y');
+    // First '3' is at 'lhs/0/0/1/0' (nested under '*' and '-')
+    const simplifiedIncompatible = getSimplificationForPath(eqIncompatible, 'lhs/0/0/1/0');
+    expect(simplifiedIncompatible).toBeNull();
+  });
+
+  test('tryCombinePowerTerms and tryExpandPowerTerm work for arbitrary exponents', () => {
+    // 1. Combining powers directly
+    const xNode = new math.SymbolNode('x');
+    const xSqNode = new math.OperatorNode('^', 'pow', [xNode, new math.ConstantNode(2)]);
+    
+    // x * x -> x^2
+    const node1 = new math.OperatorNode('*', 'multiply', [xNode, xNode]);
+    const res1 = tryCombinePowerTerms(node1);
+    expect(res1).not.toBeNull();
+    expect(res1!.toString()).toBe('x ^ 2');
+
+    // x^2 * x -> x^3
+    const node2 = new math.OperatorNode('*', 'multiply', [xSqNode, xNode]);
+    const res2 = tryCombinePowerTerms(node2);
+    expect(res2).not.toBeNull();
+    expect(res2!.toString()).toBe('x ^ 3');
+
+    // 2. Combining powers via getSimplificationForPath
+    const eq1 = parseEquation('x * x = y + 9');
+    const simplified1 = getSimplificationForPath(eq1, 'lhs');
+    expect(simplified1).not.toBeNull();
+    expect(equationToString(simplified1!)).toBe('x ^ 2 = y + 9');
+
+    const eq2 = parseEquation('x^2 * x = y + 9');
+    const simplified2 = getSimplificationForPath(eq2, 'lhs');
+    expect(simplified2).not.toBeNull();
+    expect(equationToString(simplified2!)).toBe('x ^ 3 = y + 9');
+
+    // 3. Expanding powers directly
+    // x^3 -> x * x * x
+    const xCubeNode = new math.OperatorNode('^', 'pow', [xNode, new math.ConstantNode(3)]);
+    const resExpand = tryExpandPowerTerm(xCubeNode);
+    expect(resExpand).not.toBeNull();
+    expect(resExpand!.toString()).toBe('x * x * x'); // Left-associative mathjs representation without redundant parenthesis
   });
 });
 

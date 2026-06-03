@@ -16,7 +16,8 @@ import {
   matchPattern,
   instantiatePattern,
   replaceNodeAtPath,
-  tryExpressAsPower
+  tryExpressAsPower,
+  tryExpandPowerTerm
 } from 'math-engine';
 import * as math from 'mathjs';
 
@@ -121,6 +122,24 @@ export async function POST(req: NextRequest) {
                 serialized: serializeEquation(newEq),
                 type: 'identity',
                 label
+              });
+            }
+          }
+        } catch {}
+
+        // Try expanding power terms (e.g. x^2 -> x * x, x^3 -> x * x * x)
+        try {
+          const node = getNodeByPath(eq, path);
+          const expandedForm = tryExpandPowerTerm(node);
+          if (expandedForm) {
+            const newEq = replaceNodeAtPath(eq, path, expandedForm);
+            if (areEquationsEquivalent(eq, newEq)) {
+              rawReductions.push({
+                path,
+                simplified: newEq,
+                serialized: serializeEquation(newEq),
+                type: 'identity',
+                label: 'Expand Power'
               });
             }
           }

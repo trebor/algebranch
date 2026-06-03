@@ -28,8 +28,54 @@ export const parseEquation = (eqStr: string): Equation => {
 };
 
 /**
+ * Formats a number with 2 decimal places if it's reasonably-sized, or scientific notation if very large/small.
+ */
+export const formatNumber = (val: any): string => {
+  let numVal = val;
+  if (typeof val === 'object' && val !== null) {
+    if (typeof val.toNumber === 'function') {
+      numVal = val.toNumber();
+    } else {
+      numVal = Number(val);
+    }
+  }
+  
+  if (typeof numVal !== 'number' || isNaN(numVal)) {
+    return String(val);
+  }
+
+  const absVal = Math.abs(numVal);
+  
+  // Very large or very small -> scientific notation
+  if (absVal >= 1e6 || (absVal > 0 && absVal < 1e-3)) {
+    let formatted = numVal.toExponential(2);
+    // Remove positive exponent plus signs, e.g. e+6 -> e6
+    formatted = formatted.replace(/e\+/, 'e');
+    // Remove trailing zeros in decimal part, e.g. 1.20e-6 -> 1.2e-6, 1.00e6 -> 1e6
+    formatted = formatted.replace(/\.?0+(?=e)/, '');
+    return formatted;
+  }
+  
+  if (Number.isInteger(numVal)) {
+    return numVal.toString();
+  }
+  
+  // Round to max 2 decimal places
+  const rounded = Math.round(numVal * 100) / 100;
+  return rounded.toString();
+};
+
+/**
  * Serializes an Equation tree back to a string form "LHS = RHS".
  */
 export const equationToString = (eq: Equation): string => {
-  return `${eq.lhs.toString()} = ${eq.rhs.toString()}`;
+  const options = {
+    handler: (node: math.MathNode, options: any): string | undefined => {
+      if (node.type === 'ConstantNode') {
+        return formatNumber((node as math.ConstantNode).value);
+      }
+      return undefined;
+    }
+  };
+  return `${eq.lhs.toString(options)} = ${eq.rhs.toString(options)}`;
 };

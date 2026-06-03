@@ -4,7 +4,7 @@ import React from 'react';
 import { useAtomValue } from 'jotai';
 import * as math from 'mathjs';
 import { previewEquationAtom } from '../store/equation';
-import { getNodeByPath, getFunctionName } from 'math-engine-client';
+import { getNodeByPath, getFunctionName, formatNumber } from 'math-engine-client';
 
 interface PreviewEquationNodeProps {
   readonly path: string;
@@ -27,7 +27,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
   const renderContent = () => {
     if (node.type === 'ConstantNode') {
       const constNode = node as math.ConstantNode;
-      return <span className="font-semibold text-yellow-500/80">{constNode.value.toString()}</span>;
+      return <span className="font-semibold text-yellow-500/80">{formatNumber(constNode.value)}</span>;
     }
 
     if (node.type === 'SymbolNode') {

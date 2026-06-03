@@ -21,7 +21,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Implement context-aware mouse target cursor indicators.
 - [x] Expand preset library to include multi-field stock equations (Physics, Science fields, complexity levels).
 - [ ] Develop a mechanism for equation substitution / combining expressions (e.g. replacing E with m * c^2).
-- [ ] Think hard about parentheses in the AST (parsing, matching, formatting, and structural redundant stripping).
+- [x] Think hard about parentheses in the AST (parsing, matching, formatting, and structural redundant stripping).
 
 ### 🎨 2. History Tree Layout & Loop UI
 - [x] Render beautiful curved SVG S-bezier connection lines.
@@ -41,7 +41,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [ ] Speculative preview transition finesses (optional - minor adjustments).
 - [ ] Make square root (sqrt) and nthRoot expressions prettier with premium styling.
 - [ ] Scale math expressions to fit their allotted screen spaces dynamically (for both active workspace and preview panels).
-- [ ] Cut off long numbers after the decimal point in floating point numbers (e.g. limit rendering of constants to 4 decimal places).
+- [x] Cut off long numbers after the decimal point in floating point numbers (e.g. limit rendering of constants to 4 decimal places / format appropriately).
 
 ### 🌐 4. Local Persistence & URL Sharing
 - [x] Use local storage to persist derivation history trees on the browser.

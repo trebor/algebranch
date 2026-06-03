@@ -235,6 +235,151 @@ export const tryDistribution = (node: math.MathNode): math.MathNode | null => {
 };
 
 /**
+ * Helper to check if two paths are compatible for double removal (algebraic inverse cancellation).
+ * Disallows mixed additive/multiplicative parent chains or function node boundaries.
+ */
+export const arePathsCompatibleForDoubleRemoval = (eq: Equation, p1: string, p2: string): boolean => {
+  const parts1 = p1.split('/');
+  const parts2 = p2.split('/');
+  const commonParts: string[] = [];
+  for (let i = 0; i < Math.min(parts1.length, parts2.length); i++) {
+    if (parts1[i] === parts2[i]) {
+      commonParts.push(parts1[i]);
+    } else {
+      break;
+    }
+  }
+  const lcaPath = commonParts.join('/');
+  if (!lcaPath) return false;
+
+  const getOperatorsInPathToLCA = (path: string): string[] => {
+    const operators: string[] = [];
+    let current = path;
+    while (current !== lcaPath && current.includes('/')) {
+      current = current.substring(0, current.lastIndexOf('/'));
+      try {
+        const node = getNodeByPath(eq, current);
+        if (node.type === 'OperatorNode') {
+          operators.push((node as math.OperatorNode).op);
+        } else {
+          operators.push('other');
+        }
+      } catch {
+        operators.push('other');
+      }
+    }
+    return operators;
+  };
+
+  const ops1 = getOperatorsInPathToLCA(p1);
+  const ops2 = getOperatorsInPathToLCA(p2);
+
+  try {
+    const lcaNode = getNodeByPath(eq, lcaPath);
+    if (lcaNode.type === 'OperatorNode') {
+      ops1.push((lcaNode as math.OperatorNode).op);
+    } else {
+      ops1.push('other');
+    }
+  } catch {
+    ops1.push('other');
+  }
+
+  const allOps = [...ops1, ...ops2];
+  const hasAdditive = allOps.some(op => op === '+' || op === '-');
+  const hasMultiplicative = allOps.some(op => op === '*' || op === '/');
+  const hasOther = allOps.some(op => op !== '+' && op !== '-' && op !== '*' && op !== '/');
+
+  if (hasOther) return false;
+  if (hasAdditive && hasMultiplicative) return false;
+  return true;
+};
+
+/**
+ * Helper to combine multiplied terms of the same base (e.g. x * x -> x^2, x^2 * x -> x^3, x^A * x^B -> x^(A + B)).
+ */
+export const tryCombinePowerTerms = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'OperatorNode' || (node as math.OperatorNode).op !== '*') {
+    return null;
+  }
+  const opNode = node as math.OperatorNode;
+  const left = opNode.args[0];
+  const right = opNode.args[1];
+
+  let baseLeft = left;
+  let expLeft: math.MathNode = new math.ConstantNode(1);
+  if (left.type === 'OperatorNode' && (left as math.OperatorNode).op === '^') {
+    baseLeft = (left as math.OperatorNode).args[0];
+    expLeft = (left as math.OperatorNode).args[1];
+  }
+
+  let baseRight = right;
+  let expRight: math.MathNode = new math.ConstantNode(1);
+  if (right.type === 'OperatorNode' && (right as math.OperatorNode).op === '^') {
+    baseRight = (right as math.OperatorNode).args[0];
+    expRight = (right as math.OperatorNode).args[1];
+  }
+
+  // Helper to strip outer parentheses for base comparison
+  const getCleanBaseStr = (n: math.MathNode): string => {
+    let curr = n;
+    while (curr.type === 'ParenthesisNode') {
+      curr = (curr as math.ParenthesisNode).content;
+    }
+    return curr.toString();
+  };
+
+  if (getCleanBaseStr(baseLeft) === getCleanBaseStr(baseRight)) {
+    // Combine them!
+    // Exponent sum: expLeft + expRight
+    let sumNode: math.MathNode;
+    try {
+      const valL = expLeft.type === 'ConstantNode' ? Number((expLeft as math.ConstantNode).value) : NaN;
+      const valR = expRight.type === 'ConstantNode' ? Number((expRight as math.ConstantNode).value) : NaN;
+      if (!isNaN(valL) && !isNaN(valR)) {
+        sumNode = new math.ConstantNode(valL + valR);
+      } else {
+        sumNode = new math.OperatorNode('+', 'add', [expLeft, expRight]);
+      }
+    } catch {
+      sumNode = new math.OperatorNode('+', 'add', [expLeft, expRight]);
+    }
+
+    return new math.OperatorNode('^', 'pow', [baseLeft, sumNode]);
+  }
+
+  return null;
+};
+
+/**
+ * Helper to expand a power term to repeated multiplication (e.g. x^3 -> x * x * x).
+ * Limited to positive integer exponents >= 2 and <= 10 (to avoid excessive growth).
+ */
+export const tryExpandPowerTerm = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'OperatorNode' || (node as math.OperatorNode).op !== '^') {
+    return null;
+  }
+  const opNode = node as math.OperatorNode;
+  const base = opNode.args[0];
+  const exponent = opNode.args[1];
+
+  if (exponent.type !== 'ConstantNode') {
+    return null;
+  }
+  const n = Number((exponent as math.ConstantNode).value);
+  if (!Number.isInteger(n) || n < 2 || n > 10) {
+    return null;
+  }
+
+  // Construct base * base * ... * base (n times)
+  let result = base;
+  for (let i = 1; i < n; i++) {
+    result = new math.OperatorNode('*', 'multiply', [result, base]);
+  }
+  return result;
+};
+
+/**
  * Checks if a given path has a simplification opportunity.
  * Returns the simplified Equation if found, otherwise null.
  */
@@ -278,7 +423,9 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
     if (node.type === 'ParenthesisNode') {
       const paren = node as math.ParenthesisNode;
       const candidate = replaceNodeAtPath(eq, p, paren.content);
-      if (areEquationsEquivalent(eq, candidate)) {
+      const eqStr = `${eq.lhs.toString()} = ${eq.rhs.toString()}`;
+      const candidateStr = `${candidate.lhs.toString()} = ${candidate.rhs.toString()}`;
+      if (eqStr !== candidateStr && areEquationsEquivalent(eq, candidate)) {
         return candidate;
       }
     }
@@ -288,6 +435,15 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
     if (rootPowerSimplified) {
       const candidate = replaceNodeAtPath(eq, p, rootPowerSimplified);
       if (isDiff(candidate)) {
+        return candidate;
+      }
+    }
+
+    // 2.6 Try combining power terms (e.g. x * x -> x^2)
+    const combinedPower = tryCombinePowerTerms(node);
+    if (combinedPower) {
+      const candidate = replaceNodeAtPath(eq, p, combinedPower);
+      if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
         return candidate;
       }
     }
@@ -307,11 +463,12 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
       return singleCandidate;
     }
 
-    // 4. Try double removal involving this node and another node
+    // 4. Try double removal involving this node and another node only if compatible (direct inverses)
     const allPaths = getAllPaths(eq);
     for (let i = 0; i < allPaths.length; i++) {
       const otherPath = allPaths[i];
       if (otherPath === p) continue;
+      if (!arePathsCompatibleForDoubleRemoval(eq, p, otherPath)) continue;
       const doubleCandidate = tryDoubleRemoval(eq, p, otherPath);
       if (doubleCandidate && isDiff(doubleCandidate) && areEquationsEquivalent(eq, doubleCandidate)) {
         return doubleCandidate;
@@ -413,6 +570,17 @@ export const autoSimplify = (eq: Equation): Equation => {
         currentEq = candidate;
         simplified = true;
         break; // Restart scan on the simplified tree
+      }
+
+      // Try combining power terms (e.g. x * x -> x^2)
+      const combinedPower = tryCombinePowerTerms(node);
+      if (combinedPower) {
+        const candidate = replaceNodeAtPath(currentEq, paths[i], combinedPower);
+        if (areEquationsEquivalent(currentEq, candidate)) {
+          currentEq = candidate;
+          simplified = true;
+          break; // Restart scan on the simplified tree
+        }
       }
 
       // Try algebraic distribution, e.g. a * (b + c) -> a * b + a * c

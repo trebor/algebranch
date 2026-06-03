@@ -17,7 +17,7 @@ import {
   toggleRootSignAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { getNodeByPath, getFunctionName, getChildren } from 'math-engine-client';
+import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import { Sparkles, Zap, Split } from 'lucide-react';
 
 interface EquationNodeProps {
@@ -191,7 +191,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       const constNode = node as math.ConstantNode;
       return (
         <span className={`font-semibold ${isStatic ? 'text-zinc-500' : 'text-yellow-400/90'}`}>
-          {constNode.value.toString()}
+          {formatNumber(constNode.value)}
         </span>
       );
     }

@@ -329,14 +329,82 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
         scope[v] = Math.random() * (RANGE_MID_MAX - RANGE_MID_MIN) + RANGE_MID_MIN;
       });
 
-      // 1. Check if root of eq1 satisfies eq2
-      if (!isEquationSatisfiedAtRoot(eq1, eq2, variables, { ...scope })) {
-        return false;
+      // Find roots of eq1
+      const roots1: Record<string, any[]> = {};
+      const guesses = [1.0, -1.0, 5.0, -5.0];
+      const isRealEq1 = isEquationReal(eq1, scope);
+
+      for (const solveVar of variables) {
+        roots1[solveVar] = [];
+        for (const guess of guesses) {
+          const root = solveForVariable(eq1.lhs, eq1.rhs, solveVar, { ...scope }, guess);
+          if (root !== null && isValFinite(root) && !isValNaN(root)) {
+            if (isRealEq1 && !isReal(root)) {
+              continue;
+            }
+            roots1[solveVar].push(root);
+          }
+        }
       }
 
-      // 2. Check if root of eq2 satisfies eq1
-      if (!isEquationSatisfiedAtRoot(eq2, eq1, variables, { ...scope })) {
-        return false;
+      // Find roots of eq2, using roots1 as extra guesses
+      const roots2: Record<string, any[]> = {};
+      const isRealEq2 = isEquationReal(eq2, scope);
+      for (const solveVar of variables) {
+        roots2[solveVar] = [];
+        const extraGuesses = [...guesses, ...roots1[solveVar]];
+        for (const guess of extraGuesses) {
+          const root = solveForVariable(eq2.lhs, eq2.rhs, solveVar, { ...scope }, guess);
+          if (root !== null && isValFinite(root) && !isValNaN(root)) {
+            if (isRealEq2 && !isReal(root)) {
+              continue;
+            }
+            roots2[solveVar].push(root);
+          }
+        }
+      }
+
+      // Now verify root equivalence:
+      // 1. Every root in roots1 satisfies eq2
+      for (const solveVar of variables) {
+        for (const root of roots1[solveVar]) {
+          const localScope = { ...scope, [solveVar]: root };
+          const dTarget = math.subtract(evaluatePoint(eq2.lhs, localScope), evaluatePoint(eq2.rhs, localScope));
+          if (isValNaN(dTarget) || !isValFinite(dTarget) || Number(math.abs(dTarget)) > 1e-5) {
+            return false;
+          }
+        }
+      }
+
+      // 2. Every root in roots2 satisfies eq1
+      for (const solveVar of variables) {
+        for (const root of roots2[solveVar]) {
+          const localScope = { ...scope, [solveVar]: root };
+          const dTarget = math.subtract(evaluatePoint(eq1.lhs, localScope), evaluatePoint(eq1.rhs, localScope));
+          if (isValNaN(dTarget) || !isValFinite(dTarget) || Number(math.abs(dTarget)) > 1e-5) {
+            return false;
+          }
+        }
+      }
+
+      // If no roots were checked at all (e.g. constant equations), fall back to random point diff
+      let hasCheckedAnyRoot = false;
+      for (const solveVar of variables) {
+        if (roots1[solveVar].length > 0 || roots2[solveVar].length > 0) {
+          hasCheckedAnyRoot = true;
+          break;
+        }
+      }
+
+      if (!hasCheckedAnyRoot) {
+        const d1 = math.subtract(evaluatePoint(eq1.lhs, scope), evaluatePoint(eq1.rhs, scope));
+        const d2 = math.subtract(evaluatePoint(eq2.lhs, scope), evaluatePoint(eq2.rhs, scope));
+        if (isValNaN(d1) || isValNaN(d2) || !isValFinite(d1) || !isValFinite(d2)) {
+          return false;
+        }
+        if (Number(math.abs(math.subtract(d1, d2))) > POINT_TOLERANCE) {
+          return false;
+        }
       }
     }
     return true;

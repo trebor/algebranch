@@ -405,7 +405,7 @@ export default function Home() {
 
       {/* Top Header */}
       <header className="h-16 px-4 flex items-center justify-between select-none shrink-0 w-full z-30">
-        <div className="flex items-center gap-3">
+        <a href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-90 active:scale-98 transition-all">
           <Image
             src="/logo.png"
             alt="Algebranch Logo"
@@ -417,10 +417,10 @@ export default function Home() {
           <div>
             <h1 className="text-base font-bold text-white tracking-wide">Algebranch</h1>
             <p className="text-[10px] text-indigo-300 font-semibold tracking-wider uppercase">
-              Interactive Algebraic Steps
+              Interactive Algebra
             </p>
           </div>
-        </div>
+        </a>
         <div className="flex items-center gap-3">
           <button
             onClick={handleShare}

@@ -431,32 +431,8 @@ export const ControlPanel: React.FC = () => {
                   className="w-56 p-3 z-50 text-left lowercase-none normal-case flex flex-col gap-1.5 pointer-events-auto"
                   content={
                     <>
-                      <div className="text-indigo-400 font-bold tracking-wider uppercase text-[8px] flex items-center justify-between gap-2">
-                        <span>{node.label}</span>
-                        <div className="flex items-center gap-1">
-                          <Tooltip content="Report issue with this step">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setFeedbackContext(`History Step ${stepNum} (${node.label}): ${equationToString(node.equation)}`);
-                                setFeedbackModalOpen(true);
-                              }}
-                              className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-indigo-400 cursor-pointer transition-colors"
-                            >
-                              <MessageSquarePlus size={8} />
-                            </button>
-                          </Tooltip>
-                          <Tooltip content="Copy Equation">
-                            <button
-                              onClick={(e) => handleCopyStep(e, node.equation, node.id)}
-                              className={`p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white cursor-pointer transition-colors ${
-                                isCopied ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : ''
-                              }`}
-                            >
-                              {isCopied ? <Check size={8} /> : <Copy size={8} />}
-                            </button>
-                          </Tooltip>
-                        </div>
+                      <div className="text-indigo-400 font-bold tracking-wider uppercase text-[8px] select-none">
+                        {node.label}
                       </div>
                       <div className="text-[11px] font-mono text-indigo-50 font-semibold break-all leading-tight">
                         {equationToString(node.equation)}
@@ -492,20 +468,36 @@ export const ControlPanel: React.FC = () => {
                     </span>
 
                     {/* Truncated Equation Label */}
-                    <span className="text-[11px] font-mono truncate max-w-full text-indigo-50 font-semibold pl-2 pr-5 text-center">
+                    <span className="text-[11px] font-mono truncate max-w-full text-indigo-50 font-semibold pl-2 pr-12 text-center">
                       {equationToString(node.equation)}
                     </span>
 
-                    {/* Hover Copy Button */}
-                    <button
-                      onClick={(e) => handleCopyStep(e, node.equation, node.id)}
-                      className={`absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-md border border-white/5 bg-neutral-950 text-white/40 hover:text-white hover:bg-white/10 hover:border-white/15 opacity-0 group-hover/node:opacity-100 transition-all duration-150 z-20 cursor-pointer ${
-                        isCopied ? 'text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10 opacity-100' : ''
-                      }`}
-                      title="Copy Equation"
-                    >
-                      {isCopied ? <Check size={10} /> : <Copy size={10} />}
-                    </button>
+                    {/* Hover Actions Toolbar */}
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/node:opacity-100 transition-all duration-150 z-20">
+                      <Tooltip content="Report issue with this step" position="top">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFeedbackContext(`History Step ${stepNum} (${node.label}): ${equationToString(node.equation)}`);
+                            setFeedbackModalOpen(true);
+                          }}
+                          className="p-1 rounded-md border border-white/5 bg-neutral-950 text-white/40 hover:text-indigo-400 hover:bg-white/10 hover:border-white/15 cursor-pointer"
+                        >
+                          <MessageSquarePlus size={10} />
+                        </button>
+                      </Tooltip>
+                      
+                      <Tooltip content="Copy Equation" position="top">
+                        <button
+                          onClick={(e) => handleCopyStep(e, node.equation, node.id)}
+                          className={`p-1 rounded-md border border-white/5 bg-neutral-950 text-white/40 hover:text-white hover:bg-white/10 hover:border-white/15 cursor-pointer ${
+                            isCopied ? 'text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10 opacity-100' : ''
+                          }`}
+                        >
+                          {isCopied ? <Check size={10} /> : <Copy size={10} />}
+                        </button>
+                      </Tooltip>
+                    </div>
                   </div>
                 </Tooltip>
               );

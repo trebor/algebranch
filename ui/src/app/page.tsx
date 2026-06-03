@@ -54,6 +54,37 @@ export default function Home() {
       const savedSessionsRaw = localStorage.getItem('algebranch_saved_sessions');
       if (savedSessionsRaw) {
         sessions = JSON.parse(savedSessionsRaw);
+        
+        // Auto-migrate legacy default equation to the new optimized default
+        let migrated = false;
+        sessions = sessions.map(s => {
+          if (s.id === 'session_initial' && s.name === '3 * x + 5 = x + 13') {
+            migrated = true;
+            const initialTree: Record<string, HistoryNode> = {
+              "0": {
+                id: "0",
+                equation: parseEquation(INITIAL_EQUATION_STRING),
+                parentId: null,
+                childrenIds: [],
+                label: "Initial",
+                timestamp: Date.now(),
+              }
+            };
+            return {
+              id: 'session_initial',
+              name: INITIAL_EQUATION_STRING,
+              timestamp: Date.now(),
+              tree: serializeTree(initialTree),
+              currentNodeId: "0",
+            };
+          }
+          return s;
+        });
+
+        if (migrated) {
+          localStorage.setItem('algebranch_saved_sessions', JSON.stringify(sessions));
+        }
+
         setSavedSessions(sessions);
       }
     } catch (err) {

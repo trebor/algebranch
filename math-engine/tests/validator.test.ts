@@ -387,5 +387,23 @@ describe('Math Engine Validator & Simplifier', () => {
     const resultEq = equationToString(moves['rhs']);
     expect(resultEq).toBe('x = (-b + sqrt(b ^ 2 - 4 * a * c)) / (2 * a)');
   });
+
+  test('should validate complex discriminant transpositions and variable-denominator moves', () => {
+    // 1. Check complex discriminant transposition equivalence
+    const eq1 = parseEquation('x = (-7 + sqrt(-383)) / 24');
+    const eq2 = parseEquation('x * 24 = -7 + sqrt(-383)');
+    expect(areEquationsEquivalent(eq1, eq2)).toBe(true);
+
+    // 2. Check variable-to-denominator transposition on complex equations
+    const eq3 = parseEquation('24 * x = sqrt(-383) - 7');
+    const eq4 = parseEquation('24 = (sqrt(-383) - 7) / x');
+    expect(areEquationsEquivalent(eq3, eq4)).toBe(true);
+
+    // 3. Ensure real root restriction handles standard log rules correctly
+    const eqLog1 = parseEquation('log(x^3) = 10');
+    const eqLog2 = parseEquation('3 * log(x) = 10');
+    expect(areEquationsEquivalent(eqLog1, eqLog2)).toBe(true);
+  });
 });
+
 

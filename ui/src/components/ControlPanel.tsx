@@ -12,6 +12,7 @@ import {
   hoverPathAtom,
   hoveredLoopTargetIdAtom,
   getCanonicalKey,
+  rightSidebarOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, BookOpen, Infinity } from 'lucide-react';
@@ -24,6 +25,7 @@ export const ControlPanel: React.FC = () => {
   const setSourcePath = useSetAtom(sourcePathAtom);
   const setHoverPath = useSetAtom(hoverPathAtom);
   const layout = useAtomValue(treeLayoutAtom);
+  const setRightSidebarOpen = useSetAtom(rightSidebarOpenAtom);
 
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
@@ -85,6 +87,7 @@ export const ControlPanel: React.FC = () => {
     setCurrentNodeId(id);
     setSourcePath(null);
     setHoverPath(null);
+    setRightSidebarOpen(false);
   };
 
   // Compute permanent chronological indices for visual rendering

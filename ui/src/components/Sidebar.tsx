@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtomValue, useSetAtom, useAtom } from 'jotai';
 import { Tooltip } from './Tooltip';
 import {
   currentEquationAtom,
@@ -13,6 +13,7 @@ import {
   loadSessionAtom,
   deleteSessionAtom,
   presetCategoriesAtom,
+  leftSidebarOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight } from 'lucide-react';
@@ -28,6 +29,7 @@ const formatTimestamp = (ts: number): string => {
 };
 
 export const Sidebar: React.FC = () => {
+  const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
   const resetToEquation = useSetAtom(resetToEquationStringAtom);
   const applyGlobalOp = useSetAtom(applyGlobalOpAtom);
 
@@ -64,6 +66,7 @@ export const Sidebar: React.FC = () => {
       setErrorStr(null);
       resetToEquation(inputStr);
       setInputStr('');
+      setLeftSidebarOpen(false);
       // setActiveTab('saved');
     } catch (err) {
       setErrorStr(err instanceof Error ? err.message : String(err));
@@ -84,6 +87,7 @@ export const Sidebar: React.FC = () => {
     try {
       setErrorStr(null);
       resetToEquation(eqStr);
+      setLeftSidebarOpen(false);
       // setActiveTab('saved');
     } catch (err) {
       setErrorStr(`Error loading preset: ${err instanceof Error ? err.message : String(err)}`);
@@ -103,7 +107,9 @@ export const Sidebar: React.FC = () => {
   ) : null;
 
   return (
-    <div className={`w-80 h-full flex flex-col gap-4 p-4 relative z-30 ${THEME_GLASS.PANEL}`}>
+    <div className={`w-80 h-full flex flex-col gap-4 p-4 fixed top-0 bottom-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
+      leftSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+    } lg:relative lg:translate-x-0 lg:z-30 lg:flex ${THEME_GLASS.PANEL}`}>
 
       {/* 1. Workspace Card */}
       <div className={`p-4 shrink-0 flex flex-col gap-3 relative z-20 ${THEME_GLASS.CARD}`}>
@@ -198,6 +204,7 @@ export const Sidebar: React.FC = () => {
                               onClick={() => {
                                 loadSession(session.id);
                                 setIsDropdownOpen(false);
+                                setLeftSidebarOpen(false);
                               }}
                               className={`w-full text-left px-3 py-2 text-xs flex justify-between items-center gap-4 hover:bg-indigo-600/20 transition-colors cursor-pointer ${
                                 isActive ? 'text-indigo-300 bg-indigo-600/5 font-semibold' : 'text-white/70'

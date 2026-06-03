@@ -117,6 +117,8 @@ export const hoverPathAtom = atom<string | null>(null);
 export const hoverReducePathAtom = atom<string | null>(null);
 export const hoverReduceIndexAtom = atom<number | null>(null);
 export const hoveredLoopTargetIdAtom = atom<string | null>(null);
+export const leftSidebarOpenAtom = atom(false);
+export const rightSidebarOpenAtom = atom(false);
 
 export interface ReducibleActionInfo {
   equation: Equation;

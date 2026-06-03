@@ -24,10 +24,12 @@ import {
   serializeTree,
   deserializeTree,
   INITIAL_EQUATION_STRING,
+  leftSidebarOpenAtom,
+  rightSidebarOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
-import { Share2, Check } from 'lucide-react';
+import { Share2, Check, Menu, BookOpen } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -41,6 +43,8 @@ export default function Home() {
   const targetPaths = useAtomValue(targetPathsAtom);
   const hoverReducePath = useAtomValue(hoverReducePathAtom);
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
+  const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
+  const [rightSidebarOpen, setRightSidebarOpen] = useAtom(rightSidebarOpenAtom);
   
   const [tree, setTree] = useAtom(historyTreeAtom);
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
@@ -300,6 +304,24 @@ export default function Home() {
     });
   };
 
+  // Register PWA Service Worker on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      const registerSW = () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => console.log('Service worker registered successfully:', reg.scope))
+          .catch((err) => console.error('Service worker registration failed:', err));
+      };
+
+      if (document.readyState === 'complete') {
+        registerSW();
+      } else {
+        window.addEventListener('load', registerSW);
+        return () => window.removeEventListener('load', registerSW);
+      }
+    }
+  }, []);
+
   React.useEffect(() => {
     if (!currentEq) return;
 
@@ -330,18 +352,79 @@ export default function Home() {
     };
   }, [currentEq, sourcePath, syncMathState]);
 
-  // Escape key global listener to deselect/back out of active selections
+  // Escape key global listener to deselect/back out of active selections and close mobile drawers
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && sourcePath !== null) {
-        setSourcePath(null);
+      if (e.key === 'Escape') {
+        if (leftSidebarOpen) {
+          setLeftSidebarOpen(false);
+        } else if (rightSidebarOpen) {
+          setRightSidebarOpen(false);
+        } else if (sourcePath !== null) {
+          setSourcePath(null);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [sourcePath, setSourcePath]);
+  }, [sourcePath, setSourcePath, leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen]);
+
+  // Mobile swipe gestures logic
+  React.useEffect(() => {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const swipeThreshold = 80;
+    const edgeThreshold = 40;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (e.changedTouches.length === 0) return;
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+
+      // Ignore vertical swipes (e.g. scrolling the page)
+      if (Math.abs(deltaY) > Math.abs(deltaX)) return;
+
+      const screenWidth = window.innerWidth;
+      const isLargeScreen = screenWidth >= 1024;
+      if (isLargeScreen) return;
+
+      // Swipe Right -> Open Left Drawer or Close Right Drawer
+      if (deltaX > swipeThreshold) {
+        if (rightSidebarOpen) {
+          setRightSidebarOpen(false);
+        } else if (!leftSidebarOpen && touchStartX < edgeThreshold) {
+          setLeftSidebarOpen(true);
+        }
+      }
+      // Swipe Left -> Open Right Drawer or Close Left Drawer
+      else if (deltaX < -swipeThreshold) {
+        if (leftSidebarOpen) {
+          setLeftSidebarOpen(false);
+        } else if (!rightSidebarOpen && (screenWidth - touchStartX) < edgeThreshold) {
+          setRightSidebarOpen(true);
+        }
+      }
+    };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen]);
 
 
   return (
@@ -355,22 +438,31 @@ export default function Home() {
 
       {/* Top Header */}
       <header className="h-16 px-4 flex items-center justify-between select-none shrink-0 w-full z-30">
-        <a href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-90 active:scale-98 transition-all">
-          <Image
-            src="/logo.png"
-            alt="Algebranch Logo"
-            width={36}
-            height={36}
-            priority
-            className="h-9 w-9 object-contain rounded-full"
-          />
-          <div>
-            <h1 className="text-base font-bold text-white tracking-wide">Algebranch</h1>
-            <p className="text-[10px] text-indigo-300 font-semibold tracking-wider uppercase">
-              Interactive Algebra
-            </p>
-          </div>
-        </a>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+            className="lg:hidden p-2 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-all"
+            aria-label="Toggle operations sidebar"
+          >
+            <Menu size={20} />
+          </button>
+          <a href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-90 active:scale-98 transition-all">
+            <Image
+              src="/logo.png"
+              alt="Algebranch Logo"
+              width={36}
+              height={36}
+              priority
+              className="h-9 w-9 object-contain rounded-full"
+            />
+            <div>
+              <h1 className="text-base font-bold text-white tracking-wide">Algebranch</h1>
+              <p className="text-[10px] text-indigo-300 font-semibold tracking-wider uppercase">
+                Interactive Algebra
+              </p>
+            </div>
+          </a>
+        </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleShare}
@@ -388,11 +480,31 @@ export default function Home() {
               </>
             )}
           </button>
+          <button
+            onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
+            className="lg:hidden p-2 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-all"
+            aria-label="Toggle history panel"
+          >
+            <BookOpen size={20} />
+          </button>
         </div>
       </header>
 
       {/* Under-header Layout (Sidebar + Main Workspace + Right Sidebar) */}
       <div className="flex-1 flex w-full overflow-hidden min-h-0 relative z-20 gap-4 px-4 pb-4 pt-0">
+        {/* Backdrop overlay for mobile drawers */}
+        <div
+          onClick={() => {
+            setLeftSidebarOpen(false);
+            setRightSidebarOpen(false);
+          }}
+          className={`fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-40 lg:hidden transition-all duration-300 ${
+            (leftSidebarOpen || rightSidebarOpen)
+              ? 'opacity-100 pointer-events-auto'
+              : 'opacity-0 pointer-events-none'
+          }`}
+        />
+
         {/* 1. Left Control Sidebar (Loader, Global Operations, Presets Library) */}
         <Sidebar />
 
@@ -481,7 +593,9 @@ export default function Home() {
         </main>
 
         {/* Right History & Derivations Sidebar */}
-        <div className="w-80 flex flex-col shrink-0">
+        <div className={`w-80 h-full flex flex-col fixed top-0 bottom-0 right-0 z-50 transform transition-transform duration-300 ease-in-out ${
+          rightSidebarOpen ? 'translate-x-0' : 'translate-x-full'
+        } lg:relative lg:translate-x-0 lg:z-30 lg:flex lg:flex-col shrink-0`}>
           <ControlPanel />
         </div>
       </div>

@@ -15,6 +15,7 @@ import {
   hoverReducePathAtom,
   sourcePathAtom,
   syncMathStateAtom,
+  clearMathStateAtom,
   historyTreeAtom,
   currentNodeIdAtom,
   HistoryNode,
@@ -56,6 +57,7 @@ export default function Home() {
   const [currentSessionId, setCurrentSessionId] = useAtom(currentSessionIdAtom);
 
   const syncMathState = useSetAtom(syncMathStateAtom);
+  const clearMathState = useSetAtom(clearMathStateAtom);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
@@ -335,6 +337,9 @@ export default function Home() {
   React.useEffect(() => {
     if (!currentEq) return;
 
+    // Clear old interactive paths/actions immediately during transition to prevent stale highlights/handles
+    clearMathState();
+
     let active = true;
     const syncState = async () => {
       try {
@@ -375,7 +380,7 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, [currentEq, sourcePath, syncMathState]);
+  }, [currentEq, sourcePath, syncMathState, clearMathState]);
 
   // Escape key global listener to deselect/back out of active selections and close mobile drawers
   React.useEffect(() => {

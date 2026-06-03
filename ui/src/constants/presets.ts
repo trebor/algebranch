@@ -104,6 +104,13 @@ export const PRESET_LIST: Preset[] = [
     category: 'Quadratics & Roots',
   },
   {
+    id: 'quadratic_constant_solve',
+    label: 'Solvable Quadratic (Constants)',
+    equation: '3 * x^2 + 5 * x - 2 = 0',
+    description: 'A quadratic equation with constant coefficients. Drag x to the RHS to apply the quadratic formula solver.',
+    category: 'Quadratics & Roots',
+  },
+  {
     id: 'quadratic_basic_solve',
     label: 'Quadratic Equation',
     equation: 'x^2 - 4 = 0',

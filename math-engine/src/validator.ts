@@ -621,6 +621,77 @@ const tryExtractQuadratic = (lhs: math.MathNode, rhs: math.MathNode, solveVar: s
   return { a, b, c };
 };
 
+export interface QuadraticFormulaSolutions {
+  solveVar: string;
+  pos: Equation;
+  neg: Equation;
+}
+
+export const getQuadraticFormulaSolutions = (eq: Equation): QuadraticFormulaSolutions[] => {
+  const vars1 = getVariables(eq.lhs).concat(getVariables(eq.rhs));
+  const vars = Array.from(new Set(vars1));
+  const solutions: QuadraticFormulaSolutions[] = [];
+
+  for (const solveVar of vars) {
+    const coeffs = tryExtractQuadratic(eq.lhs, eq.rhs, solveVar);
+    if (coeffs) {
+      const { a, b, c } = coeffs;
+
+      const b_sq = new math.OperatorNode('^', 'pow', [b, new math.ConstantNode(2)]);
+      const four_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(4), a]);
+      const four_a_c = new math.OperatorNode('*', 'multiply', [four_a, c]);
+      const discriminant = new math.OperatorNode('-', 'subtract', [b_sq, four_a_c]);
+      const sqrt_d = new math.FunctionNode('sqrt', [discriminant]);
+
+      let num_pos: math.MathNode;
+      let num_neg: math.MathNode;
+      if (isZeroNode(b)) {
+        num_pos = sqrt_d;
+        num_neg = new math.OperatorNode('-', 'unaryMinus', [sqrt_d]);
+      } else {
+        const neg_b = new math.OperatorNode('-', 'unaryMinus', [b]);
+        num_pos = new math.OperatorNode('+', 'add', [neg_b, sqrt_d]);
+        num_neg = new math.OperatorNode('-', 'subtract', [neg_b, sqrt_d]);
+      }
+
+      const two_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(2), a]);
+      
+      const formula_pos = new math.OperatorNode('/', 'divide', [
+        new math.ParenthesisNode(num_pos),
+        new math.ParenthesisNode(two_a)
+      ]);
+      const formula_neg = new math.OperatorNode('/', 'divide', [
+        new math.ParenthesisNode(num_neg),
+        new math.ParenthesisNode(two_a)
+      ]);
+
+      const varNode = new math.SymbolNode(solveVar);
+
+      // Determine where the quadratic was located (mostly on LHS or RHS)
+      const lhsHasQuadratic = hasVariable(eq.lhs, solveVar);
+      
+      let posEq: Equation;
+      let negEq: Equation;
+
+      if (lhsHasQuadratic) {
+        posEq = ensureNodeIds({ lhs: varNode, rhs: formula_pos });
+        negEq = ensureNodeIds({ lhs: varNode, rhs: formula_neg });
+      } else {
+        posEq = ensureNodeIds({ lhs: formula_pos, rhs: varNode });
+        negEq = ensureNodeIds({ lhs: formula_neg, rhs: varNode });
+      }
+
+      solutions.push({
+        solveVar,
+        pos: posEq,
+        neg: negEq
+      });
+    }
+  }
+
+  return solutions;
+};
+
 /**
  * Generates all mathematically valid target equations for a selected node.
  * Maps destination path string to the resulting Equation.

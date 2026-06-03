@@ -17,7 +17,8 @@ import {
   instantiatePattern,
   replaceNodeAtPath,
   tryExpressAsPower,
-  tryExpandPowerTerm
+  tryExpandPowerTerm,
+  getQuadraticFormulaSolutions
 } from 'math-engine';
 import * as math from 'mathjs';
 
@@ -159,6 +160,41 @@ export async function POST(req: NextRequest) {
           }
         } catch {}
       });
+
+      // 4. Try equation-level quadratic formula solutions
+      try {
+        const quadSolutions = getQuadraticFormulaSolutions(eq);
+        for (const sol of quadSolutions) {
+          // If the quadratic variable was on LHS, the identity is offered on LHS root path 'lhs'
+          // If it was on RHS, it's offered on RHS root path 'rhs'
+          const hasVarOnLhs = (() => {
+            let found = false;
+            sol.pos.lhs.traverse((n) => {
+              if (n.type === 'SymbolNode' && (n as math.SymbolNode).name === sol.solveVar) found = true;
+            });
+            return found;
+          })();
+          const solvePath = hasVarOnLhs ? 'lhs' : 'rhs';
+          
+          rawReductions.push({
+            path: solvePath,
+            simplified: sol.pos,
+            serialized: serializeEquation(sol.pos),
+            type: 'identity',
+            label: `Apply Quadratic Formula (+)`
+          });
+
+          rawReductions.push({
+            path: solvePath,
+            simplified: sol.neg,
+            serialized: serializeEquation(sol.neg),
+            type: 'identity',
+            label: `Apply Quadratic Formula (-)`
+          });
+        }
+      } catch (err) {
+        console.error('Error adding quadratic formula reductions:', err);
+      }
 
       // Deduplicate reducible paths: if multiple paths result in the same simplified equation,
       // choose the single most specific/relevant path to avoid overlapping simplify handles.

@@ -66,7 +66,9 @@ export const Sidebar: React.FC = () => {
       setErrorStr(null);
       resetToEquation(inputStr);
       setInputStr('');
-      setLeftSidebarOpen(false);
+      if (window.innerWidth < 1024) {
+        setLeftSidebarOpen(false);
+      }
       // setActiveTab('saved');
     } catch (err) {
       setErrorStr(err instanceof Error ? err.message : String(err));
@@ -87,7 +89,9 @@ export const Sidebar: React.FC = () => {
     try {
       setErrorStr(null);
       resetToEquation(eqStr);
-      setLeftSidebarOpen(false);
+      if (window.innerWidth < 1024) {
+        setLeftSidebarOpen(false);
+      }
       // setActiveTab('saved');
     } catch (err) {
       setErrorStr(`Error loading preset: ${err instanceof Error ? err.message : String(err)}`);
@@ -107,9 +111,15 @@ export const Sidebar: React.FC = () => {
   ) : null;
 
   return (
-    <div className={`w-80 h-full flex flex-col gap-4 p-4 fixed top-0 bottom-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
-      leftSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-    } lg:relative lg:translate-x-0 lg:z-30 lg:flex ${THEME_GLASS.PANEL}`}>
+    <div className={`h-full flex flex-col gap-4 fixed top-0 bottom-0 left-0 z-50 transform transition-all duration-300 ease-in-out ${
+      leftSidebarOpen
+        ? 'w-80 p-4 translate-x-0 opacity-100'
+        : 'w-80 p-4 -translate-x-full opacity-100 max-lg:pointer-events-none'
+    } lg:relative lg:translate-x-0 lg:z-30 lg:flex ${
+      leftSidebarOpen
+        ? 'lg:w-80 lg:min-w-[20rem] lg:p-4 lg:mr-4 lg:opacity-100'
+        : 'lg:w-0 lg:min-w-0 lg:p-0 lg:mr-0 lg:opacity-0 lg:border-0 lg:overflow-hidden lg:pointer-events-none'
+    } ${THEME_GLASS.PANEL}`}>
 
       {/* 1. Workspace Card */}
       <div className={`p-4 shrink-0 flex flex-col gap-3 relative z-20 ${THEME_GLASS.CARD}`}>
@@ -204,7 +214,9 @@ export const Sidebar: React.FC = () => {
                               onClick={() => {
                                 loadSession(session.id);
                                 setIsDropdownOpen(false);
-                                setLeftSidebarOpen(false);
+                                if (window.innerWidth < 1024) {
+                                  setLeftSidebarOpen(false);
+                                }
                               }}
                               className={`w-full text-left px-3 py-2 text-xs flex justify-between items-center gap-4 hover:bg-indigo-600/20 transition-colors cursor-pointer ${
                                 isActive ? 'text-indigo-300 bg-indigo-600/5 font-semibold' : 'text-white/70'

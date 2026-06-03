@@ -87,7 +87,9 @@ export const ControlPanel: React.FC = () => {
     setCurrentNodeId(id);
     setSourcePath(null);
     setHoverPath(null);
-    setRightSidebarOpen(false);
+    if (window.innerWidth < 1024) {
+      setRightSidebarOpen(false);
+    }
   };
 
   // Compute permanent chronological indices for visual rendering

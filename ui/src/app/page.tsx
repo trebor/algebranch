@@ -65,6 +65,13 @@ export default function Home() {
 
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
+    // 0. Set default sidebar states for mobile/tablet
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+    if (isMobile) {
+      setLeftSidebarOpen(false);
+      setRightSidebarOpen(false);
+    }
+
     // 1. First, load the library list of saved sessions
     let sessions: SavedSession[] = [];
     try {
@@ -228,7 +235,7 @@ export default function Home() {
     localStorage.setItem('algebranch_saved_sessions', JSON.stringify([defaultSession]));
     localStorage.setItem('algebranch_current_session_id', defaultId);
 
-  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId]);
+  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen]);
 
   // Save derivation steps to local storage and update address bar URL reactively
   React.useEffect(() => {
@@ -441,7 +448,7 @@ export default function Home() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-            className="lg:hidden p-2 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-all"
+            className="p-2 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-all"
             aria-label="Toggle operations sidebar"
           >
             <Menu size={20} />
@@ -482,7 +489,7 @@ export default function Home() {
           </button>
           <button
             onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-            className="lg:hidden p-2 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-all"
+            className="p-2 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-all"
             aria-label="Toggle history panel"
           >
             <BookOpen size={20} />
@@ -491,7 +498,7 @@ export default function Home() {
       </header>
 
       {/* Under-header Layout (Sidebar + Main Workspace + Right Sidebar) */}
-      <div className="flex-1 flex w-full overflow-hidden min-h-0 relative z-20 gap-4 px-4 pb-4 pt-0">
+      <div className="flex-1 flex w-full overflow-hidden min-h-0 relative z-20 px-4 pb-4 pt-0">
         {/* Backdrop overlay for mobile drawers */}
         <div
           onClick={() => {
@@ -593,9 +600,15 @@ export default function Home() {
         </main>
 
         {/* Right History & Derivations Sidebar */}
-        <div className={`w-80 h-full flex flex-col fixed top-0 bottom-0 right-0 z-50 transform transition-transform duration-300 ease-in-out ${
-          rightSidebarOpen ? 'translate-x-0' : 'translate-x-full'
-        } lg:relative lg:translate-x-0 lg:z-30 lg:flex lg:flex-col shrink-0`}>
+        <div className={`h-full flex flex-col fixed top-0 bottom-0 right-0 z-50 transform transition-all duration-300 ease-in-out ${
+          rightSidebarOpen 
+            ? 'w-80 translate-x-0 opacity-100' 
+            : 'w-80 translate-x-full opacity-100 max-lg:pointer-events-none'
+        } lg:relative lg:translate-x-0 lg:z-30 lg:flex lg:flex-col ${
+          rightSidebarOpen 
+            ? 'lg:w-80 lg:min-w-[20rem] lg:ml-4 lg:opacity-100' 
+            : 'lg:w-0 lg:min-w-0 lg:ml-0 lg:opacity-0 lg:overflow-hidden lg:pointer-events-none'
+        } shrink-0`}>
           <ControlPanel />
         </div>
       </div>

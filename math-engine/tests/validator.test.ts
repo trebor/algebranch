@@ -180,12 +180,12 @@ describe('Math Engine Validator & Simplifier', () => {
   });
 
   test('generateValidMoves blocks dragging exponents or bases out of power nodes', () => {
-    const eq = parseEquation('x ^ 2 - 4 = 0');
-    // Path for '2' in 'x ^ 2' is 'lhs/0/1'
+    const eq = parseEquation('x ^ 3 - 4 = 0');
+    // Path for '3' in 'x ^ 3' is 'lhs/0/1'
     const movesExponent = generateValidMoves(eq, 'lhs/0/1');
     expect(Object.keys(movesExponent).length).toBe(0);
 
-    // Path for 'x' in 'x ^ 2' is 'lhs/0/0'
+    // Path for 'x' in 'x ^ 3' is 'lhs/0/0'
     const movesBase = generateValidMoves(eq, 'lhs/0/0');
     expect(Object.keys(movesBase).length).toBe(0);
   });
@@ -360,6 +360,32 @@ describe('Math Engine Validator & Simplifier', () => {
     const resExpand = tryExpandPowerTerm(xCubeNode);
     expect(resExpand).not.toBeNull();
     expect(resExpand!.toString()).toBe('x * x * x'); // Left-associative mathjs representation without redundant parenthesis
+  });
+
+  test('generateValidMoves suggests quadratic formula solver moves for quadratic variable selection', () => {
+    const eq1 = parseEquation('a * x^2 + b * x + c = 0');
+    
+    // Find path for 'x' dynamically
+    const findPathForSymbol = (node: math.MathNode, targetName: string, currentPath: string): string | null => {
+      if (node.type === 'SymbolNode' && (node as math.SymbolNode).name === targetName) {
+        return currentPath;
+      }
+      const children = 'args' in node ? (node as any).args : ('content' in node ? [(node as any).content] : []);
+      for (let i = 0; i < children.length; i++) {
+        const path = findPathForSymbol(children[i], targetName, currentPath ? `${currentPath}/${i}` : (i === 0 ? 'lhs' : 'rhs'));
+        if (path) return path;
+      }
+      return null;
+    };
+
+    const xPath = findPathForSymbol(eq1.lhs, 'x', 'lhs');
+    expect(xPath).not.toBeNull();
+
+    const moves = generateValidMoves(eq1, xPath!);
+    expect(moves['rhs']).toBeDefined();
+
+    const resultEq = equationToString(moves['rhs']);
+    expect(resultEq).toBe('x = (-b + sqrt(b ^ 2 - 4 * a * c)) / (2 * a)');
   });
 });
 

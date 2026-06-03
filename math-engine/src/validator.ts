@@ -16,6 +16,7 @@ import {
   replaceNodeAtPath,
   removeNodeAtPath,
   getAllPaths,
+  ensureNodeIds,
 } from './tree';
 
 // Global Constants
@@ -440,6 +441,186 @@ export const isPathDraggable = (eq: Equation, sourcePath: string): boolean => {
   return true;
 };
 
+interface SignedTerm {
+  node: math.MathNode;
+  sign: number;
+}
+
+const hasVariable = (node: math.MathNode, varName: string): boolean => {
+  let found = false;
+  node.traverse((n) => {
+    if (n.type === 'SymbolNode' && (n as math.SymbolNode).name === varName) {
+      found = true;
+    }
+  });
+  return found;
+};
+
+const collectTerms = (node: math.MathNode, sign: number, terms: SignedTerm[]) => {
+  if (node.type === 'ParenthesisNode') {
+    collectTerms((node as math.ParenthesisNode).content, sign, terms);
+    return;
+  }
+  if (node.type === 'OperatorNode') {
+    const opNode = node as math.OperatorNode;
+    if (opNode.op === '+') {
+      collectTerms(opNode.args[0], sign, terms);
+      collectTerms(opNode.args[1], sign, terms);
+      return;
+    }
+    if (opNode.op === '-') {
+      if (opNode.isUnary()) {
+        collectTerms(opNode.args[0], -sign, terms);
+      } else {
+        collectTerms(opNode.args[0], sign, terms);
+        collectTerms(opNode.args[1], -sign, terms);
+      }
+      return;
+    }
+  }
+  terms.push({ node, sign });
+};
+
+interface TermCategory {
+  category: 'a' | 'b' | 'c';
+  coeff: math.MathNode;
+}
+
+const getTermCategory = (node: math.MathNode, solveVar: string): TermCategory | null => {
+  if (!hasVariable(node, solveVar)) {
+    return { category: 'c', coeff: node };
+  }
+
+  // Check if it's solveVar^2
+  if (node.type === 'OperatorNode' && (node as math.OperatorNode).op === '^') {
+    const opNode = node as math.OperatorNode;
+    let base = opNode.args[0];
+    let exponent = opNode.args[1];
+    while (base.type === 'ParenthesisNode') base = (base as math.ParenthesisNode).content;
+    while (exponent.type === 'ParenthesisNode') exponent = (exponent as math.ParenthesisNode).content;
+
+    if (
+      base.type === 'SymbolNode' &&
+      (base as math.SymbolNode).name === solveVar &&
+      exponent.type === 'ConstantNode' &&
+      Number((exponent as math.ConstantNode).value) === 2
+    ) {
+      return { category: 'a', coeff: new math.ConstantNode(1) };
+    }
+  }
+
+  // Check if it's Coeff * solveVar^2 or solveVar^2 * Coeff
+  if (node.type === 'OperatorNode' && (node as math.OperatorNode).op === '*') {
+    const opNode = node as math.OperatorNode;
+    for (let i = 0; i < 2; i++) {
+      const target = opNode.args[i];
+      const coeff = opNode.args[1 - i];
+      let unwrappedTarget = target;
+      while (unwrappedTarget.type === 'ParenthesisNode') {
+        unwrappedTarget = (unwrappedTarget as math.ParenthesisNode).content;
+      }
+      if (
+        unwrappedTarget.type === 'OperatorNode' &&
+        (unwrappedTarget as math.OperatorNode).op === '^'
+      ) {
+        const pNode = unwrappedTarget as math.OperatorNode;
+        let base = pNode.args[0];
+        let exponent = pNode.args[1];
+        while (base.type === 'ParenthesisNode') base = (base as math.ParenthesisNode).content;
+        while (exponent.type === 'ParenthesisNode') exponent = (exponent as math.ParenthesisNode).content;
+
+        if (
+          base.type === 'SymbolNode' &&
+          (base as math.SymbolNode).name === solveVar &&
+          exponent.type === 'ConstantNode' &&
+          Number((exponent as math.ConstantNode).value) === 2
+        ) {
+          return { category: 'a', coeff };
+        }
+      }
+    }
+
+    // Check if it's Coeff * solveVar or solveVar * Coeff
+    for (let i = 0; i < 2; i++) {
+      const target = opNode.args[i];
+      const coeff = opNode.args[1 - i];
+      let unwrappedTarget = target;
+      while (unwrappedTarget.type === 'ParenthesisNode') {
+        unwrappedTarget = (unwrappedTarget as math.ParenthesisNode).content;
+      }
+      if (
+        unwrappedTarget.type === 'SymbolNode' &&
+        (unwrappedTarget as math.SymbolNode).name === solveVar
+      ) {
+        return { category: 'b', coeff };
+      }
+    }
+  }
+
+  // Check if it's solveVar directly
+  let unwrapped = node;
+  while (unwrapped.type === 'ParenthesisNode') unwrapped = (unwrapped as math.ParenthesisNode).content;
+  if (unwrapped.type === 'SymbolNode' && (unwrapped as math.SymbolNode).name === solveVar) {
+    return { category: 'b', coeff: new math.ConstantNode(1) };
+  }
+
+  return null;
+};
+
+const isZeroNode = (node: math.MathNode): boolean => {
+  let curr = node;
+  while (curr.type === 'ParenthesisNode') curr = (curr as math.ParenthesisNode).content;
+  return curr.type === 'ConstantNode' && Number((curr as math.ConstantNode).value) === 0;
+};
+
+const sumTerms = (list: SignedTerm[]): math.MathNode => {
+  const filtered = list.filter(item => !isZeroNode(item.node));
+  if (filtered.length === 0) return new math.ConstantNode(0);
+  let acc: math.MathNode = filtered[0].sign === -1
+    ? new math.OperatorNode('-', 'unaryMinus', [filtered[0].node])
+    : filtered[0].node;
+
+  for (let i = 1; i < filtered.length; i++) {
+    const item = filtered[i];
+    if (item.sign === 1) {
+      acc = new math.OperatorNode('+', 'add', [acc, item.node]);
+    } else {
+      acc = new math.OperatorNode('-', 'subtract', [acc, item.node]);
+    }
+  }
+  return acc;
+};
+
+const tryExtractQuadratic = (lhs: math.MathNode, rhs: math.MathNode, solveVar: string) => {
+  const fullExpr = new math.OperatorNode('-', 'subtract', [lhs, rhs]);
+  const terms: SignedTerm[] = [];
+  collectTerms(fullExpr, 1, terms);
+
+  const aList: SignedTerm[] = [];
+  const bList: SignedTerm[] = [];
+  const cList: SignedTerm[] = [];
+
+  for (const t of terms) {
+    const cat = getTermCategory(t.node, solveVar);
+    if (!cat) return null; // Contains unsupported term structure (e.g. solveVar^3)
+    if (cat.category === 'a') {
+      aList.push({ node: cat.coeff, sign: t.sign });
+    } else if (cat.category === 'b') {
+      bList.push({ node: cat.coeff, sign: t.sign });
+    } else {
+      cList.push({ node: cat.coeff, sign: t.sign });
+    }
+  }
+
+  if (aList.length === 0) return null; // No quadratic term
+
+  const a = sumTerms(aList);
+  const b = sumTerms(bList);
+  const c = sumTerms(cList);
+
+  return { a, b, c };
+};
+
 /**
  * Generates all mathematically valid target equations for a selected node.
  * Maps destination path string to the resulting Equation.
@@ -448,6 +629,46 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
   const moves: Record<string, Equation> = {};
 
   try {
+    // Check if the selected node is a variable that can be solved via the quadratic formula
+    const selectedNode = getNodeByPath(originalEq, sourcePath);
+    if (selectedNode.type === 'SymbolNode') {
+      const solveVar = (selectedNode as math.SymbolNode).name;
+      const coeffs = tryExtractQuadratic(originalEq.lhs, originalEq.rhs, solveVar);
+      if (coeffs) {
+        const { a, b, c } = coeffs;
+
+        const b_sq = new math.OperatorNode('^', 'pow', [b, new math.ConstantNode(2)]);
+        const four_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(4), a]);
+        const four_a_c = new math.OperatorNode('*', 'multiply', [four_a, c]);
+        const discriminant = new math.OperatorNode('-', 'subtract', [b_sq, four_a_c]);
+        const sqrt_d = new math.FunctionNode('sqrt', [discriminant]);
+
+        let num_pos: math.MathNode;
+        if (isZeroNode(b)) {
+          num_pos = sqrt_d;
+        } else {
+          const neg_b = new math.OperatorNode('-', 'unaryMinus', [b]);
+          num_pos = new math.OperatorNode('+', 'add', [neg_b, sqrt_d]);
+        }
+
+        const two_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(2), a]);
+        const formula_pos = new math.OperatorNode('/', 'divide', [
+          new math.ParenthesisNode(num_pos),
+          new math.ParenthesisNode(two_a)
+        ]);
+
+        const varNode = new math.SymbolNode(solveVar);
+
+        if (sourcePath.startsWith('lhs')) {
+          moves['rhs'] = ensureNodeIds({ lhs: varNode, rhs: formula_pos });
+        } else {
+          moves['lhs'] = ensureNodeIds({ lhs: formula_pos, rhs: varNode });
+        }
+
+        return moves; // Return early with the quadratic formula solve move!
+      }
+    }
+
     if (!isPathDraggable(originalEq, sourcePath)) {
       return moves;
     }

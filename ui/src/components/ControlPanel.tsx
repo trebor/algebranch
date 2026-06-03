@@ -428,13 +428,14 @@ export const ControlPanel: React.FC = () => {
                     width: `${node.width}px`,
                     height: `${cardHeight}px`,
                   }}
-                  className="w-56 p-3 z-50 text-left lowercase-none normal-case flex flex-col gap-1.5 pointer-events-auto"
+                  className="max-w-[85vw] w-max p-4 z-50 text-left lowercase-none normal-case flex flex-col gap-2 pointer-events-auto font-sans bg-neutral-950/98 shadow-[0_0_30px_rgba(99,102,241,0.25)] border border-indigo-500/20"
                   content={
                     <>
-                      <div className="text-indigo-400 font-bold tracking-wider uppercase text-[8px] select-none">
-                        {node.label}
+                      <div className="text-[10px] text-indigo-400 font-bold tracking-wider uppercase select-none border-b border-indigo-500/10 pb-1.5 mb-1 flex items-center justify-between gap-12">
+                        <span>Step Details — {node.label}</span>
+                        <span className="text-[9px] text-white/30 font-sans normal-case font-medium">Step {stepNum}</span>
                       </div>
-                      <div className="text-[11px] font-mono text-indigo-50 font-semibold break-all leading-tight">
+                      <div className="text-base sm:text-lg font-mono text-indigo-100 font-semibold break-all leading-normal select-all">
                         {equationToString(node.equation)}
                       </div>
                     </>

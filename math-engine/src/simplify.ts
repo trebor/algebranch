@@ -152,6 +152,63 @@ export const trySimplifyRootOfPower = (node: math.MathNode): math.MathNode | nul
 };
 
 /**
+ * Helper to identify and simplify powers of matching roots (e.g. (sqrt(x))^2 -> x, (nthRoot(x, n))^n -> x).
+ */
+export const trySimplifyPowerOfRoot = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'OperatorNode') {
+    return null;
+  }
+  const opNode = node as math.OperatorNode;
+  if (opNode.op !== '^' || opNode.args.length !== 2) {
+    return null;
+  }
+
+  let base = opNode.args[0];
+  let exponent = opNode.args[1];
+
+  // Unwrap parentheses
+  while (base.type === 'ParenthesisNode') {
+    base = (base as math.ParenthesisNode).content;
+  }
+  while (exponent.type === 'ParenthesisNode') {
+    exponent = (exponent as math.ParenthesisNode).content;
+  }
+
+  if (base.type !== 'FunctionNode') {
+    return null;
+  }
+  const baseFunc = base as math.FunctionNode;
+  const nameStr = getFunctionName(baseFunc);
+
+  if (nameStr === 'sqrt') {
+    if (baseFunc.args.length === 1) {
+      if (exponent.type === 'ConstantNode' && Number((exponent as math.ConstantNode).value) === 2) {
+        return baseFunc.args[0];
+      }
+    }
+  }
+
+  if (nameStr === 'nthRoot') {
+    if (baseFunc.args.length === 1) {
+      // Default degree is 2 for nthRoot with 1 argument (equivalent to square root)
+      if (exponent.type === 'ConstantNode' && Number((exponent as math.ConstantNode).value) === 2) {
+        return baseFunc.args[0];
+      }
+    } else if (baseFunc.args.length === 2) {
+      let rootDegree = baseFunc.args[1];
+      while (rootDegree.type === 'ParenthesisNode') {
+        rootDegree = (rootDegree as math.ParenthesisNode).content;
+      }
+      if (exponent.toString() === rootDegree.toString()) {
+        return baseFunc.args[0];
+      }
+    }
+  }
+
+  return null;
+};
+
+/**
  * Identifies distribution opportunities (e.g. a * (b + c) -> a * b + a * c, or (b + c) / a -> b / a + c / a)
  * and returns the expanded mathematical node.
  */
@@ -430,8 +487,8 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
       }
     }
 
-    // 2.5 Try simplifying root of power (e.g. sqrt(x ^ 2) -> x)
-    const rootPowerSimplified = trySimplifyRootOfPower(node);
+    // 2.5 Try simplifying root of power (e.g. sqrt(x ^ 2) -> x) or power of root (e.g. (sqrt(x)) ^ 2 -> x)
+    const rootPowerSimplified = trySimplifyRootOfPower(node) || trySimplifyPowerOfRoot(node);
     if (rootPowerSimplified) {
       const candidate = replaceNodeAtPath(eq, p, rootPowerSimplified);
       if (isDiff(candidate)) {
@@ -563,8 +620,8 @@ export const autoSimplify = (eq: Equation): Equation => {
         }
       }
 
-      // Try root of power simplification (e.g. sqrt(x ^ 2) -> x)
-      const rootPowerSimplified = trySimplifyRootOfPower(node);
+      // Try root of power simplification (e.g. sqrt(x ^ 2) -> x) or power of root (e.g. (sqrt(x)) ^ 2 -> x)
+      const rootPowerSimplified = trySimplifyRootOfPower(node) || trySimplifyPowerOfRoot(node);
       if (rootPowerSimplified) {
         const candidate = replaceNodeAtPath(currentEq, paths[i], rootPowerSimplified);
         currentEq = candidate;

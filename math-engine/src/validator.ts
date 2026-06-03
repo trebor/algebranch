@@ -263,6 +263,16 @@ export const solveForVariable = (
   return null;
 };
 
+const isEquationReal = (eq: Equation, scope: Record<string, number>): boolean => {
+  try {
+    const valLHS = evaluatePoint(eq.lhs, scope);
+    const valRHS = evaluatePoint(eq.rhs, scope);
+    return isReal(valLHS) && isReal(valRHS);
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Checks if target equation is satisfied when source equation's root is found.
  */
@@ -274,11 +284,15 @@ export const isEquationSatisfiedAtRoot = (
 ): boolean => {
   const guesses = [1.0, -1.0, 5.0, -5.0];
   let hasCheckedAnyRoot = false;
+  const isRealEq = isEquationReal(eqSource, scope);
 
   for (const solveVar of variables) {
     for (const guess of guesses) {
       const root = solveForVariable(eqSource.lhs, eqSource.rhs, solveVar, { ...scope }, guess);
-      if (root !== null && isValFinite(root) && !isValNaN(root) && isReal(root)) {
+      if (root !== null && isValFinite(root) && !isValNaN(root)) {
+        if (isRealEq && !isReal(root)) {
+          continue;
+        }
         hasCheckedAnyRoot = true;
         const localScope = { ...scope, [solveVar]: root };
         const dTarget = math.subtract(evaluatePoint(eqTarget.lhs, localScope), evaluatePoint(eqTarget.rhs, localScope));

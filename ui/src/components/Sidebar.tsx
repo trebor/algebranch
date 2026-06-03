@@ -16,7 +16,30 @@ import {
   leftSidebarOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
-import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Layers, Triangle, Activity, Flame, BookOpen } from 'lucide-react';
+
+const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case 'Linear Equations':
+      return <Hash size={11} className="text-blue-400 shrink-0" />;
+    case 'Fractions & Ratios':
+      return <Percent size={11} className="text-teal-400 shrink-0" />;
+    case 'Quadratics & Roots':
+      return <Zap size={11} className="text-amber-400 shrink-0" />;
+    case 'Literal Equations':
+      return <Layers size={11} className="text-purple-400 shrink-0" />;
+    case 'Geometry':
+      return <Triangle size={11} className="text-emerald-400 shrink-0" />;
+    case 'Classical Physics':
+      return <Activity size={11} className="text-rose-400 shrink-0" />;
+    case 'Thermodynamics & Chemistry':
+      return <Flame size={11} className="text-orange-400 shrink-0" />;
+    case 'Algebraic Identities':
+      return <BookOpen size={11} className="text-pink-400 shrink-0" />;
+    default:
+      return <FolderGit2 size={11} className="text-indigo-400 shrink-0" />;
+  }
+};
 
 const formatTimestamp = (ts: number): string => {
   const diff = Date.now() - ts;
@@ -436,7 +459,7 @@ export const Sidebar: React.FC = () => {
       <div className="flex-1 flex flex-col gap-3 min-h-0 border-t border-white/10 pt-4">
         <h3 className="text-xs font-bold text-white flex items-center gap-2 select-none px-1">
           <FolderGit2 className="text-indigo-400" size={14} />
-          <span>Presets</span>
+          <span>Presets Library</span>
         </h3>
 
         {/* Tab Content List Container */}
@@ -448,20 +471,25 @@ export const Sidebar: React.FC = () => {
                 {/* Category Header */}
                 <button
                   onClick={() => toggleCategory(group.category)}
-                  className="w-full flex items-center justify-between py-1.5 px-2 bg-neutral-900/40 hover:bg-neutral-900/60 border border-white/5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-indigo-300 hover:text-indigo-200 transition-all select-none cursor-pointer"
+                  className="w-full flex items-center justify-between py-1.5 px-2 bg-neutral-950 border border-white/5 rounded-xl text-[10px] font-bold uppercase tracking-wider text-indigo-300 hover:text-indigo-200 transition-all select-none cursor-pointer hover:border-white/10 hover:bg-neutral-900/20"
                 >
-                  <div className="flex items-center gap-1.5">
-                    {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                    <span>{group.category}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white/40">
+                      {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {getCategoryIcon(group.category)}
+                      <span>{group.category}</span>
+                    </div>
                   </div>
-                  <span className="text-[9px] text-white/30 bg-white/5 px-1.5 py-0.5 rounded-full">
+                  <span className="text-[9px] font-sans font-semibold text-white/40 bg-white/5 px-2 py-0.5 rounded-full border border-white/5 group-hover:text-white">
                     {group.presets.length}
                   </span>
                 </button>
 
                 {/* Category Items (Collapsible) */}
                 {isExpanded && (
-                  <div className="flex flex-col gap-1.5 pl-1.5 border-l border-white/5 ml-1.5 mt-1 animate-[fadeIn_0.2s_ease-out]">
+                  <div className="flex flex-col gap-2 pl-2 border-l border-white/5 ml-3 mt-1.5 animate-[fadeIn_0.2s_ease-out]">
                     {group.presets.map((preset) => (
                       <Tooltip
                         key={preset.id}
@@ -469,20 +497,19 @@ export const Sidebar: React.FC = () => {
                       >
                         <button
                           onClick={() => handlePresetSelect(preset.equation)}
-                          className="w-full flex items-center justify-between text-left p-2.5 rounded-xl border border-white/5 bg-white/0 hover:bg-white/5 hover:border-white/10 group transition-all duration-200 cursor-pointer shrink-0"
+                          className="w-full flex items-center justify-between text-left p-2.5 pl-3 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-indigo-500/5 hover:border-indigo-500/10 border-l-2 border-l-transparent hover:border-l-indigo-400/80 group transition-all duration-200 cursor-pointer shrink-0 shadow-sm shadow-black/20"
                         >
                           <div className="flex-1 min-w-0 pr-2">
-                            <div className="text-xs text-indigo-300 font-semibold group-hover:text-indigo-200 transition-colors">
+                            <div className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">
                               {preset.label}
                             </div>
-                            <div className="text-xs font-mono text-white/70 group-hover:text-white transition-colors truncate">
+                            <div className="text-[11px] font-mono text-zinc-500 group-hover:text-indigo-200/80 transition-colors mt-0.5 truncate">
                               {preset.equation}
                             </div>
                           </div>
-                          <Play
-                            size={11}
-                            className="text-white/20 group-hover:text-indigo-400 group-hover:translate-x-0.5 transform transition-all duration-200 shrink-0"
-                          />
+                          <div className="p-1.5 rounded-lg bg-white/0 group-hover:bg-indigo-600/20 text-white/20 group-hover:text-indigo-400 border border-transparent group-hover:border-indigo-500/30 transform group-hover:scale-105 transition-all duration-200 shrink-0">
+                            <Play size={10} />
+                          </div>
                         </button>
                       </Tooltip>
                     ))}

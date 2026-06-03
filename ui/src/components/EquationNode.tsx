@@ -87,7 +87,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     const displayStyle = isDivElement ? {} : { display: 'inline-block' };
     return {
       ...displayStyle,
-      maxWidth: '200px',
       transition: 'all 150ms ease-in-out',
     };
   };

@@ -541,7 +541,7 @@ export default function Home() {
               className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light cursor-default"
             >
               <div className="flex flex-col items-center justify-center gap-2 origin-center">
-                <div ref={activeScale.contentRef} className="flex items-baseline justify-center gap-[0.8em] flex-nowrap w-max">
+                <div ref={activeScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max">
                   {/* LHS Term Tree */}
                   <div className="flex justify-end min-w-[5em]">
                     <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />
@@ -585,7 +585,7 @@ export default function Home() {
                   )}
                 </span>
                 
-                <div ref={previewScale.contentRef} className="flex items-baseline justify-center gap-[0.8em] flex-nowrap w-max pointer-events-none select-none">
+                <div ref={previewScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max pointer-events-none select-none">
                   {/* LHS Preview Term Tree */}
                   <div className="flex justify-end min-w-[5em]">
                     <PreviewEquationNode path="lhs" />

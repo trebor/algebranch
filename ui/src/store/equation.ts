@@ -529,21 +529,32 @@ export const toggleRootSignAtom = atom(
  */
 export const applyGlobalOpAtom = atom(
   null,
-  (get, set, { type, term }: { type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div'; term?: string }) => {
+  (get, set, { type, term, power }: { type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div' | 'power' | 'root'; term?: string; power?: number }) => {
     const currentEq = get(currentEquationAtom);
     if (!currentEq) return;
 
     let nextLhs: math.MathNode;
     let nextRhs: math.MathNode;
-    let label = `Global ${type === 'square' ? 'Sq' : type === 'sqrt' ? 'Sqrt' : type.toUpperCase()}`;
+    let label = '';
 
-    if (type === 'square') {
-      const exponentNode = new math.ConstantNode(2);
+    const effectivePower = power ?? 2;
+
+    if (type === 'square' || type === 'power') {
+      const exponentNode = new math.ConstantNode(effectivePower);
       nextLhs = new math.OperatorNode('^', 'pow', [currentEq.lhs, exponentNode]);
       nextRhs = new math.OperatorNode('^', 'pow', [currentEq.rhs, exponentNode]);
-    } else if (type === 'sqrt') {
-      nextLhs = new math.FunctionNode('sqrt', [currentEq.lhs]);
-      nextRhs = new math.FunctionNode('sqrt', [currentEq.rhs]);
+      label = effectivePower === 2 ? 'Global Sq' : `Global Power ${effectivePower}`;
+    } else if (type === 'sqrt' || type === 'root') {
+      if (effectivePower === 2) {
+        nextLhs = new math.FunctionNode('sqrt', [currentEq.lhs]);
+        nextRhs = new math.FunctionNode('sqrt', [currentEq.rhs]);
+        label = 'Global Sqrt';
+      } else {
+        const rootIndexNode = new math.ConstantNode(effectivePower);
+        nextLhs = new math.FunctionNode('nthRoot', [currentEq.lhs, rootIndexNode]);
+        nextRhs = new math.FunctionNode('nthRoot', [currentEq.rhs, rootIndexNode]);
+        label = `Global ${effectivePower}-Root`;
+      }
     } else {
       if (!term || !term.trim()) {
         throw new Error('Please specify a term to apply to both sides (e.g. 5x).');

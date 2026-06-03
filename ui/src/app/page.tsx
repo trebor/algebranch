@@ -11,6 +11,7 @@ import {
   previewEquationAtom,
   hoverPathAtom,
   targetPathsAtom,
+  reduciblePathsAtom,
   hoverReducePathAtom,
   sourcePathAtom,
   syncMathStateAtom,
@@ -48,9 +49,11 @@ export default function Home() {
 
   const syncMathState = useSetAtom(syncMathStateAtom);
 
+  const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
+  const reduciblePaths = useAtomValue(reduciblePathsAtom);
   const previewEq = useAtomValue(previewEquationAtom);
-  const activeScale = useMathScale(currentEq);
-  const previewScale = useMathScale(previewEq);
+  const activeScale = useMathScale(currentEq, [targetPaths, reduciblePaths, sourcePath]);
+  const previewScale = useMathScale(previewEq, [targetPaths, reduciblePaths, sourcePath, isSpeculative]);
 
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
@@ -336,7 +339,6 @@ export default function Home() {
     };
   }, [sourcePath, setSourcePath]);
 
-  const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
 
   const boundingBoxRef = React.useRef<Map<string, DOMRect>>(new Map());
 

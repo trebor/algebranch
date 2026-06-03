@@ -5,7 +5,12 @@ import { Equation } from 'math-engine-client';
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
-export function useMathScale(currentEq: Equation | null, padding = 48, minScale = 0.4) {
+export function useMathScale(
+  currentEq: Equation | null,
+  dependencies: unknown[] = [],
+  padding = 48,
+  minScale = 0.4
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -43,7 +48,7 @@ export function useMathScale(currentEq: Equation | null, padding = 48, minScale 
     return () => {
       observer.disconnect();
     };
-  }, [currentEq, padding, minScale]);
+  }, [currentEq, padding, minScale, ...dependencies]);
 
   return { containerRef, contentRef, scale };
 }

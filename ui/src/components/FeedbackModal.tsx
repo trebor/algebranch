@@ -13,14 +13,13 @@ export const FeedbackModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(feedbackModalOpenAtom);
   const context = useAtomValue(feedbackContextAtom);
   
-  const [type, setType] = React.useState<FeedbackType>('other');
   const [subject, setSubject] = React.useState('');
   const [message, setMessage] = React.useState('');
   const [rating, setRating] = React.useState<number>(0);
   const [hoveredRating, setHoveredRating] = React.useState<number>(0);
-  const [email, setEmail] = React.useState('');
   
   const [isSuccess, setIsSuccess] = React.useState(false);
+  const [successTypeLabel, setSuccessTypeLabel] = React.useState('');
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
 
   // Focus trap and escape key handler
@@ -41,12 +40,11 @@ export const FeedbackModal: React.FC = () => {
   }, [isOpen, setIsOpen]);
 
   const resetForm = () => {
-    setType('other');
     setSubject('');
     setMessage('');
     setRating(0);
-    setEmail('');
     setIsSuccess(false);
+    setSuccessTypeLabel('');
     setErrorStr(null);
   };
 
@@ -55,7 +53,7 @@ export const FeedbackModal: React.FC = () => {
     setTimeout(resetForm, 300);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmitType = (e: React.FormEvent, feedbackType: FeedbackType) => {
     e.preventDefault();
     if (!subject.trim() || !message.trim()) {
       setErrorStr('Subject and message are required.');
@@ -63,11 +61,11 @@ export const FeedbackModal: React.FC = () => {
     }
 
     try {
-      const typeLabel = type === 'bug' ? 'Bug Report' : type === 'feature' ? 'Feature Request' : 'General/Other';
+      const typeLabel = feedbackType === 'bug' ? 'Bug Report' : feedbackType === 'feature' ? 'Feature Request' : 'General/Other';
+      setSuccessTypeLabel(typeLabel);
       
       const bodyText = `Feedback Type: ${typeLabel}
 Rating: ${rating > 0 ? `${rating}/5` : 'Not rated'}
-Contact Email: ${email.trim() || 'Not provided'}
 
 Message:
 ${message.trim()}
@@ -149,7 +147,7 @@ ${context || 'No specific context attached'}
                   >
                     <CheckCircle2 className="w-16 h-16 text-emerald-400 mb-4" />
                   </motion.div>
-                  <h3 className="text-xl font-bold text-white">Email Drafted!</h3>
+                  <h3 className="text-xl font-bold text-white">{successTypeLabel} Drafted!</h3>
                   <p className="text-sm text-zinc-400 mt-2 max-w-sm">
                     We've opened your mail client with your feedback pre-written. Please press <strong>Send</strong> in your mail application to complete the submission.
                   </p>
@@ -162,52 +160,7 @@ ${context || 'No specific context attached'}
                 </motion.div>
               ) : (
                 /* Form View */
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                  {/* Type Selector (Segmented control) */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
-                      Feedback Type
-                    </label>
-                    <div className="grid grid-cols-3 gap-2 bg-neutral-950 p-1 rounded-xl border border-white/5">
-                      <button
-                        type="button"
-                        onClick={() => setType('bug')}
-                        className={`flex items-center justify-center gap-1.5 py-2 text-xs rounded-lg font-semibold transition-all cursor-pointer ${
-                          type === 'bug'
-                            ? 'bg-rose-600 text-white shadow-md'
-                            : 'text-white/60 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <Bug size={13} />
-                        <span>Report Bug</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setType('feature')}
-                        className={`flex items-center justify-center gap-1.5 py-2 text-xs rounded-lg font-semibold transition-all cursor-pointer ${
-                          type === 'feature'
-                            ? 'bg-amber-600 text-white shadow-md'
-                            : 'text-white/60 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <Lightbulb size={13} />
-                        <span>Request Feature</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setType('other')}
-                        className={`flex items-center justify-center gap-1.5 py-2 text-xs rounded-lg font-semibold transition-all cursor-pointer ${
-                          type === 'other'
-                            ? 'bg-indigo-600 text-white shadow-md'
-                            : 'text-white/60 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <MessageSquare size={13} />
-                        <span>Other</span>
-                      </button>
-                    </div>
-                  </div>
-
+                <form className="flex flex-col gap-4">
                   {/* Context Attachment Display */}
                   {context && (
                     <div className="flex items-center gap-2 p-2.5 rounded-xl border border-indigo-500/10 bg-indigo-500/5 text-indigo-300 select-none">
@@ -233,13 +186,7 @@ ${context || 'No specific context attached'}
                       required
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      placeholder={
-                        type === 'bug'
-                          ? 'Describe the issue briefly...'
-                          : type === 'feature'
-                          ? 'What feature would you like to see?'
-                          : 'General comments, questions, or ideas...'
-                      }
+                      placeholder="What is this feedback about?"
                       className="w-full h-9 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-medium"
                     />
                   </div>
@@ -251,16 +198,10 @@ ${context || 'No specific context attached'}
                     </label>
                     <textarea
                       required
-                      rows={4}
+                      rows={5}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder={
-                        type === 'bug'
-                          ? 'What steps did you take? What was the expected result vs. actual result?'
-                          : type === 'feature'
-                          ? 'Explain how this feature would work and why it would be useful.'
-                          : 'Tell us what is on your mind, how we can make this better, etc...'
-                      }
+                      placeholder="Explain your thoughts, steps to reproduce, or details about your request..."
                       className="w-full p-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-medium resize-none"
                     />
                   </div>
@@ -296,20 +237,6 @@ ${context || 'No specific context attached'}
                     </div>
                   </div>
 
-                  {/* Optional Email Input */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
-                      Your Email (Optional)
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="alex@example.com (if you would like us to follow up)"
-                      className="w-full h-9 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-medium"
-                    />
-                  </div>
-
                   {errorStr && (
                     <div className="flex items-start gap-2 text-[10px] text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl p-2.5 animate-[fadeIn_0.2s_ease-out]">
                       <X size={13} className="shrink-0 mt-0.5" />
@@ -318,27 +245,43 @@ ${context || 'No specific context attached'}
                   )}
 
                   {/* Footer Submit Buttons */}
-                  <div className="flex items-center justify-end gap-3 mt-2 border-t border-white/5 pt-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-2 border-t border-white/5 pt-4">
                     <button
                       type="button"
                       onClick={handleClose}
-                      className="px-4 py-2 rounded-xl border border-white/10 hover:border-white/20 text-xs font-semibold text-white/80 hover:text-white bg-white/0 hover:bg-white/5 transition-all cursor-pointer"
+                      className="px-4 py-2 h-9 rounded-xl border border-white/10 hover:border-white/20 text-xs font-semibold text-white/80 hover:text-white bg-white/0 hover:bg-white/5 transition-all cursor-pointer text-center"
                     >
                       Cancel
                     </button>
-                    <button
-                      type="submit"
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-lg transition-all duration-150 active:scale-95 cursor-pointer ${
-                        type === 'bug'
-                          ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/25'
-                          : type === 'feature'
-                          ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/25'
-                          : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/25'
-                      }`}
-                    >
-                      <Send size={12} />
-                      <span>Draft Email</span>
-                    </button>
+                    
+                    <div className="grid grid-cols-3 gap-2 flex-1 sm:flex-none">
+                      <button
+                        type="button"
+                        onClick={(e) => handleSubmitType(e, 'bug')}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 h-9 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 shadow-lg shadow-rose-600/25 active:scale-95 transition-all cursor-pointer text-center"
+                      >
+                        <Bug size={12} />
+                        <span>Report Bug</span>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => handleSubmitType(e, 'feature')}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 h-9 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 shadow-lg shadow-amber-600/25 active:scale-95 transition-all cursor-pointer text-center"
+                      >
+                        <Lightbulb size={12} />
+                        <span>Idea</span>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => handleSubmitType(e, 'other')}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 h-9 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/25 active:scale-95 transition-all cursor-pointer text-center"
+                      >
+                        <MessageSquare size={12} />
+                        <span>Other</span>
+                      </button>
+                    </div>
                   </div>
                 </form>
               )}

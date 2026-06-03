@@ -245,7 +245,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
     if (node.type === 'ParenthesisNode') {
       return (
-        <div className="flex items-center px-[0.05em] self-stretch">
+        <div className="flex items-center px-[0.05em]">
           <LeftParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()} />
           <div className="px-[0.05em]">
             <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
@@ -286,12 +286,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       // Binary Exponentiation operator (Superscript rendering)
       if (opNode.op === '^') {
         return (
-          <div className="inline-flex items-baseline relative">
+          <div className="inline-flex items-baseline relative" style={{ paddingTop: '0.8em' }}>
             <div>
               <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
             </div>
-            <div className="relative -top-[1.15em] text-[0.65em] ml-[0.05em] opacity-90 scale-90" style={{ display: 'inline-block' }}>
-              <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={true} />
+            <div className="relative" style={{ top: '-0.8em' }}>
+              <div className="text-[0.65em] ml-[0.05em] opacity-90 scale-90" style={{ display: 'inline-block' }}>
+                <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={true} />
+              </div>
             </div>
           </div>
         );
@@ -394,11 +396,22 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     return <span>{node.toString()}</span>;
   };
 
+  const minWidth = isReducible 
+    ? (inExponent 
+        ? `${actions.length * 0.6 + (actions.length - 1) * 0.05 + 0.4}em`
+        : `${actions.length * 18 + (actions.length - 1) * 4 + 12}px`)
+    : undefined;
+
   const customStyle: React.CSSProperties = {
     transition: 'border-color 150ms, background-color 150ms, box-shadow 150ms, opacity 150ms',
+    minWidth: minWidth,
   };
 
-  const paddingClass = isReducible ? 'pt-[1.4rem] pb-[0.2em] px-[0.4em]' : 'p-[0.2em]';
+  const paddingClass = isReducible 
+    ? (inExponent 
+        ? 'pt-[1.0em] pb-[0.05em] px-[0.25em]' 
+        : 'pt-[1.5rem] pb-[0.2em] px-[0.45em]') 
+    : 'py-[0.2em] px-[0.35em]';
 
   return (
     <div
@@ -437,7 +450,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
       {/* Compact Inline Operations Toolbar */}
       {isReducible && (
-        <div className="absolute top-1 right-1 flex items-center gap-1 z-20 bg-neutral-950/40 backdrop-blur-sm rounded px-1 py-0.5 border border-white/5 shadow-sm">
+        <div className={`absolute flex items-center z-25 ${
+          inExponent 
+            ? 'top-[0.2em] right-[0.2em] gap-[0.05em]' 
+            : 'top-1.5 right-1.5 gap-1'
+        }`}>
           {actions.map((action, index) => {
             const type = action.type;
             const label = action.label || (type === 'distribute' ? "Distribute this term" : type === 'identity' ? "Apply identity" : "Reduce this term");
@@ -451,13 +468,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 position="top"
               >
                 <button
-                  className={`h-[18px] w-[18px] md:h-[16px] md:w-[16px] rounded-full flex items-center justify-center cursor-pointer shadow-sm transition-all duration-150 relative group ${
+                  className={`flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group ${
                     type === 'distribute'
-                      ? 'bg-purple-600 border border-purple-500/80 hover:bg-purple-500 text-white'
+                      ? 'bg-purple-600 hover:bg-purple-500 text-white animate-pulse'
                       : type === 'identity'
-                      ? 'bg-indigo-600 border border-indigo-500/80 hover:bg-indigo-500 text-white'
-                      : 'bg-amber-400 border border-amber-500/80 hover:bg-amber-300 text-neutral-950'
-                  } ${isActionHovered ? 'scale-110 ring-2 ring-white/50' : ''}`}
+                      ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                      : 'bg-amber-400 hover:bg-amber-300 text-neutral-950 shadow-inner'
+                  } ${isActionHovered ? 'scale-110 ring-2 ring-white/50' : ''} ${
+                    inExponent ? 'h-[0.6em] w-[0.6em] rounded-[0.15em]' : 'h-[18px] w-[18px] md:h-[16px] md:w-[16px] rounded-full'
+                  }`}
                   onMouseEnter={(e) => {
                     e.stopPropagation();
                     setHoverReducePath(path);
@@ -475,19 +494,21 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                     setHoverReduceIndex(null);
                   }}
                 >
-                  <span className={`absolute inset-0 rounded-full animate-ping group-hover:opacity-0 pointer-events-none ${
+                  <span className={`absolute inset-0 animate-ping group-hover:opacity-0 pointer-events-none ${
                     type === 'distribute' 
                       ? 'bg-purple-500/40' 
                       : type === 'identity'
                       ? 'bg-indigo-500/40'
                       : 'bg-amber-400/40'
+                  } ${
+                    inExponent ? 'rounded-[0.15em]' : 'rounded-full'
                   }`} />
                   {type === 'distribute' ? (
-                    <Split size={8} className="text-white stroke-[2.5]" />
+                    <Split size={inExponent ? 5 : 8} className="text-white stroke-[2.5]" />
                   ) : type === 'identity' ? (
-                    <Sparkles size={8} className="text-white stroke-[2.5]" />
+                    <Sparkles size={inExponent ? 5 : 8} className="text-white stroke-[2.5]" />
                   ) : (
-                    <Zap size={8} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
+                    <Zap size={inExponent ? 5 : 8} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
                   )}
                 </button>
               </Tooltip>

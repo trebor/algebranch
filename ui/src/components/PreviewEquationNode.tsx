@@ -119,12 +119,14 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path, 
       // Binary Exponentiation operator (Superscript rendering)
       if (opNode.op === '^') {
         return (
-          <div className="inline-flex items-baseline relative">
+          <div className="inline-flex items-baseline relative" style={{ paddingTop: '0.8em' }}>
             <div>
               <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
             </div>
-            <div className="relative -top-[1.15em] text-[0.65em] ml-[0.05em] opacity-70 scale-90" style={{ display: 'inline-block' }}>
-              <PreviewEquationNode path={`${path}/1`} inExponent={true} />
+            <div className="relative" style={{ top: '-0.8em' }}>
+              <div className="text-[0.65em] ml-[0.05em] opacity-70 scale-90" style={{ display: 'inline-block' }}>
+                <PreviewEquationNode path={`${path}/1`} inExponent={true} />
+              </div>
             </div>
           </div>
         );

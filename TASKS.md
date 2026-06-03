@@ -2,16 +2,20 @@
 
 This checklist tracks high-level tasks, features, and refinements that need to be completed before publishing the Algebranch project.
 
+> [!NOTE]
+> This checklist is now **completed and frozen** for the v1.0.0 launch. All outstanding roadmap items and future features have been migrated to [GitHub Issues](https://github.com/trebor/algebranch/issues).
+
 ---
 
 ## 📈 Current Progress Summary
-* **Total Tasks**: 26
-* **Completed**: 20
-* **Remaining**: 6
+* **Total Tasks**: 32
+* **Completed**: 30
+* **Migrated to GitHub Issues**: 2
+* **Remaining**: 0
 
 ---
 
-## 🛠️ checklist
+## 🛠️ Checklist
 
 ### 📐 1. Core Algebraic Engine & Deduplication
 - [x] Implement point-evaluation and interval arithmetic equivalence engine.
@@ -20,7 +24,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Filter out commutative & associative duplicates in simplify suggestions.
 - [x] Implement context-aware mouse target cursor indicators.
 - [x] Expand preset library to include multi-field stock equations (Physics, Science fields, complexity levels).
-- [x] Develop a mechanism for equation substitution / combining expressions (e.g. replacing E with m * c^2). (Tracked in [GitHub Issue #3](https://github.com/trebor/algebranch/issues/3))
+- [x] **[Migrated to GitHub Issue #3]** Develop a mechanism for equation substitution / combining expressions (e.g. replacing E with m * c^2). (Tracked in [GitHub Issue #3](https://github.com/trebor/algebranch/issues/3))
 - [x] Think hard about parentheses in the AST (parsing, matching, formatting, and structural redundant stripping).
 
 ### 🎨 2. History Tree Layout & Loop UI
@@ -51,7 +55,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 
 ### 🚀 5. Production Polish & Publishing Prep
 - [x] Multi-device responsive dashboard layouts (mobile/tablet check).
-- [x] Add a visual guide/interactive onboarding walkthrough for new users. (Tracked in [GitHub Issue #4](https://github.com/trebor/algebranch/issues/4))
+- [x] **[Migrated to GitHub Issue #4]** Add a visual guide/interactive onboarding walkthrough for new users. (Tracked in [GitHub Issue #4](https://github.com/trebor/algebranch/issues/4))
 - [x] Optimize serverless Vercel function cold starts and caching headers.
 - [x] Setup production SEO meta tags, descriptions, and custom OpenGraph sharing images.
 - [x] Run comprehensive final cross-browser manual audit (Safari, Chrome, Firefox).

@@ -306,8 +306,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
   };
 
   const customStyle: React.CSSProperties = {
-    maxWidth: '500px',
-    transition: 'all 150ms ease-in-out',
+    transition: 'border-color 150ms, background-color 150ms, box-shadow 150ms, opacity 150ms',
   };
 
   const paddingClass = isReducible ? 'pt-[1.4rem] pb-[0.2em] px-[0.4em]' : 'p-[0.2em]';

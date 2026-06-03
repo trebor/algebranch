@@ -56,6 +56,15 @@ export const FeedbackModal: React.FC = () => {
   const [successTypeLabel, setSuccessTypeLabel] = React.useState('');
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
 
+  const resetForm = React.useCallback(() => {
+    setSubject('');
+    setMessage('');
+    setRating(0);
+    setIsSuccess(false);
+    setSuccessTypeLabel('');
+    setErrorStr(null);
+  }, []);
+
   // Focus trap and escape key handler
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -73,14 +82,12 @@ export const FeedbackModal: React.FC = () => {
     };
   }, [isOpen, setIsOpen]);
 
-  const resetForm = () => {
-    setSubject('');
-    setMessage('');
-    setRating(0);
-    setIsSuccess(false);
-    setSuccessTypeLabel('');
-    setErrorStr(null);
-  };
+  // Reset form state when modal is opened
+  React.useEffect(() => {
+    if (isOpen) {
+      resetForm();
+    }
+  }, [isOpen, resetForm]);
 
   const handleClose = () => {
     setIsOpen(false);

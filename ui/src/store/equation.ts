@@ -120,6 +120,7 @@ export const hoveredLoopTargetIdAtom = atom<string | null>(null);
 export const leftSidebarOpenAtom = atom(true);
 export const rightSidebarOpenAtom = atom(true);
 export const feedbackModalOpenAtom = atom(false);
+export const feedbackContextAtom = atom<string | null>(null);
 
 export interface ReducibleActionInfo {
   equation: Equation;

@@ -1,24 +1,25 @@
 'use client';
 
 import React from 'react';
-import { useAtom } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MessageSquare, Bug, Lightbulb, Star, Send, CheckCircle2, ShieldAlert } from 'lucide-react';
-import { feedbackModalOpenAtom } from '../store/equation';
+import { X, MessageSquare, Bug, Lightbulb, Star, Send, CheckCircle2, Paperclip } from 'lucide-react';
+import { feedbackModalOpenAtom, feedbackContextAtom } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 
-type FeedbackType = 'bug' | 'feature' | 'general';
+type FeedbackType = 'bug' | 'feature' | 'other';
 
 export const FeedbackModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(feedbackModalOpenAtom);
-  const [type, setType] = React.useState<FeedbackType>('general');
+  const context = useAtomValue(feedbackContextAtom);
+  
+  const [type, setType] = React.useState<FeedbackType>('other');
   const [subject, setSubject] = React.useState('');
   const [message, setMessage] = React.useState('');
   const [rating, setRating] = React.useState<number>(0);
   const [hoveredRating, setHoveredRating] = React.useState<number>(0);
   const [email, setEmail] = React.useState('');
   
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
 
@@ -40,7 +41,7 @@ export const FeedbackModal: React.FC = () => {
   }, [isOpen, setIsOpen]);
 
   const resetForm = () => {
-    setType('general');
+    setType('other');
     setSubject('');
     setMessage('');
     setRating(0);
@@ -51,43 +52,42 @@ export const FeedbackModal: React.FC = () => {
 
   const handleClose = () => {
     setIsOpen(false);
-    // Add brief timeout to reset form only after animation completes
     setTimeout(resetForm, 300);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim() || !message.trim()) {
       setErrorStr('Subject and message are required.');
       return;
     }
 
-    setIsSubmitting(true);
-    setErrorStr(null);
-
     try {
-      const res = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type,
-          subject: subject.trim(),
-          message: message.trim(),
-          rating: rating > 0 ? rating : undefined,
-          email: email.trim() || undefined,
-        }),
-      });
+      const typeLabel = type === 'bug' ? 'Bug Report' : type === 'feature' ? 'Feature Request' : 'General/Other';
+      
+      const bodyText = `Feedback Type: ${typeLabel}
+Rating: ${rating > 0 ? `${rating}/5` : 'Not rated'}
+Contact Email: ${email.trim() || 'Not provided'}
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to submit feedback.');
-      }
+Message:
+${message.trim()}
 
+--------------------------------------
+App Context:
+${context || 'No specific context attached'}
+`;
+
+      const mailtoUrl = `mailto:feedback@algebranch.com?subject=${encodeURIComponent(
+        `[Algebranch Feedback] ${typeLabel}: ${subject.trim()}`
+      )}&body=${encodeURIComponent(bodyText)}`;
+
+      // Launch the email client
+      window.location.href = mailtoUrl;
+
+      // Show success step explaining that their mail client has been opened
       setIsSuccess(true);
     } catch (err) {
-      setErrorStr(err instanceof Error ? err.message : 'Something went wrong.');
-    } finally {
-      setIsSubmitting(false);
+      setErrorStr('Failed to open your mail client. Please try again.');
     }
   };
 
@@ -140,7 +140,7 @@ export const FeedbackModal: React.FC = () => {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="flex flex-col items-center justify-center py-12 text-center"
+                  className="flex flex-col items-center justify-center py-10 text-center"
                 >
                   <motion.div
                     initial={{ scale: 0 }}
@@ -149,9 +149,9 @@ export const FeedbackModal: React.FC = () => {
                   >
                     <CheckCircle2 className="w-16 h-16 text-emerald-400 mb-4" />
                   </motion.div>
-                  <h3 className="text-xl font-bold text-white">Thank You!</h3>
+                  <h3 className="text-xl font-bold text-white">Email Drafted!</h3>
                   <p className="text-sm text-zinc-400 mt-2 max-w-sm">
-                    Your feedback has been successfully submitted. We appreciate your help in refining Algebranch!
+                    We've opened your mail client with your feedback pre-written. Please press <strong>Send</strong> in your mail application to complete the submission.
                   </p>
                   <button
                     onClick={handleClose}
@@ -171,18 +171,6 @@ export const FeedbackModal: React.FC = () => {
                     <div className="grid grid-cols-3 gap-2 bg-neutral-950 p-1 rounded-xl border border-white/5">
                       <button
                         type="button"
-                        onClick={() => setType('general')}
-                        className={`flex items-center justify-center gap-1.5 py-2 text-xs rounded-lg font-semibold transition-all cursor-pointer ${
-                          type === 'general'
-                            ? 'bg-indigo-600 text-white shadow-md'
-                            : 'text-white/60 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <MessageSquare size={13} />
-                        <span>General</span>
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => setType('bug')}
                         className={`flex items-center justify-center gap-1.5 py-2 text-xs rounded-lg font-semibold transition-all cursor-pointer ${
                           type === 'bug'
@@ -191,7 +179,7 @@ export const FeedbackModal: React.FC = () => {
                         }`}
                       >
                         <Bug size={13} />
-                        <span>Bug Report</span>
+                        <span>Report Bug</span>
                       </button>
                       <button
                         type="button"
@@ -203,10 +191,37 @@ export const FeedbackModal: React.FC = () => {
                         }`}
                       >
                         <Lightbulb size={13} />
-                        <span>Idea</span>
+                        <span>Request Feature</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setType('other')}
+                        className={`flex items-center justify-center gap-1.5 py-2 text-xs rounded-lg font-semibold transition-all cursor-pointer ${
+                          type === 'other'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <MessageSquare size={13} />
+                        <span>Other</span>
                       </button>
                     </div>
                   </div>
+
+                  {/* Context Attachment Display */}
+                  {context && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl border border-indigo-500/10 bg-indigo-500/5 text-indigo-300 select-none">
+                      <Paperclip size={13} className="shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[9px] uppercase tracking-wider font-bold text-indigo-400">
+                          Including Context
+                        </div>
+                        <div className="text-[11px] font-mono truncate font-semibold">
+                          {context}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Subject Input */}
                   <div className="flex flex-col gap-1.5">
@@ -220,10 +235,10 @@ export const FeedbackModal: React.FC = () => {
                       onChange={(e) => setSubject(e.target.value)}
                       placeholder={
                         type === 'bug'
-                          ? 'Describe the bug in a few words...'
+                          ? 'Describe the issue briefly...'
                           : type === 'feature'
                           ? 'What feature would you like to see?'
-                          : 'General comments or suggestions...'
+                          : 'General comments, questions, or ideas...'
                       }
                       className="w-full h-9 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-medium"
                     />
@@ -284,20 +299,20 @@ export const FeedbackModal: React.FC = () => {
                   {/* Optional Email Input */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
-                      Email Address (Optional)
+                      Your Email (Optional)
                     </label>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="alex@example.com (so we can reply to you)"
+                      placeholder="alex@example.com (if you would like us to follow up)"
                       className="w-full h-9 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-medium"
                     />
                   </div>
 
                   {errorStr && (
                     <div className="flex items-start gap-2 text-[10px] text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl p-2.5 animate-[fadeIn_0.2s_ease-out]">
-                      <ShieldAlert size={13} className="shrink-0 mt-0.5" />
+                      <X size={13} className="shrink-0 mt-0.5" />
                       <span>{errorStr}</span>
                     </div>
                   )}
@@ -306,34 +321,23 @@ export const FeedbackModal: React.FC = () => {
                   <div className="flex items-center justify-end gap-3 mt-2 border-t border-white/5 pt-4">
                     <button
                       type="button"
-                      disabled={isSubmitting}
                       onClick={handleClose}
-                      className="px-4 py-2 rounded-xl border border-white/10 hover:border-white/20 text-xs font-semibold text-white/80 hover:text-white bg-white/0 hover:bg-white/5 transition-all cursor-pointer disabled:opacity-50"
+                      className="px-4 py-2 rounded-xl border border-white/10 hover:border-white/20 text-xs font-semibold text-white/80 hover:text-white bg-white/0 hover:bg-white/5 transition-all cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      disabled={isSubmitting}
                       className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-lg transition-all duration-150 active:scale-95 cursor-pointer ${
                         type === 'bug'
                           ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/25'
                           : type === 'feature'
                           ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/25'
                           : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/25'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      }`}
                     >
-                      {isSubmitting ? (
-                        <>
-                          <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          <span>Submitting...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send size={12} />
-                          <span>Submit Feedback</span>
-                        </>
-                      )}
+                      <Send size={12} />
+                      <span>Draft Email</span>
                     </button>
                   </div>
                 </form>

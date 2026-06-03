@@ -13,9 +13,11 @@ import {
   hoveredLoopTargetIdAtom,
   getCanonicalKey,
   rightSidebarOpenAtom,
+  feedbackModalOpenAtom,
+  feedbackContextAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, BookOpen, Infinity } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, BookOpen, Infinity, Bug } from 'lucide-react';
 
 const COPIED_TIMEOUT = 2000;
 
@@ -26,6 +28,8 @@ export const ControlPanel: React.FC = () => {
   const setHoverPath = useSetAtom(hoverPathAtom);
   const layout = useAtomValue(treeLayoutAtom);
   const setRightSidebarOpen = useSetAtom(rightSidebarOpenAtom);
+  const setFeedbackModalOpen = useSetAtom(feedbackModalOpenAtom);
+  const setFeedbackContext = useSetAtom(feedbackContextAtom);
 
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
@@ -427,18 +431,32 @@ export const ControlPanel: React.FC = () => {
                   className="w-56 p-3 z-50 text-left lowercase-none normal-case flex flex-col gap-1.5 pointer-events-auto"
                   content={
                     <>
-                      <div className="text-indigo-400 font-bold tracking-wider uppercase text-[8px] flex items-center justify-between">
+                      <div className="text-indigo-400 font-bold tracking-wider uppercase text-[8px] flex items-center justify-between gap-2">
                         <span>{node.label}</span>
-                        <Tooltip content="Copy Equation">
-                          <button
-                            onClick={(e) => handleCopyStep(e, node.equation, node.id)}
-                            className={`p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white cursor-pointer transition-colors ${
-                              isCopied ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : ''
-                            }`}
-                          >
-                            {isCopied ? <Check size={8} /> : <Copy size={8} />}
-                          </button>
-                        </Tooltip>
+                        <div className="flex items-center gap-1">
+                          <Tooltip content="Report issue with this step">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFeedbackContext(`History Step ${stepNum} (${node.label}): ${equationToString(node.equation)}`);
+                                setFeedbackModalOpen(true);
+                              }}
+                              className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-rose-400 cursor-pointer transition-colors"
+                            >
+                              <Bug size={8} />
+                            </button>
+                          </Tooltip>
+                          <Tooltip content="Copy Equation">
+                            <button
+                              onClick={(e) => handleCopyStep(e, node.equation, node.id)}
+                              className={`p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white cursor-pointer transition-colors ${
+                                isCopied ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : ''
+                              }`}
+                            >
+                              {isCopied ? <Check size={8} /> : <Copy size={8} />}
+                            </button>
+                          </Tooltip>
+                        </div>
                       </div>
                       <div className="text-[11px] font-mono text-indigo-50 font-semibold break-all leading-tight">
                         {equationToString(node.equation)}

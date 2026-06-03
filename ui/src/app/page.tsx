@@ -6,6 +6,7 @@ import { EquationNode } from '../components/EquationNode';
 import { PreviewEquationNode } from '../components/PreviewEquationNode';
 import { Sidebar } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
+import { FeedbackModal } from '../components/FeedbackModal';
 import {
   currentEquationAtom,
   previewEquationAtom,
@@ -27,10 +28,11 @@ import {
   INITIAL_EQUATION_STRING,
   leftSidebarOpenAtom,
   rightSidebarOpenAtom,
+  feedbackModalOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
-import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -58,6 +60,7 @@ export default function Home() {
 
   const syncMathState = useSetAtom(syncMathStateAtom);
   const clearMathState = useSetAtom(clearMathStateAtom);
+  const setFeedbackModalOpen = useSetAtom(feedbackModalOpenAtom);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
@@ -495,6 +498,13 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setFeedbackModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group"
+          >
+            <MessageSquarePlus size={13} className="text-indigo-400 group-hover:scale-110 transition-transform" />
+            <span>Feedback</span>
+          </button>
+          <button
             onClick={handleShare}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group`}
           >
@@ -656,6 +666,7 @@ export default function Home() {
           <ControlPanel />
         </div>
       </div>
+      <FeedbackModal />
     </div>
   );
 }

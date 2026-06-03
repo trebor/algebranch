@@ -41,11 +41,15 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path, 
     }
 
     if (node.type === 'ParenthesisNode') {
+      const paren = node as math.ParenthesisNode;
+      const isFraction = paren.content && paren.content.type === 'OperatorNode' && (paren.content as math.OperatorNode).op === '/';
+      const parenScale = isFraction ? 'text-[1.6em] font-light leading-none' : 'text-[1.05em] font-light';
+      const alignClass = isFraction ? 'items-center py-[0.05em]' : 'items-baseline';
       return (
-        <div className="flex items-baseline px-[0.1em]">
-          <span className="text-white/20 font-light text-[1.05em] mr-[0.05em] select-none">(</span>
+        <div className={`flex ${alignClass} px-[0.1em]`}>
+          <span className={`text-white/20 select-none mr-[0.05em] ${parenScale}`}>(</span>
           <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
-          <span className="text-white/20 font-light text-[1.05em] ml-[0.05em] select-none">)</span>
+          <span className={`text-white/20 select-none ml-[0.05em] ${parenScale}`}>)</span>
         </div>
       );
     }
@@ -81,11 +85,11 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path, 
       // Binary Exponentiation operator (Superscript rendering)
       if (opNode.op === '^') {
         return (
-          <div className="flex items-start">
-            <div className="mt-[0.6em]">
+          <div className="inline-flex items-baseline relative">
+            <div>
               <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
             </div>
-            <div className="text-[0.65em] leading-none -mt-[0.1em] ml-[0.05em] scale-90 opacity-70">
+            <div className="relative -top-[0.65em] text-[0.65em] ml-[0.05em] opacity-70 scale-90" style={{ display: 'inline-block' }}>
               <PreviewEquationNode path={`${path}/1`} inExponent={true} />
             </div>
           </div>

@@ -208,11 +208,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     }
 
     if (node.type === 'ParenthesisNode') {
+      const paren = node as math.ParenthesisNode;
+      const isFraction = paren.content && paren.content.type === 'OperatorNode' && (paren.content as math.OperatorNode).op === '/';
+      const parenScale = isFraction ? 'text-[1.6em] font-light leading-none' : 'text-[1.05em] font-light';
+      const alignClass = isFraction ? 'items-center py-[0.05em]' : 'items-baseline';
       return (
-        <div className="flex items-baseline px-[0.1em]">
-          <span className={`font-light text-[1.05em] select-none mr-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>(</span>
+        <div className={`flex ${alignClass} px-[0.1em]`}>
+          <span className={`select-none mr-[0.05em] ${parenScale} ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>(</span>
           <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
-          <span className={`font-light text-[1.05em] select-none ml-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>)</span>
+          <span className={`select-none ml-[0.05em] ${parenScale} ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>)</span>
         </div>
       );
     }
@@ -248,11 +252,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       // Binary Exponentiation operator (Superscript rendering)
       if (opNode.op === '^') {
         return (
-          <div className="flex items-start">
-            <div className="mt-[0.6em]">
+          <div className="inline-flex items-baseline relative">
+            <div>
               <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
             </div>
-            <div className="text-[0.65em] leading-none -mt-[0.1em] ml-[0.05em] scale-90 opacity-90">
+            <div className="relative -top-[0.65em] text-[0.65em] ml-[0.05em] opacity-90 scale-90" style={{ display: 'inline-block' }}>
               <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={true} />
             </div>
           </div>

@@ -401,7 +401,15 @@ export default function Home() {
           <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
             
             {/* 1. Active Derivation Workspace (Top 2/3) */}
-            <div ref={activeScale.containerRef} className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
+            <div
+              ref={activeScale.containerRef}
+              onClick={() => {
+                if (sourcePath !== null) {
+                  setSourcePath(null);
+                }
+              }}
+              className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light cursor-default"
+            >
               <div className="flex flex-col items-center justify-center gap-2 origin-center">
                 <div ref={activeScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max">
                   {/* LHS Term Tree */}
@@ -426,7 +434,15 @@ export default function Home() {
             <div className="w-11/12 border-t border-dashed border-white/10 shrink-0 self-center" />
 
             {/* 2. Speculative Preview Workspace (Bottom 1/3) */}
-            <div ref={previewScale.containerRef} className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
+            <div
+              ref={previewScale.containerRef}
+              onClick={() => {
+                if (sourcePath !== null) {
+                  setSourcePath(null);
+                }
+              }}
+              className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light cursor-default"
+            >
               <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 origin-center ${
                 isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
               }`}>

@@ -89,6 +89,11 @@ export const Sidebar: React.FC = () => {
     try {
       setErrorStr(null);
       resetToEquation(inputStr);
+      trackEvent({
+        action: 'load_custom_equation',
+        category: 'presets',
+        label: inputStr,
+      });
       setInputStr('');
       if (window.innerWidth < 1024) {
         setLeftSidebarOpen(false);
@@ -247,6 +252,11 @@ export const Sidebar: React.FC = () => {
                               type="button"
                               onClick={() => {
                                 loadSession(session.id);
+                                trackEvent({
+                                  action: 'load_session',
+                                  category: 'sessions',
+                                  label: session.id,
+                                });
                                 setIsDropdownOpen(false);
                                 if (window.innerWidth < 1024) {
                                   setLeftSidebarOpen(false);
@@ -273,7 +283,14 @@ export const Sidebar: React.FC = () => {
               <Tooltip content="Delete workspace">
                 <button
                   type="button"
-                  onClick={() => deleteSession(currentSessionId)}
+                  onClick={() => {
+                    deleteSession(currentSessionId);
+                    trackEvent({
+                      action: 'delete_session',
+                      category: 'sessions',
+                      label: currentSessionId,
+                    });
+                  }}
                   disabled={savedSessions.length <= 1}
                   className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl border border-white/10 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                 >

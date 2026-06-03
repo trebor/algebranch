@@ -16,6 +16,7 @@ import {
   replaceNodeAtPath,
   removeNodeAtPath,
   getAllPaths,
+  ensureNodeIds,
 } from './tree';
 
 // Global Constants
@@ -71,65 +72,6 @@ export const getVariables = (node: math.MathNode): string[] => {
   return Array.from(vars);
 };
 
-/**
- * Recursively evaluates a mathjs node to a single number (point evaluation).
- */
-export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>): number => {
-  if (node.type === 'ConstantNode') {
-    const constNode = node as math.ConstantNode;
-    return Number(constNode.value);
-  }
-  if (node.type === 'SymbolNode') {
-    const symbolNode = node as math.SymbolNode;
-    if (symbolNode.name === 'pi') return CONST_PI;
-    if (symbolNode.name === 'e') return CONST_E;
-    if (symbolNode.name in scope) return scope[symbolNode.name];
-    throw new Error(`Symbol ${symbolNode.name} not in scope`);
-  }
-  if (node.type === 'ParenthesisNode') {
-    const parenNode = node as math.ParenthesisNode;
-    return evaluatePoint(parenNode.content, scope);
-  }
-  if (node.type === 'OperatorNode') {
-    const opNode = node as math.OperatorNode;
-    const args = opNode.args.map((arg) => evaluatePoint(arg, scope));
-    if (opNode.isUnary()) {
-      if (opNode.op === '-') return -args[0];
-      if (opNode.op === '+') return args[0];
-    } else {
-      const [left, right] = args;
-      if (opNode.op === '+') return left + right;
-      if (opNode.op === '-') return left - right;
-      if (opNode.op === '*') return left * right;
-      if (opNode.op === '/') return left / right;
-      if (opNode.op === '^') return Math.pow(left, right);
-    }
-  }
-  if (node.type === 'FunctionNode') {
-    const funcNode = node as math.FunctionNode;
-    const args = funcNode.args.map((arg) => evaluatePoint(arg, scope));
-    const nameStr = getFunctionName(funcNode);
-
-    if (nameStr === 'sqrt') return Math.sqrt(args[0]);
-    if (nameStr === 'nthRoot') {
-      const base = args[0];
-      const degree = args[1] !== undefined ? args[1] : 2;
-      return Math.pow(base, 1 / degree);
-    }
-    if (nameStr === 'sin') return Math.sin(args[0]);
-    if (nameStr === 'cos') return Math.cos(args[0]);
-    if (nameStr === 'tan') return Math.tan(args[0]);
-    if (nameStr === 'cot') return 1 / Math.tan(args[0]);
-    if (nameStr === 'sec') return 1 / Math.cos(args[0]);
-    if (nameStr === 'csc') return 1 / Math.sin(args[0]);
-    if (nameStr === 'log') {
-      const val = args[0];
-      const base = args[1] !== undefined ? args[1] : Math.E;
-      return Math.log(val) / Math.log(base);
-    }
-  }
-  throw new Error(`Unsupported point node type: ${node.type}`);
-};
 
 /**
  * Recursively evaluates a mathjs node to an Interval.
@@ -198,6 +140,86 @@ export const evaluateInterval = (node: math.MathNode, scope: Record<string, Inte
   throw new Error(`Unsupported interval node type: ${node.type}`);
 };
 
+const isValFinite = (val: any): boolean => {
+  if (typeof val === 'object' && val !== null && val.isComplex) {
+    return Number.isFinite(val.re) && Number.isFinite(val.im);
+  }
+  return Number.isFinite(Number(val));
+};
+const isValNaN = (val: any): boolean => {
+  if (typeof val === 'object' && val !== null && val.isComplex) {
+    return Number.isNaN(val.re) || Number.isNaN(val.im);
+  }
+  return Number.isNaN(Number(val));
+};
+
+const isReal = (val: any): boolean => {
+  if (typeof val === 'object' && val !== null && val.isComplex) {
+    return Math.abs(val.im) < 1e-9;
+  }
+  return typeof val === 'number' && !Number.isNaN(val) && Number.isFinite(val);
+};
+
+/**
+ * Recursively evaluates a mathjs node to a single number or complex number (point evaluation).
+ */
+export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>): any => {
+  if (node.type === 'ConstantNode') {
+    const constNode = node as math.ConstantNode;
+    return Number(constNode.value);
+  }
+  if (node.type === 'SymbolNode') {
+    const symbolNode = node as math.SymbolNode;
+    if (symbolNode.name === 'pi') return CONST_PI;
+    if (symbolNode.name === 'e') return CONST_E;
+    if (symbolNode.name in scope) return scope[symbolNode.name];
+    throw new Error(`Symbol ${symbolNode.name} not in scope`);
+  }
+  if (node.type === 'ParenthesisNode') {
+    const parenNode = node as math.ParenthesisNode;
+    return evaluatePoint(parenNode.content, scope);
+  }
+  if (node.type === 'OperatorNode') {
+    const opNode = node as math.OperatorNode;
+    const args = opNode.args.map((arg) => evaluatePoint(arg, scope));
+    if (opNode.isUnary()) {
+      if (opNode.op === '-') return math.unaryMinus(args[0]) as any;
+      if (opNode.op === '+') return args[0];
+    } else {
+      const [left, right] = args;
+      if (opNode.op === '+') return math.add(left, right) as any;
+      if (opNode.op === '-') return math.subtract(left, right) as any;
+      if (opNode.op === '*') return math.multiply(left, right) as any;
+      if (opNode.op === '/') return math.divide(left, right) as any;
+      if (opNode.op === '^') return math.pow(left, right) as any;
+    }
+  }
+  if (node.type === 'FunctionNode') {
+    const funcNode = node as math.FunctionNode;
+    const args = funcNode.args.map((arg) => evaluatePoint(arg, scope));
+    const nameStr = getFunctionName(funcNode);
+
+    if (nameStr === 'sqrt') return math.sqrt(args[0]) as any;
+    if (nameStr === 'nthRoot') {
+      const base = args[0];
+      const degree = args[1] !== undefined ? args[1] : 2;
+      return math.pow(base, math.divide(1, degree)) as any;
+    }
+    if (nameStr === 'sin') return math.sin(args[0]) as any;
+    if (nameStr === 'cos') return math.cos(args[0]) as any;
+    if (nameStr === 'tan') return math.tan(args[0]) as any;
+    if (nameStr === 'cot') return math.cot(args[0]) as any;
+    if (nameStr === 'sec') return math.sec(args[0]) as any;
+    if (nameStr === 'csc') return math.csc(args[0]) as any;
+    if (nameStr === 'log') {
+      const val = args[0];
+      const base = args[1] !== undefined ? args[1] : Math.E;
+      return math.log(val, base) as any;
+    }
+  }
+  throw new Error(`Unsupported point node type: ${node.type}`);
+};
+
 /**
  * Numerically solves LHS - RHS = 0 for a specific variable using Newton-Raphson.
  * Returns the root value or null if it fails to converge.
@@ -208,37 +230,47 @@ export const solveForVariable = (
   solveVar: string,
   scope: Record<string, number>,
   initialGuess: number = 1.0
-): number | null => {
-  const f = (x: number): number => {
+): any | null => {
+  const f = (x: any): any => {
     const localScope = { ...scope, [solveVar]: x };
-    return evaluatePoint(nodeLHS, localScope) - evaluatePoint(nodeRHS, localScope);
+    return math.subtract(evaluatePoint(nodeLHS, localScope), evaluatePoint(nodeRHS, localScope));
   };
 
-  let x = initialGuess; // Initial guess
+  let x: any = initialGuess; // Initial guess
   const maxIterations = 20;
   const tolerance = 1e-10;
   const h = 1e-5;
 
   for (let i = 0; i < maxIterations; i++) {
     const y = f(x);
-    if (isNaN(y) || !isFinite(y)) {
+    if (isValNaN(y) || !isValFinite(y)) {
       return null;
     }
-    if (Math.abs(y) < tolerance) {
+    if (Number(math.abs(y)) < tolerance) {
       return x;
     }
-    const dy = (f(x + h) - f(x - h)) / (2 * h);
-    if (Math.abs(dy) < 1e-12) {
-      x += 1.5; // Shift guess if derivative is zero
+    const dy = math.divide(math.subtract(f(math.add(x, h)), f(math.subtract(x, h))), 2 * h);
+    if (Number(math.abs(dy)) < 1e-12) {
+      x = math.add(x, 1.5); // Shift guess if derivative is zero
       continue;
     }
-    x = x - y / dy;
+    x = math.subtract(x, math.divide(y, dy));
   }
 
-  if (Math.abs(f(x)) < 1e-7) {
+  if (Number(math.abs(f(x))) < 1e-7) {
     return x;
   }
   return null;
+};
+
+const isEquationReal = (eq: Equation, scope: Record<string, number>): boolean => {
+  try {
+    const valLHS = evaluatePoint(eq.lhs, scope);
+    const valRHS = evaluatePoint(eq.rhs, scope);
+    return isReal(valLHS) && isReal(valRHS);
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -250,17 +282,21 @@ export const isEquationSatisfiedAtRoot = (
   variables: string[],
   scope: Record<string, number>
 ): boolean => {
-  const guesses = [1.0, -1.0, 5.0, -5.0];
+  const guesses = [1.0, -1.0, 5.0, -5.0, 0.5, -0.5, 0.1, -0.1];
   let hasCheckedAnyRoot = false;
+  const isRealEq = isEquationReal(eqSource, scope);
 
   for (const solveVar of variables) {
     for (const guess of guesses) {
       const root = solveForVariable(eqSource.lhs, eqSource.rhs, solveVar, { ...scope }, guess);
-      if (root !== null && isFinite(root) && !isNaN(root)) {
+      if (root !== null && isValFinite(root) && !isValNaN(root)) {
+        if (isRealEq && !isReal(root)) {
+          continue;
+        }
         hasCheckedAnyRoot = true;
         const localScope = { ...scope, [solveVar]: root };
-        const dTarget = evaluatePoint(eqTarget.lhs, localScope) - evaluatePoint(eqTarget.rhs, localScope);
-        if (isNaN(dTarget) || !isFinite(dTarget) || Math.abs(dTarget) > 1e-5) {
+        const dTarget = math.subtract(evaluatePoint(eqTarget.lhs, localScope), evaluatePoint(eqTarget.rhs, localScope));
+        if (isValNaN(dTarget) || !isValFinite(dTarget) || Number(math.abs(dTarget)) > 1e-5) {
           return false;
         }
       }
@@ -269,12 +305,12 @@ export const isEquationSatisfiedAtRoot = (
 
   if (!hasCheckedAnyRoot) {
     // Fallback for constant equations or equations with no real roots on the domain
-    const d1 = evaluatePoint(eqSource.lhs, scope) - evaluatePoint(eqSource.rhs, scope);
-    const d2 = evaluatePoint(eqTarget.lhs, scope) - evaluatePoint(eqTarget.rhs, scope);
-    if (isNaN(d1) || isNaN(d2) || !isFinite(d1) || !isFinite(d2)) {
+    const d1 = math.subtract(evaluatePoint(eqSource.lhs, scope), evaluatePoint(eqSource.rhs, scope));
+    const d2 = math.subtract(evaluatePoint(eqTarget.lhs, scope), evaluatePoint(eqTarget.rhs, scope));
+    if (isValNaN(d1) || isValNaN(d2) || !isValFinite(d1) || !isValFinite(d2)) {
       return false;
     }
-    return Math.abs(d1 - d2) <= POINT_TOLERANCE;
+    return Number(math.abs(math.subtract(d1, d2))) <= POINT_TOLERANCE;
   }
 
   return true;
@@ -293,14 +329,82 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
         scope[v] = Math.random() * (RANGE_MID_MAX - RANGE_MID_MIN) + RANGE_MID_MIN;
       });
 
-      // 1. Check if root of eq1 satisfies eq2
-      if (!isEquationSatisfiedAtRoot(eq1, eq2, variables, { ...scope })) {
-        return false;
+      // Find roots of eq1
+      const roots1: Record<string, any[]> = {};
+      const guesses = [1.0, -1.0, 5.0, -5.0, 0.5, -0.5, 0.1, -0.1];
+      const isRealEq1 = isEquationReal(eq1, scope);
+
+      for (const solveVar of variables) {
+        roots1[solveVar] = [];
+        for (const guess of guesses) {
+          const root = solveForVariable(eq1.lhs, eq1.rhs, solveVar, { ...scope }, guess);
+          if (root !== null && isValFinite(root) && !isValNaN(root)) {
+            if (isRealEq1 && !isReal(root)) {
+              continue;
+            }
+            roots1[solveVar].push(root);
+          }
+        }
       }
 
-      // 2. Check if root of eq2 satisfies eq1
-      if (!isEquationSatisfiedAtRoot(eq2, eq1, variables, { ...scope })) {
-        return false;
+      // Find roots of eq2, using roots1 as extra guesses
+      const roots2: Record<string, any[]> = {};
+      const isRealEq2 = isEquationReal(eq2, scope);
+      for (const solveVar of variables) {
+        roots2[solveVar] = [];
+        const extraGuesses = [...guesses, ...roots1[solveVar]];
+        for (const guess of extraGuesses) {
+          const root = solveForVariable(eq2.lhs, eq2.rhs, solveVar, { ...scope }, guess);
+          if (root !== null && isValFinite(root) && !isValNaN(root)) {
+            if (isRealEq2 && !isReal(root)) {
+              continue;
+            }
+            roots2[solveVar].push(root);
+          }
+        }
+      }
+
+      // Now verify root equivalence:
+      // 1. Every root in roots1 satisfies eq2
+      for (const solveVar of variables) {
+        for (const root of roots1[solveVar]) {
+          const localScope = { ...scope, [solveVar]: root };
+          const dTarget = math.subtract(evaluatePoint(eq2.lhs, localScope), evaluatePoint(eq2.rhs, localScope));
+          if (isValNaN(dTarget) || !isValFinite(dTarget) || Number(math.abs(dTarget)) > 1e-5) {
+            return false;
+          }
+        }
+      }
+
+      // 2. Every root in roots2 satisfies eq1
+      for (const solveVar of variables) {
+        for (const root of roots2[solveVar]) {
+          const localScope = { ...scope, [solveVar]: root };
+          const dTarget = math.subtract(evaluatePoint(eq1.lhs, localScope), evaluatePoint(eq1.rhs, localScope));
+          if (isValNaN(dTarget) || !isValFinite(dTarget) || Number(math.abs(dTarget)) > 1e-5) {
+            return false;
+          }
+        }
+      }
+
+      // If no roots were checked at all (e.g. constant equations), fall back to random point diff
+      let hasCheckedAnyRoot = false;
+      for (const solveVar of variables) {
+        if (roots1[solveVar].length > 0 || roots2[solveVar].length > 0) {
+          hasCheckedAnyRoot = true;
+          break;
+        }
+      }
+
+      if (!hasCheckedAnyRoot) {
+        const d1 = math.subtract(evaluatePoint(eq1.lhs, scope), evaluatePoint(eq1.rhs, scope));
+        const d2 = math.subtract(evaluatePoint(eq2.lhs, scope), evaluatePoint(eq2.rhs, scope));
+        if (isValNaN(d1) || isValNaN(d2) || !isValFinite(d1) || !isValFinite(d2)) {
+          return false;
+        }
+        if (Number(math.abs(math.subtract(d1, d2))) > POINT_TOLERANCE) {
+          return false;
+        }
       }
     }
     return true;
@@ -440,6 +544,257 @@ export const isPathDraggable = (eq: Equation, sourcePath: string): boolean => {
   return true;
 };
 
+interface SignedTerm {
+  node: math.MathNode;
+  sign: number;
+}
+
+const hasVariable = (node: math.MathNode, varName: string): boolean => {
+  let found = false;
+  node.traverse((n) => {
+    if (n.type === 'SymbolNode' && (n as math.SymbolNode).name === varName) {
+      found = true;
+    }
+  });
+  return found;
+};
+
+const collectTerms = (node: math.MathNode, sign: number, terms: SignedTerm[]) => {
+  if (node.type === 'ParenthesisNode') {
+    collectTerms((node as math.ParenthesisNode).content, sign, terms);
+    return;
+  }
+  if (node.type === 'OperatorNode') {
+    const opNode = node as math.OperatorNode;
+    if (opNode.op === '+') {
+      collectTerms(opNode.args[0], sign, terms);
+      collectTerms(opNode.args[1], sign, terms);
+      return;
+    }
+    if (opNode.op === '-') {
+      if (opNode.isUnary()) {
+        collectTerms(opNode.args[0], -sign, terms);
+      } else {
+        collectTerms(opNode.args[0], sign, terms);
+        collectTerms(opNode.args[1], -sign, terms);
+      }
+      return;
+    }
+  }
+  terms.push({ node, sign });
+};
+
+interface TermCategory {
+  category: 'a' | 'b' | 'c';
+  coeff: math.MathNode;
+}
+
+const getTermCategory = (node: math.MathNode, solveVar: string): TermCategory | null => {
+  if (!hasVariable(node, solveVar)) {
+    return { category: 'c', coeff: node };
+  }
+
+  // Check if it's solveVar^2
+  if (node.type === 'OperatorNode' && (node as math.OperatorNode).op === '^') {
+    const opNode = node as math.OperatorNode;
+    let base = opNode.args[0];
+    let exponent = opNode.args[1];
+    while (base.type === 'ParenthesisNode') base = (base as math.ParenthesisNode).content;
+    while (exponent.type === 'ParenthesisNode') exponent = (exponent as math.ParenthesisNode).content;
+
+    if (
+      base.type === 'SymbolNode' &&
+      (base as math.SymbolNode).name === solveVar &&
+      exponent.type === 'ConstantNode' &&
+      Number((exponent as math.ConstantNode).value) === 2
+    ) {
+      return { category: 'a', coeff: new math.ConstantNode(1) };
+    }
+  }
+
+  // Check if it's Coeff * solveVar^2 or solveVar^2 * Coeff
+  if (node.type === 'OperatorNode' && (node as math.OperatorNode).op === '*') {
+    const opNode = node as math.OperatorNode;
+    for (let i = 0; i < 2; i++) {
+      const target = opNode.args[i];
+      const coeff = opNode.args[1 - i];
+      let unwrappedTarget = target;
+      while (unwrappedTarget.type === 'ParenthesisNode') {
+        unwrappedTarget = (unwrappedTarget as math.ParenthesisNode).content;
+      }
+      if (
+        unwrappedTarget.type === 'OperatorNode' &&
+        (unwrappedTarget as math.OperatorNode).op === '^'
+      ) {
+        const pNode = unwrappedTarget as math.OperatorNode;
+        let base = pNode.args[0];
+        let exponent = pNode.args[1];
+        while (base.type === 'ParenthesisNode') base = (base as math.ParenthesisNode).content;
+        while (exponent.type === 'ParenthesisNode') exponent = (exponent as math.ParenthesisNode).content;
+
+        if (
+          base.type === 'SymbolNode' &&
+          (base as math.SymbolNode).name === solveVar &&
+          exponent.type === 'ConstantNode' &&
+          Number((exponent as math.ConstantNode).value) === 2
+        ) {
+          return { category: 'a', coeff };
+        }
+      }
+    }
+
+    // Check if it's Coeff * solveVar or solveVar * Coeff
+    for (let i = 0; i < 2; i++) {
+      const target = opNode.args[i];
+      const coeff = opNode.args[1 - i];
+      let unwrappedTarget = target;
+      while (unwrappedTarget.type === 'ParenthesisNode') {
+        unwrappedTarget = (unwrappedTarget as math.ParenthesisNode).content;
+      }
+      if (
+        unwrappedTarget.type === 'SymbolNode' &&
+        (unwrappedTarget as math.SymbolNode).name === solveVar
+      ) {
+        return { category: 'b', coeff };
+      }
+    }
+  }
+
+  // Check if it's solveVar directly
+  let unwrapped = node;
+  while (unwrapped.type === 'ParenthesisNode') unwrapped = (unwrapped as math.ParenthesisNode).content;
+  if (unwrapped.type === 'SymbolNode' && (unwrapped as math.SymbolNode).name === solveVar) {
+    return { category: 'b', coeff: new math.ConstantNode(1) };
+  }
+
+  return null;
+};
+
+const isZeroNode = (node: math.MathNode): boolean => {
+  let curr = node;
+  while (curr.type === 'ParenthesisNode') curr = (curr as math.ParenthesisNode).content;
+  return curr.type === 'ConstantNode' && Number((curr as math.ConstantNode).value) === 0;
+};
+
+const sumTerms = (list: SignedTerm[]): math.MathNode => {
+  const filtered = list.filter(item => !isZeroNode(item.node));
+  if (filtered.length === 0) return new math.ConstantNode(0);
+  let acc: math.MathNode = filtered[0].sign === -1
+    ? new math.OperatorNode('-', 'unaryMinus', [filtered[0].node])
+    : filtered[0].node;
+
+  for (let i = 1; i < filtered.length; i++) {
+    const item = filtered[i];
+    if (item.sign === 1) {
+      acc = new math.OperatorNode('+', 'add', [acc, item.node]);
+    } else {
+      acc = new math.OperatorNode('-', 'subtract', [acc, item.node]);
+    }
+  }
+  return acc;
+};
+
+const tryExtractQuadratic = (lhs: math.MathNode, rhs: math.MathNode, solveVar: string) => {
+  const fullExpr = new math.OperatorNode('-', 'subtract', [lhs, rhs]);
+  const terms: SignedTerm[] = [];
+  collectTerms(fullExpr, 1, terms);
+
+  const aList: SignedTerm[] = [];
+  const bList: SignedTerm[] = [];
+  const cList: SignedTerm[] = [];
+
+  for (const t of terms) {
+    const cat = getTermCategory(t.node, solveVar);
+    if (!cat) return null; // Contains unsupported term structure (e.g. solveVar^3)
+    if (cat.category === 'a') {
+      aList.push({ node: cat.coeff, sign: t.sign });
+    } else if (cat.category === 'b') {
+      bList.push({ node: cat.coeff, sign: t.sign });
+    } else {
+      cList.push({ node: cat.coeff, sign: t.sign });
+    }
+  }
+
+  if (aList.length === 0) return null; // No quadratic term
+
+  const a = sumTerms(aList);
+  const b = sumTerms(bList);
+  const c = sumTerms(cList);
+
+  return { a, b, c };
+};
+
+export interface QuadraticFormulaSolutions {
+  solveVar: string;
+  pos: Equation;
+  neg: Equation;
+}
+
+export const getQuadraticFormulaSolutions = (eq: Equation): QuadraticFormulaSolutions[] => {
+  const vars1 = getVariables(eq.lhs).concat(getVariables(eq.rhs));
+  const vars = Array.from(new Set(vars1));
+  const solutions: QuadraticFormulaSolutions[] = [];
+
+  for (const solveVar of vars) {
+    const coeffs = tryExtractQuadratic(eq.lhs, eq.rhs, solveVar);
+    if (coeffs) {
+      const { a, b, c } = coeffs;
+
+      const b_sq = new math.OperatorNode('^', 'pow', [b, new math.ConstantNode(2)]);
+      const four_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(4), a]);
+      const four_a_c = new math.OperatorNode('*', 'multiply', [four_a, c]);
+      const discriminant = new math.OperatorNode('-', 'subtract', [b_sq, four_a_c]);
+      const sqrt_d = new math.FunctionNode('sqrt', [discriminant]);
+
+      let num_pos: math.MathNode;
+      let num_neg: math.MathNode;
+      if (isZeroNode(b)) {
+        num_pos = sqrt_d;
+        num_neg = new math.OperatorNode('-', 'unaryMinus', [sqrt_d]);
+      } else {
+        const neg_b = new math.OperatorNode('-', 'unaryMinus', [b]);
+        num_pos = new math.OperatorNode('+', 'add', [neg_b, sqrt_d]);
+        num_neg = new math.OperatorNode('-', 'subtract', [neg_b, sqrt_d]);
+      }
+
+      const two_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(2), a]);
+      
+      const formula_pos = new math.OperatorNode('/', 'divide', [
+        new math.ParenthesisNode(num_pos),
+        new math.ParenthesisNode(two_a)
+      ]);
+      const formula_neg = new math.OperatorNode('/', 'divide', [
+        new math.ParenthesisNode(num_neg),
+        new math.ParenthesisNode(two_a)
+      ]);
+
+      const varNode = new math.SymbolNode(solveVar);
+
+      // Determine where the quadratic was located (mostly on LHS or RHS)
+      const lhsHasQuadratic = hasVariable(eq.lhs, solveVar);
+      
+      let posEq: Equation;
+      let negEq: Equation;
+
+      if (lhsHasQuadratic) {
+        posEq = ensureNodeIds({ lhs: varNode, rhs: formula_pos });
+        negEq = ensureNodeIds({ lhs: varNode, rhs: formula_neg });
+      } else {
+        posEq = ensureNodeIds({ lhs: formula_pos, rhs: varNode });
+        negEq = ensureNodeIds({ lhs: formula_neg, rhs: varNode });
+      }
+
+      solutions.push({
+        solveVar,
+        pos: posEq,
+        neg: negEq
+      });
+    }
+  }
+
+  return solutions;
+};
+
 /**
  * Generates all mathematically valid target equations for a selected node.
  * Maps destination path string to the resulting Equation.
@@ -448,6 +803,46 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
   const moves: Record<string, Equation> = {};
 
   try {
+    // Check if the selected node is a variable that can be solved via the quadratic formula
+    const selectedNode = getNodeByPath(originalEq, sourcePath);
+    if (selectedNode.type === 'SymbolNode') {
+      const solveVar = (selectedNode as math.SymbolNode).name;
+      const coeffs = tryExtractQuadratic(originalEq.lhs, originalEq.rhs, solveVar);
+      if (coeffs) {
+        const { a, b, c } = coeffs;
+
+        const b_sq = new math.OperatorNode('^', 'pow', [b, new math.ConstantNode(2)]);
+        const four_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(4), a]);
+        const four_a_c = new math.OperatorNode('*', 'multiply', [four_a, c]);
+        const discriminant = new math.OperatorNode('-', 'subtract', [b_sq, four_a_c]);
+        const sqrt_d = new math.FunctionNode('sqrt', [discriminant]);
+
+        let num_pos: math.MathNode;
+        if (isZeroNode(b)) {
+          num_pos = sqrt_d;
+        } else {
+          const neg_b = new math.OperatorNode('-', 'unaryMinus', [b]);
+          num_pos = new math.OperatorNode('+', 'add', [neg_b, sqrt_d]);
+        }
+
+        const two_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(2), a]);
+        const formula_pos = new math.OperatorNode('/', 'divide', [
+          new math.ParenthesisNode(num_pos),
+          new math.ParenthesisNode(two_a)
+        ]);
+
+        const varNode = new math.SymbolNode(solveVar);
+
+        if (sourcePath.startsWith('lhs')) {
+          moves['rhs'] = ensureNodeIds({ lhs: varNode, rhs: formula_pos });
+        } else {
+          moves['lhs'] = ensureNodeIds({ lhs: formula_pos, rhs: varNode });
+        }
+
+        return moves; // Return early with the quadratic formula solve move!
+      }
+    }
+
     if (!isPathDraggable(originalEq, sourcePath)) {
       return moves;
     }

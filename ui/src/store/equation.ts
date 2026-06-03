@@ -616,3 +616,16 @@ export const syncMathStateAtom = atom(
   }
 );
 
+/**
+ * Action: Clears the server-side math state to avoid stale highlights/actions rendering during transitions.
+ */
+export const clearMathStateAtom = atom(
+  null,
+  (_get, set) => {
+    set(candidatePathsAtom, new Set<string>());
+    set(reduciblePathsAtom, {});
+    set(targetPathsAtom, {});
+  }
+);
+
+

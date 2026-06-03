@@ -180,12 +180,12 @@ describe('Math Engine Validator & Simplifier', () => {
   });
 
   test('generateValidMoves blocks dragging exponents or bases out of power nodes', () => {
-    const eq = parseEquation('x ^ 2 - 4 = 0');
-    // Path for '2' in 'x ^ 2' is 'lhs/0/1'
+    const eq = parseEquation('x ^ 3 - 4 = 0');
+    // Path for '3' in 'x ^ 3' is 'lhs/0/1'
     const movesExponent = generateValidMoves(eq, 'lhs/0/1');
     expect(Object.keys(movesExponent).length).toBe(0);
 
-    // Path for 'x' in 'x ^ 2' is 'lhs/0/0'
+    // Path for 'x' in 'x ^ 3' is 'lhs/0/0'
     const movesBase = generateValidMoves(eq, 'lhs/0/0');
     expect(Object.keys(movesBase).length).toBe(0);
   });
@@ -361,5 +361,54 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(resExpand).not.toBeNull();
     expect(resExpand!.toString()).toBe('x * x * x'); // Left-associative mathjs representation without redundant parenthesis
   });
+
+  test('generateValidMoves suggests quadratic formula solver moves for quadratic variable selection', () => {
+    const eq1 = parseEquation('a * x^2 + b * x + c = 0');
+    
+    // Find path for 'x' dynamically
+    const findPathForSymbol = (node: math.MathNode, targetName: string, currentPath: string): string | null => {
+      if (node.type === 'SymbolNode' && (node as math.SymbolNode).name === targetName) {
+        return currentPath;
+      }
+      const children = 'args' in node ? (node as any).args : ('content' in node ? [(node as any).content] : []);
+      for (let i = 0; i < children.length; i++) {
+        const path = findPathForSymbol(children[i], targetName, currentPath ? `${currentPath}/${i}` : (i === 0 ? 'lhs' : 'rhs'));
+        if (path) return path;
+      }
+      return null;
+    };
+
+    const xPath = findPathForSymbol(eq1.lhs, 'x', 'lhs');
+    expect(xPath).not.toBeNull();
+
+    const moves = generateValidMoves(eq1, xPath!);
+    expect(moves['rhs']).toBeDefined();
+
+    const resultEq = equationToString(moves['rhs']);
+    expect(resultEq).toBe('x = (-b + sqrt(b ^ 2 - 4 * a * c)) / (2 * a)');
+  });
+
+  test('should validate complex discriminant transpositions and variable-denominator moves', () => {
+    // 1. Check complex discriminant transposition equivalence
+    const eq1 = parseEquation('x = (-7 + sqrt(-383)) / 24');
+    const eq2 = parseEquation('x * 24 = -7 + sqrt(-383)');
+    expect(areEquationsEquivalent(eq1, eq2)).toBe(true);
+
+    // 2. Check variable-to-denominator transposition on complex equations
+    const eq3 = parseEquation('24 * x = sqrt(-383) - 7');
+    const eq4 = parseEquation('24 = (sqrt(-383) - 7) / x');
+    expect(areEquationsEquivalent(eq3, eq4)).toBe(true);
+
+    // 3. Ensure real root restriction handles standard log rules correctly
+    const eqLog1 = parseEquation('log(x^3) = 10');
+    const eqLog2 = parseEquation('3 * log(x) = 10');
+    expect(areEquationsEquivalent(eqLog1, eqLog2)).toBe(true);
+
+    // 4. Check transposition of division term in complex equation
+    const eq5 = parseEquation('0 = (sqrt(-383) - 7) / x - 24');
+    const eq6 = parseEquation('(sqrt(-383) - 7) / x = 24');
+    expect(areEquationsEquivalent(eq5, eq6)).toBe(true);
+  });
 });
+
 

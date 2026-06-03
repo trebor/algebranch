@@ -280,7 +280,8 @@ export const pushEquationAtom = atom(
     if (loopAncestorId) {
       // Loop Detected!
       if (existingChildId) {
-        // If the loop node child already exists, keep selection on the parent (bounce back) and do nothing else
+        // If the loop node child already exists, jump selection directly to the loop ancestor node
+        set(currentNodeIdAtom, loopAncestorId);
         set(sourcePathAtom, null);
         set(hoverPathAtom, null);
         set(hoverReducePathAtom, null);
@@ -289,7 +290,7 @@ export const pushEquationAtom = atom(
         return;
       }
       
-      // Otherwise, we need to create the loop node under the parent, but keep the active selection on the parent (bounce back)
+      // Otherwise, we need to create the loop node under the parent, but redirect active selection to the loop ancestor node
     } else {
       // Normal state progression (No Loop)
       if (existingChildId) {
@@ -349,8 +350,8 @@ export const pushEquationAtom = atom(
     set(historyTreeAtom, updatedTree);
     
     if (loopAncestorId) {
-      // Loop detected: select the parent node (the step just before the loop) to bounce the user back
-      set(currentNodeIdAtom, currentNodeId);
+      // Loop detected: select the loop ancestor node directly
+      set(currentNodeIdAtom, loopAncestorId);
     } else {
       // Normal state progression: select the newly created progress node
       set(currentNodeIdAtom, newId);

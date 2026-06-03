@@ -327,7 +327,7 @@ export const ControlPanel: React.FC = () => {
                         key={`loop-${ancestor.id}-${node.id}`}
                         d={dStr}
                         fill="none"
-                        stroke="rgba(244, 63, 94, 0.85)"
+                        stroke="rgba(217, 70, 239, 0.85)"
                         strokeWidth={2.5}
                         strokeDasharray="5, 5"
                         className="transition-all duration-300 animate-dash"
@@ -367,8 +367,8 @@ export const ControlPanel: React.FC = () => {
                     }}
                     className="w-56 p-3 z-50 text-left lowercase-none normal-case flex flex-col gap-1.5 pointer-events-auto"
                     content={
-                      <div className="flex flex-col gap-0.5 text-rose-300 font-semibold p-1">
-                        <div className="flex items-center gap-1 uppercase tracking-wider text-[8px] font-bold text-rose-400">
+                      <div className="flex flex-col gap-0.5 text-fuchsia-300 font-semibold p-1">
+                        <div className="flex items-center gap-1 uppercase tracking-wider text-[8px] font-bold text-fuchsia-400">
                           <Infinity size={10} />
                           <span>Loop Detected</span>
                         </div>
@@ -387,15 +387,15 @@ export const ControlPanel: React.FC = () => {
                       onMouseLeave={() => setHoveredLoopTargetId(null)}
                       className={`w-11 h-11 rounded-full flex items-center justify-center border select-none cursor-pointer transition-all duration-300 relative group/node ${
                         isLoopHighlight
-                          ? 'border-rose-500 bg-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.45)] scale-[1.05]'
-                          : 'border-rose-500/40 hover:border-rose-500/80 bg-rose-950/60 hover:bg-rose-950/80 text-rose-400 hover:text-rose-300 shadow-md shadow-rose-950/20'
+                          ? 'border-fuchsia-500 bg-fuchsia-500/20 shadow-[0_0_15px_rgba(217,70,239,0.45)] scale-[1.05]'
+                          : 'border-fuchsia-500/40 hover:border-fuchsia-500/80 bg-fuchsia-950/60 hover:bg-fuchsia-950/80 text-fuchsia-400 hover:text-fuchsia-300 shadow-md shadow-fuchsia-950/20'
                       }`}
                     >
                       {/* Step index badge on top-left */}
                       <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
                         isLoopHighlight
-                          ? 'bg-rose-600 border-rose-400 text-rose-100'
-                          : 'bg-rose-950 border-rose-500/30 text-rose-400'
+                          ? 'bg-fuchsia-600 border-fuchsia-400 text-fuchsia-100'
+                          : 'bg-fuchsia-950 border-fuchsia-500/30 text-fuchsia-400'
                       }`}>
                         {stepNum}
                       </span>
@@ -451,7 +451,7 @@ export const ControlPanel: React.FC = () => {
                     }}
                     className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none cursor-pointer transition-all duration-300 relative group/node p-1.5 ${
                       isLoopHighlight
-                        ? 'border-rose-500/80 text-rose-300 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.35)] scale-[1.02]'
+                        ? 'border-fuchsia-500/80 text-fuchsia-300 bg-fuchsia-500/10 shadow-[0_0_15px_rgba(217,70,239,0.35)] scale-[1.02]'
                         : isCurrent
                         ? 'border-indigo-400/85 text-indigo-300 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.25)] scale-[1.02]'
                         : 'border-white/5 hover:border-white/12 bg-neutral-950/80 hover:bg-neutral-900/90 text-white/55 hover:text-white/85 shadow-md'
@@ -460,7 +460,7 @@ export const ControlPanel: React.FC = () => {
                     {/* Step index badge on top-left */}
                     <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
                       isLoopHighlight
-                        ? 'bg-rose-600 border-rose-400 text-rose-100'
+                        ? 'bg-fuchsia-600 border-fuchsia-400 text-fuchsia-100'
                         : isCurrent 
                         ? 'bg-indigo-600 border-indigo-400 text-indigo-100'
                         : 'bg-neutral-900 border-white/10 text-white/60'

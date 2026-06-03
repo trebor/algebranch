@@ -8,9 +8,10 @@ import { getNodeByPath, getFunctionName, formatNumber } from 'math-engine-client
 
 interface PreviewEquationNodeProps {
   readonly path: string;
+  readonly inExponent?: boolean;
 }
 
-export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }) => {
+export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path, inExponent = false }) => {
   const previewEq = useAtomValue(previewEquationAtom);
 
   const node = React.useMemo(() => {
@@ -43,7 +44,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       return (
         <div className="flex items-baseline px-[0.1em]">
           <span className="text-white/20 font-light text-[1.05em] mr-[0.05em] select-none">(</span>
-          <PreviewEquationNode path={`${path}/0`} />
+          <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
           <span className="text-white/20 font-light text-[1.05em] ml-[0.05em] select-none">)</span>
         </div>
       );
@@ -57,7 +58,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
         return (
           <div className="flex items-baseline gap-[0.05em]">
             <span className="text-indigo-400/60 font-bold select-none">{opSymbol}</span>
-            <PreviewEquationNode path={`${path}/0`} />
+            <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
           </div>
         );
       }
@@ -65,13 +66,13 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       // Binary Fraction operator (Vertical rendering)
       if (opNode.op === '/') {
         return (
-          <div className="flex flex-col items-center justify-center mx-[0.1em] my-[0.05em]">
-            <div className="w-full text-center pb-[0.1em]">
-              <PreviewEquationNode path={`${path}/0`} />
+          <div className={`flex flex-col items-center justify-center ${inExponent ? 'mx-[0.05em] my-[0.02em] text-[0.7em] leading-none' : 'mx-[0.1em] my-[0.05em]'}`}>
+            <div className={`w-full text-center ${inExponent ? 'pb-[0.02em]' : 'pb-[0.1em]'}`}>
+              <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
             </div>
             <div className="w-full border-t border-white/10 h-0" />
-            <div className="w-full text-center pt-[0.1em]">
-              <PreviewEquationNode path={`${path}/1`} />
+            <div className={`w-full text-center ${inExponent ? 'pt-[0.02em]' : 'pt-[0.1em]'}`}>
+              <PreviewEquationNode path={`${path}/1`} inExponent={inExponent} />
             </div>
           </div>
         );
@@ -82,10 +83,10 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
         return (
           <div className="flex items-start">
             <div className="mt-[0.6em]">
-              <PreviewEquationNode path={`${path}/0`} />
+              <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
             </div>
             <div className="text-[0.65em] leading-none -mt-[0.1em] ml-[0.05em] scale-90 opacity-70">
-              <PreviewEquationNode path={`${path}/1`} />
+              <PreviewEquationNode path={`${path}/1`} inExponent={true} />
             </div>
           </div>
         );
@@ -101,9 +102,9 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
 
       return (
         <div className="flex items-baseline gap-[0.2em] flex-nowrap justify-center py-[0.05em]">
-          <PreviewEquationNode path={`${path}/0`} />
+          <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
           <span className="text-indigo-400/60 font-medium text-[0.85em] select-none">{opSymbol}</span>
-          <PreviewEquationNode path={`${path}/1`} />
+          <PreviewEquationNode path={`${path}/1`} inExponent={inExponent} />
         </div>
       );
     }
@@ -119,7 +120,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
             <div className="flex items-stretch select-none shrink-0 relative mr-[-1px]">
               {hasIndex && (
                 <div className="absolute right-full top-0 -mt-[0.2em] -mr-[0.3em] text-[0.55em] scale-90 z-10">
-                  <PreviewEquationNode path={`${path}/1`} />
+                  <PreviewEquationNode path={`${path}/1`} inExponent={inExponent} />
                 </div>
               )}
               <svg
@@ -139,7 +140,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
               </svg>
             </div>
             <div className="border-t border-white/15 pt-[0.15em] pb-[0.05em] px-[0.15em] rounded-tr-[0.2em] flex items-center">
-              <PreviewEquationNode path={`${path}/0`} />
+              <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
             </div>
           </div>
         );
@@ -166,7 +167,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
               </svg>
             </div>
             <div className="border-t border-white/15 pt-[0.15em] pb-[0.05em] px-[0.15em] rounded-tr-[0.2em] flex items-center">
-              <PreviewEquationNode path={`${path}/0`} />
+              <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
             </div>
           </div>
         );
@@ -177,7 +178,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
         <div className="flex items-baseline gap-[0.05em]">
           <span className="text-purple-400/60 font-medium text-[0.9em]">{nameStr}</span>
           <span className="text-white/20 mr-[0.05em]">(</span>
-          <PreviewEquationNode path={`${path}/0`} />
+          <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
           <span className="text-white/20 ml-[0.05em]">)</span>
         </div>
       );

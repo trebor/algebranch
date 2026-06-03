@@ -92,6 +92,20 @@ export async function POST(req: NextRequest) {
           for (const rule of HIGH_SCHOOL_IDENTITIES) {
             const bindings = matchPattern(rule.sourcePattern, node);
             if (bindings) {
+              // Exclude n = 2 for nthRoot exponent rules to prevent duplicate square root rules
+              if (rule.id === 'exponent_nthRoot_reverse' || rule.id === 'exponent_nthRoot') {
+                const nNode = bindings['_n'];
+                if (nNode) {
+                  let unwrapped = nNode;
+                  while (unwrapped.type === 'ParenthesisNode') {
+                    unwrapped = (unwrapped as math.ParenthesisNode).content;
+                  }
+                  if (unwrapped.type === 'ConstantNode' && (unwrapped as math.ConstantNode).value === 2) {
+                    continue; // Skip offering nthRoot rule if index is 2 (handled by square root)
+                  }
+                }
+              }
+
               const instantiated = instantiatePattern(rule.targetPattern, bindings);
               const newEq = replaceNodeAtPath(eq, path, instantiated);
               if (areEquationsEquivalent(eq, newEq)) {

@@ -321,11 +321,20 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       const nameStr = getFunctionName(funcNode);
 
       if (nameStr === 'nthRoot') {
-        const hasIndex = funcNode.args.length > 1;
+        let showIndex = funcNode.args.length > 1;
+        if (showIndex) {
+          let unwrapped = funcNode.args[1];
+          while (unwrapped && unwrapped.type === 'ParenthesisNode') {
+            unwrapped = (unwrapped as any).content;
+          }
+          if (unwrapped && unwrapped.type === 'ConstantNode' && ((unwrapped as any).value === 2 || (unwrapped as any).value === '2')) {
+            showIndex = false;
+          }
+        }
         return (
           <div className="flex items-stretch mx-[0.1em] relative">
             <div className="flex items-stretch select-none shrink-0 relative mr-[-1px]">
-              {hasIndex && (
+              {showIndex && (
                 <div className="absolute right-full top-0 -mt-[0.2em] -mr-[0.3em] text-[0.55em] scale-90 z-10" style={getOpStyle()}>
                   <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} />
                 </div>

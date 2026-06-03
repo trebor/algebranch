@@ -22,9 +22,34 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://algebranch.vercel.app"),
   title: "Algebranch - Interactive Algebraic Steps",
   description: "An interactive step-by-step mathematical exploration and algebraic manipulation system.",
   manifest: "/manifest.json",
+  keywords: ["algebra", "math editor", "step by step math", "equation solver", "algebraic identity", "interactive math", "visual math", "study tool", "symbolic manipulation"],
+  authors: [{ name: "Algebranch Team" }],
+  openGraph: {
+    title: "Algebranch - Interactive Algebraic Steps",
+    description: "An interactive step-by-step mathematical exploration and algebraic manipulation system.",
+    url: "https://algebranch.vercel.app",
+    siteName: "Algebranch",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1024,
+        height: 1024,
+        alt: "Algebranch - Interactive Algebraic Steps",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Algebranch - Interactive Algebraic Steps",
+    description: "An interactive step-by-step mathematical exploration and algebraic manipulation system.",
+    images: ["/og-image.png"],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

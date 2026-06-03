@@ -37,6 +37,9 @@ import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
 // Local Constants
 const API_MATH_ENDPOINT = '/api/math';
 
+// Client-side cache for deterministic mathematical API sync states
+const mathStateCache = new Map<string, any>();
+
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
   const hoverPath = useAtomValue(hoverPathAtom);
@@ -337,6 +340,18 @@ export default function Home() {
       try {
         const eqStr = equationToString(currentEq);
         const serializedEq = serializeEquation(currentEq);
+        
+        // Generate a cache key based on the deterministic calculation inputs
+        const cacheKey = JSON.stringify({ eqStr, serializedEq, sourcePath });
+        const cachedData = mathStateCache.get(cacheKey);
+        
+        if (cachedData) {
+          if (active) {
+            syncMathState(cachedData);
+          }
+          return;
+        }
+
         const res = await fetch(API_MATH_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -345,6 +360,9 @@ export default function Home() {
         const data = await res.json();
 
         if (!active) return;
+
+        // Store response in cache for instant sub-millisecond retrieval on repeat visits/history navigation
+        mathStateCache.set(cacheKey, data);
 
         // Atomically synchronize state inside Jotai store action
         syncMathState(data);

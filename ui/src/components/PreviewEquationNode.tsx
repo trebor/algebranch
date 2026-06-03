@@ -23,6 +23,8 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
 
   if (!node) return null;
 
+  const nodeId = (node as unknown as { id?: string })?.id || `preview_${path}`;
+
   // Recursive Render logic depending on Node type
   const renderContent = () => {
     if (node.type === 'ConstantNode') {
@@ -136,7 +138,10 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
   };
 
   return (
-    <div className="relative inline-flex items-center justify-center p-[0.2em] border border-white/5 bg-white/0 rounded-[0.4em]">
+    <div
+      data-flip-id={nodeId}
+      className="relative inline-flex items-center justify-center p-[0.2em] border border-white/5 bg-white/0 rounded-[0.4em]"
+    >
       {renderContent()}
     </div>
   );

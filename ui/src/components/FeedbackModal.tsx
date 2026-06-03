@@ -81,8 +81,8 @@ ${context || 'No specific context attached'}
         `[Algebranch Feedback] ${typeLabel}: ${subject.trim()}`
       )}&body=${encodeURIComponent(bodyText)}`;
 
-      // Launch the email client
-      window.location.href = mailtoUrl;
+      // Launch the email client in a new tab/window
+      window.open(mailtoUrl, '_blank');
 
       // Show success step explaining that their mail client has been opened
       setIsSuccess(true);

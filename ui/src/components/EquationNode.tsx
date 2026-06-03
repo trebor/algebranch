@@ -209,7 +209,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
     if (node.type === 'ParenthesisNode') {
       return (
-        <div className="flex items-center px-[0.1em]">
+        <div className="flex items-baseline px-[0.1em]">
           <span className={`font-light text-[1.05em] select-none mr-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>(</span>
           <EquationNode path={`${path}/0`} key={getChildId(0)} />
           <span className={`font-light text-[1.05em] select-none ml-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>)</span>
@@ -223,7 +223,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       if (opNode.isUnary()) {
         const opSymbol = opNode.op === '-' ? '−' : opNode.op;
         return (
-          <div className="flex items-center gap-[0.05em]">
+          <div className="flex items-baseline gap-[0.05em]">
             <span className={`font-bold select-none ${isStatic ? 'text-zinc-600' : 'text-indigo-300/90'}`} style={getOpStyle()}>{opSymbol}</span>
             <EquationNode path={`${path}/0`} key={getChildId(0)} />
           </div>
@@ -268,7 +268,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       const opSymbol = opDisplayMap[opNode.op] || opNode.op;
 
       return (
-        <div className="flex items-center gap-[0.2em] flex-wrap justify-center py-[0.05em]">
+        <div className="flex items-baseline gap-[0.2em] flex-wrap justify-center py-[0.05em]">
           <EquationNode path={`${path}/0`} key={getChildId(0)} />
           <span className={`font-medium select-none text-[0.85em] ${isStatic ? 'text-zinc-600' : 'text-indigo-400'}`} style={getOpStyle()}>{opSymbol}</span>
           <EquationNode path={`${path}/1`} key={getChildId(1)} />
@@ -293,7 +293,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
 
       // Default fallback function renderer
       return (
-        <div className="flex items-center gap-[0.05em]">
+        <div className="flex items-baseline gap-[0.05em]">
           <span className={`font-medium select-none text-[0.9em] ${isStatic ? 'text-zinc-500' : 'text-purple-300'}`} style={getOpStyle()}>{nameStr}</span>
           <span className={`mr-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>(</span>
           <EquationNode path={`${path}/0`} key={getChildId(0)} />

@@ -39,7 +39,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
 
     if (node.type === 'ParenthesisNode') {
       return (
-        <div className="flex items-center px-[0.1em]">
+        <div className="flex items-baseline px-[0.1em]">
           <span className="text-white/20 font-light text-[1.05em] mr-[0.05em] select-none">(</span>
           <PreviewEquationNode path={`${path}/0`} />
           <span className="text-white/20 font-light text-[1.05em] ml-[0.05em] select-none">)</span>
@@ -53,7 +53,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       if (opNode.isUnary()) {
         const opSymbol = opNode.op === '-' ? '−' : opNode.op;
         return (
-          <div className="flex items-center gap-[0.05em]">
+          <div className="flex items-baseline gap-[0.05em]">
             <span className="text-indigo-400/60 font-bold select-none">{opSymbol}</span>
             <PreviewEquationNode path={`${path}/0`} />
           </div>
@@ -98,7 +98,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       const opSymbol = opDisplayMap[opNode.op] || opNode.op;
 
       return (
-        <div className="flex items-center gap-[0.2em] flex-wrap justify-center py-[0.05em]">
+        <div className="flex items-baseline gap-[0.2em] flex-wrap justify-center py-[0.05em]">
           <PreviewEquationNode path={`${path}/0`} />
           <span className="text-indigo-400/60 font-medium text-[0.85em] select-none">{opSymbol}</span>
           <PreviewEquationNode path={`${path}/1`} />
@@ -123,7 +123,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
 
       // Default fallback function renderer
       return (
-        <div className="flex items-center gap-[0.05em]">
+        <div className="flex items-baseline gap-[0.05em]">
           <span className="text-purple-400/60 font-medium text-[0.9em]">{nameStr}</span>
           <span className="text-white/20 mr-[0.05em]">(</span>
           <PreviewEquationNode path={`${path}/0`} />

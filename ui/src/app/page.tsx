@@ -505,7 +505,7 @@ export default function Home() {
             setLeftSidebarOpen(false);
             setRightSidebarOpen(false);
           }}
-          className={`fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-40 lg:hidden transition-all duration-300 ${
+          className={`fixed top-16 left-0 right-0 bottom-0 bg-neutral-950/60 backdrop-blur-sm z-35 lg:hidden transition-all duration-300 ${
             (leftSidebarOpen || rightSidebarOpen)
               ? 'opacity-100 pointer-events-auto'
               : 'opacity-0 pointer-events-none'
@@ -621,12 +621,11 @@ export default function Home() {
           {rightSidebarOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
 
-        {/* Right History & Derivations Sidebar */}
-        <div className={`h-full flex flex-col fixed top-0 bottom-0 right-0 z-50 transform transition-all duration-300 ease-in-out ${
+        <div className={`flex flex-col fixed top-16 bottom-0 right-0 z-38 transform transition-all duration-300 ease-in-out ${
           rightSidebarOpen 
             ? 'w-80 translate-x-0 opacity-100' 
             : 'w-80 translate-x-full opacity-100 max-lg:pointer-events-none'
-        } lg:relative lg:translate-x-0 lg:z-30 lg:flex lg:flex-col ${
+        } lg:relative lg:top-0 lg:translate-x-0 lg:z-30 lg:flex lg:flex-col lg:h-full ${
           rightSidebarOpen 
             ? 'lg:w-80 lg:min-w-[20rem] lg:ml-4 lg:opacity-100' 
             : 'lg:w-0 lg:min-w-0 lg:ml-0 lg:opacity-0 lg:overflow-hidden lg:pointer-events-none'

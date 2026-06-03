@@ -111,11 +111,11 @@ export const Sidebar: React.FC = () => {
   ) : null;
 
   return (
-    <div className={`h-full flex flex-col gap-4 fixed top-0 bottom-0 left-0 z-50 transform transition-all duration-300 ease-in-out ${
+    <div className={`flex flex-col gap-4 fixed top-16 bottom-0 left-0 z-38 transform transition-all duration-300 ease-in-out ${
       leftSidebarOpen
         ? 'w-80 p-4 translate-x-0 opacity-100'
         : 'w-80 p-4 -translate-x-full opacity-100 max-lg:pointer-events-none'
-    } lg:relative lg:translate-x-0 lg:z-30 lg:flex ${
+    } lg:relative lg:top-0 lg:translate-x-0 lg:z-30 lg:flex lg:h-full ${
       leftSidebarOpen
         ? 'lg:w-80 lg:min-w-[20rem] lg:p-4 lg:mr-4 lg:opacity-100'
         : 'lg:w-0 lg:min-w-0 lg:p-0 lg:mr-0 lg:opacity-0 lg:border-0 lg:overflow-hidden lg:pointer-events-none'

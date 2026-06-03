@@ -280,6 +280,23 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
       const funcNode = node as math.FunctionNode;
       const nameStr = getFunctionName(funcNode);
 
+      if (nameStr === 'nthRoot') {
+        const hasIndex = funcNode.args.length > 1;
+        return (
+          <div className="flex items-stretch mx-[0.1em] relative">
+            {hasIndex && (
+              <div className="text-[0.55em] leading-none self-start -mt-[0.2em] -mr-[0.25em] scale-90 z-10" style={getOpStyle()}>
+                <EquationNode path={`${path}/1`} key={getChildId(1)} />
+              </div>
+            )}
+            <span className={`text-[1.25em] font-light font-serif mr-[-0.05em] select-none self-center ${isStatic ? 'text-zinc-600' : 'text-indigo-300'}`} style={getOpStyle()}>√</span>
+            <div className={`border-t border-l pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center ${isStatic ? 'border-zinc-800' : 'border-white/30'}`} style={getOpStyle(true)}>
+              <EquationNode path={`${path}/0`} key={getChildId(0)} />
+            </div>
+          </div>
+        );
+      }
+
       if (nameStr === 'sqrt') {
         return (
           <div className="flex items-stretch mx-[0.1em]">

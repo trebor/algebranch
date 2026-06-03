@@ -112,6 +112,23 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       const funcNode = node as math.FunctionNode;
       const nameStr = getFunctionName(funcNode);
 
+      if (nameStr === 'nthRoot') {
+        const hasIndex = funcNode.args.length > 1;
+        return (
+          <div className="flex items-stretch mx-[0.1em] relative">
+            {hasIndex && (
+              <div className="text-[0.55em] leading-none self-start -mt-[0.2em] -mr-[0.25em] scale-90 z-10">
+                <PreviewEquationNode path={`${path}/1`} />
+              </div>
+            )}
+            <span className="text-[1.25em] font-light font-serif mr-[-0.05em] text-indigo-400/60 self-center select-none">√</span>
+            <div className="border-t border-l border-white/15 pt-[0.1em] px-[0.15em] rounded-tr-[0.2em] flex items-center">
+              <PreviewEquationNode path={`${path}/0`} />
+            </div>
+          </div>
+        );
+      }
+
       if (nameStr === 'sqrt') {
         return (
           <div className="flex items-stretch mx-[0.1em]">

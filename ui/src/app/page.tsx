@@ -491,8 +491,8 @@ export default function Home() {
             
             {/* 1. Active Derivation Workspace (Top 2/3) */}
             <div ref={activeScale.containerRef} className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
-              <div ref={activeScale.contentRef} className="flex flex-col items-center justify-center gap-2 origin-center">
-                <div className="flex items-center justify-center gap-[0.8em] flex-nowrap max-w-full">
+              <div className="flex flex-col items-center justify-center gap-2 origin-center">
+                <div ref={activeScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max">
                   {/* LHS Term Tree */}
                   <div className="flex justify-end min-w-[5em]">
                     <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />
@@ -516,7 +516,7 @@ export default function Home() {
 
             {/* 2. Speculative Preview Workspace (Bottom 1/3) */}
             <div ref={previewScale.containerRef} className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
-              <div ref={previewScale.contentRef} className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 origin-center ${
+              <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 origin-center ${
                 isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
               }`}>
                 <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
@@ -528,7 +528,7 @@ export default function Home() {
                   )}
                 </span>
                 
-                <div className="flex items-center justify-center gap-[0.8em] flex-nowrap max-w-full pointer-events-none select-none">
+                <div ref={previewScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max pointer-events-none select-none">
                   {/* LHS Preview Term Tree */}
                   <div className="flex justify-end min-w-[5em]">
                     <PreviewEquationNode path="lhs" />

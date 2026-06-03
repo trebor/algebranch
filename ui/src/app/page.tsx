@@ -25,7 +25,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
-import { HelpCircle, Share2, Check } from 'lucide-react';
+import { Share2, Check } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
 
 // Local Constants
@@ -422,10 +422,6 @@ export default function Home() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs text-white/50 bg-white/5 px-3 py-1.5 border border-white/10 rounded-full">
-            <HelpCircle size={14} className="text-indigo-400" />
-            <span>Click nodes to select. Click green slots to relocate.</span>
-          </div>
           <button
             onClick={handleShare}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group`}

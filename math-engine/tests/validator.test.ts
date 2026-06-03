@@ -403,6 +403,11 @@ describe('Math Engine Validator & Simplifier', () => {
     const eqLog1 = parseEquation('log(x^3) = 10');
     const eqLog2 = parseEquation('3 * log(x) = 10');
     expect(areEquationsEquivalent(eqLog1, eqLog2)).toBe(true);
+
+    // 4. Check transposition of division term in complex equation
+    const eq5 = parseEquation('0 = (sqrt(-383) - 7) / x - 24');
+    const eq6 = parseEquation('(sqrt(-383) - 7) / x = 24');
+    expect(areEquationsEquivalent(eq5, eq6)).toBe(true);
   });
 });
 

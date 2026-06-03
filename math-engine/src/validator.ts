@@ -282,7 +282,7 @@ export const isEquationSatisfiedAtRoot = (
   variables: string[],
   scope: Record<string, number>
 ): boolean => {
-  const guesses = [1.0, -1.0, 5.0, -5.0];
+  const guesses = [1.0, -1.0, 5.0, -5.0, 0.5, -0.5, 0.1, -0.1];
   let hasCheckedAnyRoot = false;
   const isRealEq = isEquationReal(eqSource, scope);
 
@@ -331,7 +331,7 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
 
       // Find roots of eq1
       const roots1: Record<string, any[]> = {};
-      const guesses = [1.0, -1.0, 5.0, -5.0];
+      const guesses = [1.0, -1.0, 5.0, -5.0, 0.5, -0.5, 0.1, -0.1];
       const isRealEq1 = isEquationReal(eq1, scope);
 
       for (const solveVar of variables) {

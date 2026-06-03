@@ -20,6 +20,42 @@ import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import { Sparkles, Zap, Split } from 'lucide-react';
 
+const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
+  <svg
+    viewBox="0 0 8 100"
+    preserveAspectRatio="none"
+    className={className}
+    style={style}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+  >
+    <path
+      d="M 6,3 C 1,25 1,75 6,97"
+      vectorEffect="non-scaling-stroke"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const RightParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
+  <svg
+    viewBox="0 0 8 100"
+    preserveAspectRatio="none"
+    className={className}
+    style={style}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+  >
+    <path
+      d="M 2,3 C 7,25 7,75 2,97"
+      vectorEffect="non-scaling-stroke"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 interface EquationNodeProps {
   readonly path: string;
   readonly inExponent?: boolean;
@@ -208,15 +244,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     }
 
     if (node.type === 'ParenthesisNode') {
-      const paren = node as math.ParenthesisNode;
-      const isFraction = paren.content && paren.content.type === 'OperatorNode' && (paren.content as math.OperatorNode).op === '/';
-      const parenScale = isFraction ? 'text-[1.6em] font-light leading-none' : 'text-[1.05em] font-light';
-      const alignClass = isFraction ? 'items-center py-[0.05em]' : 'items-baseline';
       return (
-        <div className={`flex ${alignClass} px-[0.1em]`}>
-          <span className={`select-none mr-[0.05em] ${parenScale} ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>(</span>
-          <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
-          <span className={`select-none ml-[0.05em] ${parenScale} ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>)</span>
+        <div className="flex items-center px-[0.05em] self-stretch">
+          <LeftParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()} />
+          <div className="px-[0.05em]">
+            <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
+          </div>
+          <RightParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()} />
         </div>
       );
     }
@@ -256,7 +290,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             <div>
               <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
             </div>
-            <div className="relative -top-[0.65em] text-[0.65em] ml-[0.05em] opacity-90 scale-90" style={{ display: 'inline-block' }}>
+            <div className="relative -top-[1.15em] text-[0.65em] ml-[0.05em] opacity-90 scale-90" style={{ display: 'inline-block' }}>
               <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={true} />
             </div>
           </div>

@@ -6,6 +6,42 @@ import * as math from 'mathjs';
 import { previewEquationAtom } from '../store/equation';
 import { getNodeByPath, getFunctionName, formatNumber } from 'math-engine-client';
 
+const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
+  <svg
+    viewBox="0 0 8 100"
+    preserveAspectRatio="none"
+    className={className}
+    style={style}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+  >
+    <path
+      d="M 6,3 C 1,25 1,75 6,97"
+      vectorEffect="non-scaling-stroke"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const RightParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
+  <svg
+    viewBox="0 0 8 100"
+    preserveAspectRatio="none"
+    className={className}
+    style={style}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+  >
+    <path
+      d="M 2,3 C 7,25 7,75 2,97"
+      vectorEffect="non-scaling-stroke"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 interface PreviewEquationNodeProps {
   readonly path: string;
   readonly inExponent?: boolean;
@@ -41,15 +77,13 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path, 
     }
 
     if (node.type === 'ParenthesisNode') {
-      const paren = node as math.ParenthesisNode;
-      const isFraction = paren.content && paren.content.type === 'OperatorNode' && (paren.content as math.OperatorNode).op === '/';
-      const parenScale = isFraction ? 'text-[1.6em] font-light leading-none' : 'text-[1.05em] font-light';
-      const alignClass = isFraction ? 'items-center py-[0.05em]' : 'items-baseline';
       return (
-        <div className={`flex ${alignClass} px-[0.1em]`}>
-          <span className={`text-white/20 select-none mr-[0.05em] ${parenScale}`}>(</span>
-          <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
-          <span className={`text-white/20 select-none ml-[0.05em] ${parenScale}`}>)</span>
+        <div className="flex items-center px-[0.05em] self-stretch">
+          <LeftParenSVG className="w-[0.32em] shrink-0 self-stretch text-white/20" />
+          <div className="px-[0.05em]">
+            <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
+          </div>
+          <RightParenSVG className="w-[0.32em] shrink-0 self-stretch text-white/20" />
         </div>
       );
     }
@@ -89,7 +123,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path, 
             <div>
               <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} />
             </div>
-            <div className="relative -top-[0.65em] text-[0.65em] ml-[0.05em] opacity-70 scale-90" style={{ display: 'inline-block' }}>
+            <div className="relative -top-[1.15em] text-[0.65em] ml-[0.05em] opacity-70 scale-90" style={{ display: 'inline-block' }}>
               <PreviewEquationNode path={`${path}/1`} inExponent={true} />
             </div>
           </div>

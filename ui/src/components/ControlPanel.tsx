@@ -3,6 +3,7 @@
 import React from 'react';
 import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import { Tooltip } from './Tooltip';
+import { PreviewEquationNode } from './PreviewEquationNode';
 import { Equation, equationToString } from 'math-engine-client';
 import {
   historyTreeAtom,
@@ -435,8 +436,10 @@ export const ControlPanel: React.FC = () => {
                         <span>Step Details — {node.label}</span>
                         <span className="text-[9px] text-white/30 font-sans normal-case font-medium">Step {stepNum}</span>
                       </div>
-                      <div className="text-base sm:text-lg font-mono text-indigo-100 font-semibold break-all leading-normal select-all">
-                        {equationToString(node.equation)}
+                      <div className="flex items-center justify-center gap-2 py-2 overflow-x-auto select-all text-base sm:text-lg font-semibold text-indigo-100">
+                        <PreviewEquationNode path="lhs" customEquation={node.equation} />
+                        <span className="text-[1.1em] font-mono text-indigo-400 select-none px-2">=</span>
+                        <PreviewEquationNode path="rhs" customEquation={node.equation} />
                       </div>
                     </>
                   }

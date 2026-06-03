@@ -4,14 +4,48 @@ import React from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageSquare, Bug, Lightbulb, Star, Send, CheckCircle2, Paperclip } from 'lucide-react';
-import { feedbackModalOpenAtom, feedbackContextAtom } from '../store/equation';
+import { feedbackModalOpenAtom, feedbackContextAtom, historyTreeAtom, HistoryNode } from '../store/equation';
+import { equationToString } from 'math-engine-client';
 import { THEME_GLASS } from '../constants/theme';
 
 type FeedbackType = 'bug' | 'feature' | 'other';
 
+const formatHistoryTree = (tree: Record<string, HistoryNode>): string => {
+  const root = tree["0"];
+  if (!root) return "Empty history";
+
+  // Build temporary indices map based on sorted timestamp
+  const sortedNodes = Object.values(tree).sort((a, b) => a.timestamp - b.timestamp);
+  const stepIndices = new Map<string, number>();
+  sortedNodes.forEach((n, idx) => stepIndices.set(n.id, idx));
+
+  const formatNode = (nodeId: string, depth: number): string => {
+    const node = tree[nodeId];
+    if (!node) return "";
+    
+    const stepNum = stepIndices.get(nodeId) ?? 0;
+    const eqStr = equationToString(node.equation);
+    const indent = "  ".repeat(depth);
+    let line = `${indent}- Step ${stepNum} (${node.label}): ${eqStr}\n`;
+    
+    const children = node.childrenIds
+      .map(cid => tree[cid])
+      .filter(Boolean)
+      .sort((a, b) => a!.timestamp - b!.timestamp);
+
+    for (const child of children) {
+      line += formatNode(child!.id, depth + 1);
+    }
+    return line;
+  };
+
+  return formatNode("0", 0);
+};
+
 export const FeedbackModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(feedbackModalOpenAtom);
   const context = useAtomValue(feedbackContextAtom);
+  const tree = useAtomValue(historyTreeAtom);
   
   const [subject, setSubject] = React.useState('');
   const [message, setMessage] = React.useState('');
@@ -64,6 +98,7 @@ export const FeedbackModal: React.FC = () => {
       const typeLabel = feedbackType === 'bug' ? 'Bug Report' : feedbackType === 'feature' ? 'Feature Request' : 'General/Other';
       setSuccessTypeLabel(typeLabel);
       
+      const formattedTree = formatHistoryTree(tree);
       const bodyText = `Feedback Type: ${typeLabel}
 Rating: ${rating > 0 ? `${rating}/5` : 'Not rated'}
 
@@ -73,6 +108,10 @@ ${message.trim()}
 --------------------------------------
 App Context:
 ${context || 'No specific context attached'}
+
+--------------------------------------
+History Tree:
+${formattedTree}
 `;
 
       const mailtoUrl = `mailto:feedback@algebranch.com?subject=${encodeURIComponent(

@@ -8,7 +8,7 @@ const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffec
 export function useMathScale(
   currentEq: Equation | null,
   dependencies: unknown[] = [],
-  padding = 48,
+  extraBuffer = 24,
   minScale = 0.4
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -25,14 +25,30 @@ export function useMathScale(
       content.style.fontSize = '1em';
       
       const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
       const contentWidth = content.scrollWidth;
+      const contentHeight = content.scrollHeight;
 
-      if (contentWidth > 0 && containerWidth > 0) {
-        // 2. Calculate linear scale ratio
-        const targetScale = (containerWidth - padding) / contentWidth;
+      if (contentWidth > 0 && containerWidth > 0 && contentHeight > 0 && containerHeight > 0) {
+        // 2. Read computed padding dynamically from the container
+        const style = window.getComputedStyle(container);
+        const paddingLeft = parseFloat(style.paddingLeft) || 0;
+        const paddingRight = parseFloat(style.paddingRight) || 0;
+        const paddingTop = parseFloat(style.paddingTop) || 0;
+        const paddingBottom = parseFloat(style.paddingBottom) || 0;
+
+        const paddingX = paddingLeft + paddingRight + extraBuffer;
+        const paddingY = paddingTop + paddingBottom + extraBuffer;
+
+        // 3. Calculate scale ratios for both dimensions
+        const targetWidthScale = (containerWidth - paddingX) / contentWidth;
+        const targetHeightScale = (containerHeight - paddingY) / contentHeight;
+        
+        // 4. Select the smaller scale to guarantee fitting in both directions
+        const targetScale = Math.min(targetWidthScale, targetHeightScale);
         const clampedScale = Math.max(minScale, Math.min(1, targetScale));
         
-        // 3. Set state and apply directly to DOM to prevent layout loops
+        // 5. Set state and apply directly to DOM to prevent layout loops
         setScale(clampedScale);
         content.style.fontSize = `${clampedScale}em`;
       }
@@ -48,7 +64,7 @@ export function useMathScale(
     return () => {
       observer.disconnect();
     };
-  }, [currentEq, padding, minScale, ...dependencies]);
+  }, [currentEq, extraBuffer, minScale, ...dependencies]);
 
   return { containerRef, contentRef, scale };
 }

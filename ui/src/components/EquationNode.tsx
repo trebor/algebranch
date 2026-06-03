@@ -19,6 +19,7 @@ import {
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import { Sparkles, Zap, Split } from 'lucide-react';
+import { trackEvent } from '../utils/analytics';
 
 const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
   <svg
@@ -157,6 +158,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const handleToggleRootSign = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleRootSign(path);
+    trackEvent({
+      action: 'toggle_root_sign',
+      category: 'math_interaction',
+      label: path,
+    });
   };
 
   const getTargetPath = (): string | null => {
@@ -182,14 +188,29 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     const activeTargetPath = getTargetPath();
     if (activeTargetPath && sourcePath) {
       pushEquation(targetPaths[activeTargetPath]);
+      trackEvent({
+        action: 'apply_transposition',
+        category: 'math_interaction',
+        label: `${sourcePath} -> ${activeTargetPath}`,
+      });
       return;
     }
 
     // Toggle select
     if (isSelected) {
       setSourcePath(null);
+      trackEvent({
+        action: 'deselect_node',
+        category: 'math_interaction',
+        label: path,
+      });
     } else {
       setSourcePath(path);
+      trackEvent({
+        action: 'select_node',
+        category: 'math_interaction',
+        label: path,
+      });
     }
   };
 
@@ -499,6 +520,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   onClick={(e) => {
                     e.stopPropagation();
                     pushEquation(action.equation, action.type === 'identity' ? (action.label || 'Apply Identity') : (action.type === 'distribute' ? 'Distribute' : 'Reduce'));
+                    trackEvent({
+                      action: 'apply_reduction',
+                      category: 'math_interaction',
+                      label: `${action.type}: ${action.label || 'Reduce'}`,
+                    });
                     setHoverReducePath(null);
                     setHoverReduceIndex(null);
                   }}

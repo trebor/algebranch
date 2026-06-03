@@ -4,7 +4,7 @@ import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
 
 // Global Initial Value Constants
-export const INITIAL_EQUATION_STRING = '3 * x + 5 = x + 13';
+export const INITIAL_EQUATION_STRING = '2 * (x + 3) = 10';
 
 // Tree Interface Definition
 export interface HistoryNode {

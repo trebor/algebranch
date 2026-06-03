@@ -8,6 +8,7 @@ import { Sidebar } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import {
   currentEquationAtom,
+  previewEquationAtom,
   hoverPathAtom,
   targetPathsAtom,
   hoverReducePathAtom,
@@ -27,6 +28,7 @@ import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
 import { Share2, Check } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
+import { useMathScale } from '../hooks/useMathScale';
 
 // Local Constants
 const API_MATH_ENDPOINT = '/api/math';
@@ -45,6 +47,10 @@ export default function Home() {
   const [currentSessionId, setCurrentSessionId] = useAtom(currentSessionIdAtom);
 
   const syncMathState = useSetAtom(syncMathStateAtom);
+
+  const previewEq = useAtomValue(previewEquationAtom);
+  const activeScale = useMathScale(currentEq);
+  const previewScale = useMathScale(previewEq);
 
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
@@ -482,9 +488,9 @@ export default function Home() {
           <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
             
             {/* 1. Active Derivation Workspace (Top 2/3) */}
-            <div className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
-              <div className="flex flex-col items-center justify-center gap-2">
-                <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full">
+            <div ref={activeScale.containerRef} className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
+              <div ref={activeScale.contentRef} className="flex flex-col items-center justify-center gap-2 origin-center">
+                <div className="flex items-center justify-center gap-[0.8em] flex-nowrap max-w-full">
                   {/* LHS Term Tree */}
                   <div className="flex justify-end min-w-[5em]">
                     <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />
@@ -507,8 +513,8 @@ export default function Home() {
             <div className="w-11/12 border-t border-dashed border-white/10 shrink-0 self-center" />
 
             {/* 2. Speculative Preview Workspace (Bottom 1/3) */}
-            <div className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
-              <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 ${
+            <div ref={previewScale.containerRef} className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light">
+              <div ref={previewScale.contentRef} className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 origin-center ${
                 isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
               }`}>
                 <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
@@ -520,7 +526,7 @@ export default function Home() {
                   )}
                 </span>
                 
-                <div className="flex items-center justify-center gap-[0.8em] flex-wrap max-w-full pointer-events-none select-none">
+                <div className="flex items-center justify-center gap-[0.8em] flex-nowrap max-w-full pointer-events-none select-none">
                   {/* LHS Preview Term Tree */}
                   <div className="flex justify-end min-w-[5em]">
                     <PreviewEquationNode path="lhs" />

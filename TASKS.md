@@ -6,8 +6,8 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 
 ## 📈 Current Progress Summary
 * **Total Tasks**: 26
-* **Completed**: 16
-* **Remaining**: 10
+* **Completed**: 18
+* **Remaining**: 8
 
 ---
 
@@ -30,7 +30,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Animated neon-rose electrical dashed flow lines on loop target hover.
 - [x] Selection parent redirect (go back one step just before the loop to explore a new path).
 - [x] Single Active Node Highlight Contrast (selected node glows indigo, parent steps are high-contrast black glass).
-- [ ] Reevaluate where to navigate to in the history when a loop is detected.
+- [x] Reevaluate where to navigate to in the history when a loop is detected.
 - [x] Change the color of the highlight in the history of the current/active item (currently feels too red/error-like).
 
 
@@ -40,7 +40,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Unified 350ms FLIP transition engine for all transpositions, reductions, and timeline jumps.
 - [ ] Speculative preview transition finesses (optional - minor adjustments).
 - [ ] Make square root (sqrt) and nthRoot expressions prettier with premium styling.
-- [ ] Scale math expressions to fit their allotted screen spaces dynamically (for both active workspace and preview panels).
+- [x] Scale math expressions to fit their allotted screen spaces dynamically (for both active workspace and preview panels).
 - [x] Cut off long numbers after the decimal point in floating point numbers (e.g. limit rendering of constants to 4 decimal places / format appropriately).
 
 ### 🌐 4. Local Persistence & URL Sharing

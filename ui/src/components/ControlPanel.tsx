@@ -17,7 +17,7 @@ import {
   feedbackContextAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, BookOpen, Infinity, Bug } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, BookOpen, Infinity, MessageSquarePlus } from 'lucide-react';
 
 const COPIED_TIMEOUT = 2000;
 
@@ -441,9 +441,9 @@ export const ControlPanel: React.FC = () => {
                                 setFeedbackContext(`History Step ${stepNum} (${node.label}): ${equationToString(node.equation)}`);
                                 setFeedbackModalOpen(true);
                               }}
-                              className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-rose-400 cursor-pointer transition-colors"
+                              className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-indigo-400 cursor-pointer transition-colors"
                             >
-                              <Bug size={8} />
+                              <MessageSquarePlus size={8} />
                             </button>
                           </Tooltip>
                           <Tooltip content="Copy Equation">

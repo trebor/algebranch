@@ -83,6 +83,27 @@ export const PRESET_LIST: Preset[] = [
 
   // Quadratics & Roots
   {
+    id: 'quadratic_general',
+    label: 'General Quadratic Equation',
+    equation: 'a * x^2 + b * x + c = 0',
+    description: 'Standard form of a quadratic equation. Practice operations to complete the square.',
+    category: 'Quadratics & Roots',
+  },
+  {
+    id: 'quadratic_formula_pos',
+    label: 'Quadratic Formula (+)',
+    equation: 'x = (-b + sqrt(b^2 - 4 * a * c)) / (2 * a)',
+    description: 'Solve for x using the positive branch of the quadratic formula.',
+    category: 'Quadratics & Roots',
+  },
+  {
+    id: 'quadratic_formula_neg',
+    label: 'Quadratic Formula (-)',
+    equation: 'x = (-b - sqrt(b^2 - 4 * a * c)) / (2 * a)',
+    description: 'Solve for x using the negative branch of the quadratic formula.',
+    category: 'Quadratics & Roots',
+  },
+  {
     id: 'quadratic_basic_solve',
     label: 'Quadratic Equation',
     equation: 'x^2 - 4 = 0',

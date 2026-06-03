@@ -38,6 +38,7 @@ import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquare
 import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
+import { trackEvent } from '../utils/analytics';
 
 // Local Constants
 const API_MATH_ENDPOINT = '/api/math';
@@ -316,6 +317,10 @@ export default function Home() {
     const shareUrl = window.location.href;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setSharedCopied(true);
+      trackEvent({
+        action: 'share_link',
+        category: 'interaction',
+      });
       setTimeout(() => {
         setSharedCopied(false);
       }, 2000);

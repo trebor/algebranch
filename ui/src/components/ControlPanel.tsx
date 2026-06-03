@@ -5,6 +5,7 @@ import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import { Tooltip } from './Tooltip';
 import { PreviewEquationNode } from './PreviewEquationNode';
 import { Equation, equationToString } from 'math-engine-client';
+import { trackEvent } from '../utils/analytics';
 import {
   historyTreeAtom,
   currentNodeIdAtom,
@@ -40,6 +41,11 @@ export const ControlPanel: React.FC = () => {
     const eqStr = equationToString(node);
     navigator.clipboard.writeText(eqStr).then(() => {
       setCopiedId(id);
+      trackEvent({
+        action: 'copy_step',
+        category: 'history',
+        label: id,
+      });
       setTimeout(() => {
         setCopiedId(null);
       }, COPIED_TIMEOUT);
@@ -56,6 +62,11 @@ export const ControlPanel: React.FC = () => {
   const handleUndo = () => {
     if (canUndo && activeNode.parentId) {
       setCurrentNodeId(activeNode.parentId);
+      trackEvent({
+        action: 'undo_step',
+        category: 'history',
+        label: activeNode.parentId,
+      });
       setSourcePath(null);
       setHoverPath(null);
     }
@@ -63,7 +74,13 @@ export const ControlPanel: React.FC = () => {
 
   const handleRedo = () => {
     if (canRedo) {
-      setCurrentNodeId(activeNode.childrenIds[activeNode.childrenIds.length - 1]);
+      const nextId = activeNode.childrenIds[activeNode.childrenIds.length - 1];
+      setCurrentNodeId(nextId);
+      trackEvent({
+        action: 'redo_step',
+        category: 'history',
+        label: nextId,
+      });
       setSourcePath(null);
       setHoverPath(null);
     }
@@ -83,6 +100,10 @@ export const ControlPanel: React.FC = () => {
         }
       });
       setCurrentNodeId("0");
+      trackEvent({
+        action: 'reset_history',
+        category: 'history',
+      });
       setSourcePath(null);
       setHoverPath(null);
     }
@@ -90,6 +111,11 @@ export const ControlPanel: React.FC = () => {
 
   const handleStepClick = (id: string) => {
     setCurrentNodeId(id);
+    trackEvent({
+      action: 'select_step',
+      category: 'history',
+      label: id,
+    });
     setSourcePath(null);
     setHoverPath(null);
     if (window.innerWidth < 1024) {

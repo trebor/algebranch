@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageSquare, Bug, Lightbulb, Star, Send, CheckCircle2, Paperclip } from 'lucide-react';
 import { feedbackModalOpenAtom, feedbackContextAtom, historyTreeAtom, HistoryNode, currentNodeIdAtom } from '../store/equation';
 import { equationToString } from 'math-engine-client';
+import { trackEvent } from '../utils/analytics';
 import { THEME_GLASS } from '../constants/theme';
 
 type FeedbackType = 'bug' | 'feature' | 'other';
@@ -129,6 +130,12 @@ ${formattedTree}
 
       // Launch the email client in a new tab/window
       window.open(mailtoUrl, '_blank');
+
+      trackEvent({
+        action: 'submit_feedback',
+        category: 'feedback',
+        label: feedbackType,
+      });
 
       // Show success step explaining that their mail client has been opened
       setIsSuccess(true);

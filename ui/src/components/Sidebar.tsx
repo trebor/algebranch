@@ -16,6 +16,7 @@ import {
   leftSidebarOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
+import { trackEvent } from '../utils/analytics';
 import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Layers, Triangle, Activity, Flame, BookOpen } from 'lucide-react';
 
 const getCategoryIcon = (category: string) => {
@@ -102,6 +103,11 @@ export const Sidebar: React.FC = () => {
     try {
       setErrorStr(null);
       applyGlobalOp({ type, term: termInput, power });
+      trackEvent({
+        action: 'apply_global_op',
+        category: 'operations',
+        label: type,
+      });
       setTermInput('');
     } catch (err) {
       setErrorStr(`Failed to apply operation: ${err instanceof Error ? err.message : String(err)}`);
@@ -112,6 +118,11 @@ export const Sidebar: React.FC = () => {
     try {
       setErrorStr(null);
       resetToEquation(eqStr);
+      trackEvent({
+        action: 'load_preset',
+        category: 'presets',
+        label: eqStr,
+      });
       if (window.innerWidth < 1024) {
         setLeftSidebarOpen(false);
       }

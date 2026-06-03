@@ -98,7 +98,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({ path }
       const opSymbol = opDisplayMap[opNode.op] || opNode.op;
 
       return (
-        <div className="flex items-baseline gap-[0.2em] flex-wrap justify-center py-[0.05em]">
+        <div className="flex items-baseline gap-[0.2em] flex-nowrap justify-center py-[0.05em]">
           <PreviewEquationNode path={`${path}/0`} />
           <span className="text-indigo-400/60 font-medium text-[0.85em] select-none">{opSymbol}</span>
           <PreviewEquationNode path={`${path}/1`} />

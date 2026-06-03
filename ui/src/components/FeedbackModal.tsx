@@ -4,13 +4,13 @@ import React from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageSquare, Bug, Lightbulb, Star, Send, CheckCircle2, Paperclip } from 'lucide-react';
-import { feedbackModalOpenAtom, feedbackContextAtom, historyTreeAtom, HistoryNode } from '../store/equation';
+import { feedbackModalOpenAtom, feedbackContextAtom, historyTreeAtom, HistoryNode, currentNodeIdAtom } from '../store/equation';
 import { equationToString } from 'math-engine-client';
 import { THEME_GLASS } from '../constants/theme';
 
 type FeedbackType = 'bug' | 'feature' | 'other';
 
-const formatHistoryTree = (tree: Record<string, HistoryNode>): string => {
+const formatHistoryTree = (tree: Record<string, HistoryNode>, currentNodeId: string | null): string => {
   const root = tree["0"];
   if (!root) return "Empty history";
 
@@ -26,7 +26,8 @@ const formatHistoryTree = (tree: Record<string, HistoryNode>): string => {
     const stepNum = stepIndices.get(nodeId) ?? 0;
     const eqStr = equationToString(node.equation);
     const indent = "  ".repeat(depth);
-    let line = `${indent}- Step ${stepNum} (${node.label}): ${eqStr}\n`;
+    const isSelected = nodeId === currentNodeId ? " <- Current Selected Step" : "";
+    let line = `${indent}- Step ${stepNum} (${node.label}): ${eqStr}${isSelected}\n`;
     
     const children = node.childrenIds
       .map(cid => tree[cid])
@@ -46,6 +47,7 @@ export const FeedbackModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(feedbackModalOpenAtom);
   const context = useAtomValue(feedbackContextAtom);
   const tree = useAtomValue(historyTreeAtom);
+  const currentNodeId = useAtomValue(currentNodeIdAtom);
   
   const [subject, setSubject] = React.useState('');
   const [message, setMessage] = React.useState('');
@@ -105,7 +107,7 @@ export const FeedbackModal: React.FC = () => {
       const typeLabel = feedbackType === 'bug' ? 'Bug Report' : feedbackType === 'feature' ? 'Feature Request' : 'General/Other';
       setSuccessTypeLabel(typeLabel);
       
-      const formattedTree = formatHistoryTree(tree);
+      const formattedTree = formatHistoryTree(tree, currentNodeId);
       const bodyText = `Feedback Type: ${typeLabel}
 Rating: ${rating > 0 ? `${rating}/5` : 'Not rated'}
 

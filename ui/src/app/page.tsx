@@ -501,7 +501,14 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setFeedbackModalOpen(true)}
+            onClick={() => {
+              if (currentEq) {
+                setFeedbackContext(`Active Equation: ${equationToString(currentEq)}`);
+              } else {
+                setFeedbackContext(null);
+              }
+              setFeedbackModalOpen(true);
+            }}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group"
           >
             <MessageSquarePlus size={13} className="text-indigo-400 group-hover:scale-110 transition-transform" />

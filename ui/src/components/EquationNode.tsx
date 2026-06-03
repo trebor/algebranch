@@ -176,10 +176,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path }) => {
     ? THEME_GLASS.CARD_CANDIDATE
     : THEME_GLASS.CARD_CANDIDATE + ' cursor-default';
 
-  // Highlight identity-reducible nodes with a delicate glowing indigo border when hovered
+  // Highlight identity-reducible nodes with a delicate glowing indigo border when hovered, only if the node is active/selectable
   const hasIdentityAction = actions.some((a) => a.type === 'identity');
   const isHoveredActionIdentity = hoverReducePath === path && hoverReduceIndex !== null && actions[hoverReduceIndex]?.type === 'identity';
-  const isIdentityHovered = isReducible && (hasIdentityAction && isHovered || isHoveredActionIdentity);
+  const isIdentityHovered = !isStatic && isReducible && (hasIdentityAction && isHovered || isHoveredActionIdentity);
   if (isIdentityHovered) {
     semanticStyle = 'border-indigo-400/80 bg-indigo-500/10 text-indigo-100 shadow-[0_0_15px_rgba(99,102,241,0.45)] cursor-pointer';
   }

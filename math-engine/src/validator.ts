@@ -72,65 +72,6 @@ export const getVariables = (node: math.MathNode): string[] => {
   return Array.from(vars);
 };
 
-/**
- * Recursively evaluates a mathjs node to a single number (point evaluation).
- */
-export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>): number => {
-  if (node.type === 'ConstantNode') {
-    const constNode = node as math.ConstantNode;
-    return Number(constNode.value);
-  }
-  if (node.type === 'SymbolNode') {
-    const symbolNode = node as math.SymbolNode;
-    if (symbolNode.name === 'pi') return CONST_PI;
-    if (symbolNode.name === 'e') return CONST_E;
-    if (symbolNode.name in scope) return scope[symbolNode.name];
-    throw new Error(`Symbol ${symbolNode.name} not in scope`);
-  }
-  if (node.type === 'ParenthesisNode') {
-    const parenNode = node as math.ParenthesisNode;
-    return evaluatePoint(parenNode.content, scope);
-  }
-  if (node.type === 'OperatorNode') {
-    const opNode = node as math.OperatorNode;
-    const args = opNode.args.map((arg) => evaluatePoint(arg, scope));
-    if (opNode.isUnary()) {
-      if (opNode.op === '-') return -args[0];
-      if (opNode.op === '+') return args[0];
-    } else {
-      const [left, right] = args;
-      if (opNode.op === '+') return left + right;
-      if (opNode.op === '-') return left - right;
-      if (opNode.op === '*') return left * right;
-      if (opNode.op === '/') return left / right;
-      if (opNode.op === '^') return Math.pow(left, right);
-    }
-  }
-  if (node.type === 'FunctionNode') {
-    const funcNode = node as math.FunctionNode;
-    const args = funcNode.args.map((arg) => evaluatePoint(arg, scope));
-    const nameStr = getFunctionName(funcNode);
-
-    if (nameStr === 'sqrt') return Math.sqrt(args[0]);
-    if (nameStr === 'nthRoot') {
-      const base = args[0];
-      const degree = args[1] !== undefined ? args[1] : 2;
-      return Math.pow(base, 1 / degree);
-    }
-    if (nameStr === 'sin') return Math.sin(args[0]);
-    if (nameStr === 'cos') return Math.cos(args[0]);
-    if (nameStr === 'tan') return Math.tan(args[0]);
-    if (nameStr === 'cot') return 1 / Math.tan(args[0]);
-    if (nameStr === 'sec') return 1 / Math.cos(args[0]);
-    if (nameStr === 'csc') return 1 / Math.sin(args[0]);
-    if (nameStr === 'log') {
-      const val = args[0];
-      const base = args[1] !== undefined ? args[1] : Math.E;
-      return Math.log(val) / Math.log(base);
-    }
-  }
-  throw new Error(`Unsupported point node type: ${node.type}`);
-};
 
 /**
  * Recursively evaluates a mathjs node to an Interval.
@@ -199,6 +140,86 @@ export const evaluateInterval = (node: math.MathNode, scope: Record<string, Inte
   throw new Error(`Unsupported interval node type: ${node.type}`);
 };
 
+const isValFinite = (val: any): boolean => {
+  if (typeof val === 'object' && val !== null && val.isComplex) {
+    return Number.isFinite(val.re) && Number.isFinite(val.im);
+  }
+  return Number.isFinite(Number(val));
+};
+const isValNaN = (val: any): boolean => {
+  if (typeof val === 'object' && val !== null && val.isComplex) {
+    return Number.isNaN(val.re) || Number.isNaN(val.im);
+  }
+  return Number.isNaN(Number(val));
+};
+
+const isReal = (val: any): boolean => {
+  if (typeof val === 'object' && val !== null && val.isComplex) {
+    return Math.abs(val.im) < 1e-9;
+  }
+  return typeof val === 'number' && !Number.isNaN(val) && Number.isFinite(val);
+};
+
+/**
+ * Recursively evaluates a mathjs node to a single number or complex number (point evaluation).
+ */
+export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>): any => {
+  if (node.type === 'ConstantNode') {
+    const constNode = node as math.ConstantNode;
+    return Number(constNode.value);
+  }
+  if (node.type === 'SymbolNode') {
+    const symbolNode = node as math.SymbolNode;
+    if (symbolNode.name === 'pi') return CONST_PI;
+    if (symbolNode.name === 'e') return CONST_E;
+    if (symbolNode.name in scope) return scope[symbolNode.name];
+    throw new Error(`Symbol ${symbolNode.name} not in scope`);
+  }
+  if (node.type === 'ParenthesisNode') {
+    const parenNode = node as math.ParenthesisNode;
+    return evaluatePoint(parenNode.content, scope);
+  }
+  if (node.type === 'OperatorNode') {
+    const opNode = node as math.OperatorNode;
+    const args = opNode.args.map((arg) => evaluatePoint(arg, scope));
+    if (opNode.isUnary()) {
+      if (opNode.op === '-') return math.unaryMinus(args[0]) as any;
+      if (opNode.op === '+') return args[0];
+    } else {
+      const [left, right] = args;
+      if (opNode.op === '+') return math.add(left, right) as any;
+      if (opNode.op === '-') return math.subtract(left, right) as any;
+      if (opNode.op === '*') return math.multiply(left, right) as any;
+      if (opNode.op === '/') return math.divide(left, right) as any;
+      if (opNode.op === '^') return math.pow(left, right) as any;
+    }
+  }
+  if (node.type === 'FunctionNode') {
+    const funcNode = node as math.FunctionNode;
+    const args = funcNode.args.map((arg) => evaluatePoint(arg, scope));
+    const nameStr = getFunctionName(funcNode);
+
+    if (nameStr === 'sqrt') return math.sqrt(args[0]) as any;
+    if (nameStr === 'nthRoot') {
+      const base = args[0];
+      const degree = args[1] !== undefined ? args[1] : 2;
+      return math.pow(base, math.divide(1, degree)) as any;
+    }
+    if (nameStr === 'sin') return math.sin(args[0]) as any;
+    if (nameStr === 'cos') return math.cos(args[0]) as any;
+    if (nameStr === 'tan') return math.tan(args[0]) as any;
+    if (nameStr === 'cot') return math.cot(args[0]) as any;
+    if (nameStr === 'sec') return math.sec(args[0]) as any;
+    if (nameStr === 'csc') return math.csc(args[0]) as any;
+    if (nameStr === 'log') {
+      const val = args[0];
+      const base = args[1] !== undefined ? args[1] : Math.E;
+      return math.log(val, base) as any;
+    }
+  }
+  throw new Error(`Unsupported point node type: ${node.type}`);
+};
+
 /**
  * Numerically solves LHS - RHS = 0 for a specific variable using Newton-Raphson.
  * Returns the root value or null if it fails to converge.
@@ -209,34 +230,34 @@ export const solveForVariable = (
   solveVar: string,
   scope: Record<string, number>,
   initialGuess: number = 1.0
-): number | null => {
-  const f = (x: number): number => {
+): any | null => {
+  const f = (x: any): any => {
     const localScope = { ...scope, [solveVar]: x };
-    return evaluatePoint(nodeLHS, localScope) - evaluatePoint(nodeRHS, localScope);
+    return math.subtract(evaluatePoint(nodeLHS, localScope), evaluatePoint(nodeRHS, localScope));
   };
 
-  let x = initialGuess; // Initial guess
+  let x: any = initialGuess; // Initial guess
   const maxIterations = 20;
   const tolerance = 1e-10;
   const h = 1e-5;
 
   for (let i = 0; i < maxIterations; i++) {
     const y = f(x);
-    if (isNaN(y) || !isFinite(y)) {
+    if (isValNaN(y) || !isValFinite(y)) {
       return null;
     }
-    if (Math.abs(y) < tolerance) {
+    if (Number(math.abs(y)) < tolerance) {
       return x;
     }
-    const dy = (f(x + h) - f(x - h)) / (2 * h);
-    if (Math.abs(dy) < 1e-12) {
-      x += 1.5; // Shift guess if derivative is zero
+    const dy = math.divide(math.subtract(f(math.add(x, h)), f(math.subtract(x, h))), 2 * h);
+    if (Number(math.abs(dy)) < 1e-12) {
+      x = math.add(x, 1.5); // Shift guess if derivative is zero
       continue;
     }
-    x = x - y / dy;
+    x = math.subtract(x, math.divide(y, dy));
   }
 
-  if (Math.abs(f(x)) < 1e-7) {
+  if (Number(math.abs(f(x))) < 1e-7) {
     return x;
   }
   return null;
@@ -257,11 +278,11 @@ export const isEquationSatisfiedAtRoot = (
   for (const solveVar of variables) {
     for (const guess of guesses) {
       const root = solveForVariable(eqSource.lhs, eqSource.rhs, solveVar, { ...scope }, guess);
-      if (root !== null && isFinite(root) && !isNaN(root)) {
+      if (root !== null && isValFinite(root) && !isValNaN(root) && isReal(root)) {
         hasCheckedAnyRoot = true;
         const localScope = { ...scope, [solveVar]: root };
-        const dTarget = evaluatePoint(eqTarget.lhs, localScope) - evaluatePoint(eqTarget.rhs, localScope);
-        if (isNaN(dTarget) || !isFinite(dTarget) || Math.abs(dTarget) > 1e-5) {
+        const dTarget = math.subtract(evaluatePoint(eqTarget.lhs, localScope), evaluatePoint(eqTarget.rhs, localScope));
+        if (isValNaN(dTarget) || !isValFinite(dTarget) || Number(math.abs(dTarget)) > 1e-5) {
           return false;
         }
       }
@@ -270,12 +291,12 @@ export const isEquationSatisfiedAtRoot = (
 
   if (!hasCheckedAnyRoot) {
     // Fallback for constant equations or equations with no real roots on the domain
-    const d1 = evaluatePoint(eqSource.lhs, scope) - evaluatePoint(eqSource.rhs, scope);
-    const d2 = evaluatePoint(eqTarget.lhs, scope) - evaluatePoint(eqTarget.rhs, scope);
-    if (isNaN(d1) || isNaN(d2) || !isFinite(d1) || !isFinite(d2)) {
+    const d1 = math.subtract(evaluatePoint(eqSource.lhs, scope), evaluatePoint(eqSource.rhs, scope));
+    const d2 = math.subtract(evaluatePoint(eqTarget.lhs, scope), evaluatePoint(eqTarget.rhs, scope));
+    if (isValNaN(d1) || isValNaN(d2) || !isValFinite(d1) || !isValFinite(d2)) {
       return false;
     }
-    return Math.abs(d1 - d2) <= POINT_TOLERANCE;
+    return Number(math.abs(math.subtract(d1, d2))) <= POINT_TOLERANCE;
   }
 
   return true;

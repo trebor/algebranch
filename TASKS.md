@@ -20,7 +20,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 - [x] Filter out commutative & associative duplicates in simplify suggestions.
 - [x] Implement context-aware mouse target cursor indicators.
 - [x] Expand preset library to include multi-field stock equations (Physics, Science fields, complexity levels).
-- [ ] Develop a mechanism for equation substitution / combining expressions (e.g. replacing E with m * c^2).
+- [x] Develop a mechanism for equation substitution / combining expressions (e.g. replacing E with m * c^2). (Tracked in [GitHub Issue #3](https://github.com/trebor/algebranch/issues/3))
 - [x] Think hard about parentheses in the AST (parsing, matching, formatting, and structural redundant stripping).
 
 ### 🎨 2. History Tree Layout & Loop UI
@@ -51,7 +51,7 @@ This checklist tracks high-level tasks, features, and refinements that need to b
 
 ### 🚀 5. Production Polish & Publishing Prep
 - [x] Multi-device responsive dashboard layouts (mobile/tablet check).
-- [ ] Add a visual guide/interactive onboarding walkthrough for new users.
+- [x] Add a visual guide/interactive onboarding walkthrough for new users. (Tracked in [GitHub Issue #4](https://github.com/trebor/algebranch/issues/4))
 - [x] Optimize serverless Vercel function cold starts and caching headers.
 - [x] Setup production SEO meta tags, descriptions, and custom OpenGraph sharing images.
 - [x] Run comprehensive final cross-browser manual audit (Safari, Chrome, Firefox).

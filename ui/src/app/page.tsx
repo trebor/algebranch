@@ -626,23 +626,7 @@ export default function Home() {
               }}
               className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light cursor-default relative group/preview"
             >
-              {/* Contextual Feedback Button for Preview Equation */}
-              {isSpeculative && (
-                <div className="absolute top-4 right-4 z-30 opacity-0 group-hover/preview:opacity-100 transition-opacity duration-300">
-                  <Tooltip content="Report an issue with this preview step" position="left">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFeedbackContext(`Preview Equation: ${equationToString(previewEq)}`);
-                        setFeedbackModalOpen(true);
-                      }}
-                      className="p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-neutral-900/90 text-white/40 hover:text-indigo-400 hover:border-indigo-500/30 transition-all cursor-pointer shadow-md"
-                    >
-                      <MessageSquarePlus size={14} />
-                    </button>
-                  </Tooltip>
-                </div>
-              )}
+
               <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 origin-center ${
                 isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
               }`}>

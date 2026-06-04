@@ -296,7 +296,14 @@ export async function POST(req: NextRequest) {
           if (!isOpA && isOpB) return 1;
           
           // Prefer deeper paths (more specific subtrees)
-          return b.path.split('/').length - a.path.split('/').length;
+          const depthDiff = b.path.split('/').length - a.path.split('/').length;
+          if (depthDiff !== 0) return depthDiff;
+
+          // Prefer labeled actions over unlabeled ones (e.g. 'Evaluate to Decimal' over generic 'Reduce this term')
+          if (a.label && !b.label) return -1;
+          if (!a.label && b.label) return 1;
+
+          return 0;
         });
         
         const bestRed = reds[0];

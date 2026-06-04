@@ -137,6 +137,15 @@ describe('Math Engine Validator & Simplifier', () => {
     const eq4 = parseEquation('x + sqrt(4) = 5');
     const simplified4 = autoSimplify(eq4);
     expect(equationToString(simplified4)).toBe('x + 2 = 5');
+
+    // verify fraction reduction is NOT offered for decimal values
+    const eqDecimal1 = parseEquation('x + 2.5 / 5 = 5');
+    const simplifiedDecimal1 = autoSimplify(eqDecimal1);
+    expect(equationToString(simplifiedDecimal1)).toBe('x + 0.5 = 5');
+
+    const eqDecimal2 = parseEquation('x + 0.5 / 2 = 5');
+    const simplifiedDecimal2 = autoSimplify(eqDecimal2);
+    expect(equationToString(simplifiedDecimal2)).toBe('x + 0.25 = 5');
   });
 
 

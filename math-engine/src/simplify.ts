@@ -78,6 +78,22 @@ export const isConstantSubtree = (node: math.MathNode): boolean => {
 const mathFraction = math.create(math.all, { number: 'Fraction' });
 
 /**
+ * Checks if a mathematical node contains any constant node with a decimal point.
+ */
+const hasDecimalConstant = (node: math.MathNode): boolean => {
+  let hasDecimal = false;
+  node.traverse((n) => {
+    if (n.type === 'ConstantNode') {
+      const valStr = String((n as math.ConstantNode).value);
+      if (valStr.includes('.')) {
+        hasDecimal = true;
+      }
+    }
+  });
+  return hasDecimal;
+};
+
+/**
  * Evaluates a constant subtree to its simplified form, preserving fractions (e.g. 2/12 -> 1/6)
  * instead of converting to decimal float.
  */
@@ -85,44 +101,50 @@ export const evaluateConstantSubtree = (node: math.MathNode): math.MathNode | nu
   if (node.type === 'ConstantNode') return null;
   if (!isConstantSubtree(node)) return null;
 
-  try {
-    const val = mathFraction.evaluate(node.toString());
-    if (val && val.constructor?.name === 'Fraction') {
-      const s = Number(val.s);
-      const n = Number(val.n);
-      const d = Number(val.d);
-
-      if (d === 1) {
-        return new math.ConstantNode(s * n);
-      } else {
-        return new math.OperatorNode('/', 'divide', [
-          new math.ConstantNode(s * n),
-          new math.ConstantNode(d)
-        ]);
-      }
-    }
-  } catch {
-    // Fall back to standard numeric evaluation
+  // Try fraction evaluation first if it doesn't contain decimals
+  if (!hasDecimalConstant(node)) {
     try {
-      const val = node.compile().evaluate();
-      let numVal: number | null = null;
-      if (typeof val === 'number') {
-        numVal = val;
-      } else if (val && typeof val === 'object' && 'toNumber' in val) {
-        numVal = (val as unknown as { toNumber: () => number }).toNumber();
-      } else {
-        const parsed = parseFloat(val?.toString());
-        if (!isNaN(parsed)) {
-          numVal = parsed;
+      const val = mathFraction.evaluate(node.toString());
+      if (val && val.constructor?.name === 'Fraction') {
+        const s = Number(val.s);
+        const n = Number(val.n);
+        const d = Number(val.d);
+
+        if (d === 1) {
+          return new math.ConstantNode(s * n);
+        } else {
+          return new math.OperatorNode('/', 'divide', [
+            new math.ConstantNode(s * n),
+            new math.ConstantNode(d)
+          ]);
         }
       }
-      if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
-        return new math.ConstantNode(numVal);
-      }
     } catch {
-      // ignore
+      // Ignore and fall through to standard numeric evaluation
     }
   }
+
+  // Fall back to standard numeric evaluation
+  try {
+    const val = node.compile().evaluate();
+    let numVal: number | null = null;
+    if (typeof val === 'number') {
+      numVal = val;
+    } else if (val && typeof val === 'object' && 'toNumber' in val) {
+      numVal = (val as unknown as { toNumber: () => number }).toNumber();
+    } else {
+      const parsed = parseFloat(val?.toString());
+      if (!isNaN(parsed)) {
+        numVal = parsed;
+      }
+    }
+    if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
+      return new math.ConstantNode(numVal);
+    }
+  } catch {
+    // ignore
+  }
+
   return null;
 };
 

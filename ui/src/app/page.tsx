@@ -40,6 +40,8 @@ import {
   currentTabNameAtom,
   deleteSessionAtom,
   deleteConfirmationModalOpenAtom,
+  tabsAtom,
+  activeTabIdAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
@@ -68,6 +70,8 @@ export default function Home() {
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
   const [sharedCopied, setSharedCopied] = React.useState(false);
   const [savedSessions, setSavedSessions] = useAtom(savedSessionsAtom);
+  const tabs = useAtomValue(tabsAtom);
+  const activeTabId = useAtomValue(activeTabIdAtom);
   const [currentSessionId, setCurrentSessionId] = useAtom(currentSessionIdAtom);
 
   const syncMathState = useSetAtom(syncMathStateAtom);
@@ -287,6 +291,14 @@ export default function Home() {
   // Save derivation steps to local storage and update address bar URL reactively
   React.useEffect(() => {
     if (!tree || !currentNodeId || !tree[currentNodeId] || !currentSessionId) return;
+
+    // Do not save to the "Recents" library list unless the user has actually modified the workspace,
+    // or if the session is already registered in the library.
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    const isAlreadySaved = savedSessions.some(s => s.id === currentSessionId);
+    if (!isAlreadySaved && activeTab && !activeTab.isModified) {
+      return;
+    }
 
     // 1. Save active workspace to the current session's entry in savedSessions library
     try {

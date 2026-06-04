@@ -75,6 +75,7 @@ export interface WorkspaceTab {
   historyTree: Record<string, HistoryNode>;
   currentNodeId: string;
   isCustomNamed?: boolean;
+  isModified?: boolean;
   sessionId?: string;
 }
 
@@ -86,7 +87,7 @@ const getFallbackTabs = (): WorkspaceTab[] => [
     historyTree: {
       "0": {
         id: "0",
-        equation: parseEquation(INITIAL_EQUATION_STRING),
+        equation: ensureNodeIds(parseEquation(INITIAL_EQUATION_STRING)),
         parentId: null,
         childrenIds: [],
         label: "Initial",
@@ -94,7 +95,6 @@ const getFallbackTabs = (): WorkspaceTab[] => [
       }
     },
     currentNodeId: "0",
-    sessionId: "session_initial"
   }
 ];
 
@@ -159,7 +159,8 @@ export const historyTreeAtom = atom(
         return {
           ...t,
           historyTree: nextTree,
-          name: tabName
+          name: tabName,
+          isModified: true
         };
       }
       return t;
@@ -885,11 +886,28 @@ export const addTabAtom = atom(
           };
         });
 
+        // Generate a unique cloned tab name to avoid duplicate names
+        let baseName = activeTab.name;
+        const copyMatch = activeTab.name.match(/^(.*?)\s*\(Copy\s*(\d*)\)$/);
+        if (copyMatch) {
+          baseName = copyMatch[1];
+        }
+        
+        let suffixNum = 1;
+        let candidateName = copyMatch ? `${baseName} (Copy ${parseInt(copyMatch[2] || '1') + 1})` : `${baseName} (Copy)`;
+        
+        const existingNames = prevTabs.map(t => t.name);
+        while (existingNames.includes(candidateName)) {
+          suffixNum++;
+          candidateName = `${baseName} (Copy ${suffixNum})`;
+        }
+
         newTab = {
           id: newTabId,
-          name: activeTab.name,
+          name: candidateName,
           historyTree: clonedHistoryTree,
           currentNodeId: activeTab.currentNodeId,
+          isCustomNamed: activeTab.isCustomNamed,
           sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         };
 
@@ -995,7 +1013,8 @@ export const renameTabAtom = atom(
         return { 
           ...t, 
           name: name.trim(),
-          isCustomNamed: true 
+          isCustomNamed: true,
+          isModified: true 
         };
       }
       return t;

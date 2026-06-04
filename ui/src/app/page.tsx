@@ -159,6 +159,8 @@ export default function Home() {
         try {
           const cleanEqStr = decodeURIComponent(urlEq);
           createNewSession(cleanEqStr);
+          // Clear query parameter from the URL to prevent duplicate tabs on page refresh
+          window.history.replaceState(null, '', window.location.pathname);
         } catch (err) {
           console.error('Failed to parse equation from URL query parameter:', err);
         }
@@ -203,6 +205,8 @@ export default function Home() {
         setSavedSessions(updated);
         localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
         localStorage.setItem('algebranch_current_session_id', newSessionId);
+        // Clear query parameter from the URL to prevent duplicate tabs on page refresh
+        window.history.replaceState(null, '', window.location.pathname);
         return;
       } catch (err) {
         console.error('Failed to parse equation from URL query parameter:', err);
@@ -345,32 +349,27 @@ export default function Home() {
       console.error('Failed to save history to local storage:', err);
     }
 
-    // 2. Update address bar URL query parameter reactively
-    try {
-      const currentEqVal = tree[currentNodeId].equation;
-      const eqStr = equationToString(currentEqVal);
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('eq') !== eqStr) {
-        params.set('eq', eqStr);
-        window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
-      }
-    } catch (err) {
-      console.error('Failed to update URL search parameter:', err);
-    }
   }, [tree, currentNodeId, currentSessionId, setSavedSessions, currentTabName]);
 
   const handleShare = () => {
-    const shareUrl = window.location.href;
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      setSharedCopied(true);
-      trackEvent({
-        action: 'share_link',
-        category: 'interaction',
+    try {
+      const eqStr = currentEq ? equationToString(currentEq) : '';
+      const baseUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
+      const shareUrl = eqStr ? `${baseUrl}?eq=${encodeURIComponent(eqStr)}` : baseUrl;
+
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        setSharedCopied(true);
+        trackEvent({
+          action: 'share_link',
+          category: 'interaction',
+        });
+        setTimeout(() => {
+          setSharedCopied(false);
+        }, 2000);
       });
-      setTimeout(() => {
-        setSharedCopied(false);
-      }, 2000);
-    });
+    } catch (err) {
+      console.error('Failed to copy share link:', err);
+    }
   };
 
   // Register PWA Service Worker on mount

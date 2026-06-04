@@ -790,10 +790,19 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
           clean(targetNodeInSimplified.toString()) === clean(distNode.toString())
         );
 
+        let label: string | undefined = undefined;
+        if (isActualDistribution) {
+          label = 'Distribute';
+        } else {
+          const isFraction = node.type === 'OperatorNode' && (node as math.OperatorNode).op === '/';
+          label = isFraction ? 'Simplify Fraction' : 'Simplify';
+        }
+
         rawReductions.push({
           path,
           simplified,
-          type: isActualDistribution ? 'distribute' : 'reduce'
+          type: isActualDistribution ? 'distribute' : 'reduce',
+          label
         });
 
         // If the node can be distributed but was simplified in a different way (e.g. constant folded),
@@ -805,7 +814,8 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
             rawReductions.push({
               path,
               simplified: eqDist,
-              type: 'distribute'
+              type: 'distribute',
+              label: 'Distribute'
             });
           }
         }
@@ -984,6 +994,13 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
 
       if (a.label && !b.label) return -1;
       if (!a.label && b.label) return 1;
+
+      if (a.label && b.label) {
+        const isGenericA = a.label === 'Simplify' || a.label === 'Simplify Fraction';
+        const isGenericB = b.label === 'Simplify' || b.label === 'Simplify Fraction';
+        if (!isGenericA && isGenericB) return -1;
+        if (isGenericA && !isGenericB) return 1;
+      }
 
       return 0;
     });

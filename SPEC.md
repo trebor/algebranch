@@ -62,4 +62,4 @@ To ensure complete semantic consistency between visual rendering, user interacti
 2.  **Source:** The selected Candidate node undergoing transposition. There can be at most one Source selected at any time.
 3.  **Target:** A valid mathematical destination slot receptive to receiving the **Source** node.
 4.  **Static:** Inert terms that are non-interactive in the current state. They display as fully opaque gray elements to establish the stable visual landscape of the equation.
-5.  **Reduce:** Terms containing active constant folding or simplification opportunities. Clicking a **Reduce** point immediately reduces the term to its simplified form.
+5.  **Simplify:** Terms containing active constant folding or simplification opportunities. Clicking a **Simplify** point immediately simplifies the term.

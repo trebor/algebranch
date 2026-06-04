@@ -36,6 +36,21 @@ export const ControlPanel: React.FC = () => {
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
 
+  const activeCardRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (activeCardRef.current) {
+        activeCardRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest',
+        });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [currentNodeId]);
+
   const handleCopyStep = (e: React.MouseEvent, node: Equation, id: string) => {
     e.stopPropagation();
     const eqStr = equationToString(node);
@@ -471,6 +486,7 @@ export const ControlPanel: React.FC = () => {
                   }
                 >
                   <div
+                    ref={isCurrent ? activeCardRef : undefined}
                     onClick={() => handleStepClick(node.id)}
                     onMouseEnter={() => {
                       setHoveredLoopTargetId(node.id);

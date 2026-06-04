@@ -588,7 +588,7 @@ export default function Home() {
         </button>
 
         {/* Main workspace section */}
-        <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+        <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden gap-3">
           <WorkspaceTabs />
           <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
             

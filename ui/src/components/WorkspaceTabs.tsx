@@ -57,9 +57,9 @@ export const WorkspaceTabs: React.FC = () => {
   };
 
   return (
-    <div className="w-full flex items-center justify-between border-b border-white/10 bg-neutral-950/40 px-2 py-1 gap-4 shrink-0 select-none">
+    <div className="w-full flex items-center justify-between bg-transparent px-0 pt-2 pb-0 gap-4 shrink-0 select-none">
       {/* Scrollable tab containers list */}
-      <div className="flex-1 flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
+      <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTabId;
           const isEditing = tab.id === editingTabId;
@@ -69,10 +69,10 @@ export const WorkspaceTabs: React.FC = () => {
               key={tab.id}
               onClick={() => !isEditing && setActiveTabId(tab.id)}
               onDoubleClick={(e) => handleStartEdit(e, tab)}
-              className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer select-none transition-all duration-200 ${
+              className={`group flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer select-none transition-all duration-200 ${
                 isActive
-                  ? 'bg-white/10 border-indigo-500/30 text-white shadow-[0_0_12px_rgba(99,102,241,0.08)]'
-                  : 'bg-transparent border-transparent text-white/50 hover:text-white/80 hover:bg-white/5'
+                  ? 'bg-white/10 border-indigo-500/30 text-white shadow-[0_4px_12px_rgba(0,0,0,0.25)] backdrop-blur-sm'
+                  : 'bg-white/5 border-white/5 text-white/50 hover:text-white/80 hover:bg-white/10 hover:border-white/10 backdrop-blur-sm'
               }`}
             >
               <Layers size={11} className={isActive ? 'text-indigo-400' : 'text-white/30 group-hover:text-white/50'} />
@@ -130,7 +130,7 @@ export const WorkspaceTabs: React.FC = () => {
         <Tooltip content="Open a new algebra workspace" position="bottom">
           <button
             onClick={() => addTab()}
-            className="flex items-center justify-center p-2 rounded-lg border border-transparent hover:border-white/5 bg-transparent hover:bg-white/5 text-white/40 hover:text-white transition-all cursor-pointer"
+            className="flex items-center justify-center p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white/40 hover:text-white transition-all cursor-pointer"
           >
             <Plus size={13} />
           </button>

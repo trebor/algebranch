@@ -748,28 +748,56 @@ export const mathLoadingAtom = atom(false);
 export const addTabAtom = atom(
   null,
   (get, set, initialEqStr?: string) => {
-    const eqStr = initialEqStr || INITIAL_EQUATION_STRING;
     const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     try {
-      const newEq = ensureNodeIds(parseEquation(eqStr));
-      const newTab: WorkspaceTab = {
-        id: newTabId,
-        name: eqStr,
-        historyTree: {
-          "0": {
-            id: "0",
-            equation: newEq,
-            parentId: null,
-            childrenIds: [],
-            label: "Initial",
-            timestamp: Date.now(),
-          }
-        },
-        currentNodeId: "0"
-      };
-
+      let newTab: WorkspaceTab;
       const prevTabs = get(tabsAtom);
+      const activeId = get(activeTabIdAtom);
+      const activeTab = prevTabs.find(t => t.id === activeId) || prevTabs[0];
+
+      if (!initialEqStr && activeTab) {
+        // Clone the active tab's historyTree and current location to allow branching
+        const clonedHistoryTree: Record<string, HistoryNode> = {};
+        Object.keys(activeTab.historyTree).forEach(id => {
+          const node = activeTab.historyTree[id];
+          clonedHistoryTree[id] = {
+            ...node,
+            equation: {
+              lhs: node.equation.lhs.clone(),
+              rhs: node.equation.rhs.clone()
+            },
+            childrenIds: [...node.childrenIds]
+          };
+        });
+
+        newTab = {
+          id: newTabId,
+          name: activeTab.name,
+          historyTree: clonedHistoryTree,
+          currentNodeId: activeTab.currentNodeId
+        };
+      } else {
+        // Create a brand new workspace with the given equation or fallback
+        const eqStr = initialEqStr || INITIAL_EQUATION_STRING;
+        const newEq = ensureNodeIds(parseEquation(eqStr));
+        newTab = {
+          id: newTabId,
+          name: eqStr,
+          historyTree: {
+            "0": {
+              id: "0",
+              equation: newEq,
+              parentId: null,
+              childrenIds: [],
+              label: "Initial",
+              timestamp: Date.now(),
+            }
+          },
+          currentNodeId: "0"
+        };
+      }
+
       set(tabsAtom, [...prevTabs, newTab]);
       set(activeTabIdAtom, newTabId);
       

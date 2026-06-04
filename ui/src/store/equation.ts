@@ -124,7 +124,7 @@ export const feedbackContextAtom = atom<string | null>(null);
 
 export interface ReducibleActionInfo {
   equation: Equation;
-  type: 'reduce' | 'distribute' | 'identity' | 'evaluate';
+  type: 'reduce' | 'distribute' | 'identity';
   label?: string;
 }
 
@@ -323,8 +323,6 @@ export const pushEquationAtom = atom(
           const actionType = action.type;
           if (actionType === 'identity') {
             label = action.label || 'Apply Identity';
-          } else if (actionType === 'evaluate') {
-            label = action.label || 'Evaluate';
           } else {
             label = actionType === 'distribute' ? 'Distribute' : 'Reduce';
           }
@@ -597,7 +595,7 @@ export const syncMathStateAtom = atom(
   null,
   (_get, set, { activePaths, reduciblePaths, targetPaths }: { 
     activePaths: string[]; 
-    reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' | 'identity' | 'evaluate'; label?: string }[]>; 
+    reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' | 'identity'; label?: string }[]>; 
     targetPaths: Record<string, SerializedEquation> 
   }) => {
     set(candidatePathsAtom, new Set<string>(activePaths));

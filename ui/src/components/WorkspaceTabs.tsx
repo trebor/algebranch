@@ -22,6 +22,7 @@ export const WorkspaceTabs: React.FC = () => {
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editName, setEditName] = useState<string>('');
   const editInputRef = useRef<HTMLInputElement>(null);
+  const activeTabRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (editingTabId && editInputRef.current) {
@@ -29,6 +30,17 @@ export const WorkspaceTabs: React.FC = () => {
       editInputRef.current.select();
     }
   }, [editingTabId]);
+
+  // Scroll active tab into view horizontally when activeTabId changes
+  useEffect(() => {
+    if (activeTabRef.current) {
+      activeTabRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest'
+      });
+    }
+  }, [activeTabId]);
 
   const handleStartEdit = (e: React.MouseEvent, tab: WorkspaceTab) => {
     e.stopPropagation();
@@ -67,6 +79,7 @@ export const WorkspaceTabs: React.FC = () => {
           return (
             <div
               key={tab.id}
+              ref={isActive ? activeTabRef : undefined}
               onClick={() => !isEditing && setActiveTabId(tab.id)}
               onDoubleClick={(e) => handleStartEdit(e, tab)}
               className={`group flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer select-none transition-all duration-200 shrink-0 ${

@@ -8,6 +8,7 @@ import { Sidebar } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { Tooltip } from '../components/Tooltip';
+import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import {
   currentEquationAtom,
   previewEquationAtom,
@@ -583,6 +584,7 @@ export default function Home() {
 
         {/* Main workspace section */}
         <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+          <WorkspaceTabs />
           <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
             
             {/* 1. Active Derivation Workspace (Top 2/3) */}

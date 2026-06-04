@@ -31,6 +31,7 @@ import {
   rightSidebarOpenAtom,
   feedbackModalOpenAtom,
   feedbackContextAtom,
+  mathLoadingAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
@@ -65,6 +66,7 @@ export default function Home() {
   const clearMathState = useSetAtom(clearMathStateAtom);
   const setFeedbackModalOpen = useSetAtom(feedbackModalOpenAtom);
   const setFeedbackContext = useSetAtom(feedbackContextAtom);
+  const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
@@ -354,6 +356,7 @@ export default function Home() {
     let active = true;
     const syncState = async () => {
       try {
+        setMathLoading(true);
         const eqStr = equationToString(currentEq);
         const serializedEq = serializeEquation(currentEq);
         
@@ -384,6 +387,10 @@ export default function Home() {
         syncMathState(data);
       } catch (err) {
         console.error('Failed to sync math state from server:', err);
+      } finally {
+        if (active) {
+          setMathLoading(false);
+        }
       }
     };
 
@@ -588,6 +595,14 @@ export default function Home() {
               }}
               className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light cursor-default relative group/canvas"
             >
+              {/* Calculating Math Engine Spinner */}
+              {isMathLoading && (
+                <div className="absolute top-4 left-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/20 bg-neutral-900/60 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]">
+                  <span className="h-2 w-2 rounded-full bg-indigo-400 animate-ping shrink-0" />
+                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-indigo-500/20 border-t-indigo-400" />
+                  <span>Calculating...</span>
+                </div>
+              )}
               {/* Contextual Feedback Button for Active Equation */}
               {currentEq && (
                 <div className="absolute top-4 right-4 z-30 opacity-0 group-hover/canvas:opacity-100 transition-opacity duration-300">

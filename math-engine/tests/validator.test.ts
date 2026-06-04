@@ -146,6 +146,11 @@ describe('Math Engine Validator & Simplifier', () => {
     const eqDecimal2 = parseEquation('x + 0.5 / 2 = 5');
     const simplifiedDecimal2 = autoSimplify(eqDecimal2);
     expect(equationToString(simplifiedDecimal2)).toBe('x + 0.25 = 5');
+
+    // verify integer division simplifies to integer constant instead of fraction
+    const eqInt = parseEquation('x + 6 / 2 = 5');
+    const simplifiedInt = autoSimplify(eqInt);
+    expect(equationToString(simplifiedInt)).toBe('x + 3 = 5');
   });
 
 

@@ -75,6 +75,8 @@ export const WorkspaceTabs: React.FC = () => {
         {tabs.map((tab) => {
           const isActive = tab.id === activeTabId;
           const isEditing = tab.id === editingTabId;
+          const stepCount = tab.historyTree ? Math.max(0, Object.keys(tab.historyTree).length - 1) : 0;
+          const tooltipContent = `${tab.name} (${stepCount} ${stepCount === 1 ? 'step' : 'steps'})`;
 
           return (
             <div
@@ -102,7 +104,7 @@ export const WorkspaceTabs: React.FC = () => {
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <Tooltip content={tab.name} position="bottom" autoAlign={false}>
+                <Tooltip content={tooltipContent} position="bottom" autoAlign={false}>
                   <span className="truncate max-w-[120px] tracking-wide">
                     {truncateName(tab.name)}
                   </span>

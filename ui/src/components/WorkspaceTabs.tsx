@@ -128,7 +128,7 @@ export const WorkspaceTabs: React.FC = () => {
       </div>
 
       {/* Plus Button to add tab - Pinned to the right */}
-      <Tooltip content="New workspace" position="bottom">
+      <Tooltip content="Clone workspace" position="bottom">
         <button
           onClick={() => addTab()}
           className="flex items-center justify-center p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white/40 hover:text-white transition-all cursor-pointer shrink-0"

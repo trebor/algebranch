@@ -37,10 +37,11 @@ import {
   toastAtom,
   createNewSessionAtom,
   currentTabNameAtom,
+  deleteSessionAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
-import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus } from 'lucide-react';
+import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2 } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -74,6 +75,7 @@ export default function Home() {
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
   const createNewSession = useSetAtom(createNewSessionAtom);
+  const deleteSession = useSetAtom(deleteSessionAtom);
   const currentTabName = useAtomValue(currentTabNameAtom);
   const [toast, setToast] = useAtom(toastAtom);
 
@@ -645,9 +647,9 @@ export default function Home() {
                   <span>Calculating...</span>
                 </div>
               ) : null}
-              {/* Contextual Feedback Button for Active Equation */}
+              {/* Contextual Action Buttons for Active Workspace */}
               {currentEq && (
-                <div className="absolute top-4 right-4 z-30 opacity-0 group-hover/canvas:opacity-100 transition-opacity duration-300">
+                <div className="absolute top-4 right-4 z-30 opacity-0 group-hover/canvas:opacity-100 transition-opacity duration-300 flex items-center gap-2">
                   <Tooltip content="Report an issue with this active equation" position="left">
                     <button
                       onClick={(e) => {
@@ -658,6 +660,23 @@ export default function Home() {
                       className="p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-neutral-900/90 text-white/40 hover:text-indigo-400 hover:border-indigo-500/30 transition-all cursor-pointer shadow-md"
                     >
                       <MessageSquarePlus size={14} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Delete workspace" position="left">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteSession(currentSessionId);
+                        trackEvent({
+                          action: 'delete_session',
+                          category: 'sessions',
+                          label: currentSessionId,
+                        });
+                      }}
+                      disabled={savedSessions.length <= 1}
+                      className="p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-red-500/10 text-white/40 hover:text-red-400 hover:border-red-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-md"
+                    >
+                      <Trash2 size={14} />
                     </button>
                   </Tooltip>
                 </div>

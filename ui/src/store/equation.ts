@@ -598,6 +598,15 @@ export const loadSessionAtom = atom(
     const session = sessions.find(s => s.id === sessionId);
     if (!session) return;
 
+    // Check if a tab with this sessionId is already open
+    const prevTabs = get(tabsAtom);
+    const existingTab = prevTabs.find(t => t.sessionId === sessionId);
+    if (existingTab) {
+      set(activeTabIdAtom, existingTab.id);
+      set(currentSessionIdAtom, sessionId);
+      return;
+    }
+
     try {
       const deserialized = deserializeTree(session.tree);
       
@@ -611,7 +620,6 @@ export const loadSessionAtom = atom(
         sessionId: sessionId
       };
 
-      const prevTabs = get(tabsAtom);
       set(tabsAtom, [...prevTabs, newTab]);
       set(activeTabIdAtom, newTabId);
 
@@ -651,6 +659,28 @@ export const deleteSessionAtom = atom(
       localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
     } catch (err) {
       console.error('Failed to save sessions after deletion:', err);
+    }
+
+    // Find the tab associated with this session and close/remove it
+    const tabs = get(tabsAtom);
+    const tabToDelete = tabs.find(t => t.sessionId === sessionId);
+    if (tabToDelete) {
+      const filteredTabs = tabs.filter(t => t.id !== tabToDelete.id);
+      if (filteredTabs.length > 0) {
+        set(tabsAtom, filteredTabs);
+        
+        // If we are deleting the active tab, we need to switch activeTabId
+        const activeId = get(activeTabIdAtom);
+        if (activeId === tabToDelete.id) {
+          const closedIndex = tabs.findIndex(t => t.id === tabToDelete.id);
+          const nextActiveIndex = Math.min(closedIndex, filteredTabs.length - 1);
+          set(activeTabIdAtom, filteredTabs[nextActiveIndex].id);
+        }
+      } else {
+        // If no tabs left, reset to fallback tab
+        set(tabsAtom, getFallbackTabs());
+        set(activeTabIdAtom, 'tab_initial');
+      }
     }
 
     const currentSessionId = get(currentSessionIdAtom);

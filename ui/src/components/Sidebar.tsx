@@ -11,7 +11,6 @@ import {
   savedSessionsAtom,
   currentSessionIdAtom,
   loadSessionAtom,
-  deleteSessionAtom,
   presetCategoriesAtom,
   leftSidebarOpenAtom,
 } from '../store/equation';
@@ -61,7 +60,6 @@ export const Sidebar: React.FC = () => {
   const currentSessionId = useAtomValue(currentSessionIdAtom);
   const currentSession = savedSessions.find(s => s.id === currentSessionId);
   const loadSession = useSetAtom(loadSessionAtom);
-  const deleteSession = useSetAtom(deleteSessionAtom);
   const presetCategories = useAtomValue(presetCategoriesAtom);
   const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>({});
 
@@ -205,99 +203,79 @@ export const Sidebar: React.FC = () => {
             <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
               Recents
             </span>
-            <div className="flex gap-2 items-center relative min-w-0">
-              <div className="flex-1 min-w-0 relative">
-                {!isDropdownOpen && currentSession ? (
-                  <Tooltip 
-                    content={triggerTooltipContent} 
-                    wrapperClassName="w-full min-w-0"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
-                    >
-                      <span className="truncate flex-1 text-left">
-                        {currentSession.name}
-                      </span>
-                      <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                  </Tooltip>
-                ) : (
+            <div className="relative w-full">
+              {!isDropdownOpen && currentSession ? (
+                <Tooltip 
+                  content={triggerTooltipContent} 
+                  wrapperClassName="w-full min-w-0"
+                >
                   <button
                     type="button"
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
                   >
                     <span className="truncate flex-1 text-left">
-                      {currentSession?.name || 'Select equation...'}
+                      {currentSession.name}
                     </span>
                     <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
-                )}
-
-                {isDropdownOpen && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-40 cursor-default" 
-                      onClick={() => setIsDropdownOpen(false)} 
-                    />
-                    <div className="absolute left-0 right-0 mt-1.5 bg-neutral-950/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl overflow-y-auto max-h-60 z-50 py-1 animate-[fadeIn_0.15s_ease-out]">
-                      {[...savedSessions]
-                        .sort((a, b) => b.timestamp - a.timestamp)
-                        .map((session) => {
-                          const isActive = session.id === currentSessionId;
-                          return (
-                            <button
-                              key={session.id}
-                              type="button"
-                              onClick={() => {
-                                loadSession(session.id);
-                                trackEvent({
-                                  action: 'load_session',
-                                  category: 'sessions',
-                                  label: session.id,
-                                });
-                                setIsDropdownOpen(false);
-                                if (window.innerWidth < 1024) {
-                                  setLeftSidebarOpen(false);
-                                }
-                              }}
-                              className={`w-full text-left px-3 py-2 text-xs flex justify-between items-center gap-4 hover:bg-indigo-600/20 transition-colors cursor-pointer ${
-                                isActive ? 'text-indigo-300 bg-indigo-600/5 font-semibold' : 'text-white/70'
-                              }`}
-                            >
-                              <span className="truncate font-mono flex-1">
-                                {session.name}
-                              </span>
-                              <span className="text-[10px] text-white/30 whitespace-nowrap font-sans shrink-0">
-                                {formatTimestamp(session.timestamp)}
-                              </span>
-                            </button>
-                          );
-                        })}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <Tooltip content="Delete workspace">
+                </Tooltip>
+              ) : (
                 <button
                   type="button"
-                  onClick={() => {
-                    deleteSession(currentSessionId);
-                    trackEvent({
-                      action: 'delete_session',
-                      category: 'sessions',
-                      label: currentSessionId,
-                    });
-                  }}
-                  disabled={savedSessions.length <= 1}
-                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl border border-white/10 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
                 >
-                  <Trash2 size={13} />
+                  <span className="truncate flex-1 text-left">
+                    {currentSession?.name || 'Select equation...'}
+                  </span>
+                  <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-              </Tooltip>
+              )}
+
+              {isDropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40 cursor-default" 
+                    onClick={() => setIsDropdownOpen(false)} 
+                  />
+                  <div className="absolute left-0 right-0 mt-1.5 bg-neutral-950/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl overflow-y-auto max-h-60 z-50 py-1 animate-[fadeIn_0.15s_ease-out]">
+                    {[...savedSessions]
+                      .sort((a, b) => b.timestamp - a.timestamp)
+                      .map((session) => {
+                        const isActive = session.id === currentSessionId;
+                        return (
+                          <button
+                            key={session.id}
+                            type="button"
+                            onClick={() => {
+                              loadSession(session.id);
+                              trackEvent({
+                                action: 'load_session',
+                                category: 'sessions',
+                                label: session.id,
+                              });
+                              setIsDropdownOpen(false);
+                              if (window.innerWidth < 1024) {
+                                setLeftSidebarOpen(false);
+                              }
+                            }}
+                            className={`w-full text-left px-3 py-2 text-xs flex justify-between items-center gap-4 hover:bg-indigo-600/20 transition-colors cursor-pointer ${
+                              isActive ? 'text-indigo-300 bg-indigo-600/5 font-semibold' : 'text-white/70'
+                            }`}
+                          >
+                            <span className="truncate font-mono flex-1">
+                              {session.name}
+                            </span>
+                            <span className="text-[10px] text-white/30 whitespace-nowrap font-sans shrink-0">
+                              {formatTimestamp(session.timestamp)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

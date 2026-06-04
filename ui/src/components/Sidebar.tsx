@@ -51,6 +51,11 @@ const formatTimestamp = (ts: number): string => {
   return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
+const getStepCount = (tree: Record<string, any> | undefined | null): number => {
+  if (!tree) return 0;
+  return Math.max(0, Object.keys(tree).length - 1);
+};
+
 export const Sidebar: React.FC = () => {
   const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
   const resetToEquation = useSetAtom(resetToEquationStringAtom);
@@ -244,6 +249,7 @@ export const Sidebar: React.FC = () => {
                       .sort((a, b) => b.timestamp - a.timestamp)
                       .map((session) => {
                         const isActive = session.id === currentSessionId;
+                        const stepCount = getStepCount(session.tree);
                         return (
                           <button
                             key={session.id}
@@ -267,8 +273,10 @@ export const Sidebar: React.FC = () => {
                             <span className="truncate font-mono flex-1">
                               {session.name}
                             </span>
-                            <span className="text-[10px] text-white/30 whitespace-nowrap font-sans shrink-0">
-                              {formatTimestamp(session.timestamp)}
+                            <span className="text-[10px] text-white/30 whitespace-nowrap font-sans shrink-0 flex items-center gap-1.5">
+                              <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
+                              <span>·</span>
+                              <span>{formatTimestamp(session.timestamp)}</span>
                             </span>
                           </button>
                         );

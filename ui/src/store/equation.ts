@@ -55,6 +55,18 @@ export const deserializeTree = (serialized: Record<string, SerializedHistoryNode
   return tree;
 };
 
+export const getSessionLatestTimestamp = (tree: Record<string, HistoryNode> | Record<string, SerializedHistoryNode>): number => {
+  const nodes = Object.values(tree);
+  if (nodes.length === 0) return Date.now();
+  let maxTs = 0;
+  for (const node of nodes) {
+    if (node.timestamp && node.timestamp > maxTs) {
+      maxTs = node.timestamp;
+    }
+  }
+  return maxTs > 0 ? maxTs : Date.now();
+};
+
 export interface VisualTreeNode extends HistoryNode {
   depth: number;
   column: number;
@@ -77,6 +89,7 @@ export interface WorkspaceTab {
   isCustomNamed?: boolean;
   isModified?: boolean;
   sessionId?: string;
+  timestamp?: number;
 }
 
 // Helper for fallback/static initial tabs
@@ -95,6 +108,7 @@ const getFallbackTabs = (): WorkspaceTab[] => [
       }
     },
     currentNodeId: "0",
+    timestamp: Date.now(),
   }
 ];
 
@@ -160,7 +174,8 @@ export const historyTreeAtom = atom(
           ...t,
           historyTree: nextTree,
           name: tabName,
-          isModified: true
+          isModified: true,
+          timestamp: Date.now()
         };
       }
       return t;
@@ -549,7 +564,8 @@ export const createNewSessionAtom = atom(
         historyTree: newTree,
         currentNodeId: "0",
         isCustomNamed: !!customName,
-        sessionId: newId
+        sessionId: newId,
+        timestamp: Date.now()
       };
 
       const prevTabs = get(tabsAtom);
@@ -614,12 +630,14 @@ export const loadSessionAtom = atom(
       
       // Create a brand new workspace tab for this session and select it
       const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const fallbackTimestamp = getSessionLatestTimestamp(deserialized);
       const newTab: WorkspaceTab = {
         id: newTabId,
         name: session.name,
         historyTree: deserialized,
         currentNodeId: session.currentNodeId,
-        sessionId: sessionId
+        sessionId: sessionId,
+        timestamp: session.timestamp || fallbackTimestamp
       };
 
       set(tabsAtom, [...prevTabs, newTab]);
@@ -908,7 +926,8 @@ export const addTabAtom = atom(
           historyTree: clonedHistoryTree,
           currentNodeId: activeTab.currentNodeId,
           isCustomNamed: activeTab.isCustomNamed,
-          sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: Date.now()
         };
 
         // Show transient success message
@@ -931,7 +950,8 @@ export const addTabAtom = atom(
             }
           },
           currentNodeId: "0",
-          sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: Date.now()
         };
       }
 
@@ -1014,7 +1034,8 @@ export const renameTabAtom = atom(
           ...t, 
           name: name.trim(),
           isCustomNamed: true,
-          isModified: true 
+          isModified: true,
+          timestamp: Date.now()
         };
       }
       return t;
@@ -1036,11 +1057,15 @@ export const hydrateWorkspaceTabsAtom = atom(
       
       if (savedTabs) {
         const parsed = JSON.parse(savedTabs);
-        const deserialized = parsed.map((tab: any) => ({
-          ...tab,
-          historyTree: deserializeTree(tab.historyTree),
-          sessionId: tab.sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        }));
+        const deserialized = parsed.map((tab: any) => {
+          const tree = deserializeTree(tab.historyTree);
+          return {
+            ...tab,
+            historyTree: tree,
+            sessionId: tab.sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            timestamp: tab.timestamp || getSessionLatestTimestamp(tree)
+          };
+        });
         set(rawTabsAtom, deserialized);
 
         const activeId = savedActiveId || 'tab_initial';

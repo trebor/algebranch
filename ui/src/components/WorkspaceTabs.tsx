@@ -12,6 +12,16 @@ import {
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
 
+const formatTimestamp = (ts: number): string => {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'Just now';
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
 export const WorkspaceTabs: React.FC = () => {
   const [tabs, setTabs] = useAtom(tabsAtom);
   const [activeTabId, setActiveTabId] = useAtom(activeTabIdAtom);
@@ -76,7 +86,23 @@ export const WorkspaceTabs: React.FC = () => {
           const isActive = tab.id === activeTabId;
           const isEditing = tab.id === editingTabId;
           const stepCount = tab.historyTree ? Math.max(0, Object.keys(tab.historyTree).length - 1) : 0;
-          const tooltipContent = `${tab.name} (${stepCount} ${stepCount === 1 ? 'step' : 'steps'})`;
+          const lastEditTime = tab.timestamp || (() => {
+            if (!tab.historyTree) return Date.now();
+            const vals = Object.values(tab.historyTree).map(n => n.timestamp || 0);
+            return vals.length > 0 ? Math.max(...vals) : Date.now();
+          })();
+
+          const tooltipContent = (
+            <div className="flex flex-col gap-1 min-w-[140px] text-left">
+              <div className="font-bold text-white truncate max-w-[180px]">
+                {tab.name}
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-indigo-300/80 font-medium gap-4">
+                <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
+                <span>{formatTimestamp(lastEditTime)}</span>
+              </div>
+            </div>
+          );
 
           return (
             <div

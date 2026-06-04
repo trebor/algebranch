@@ -89,7 +89,10 @@ const ALL_RULE_TEST_CASES: RuleTestCase[] = [
   { ruleId: 'trig_double_cos_form3', input: 'cos(2 * x)', expected: '1-2*sin(x)^2' },
   { ruleId: 'trig_double_cos_form3_reverse', input: '1 - 2 * sin(x)^2', expected: 'cos(2*x)' },
   { ruleId: 'trig_double_tan', input: 'tan(2 * x)', expected: '(2*tan(x))/(1-tan(x)^2)' },
-  { ruleId: 'trig_double_tan_reverse', input: '(2 * tan(x)) / (1 - tan(x)^2)', expected: 'tan(2*x)' }
+  { ruleId: 'trig_double_tan_reverse', input: '(2 * tan(x)) / (1 - tan(x)^2)', expected: 'tan(2*x)' },
+  { ruleId: 'repeated_addition_2', input: '2 * (x + 3)', expected: '(x+3)+(x+3)' },
+  { ruleId: 'repeated_addition_2_right', input: '(x + 3) * 2', expected: '(x+3)+(x+3)' },
+  { ruleId: 'repeated_addition_2_reverse', input: '(x + 3) + (x + 3)', expected: '2*(x+3)' }
 ];
 
 describe('Exhaustive Bidirectional Identity Rules Verification', () => {

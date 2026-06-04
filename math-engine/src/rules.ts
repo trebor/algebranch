@@ -579,6 +579,30 @@ const RAW_RULES: RawRule[] = [
     targetPatternStr: 'tan(2 * _theta)',
     description: 'Condenses tangent expression into double angle tangent.',
   },
+  {
+    id: 'repeated_addition_2',
+    name: 'Express as Repeated Addition',
+    category: 'Basic Arithmetic',
+    sourcePatternStr: '2 * _A',
+    targetPatternStr: '_A + _A',
+    description: 'Converts multiplication by 2 into repeated addition of the term.',
+  },
+  {
+    id: 'repeated_addition_2_right',
+    name: 'Express as Repeated Addition',
+    category: 'Basic Arithmetic',
+    sourcePatternStr: '_A * 2',
+    targetPatternStr: '_A + _A',
+    description: 'Converts multiplication by 2 into repeated addition of the term.',
+  },
+  {
+    id: 'repeated_addition_2_reverse',
+    name: 'Express as Multiplication',
+    category: 'Basic Arithmetic',
+    sourcePatternStr: '_A + _A',
+    targetPatternStr: '2 * _A',
+    description: 'Combines two identical terms into multiplication by 2.',
+  },
 ];
 
 export const HIGH_SCHOOL_IDENTITIES: RewriteRule[] = RAW_RULES.map((rule) => {

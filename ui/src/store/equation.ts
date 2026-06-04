@@ -96,7 +96,7 @@ export interface WorkspaceTab {
 const getFallbackTabs = (): WorkspaceTab[] => [
   {
     id: 'tab_initial',
-    name: INITIAL_EQUATION_STRING,
+    name: 'Sample Workspace',
     historyTree: {
       "0": {
         id: "0",
@@ -108,6 +108,7 @@ const getFallbackTabs = (): WorkspaceTab[] => [
       }
     },
     currentNodeId: "0",
+    isCustomNamed: true,
     timestamp: Date.now(),
   }
 ];
@@ -217,7 +218,7 @@ export const currentTabNameAtom = atom<string>((get) => {
   const tabs = get(tabsAtom);
   const activeId = get(activeTabIdAtom);
   const activeTab = tabs.find(t => t.id === activeId) || tabs[0];
-  return activeTab?.name || INITIAL_EQUATION_STRING;
+  return activeTab?.name || 'Sample Workspace';
 });
 
 // Saved sessions state
@@ -982,7 +983,7 @@ export const closeTabAtom = atom(
       set(tabsAtom, [
         {
           id: 'tab_initial',
-          name: INITIAL_EQUATION_STRING,
+          name: 'Sample Workspace',
           historyTree: {
             "0": {
               id: "0",
@@ -994,7 +995,9 @@ export const closeTabAtom = atom(
             }
           },
           currentNodeId: "0",
-          sessionId: 'session_initial'
+          isCustomNamed: true,
+          sessionId: 'session_initial',
+          timestamp: Date.now()
         }
       ]);
       set(activeTabIdAtom, 'tab_initial');

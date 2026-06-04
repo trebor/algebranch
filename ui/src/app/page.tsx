@@ -133,7 +133,7 @@ export default function Home() {
               };
               return {
                 id: 'session_initial',
-                name: INITIAL_EQUATION_STRING,
+                name: 'Sample Workspace',
                 timestamp: Date.now(),
                 tree: serializeTree(initialTree),
                 currentNodeId: "0",
@@ -283,7 +283,7 @@ export default function Home() {
       };
       const defaultSession: SavedSession = {
         id: defaultId,
-        name: INITIAL_EQUATION_STRING,
+        name: "Sample Workspace",
         timestamp: Date.now(),
         tree: serializeTree(initialTree),
         currentNodeId: "0",
@@ -312,7 +312,7 @@ export default function Home() {
     // 1. Save active workspace to the current session's entry in savedSessions library
     try {
       const serialized = serializeTree(tree);
-      const sessionName = currentTabName || INITIAL_EQUATION_STRING;
+      const sessionName = currentTabName || "Sample Workspace";
 
       // Update the active session in our list
       setSavedSessions(prevSessions => {

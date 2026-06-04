@@ -12,6 +12,16 @@ import {
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
 
+const formatTimestamp = (ts: number): string => {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'Just now';
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
 export const WorkspaceTabs: React.FC = () => {
   const [tabs, setTabs] = useAtom(tabsAtom);
   const [activeTabId, setActiveTabId] = useAtom(activeTabIdAtom);
@@ -22,6 +32,7 @@ export const WorkspaceTabs: React.FC = () => {
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editName, setEditName] = useState<string>('');
   const editInputRef = useRef<HTMLInputElement>(null);
+  const activeTabRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (editingTabId && editInputRef.current) {
@@ -29,6 +40,17 @@ export const WorkspaceTabs: React.FC = () => {
       editInputRef.current.select();
     }
   }, [editingTabId]);
+
+  // Scroll active tab into view horizontally when activeTabId changes
+  useEffect(() => {
+    if (activeTabRef.current) {
+      activeTabRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest'
+      });
+    }
+  }, [activeTabId]);
 
   const handleStartEdit = (e: React.MouseEvent, tab: WorkspaceTab) => {
     e.stopPropagation();
@@ -57,22 +79,41 @@ export const WorkspaceTabs: React.FC = () => {
   };
 
   return (
-    <div className="w-full flex items-center justify-between border-b border-white/10 bg-neutral-950/40 px-2 py-1 gap-4 shrink-0 select-none">
+    <div className="w-full flex items-center justify-between bg-transparent px-0 pt-2 pb-0 gap-4 shrink-0 select-none">
       {/* Scrollable tab containers list */}
-      <div className="flex-1 flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
+      <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTabId;
           const isEditing = tab.id === editingTabId;
+          const stepCount = tab.historyTree ? Math.max(0, Object.keys(tab.historyTree).length - 1) : 0;
+          const lastEditTime = tab.timestamp || (() => {
+            if (!tab.historyTree) return Date.now();
+            const vals = Object.values(tab.historyTree).map(n => n.timestamp || 0);
+            return vals.length > 0 ? Math.max(...vals) : Date.now();
+          })();
+
+          const tooltipContent = (
+            <div className="flex flex-col gap-1 min-w-[140px] text-left">
+              <div className="font-bold text-white truncate max-w-[180px]">
+                {tab.name}
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-indigo-300/80 font-medium gap-4">
+                <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
+                <span>{formatTimestamp(lastEditTime)}</span>
+              </div>
+            </div>
+          );
 
           return (
             <div
               key={tab.id}
+              ref={isActive ? activeTabRef : undefined}
               onClick={() => !isEditing && setActiveTabId(tab.id)}
               onDoubleClick={(e) => handleStartEdit(e, tab)}
-              className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer select-none transition-all duration-200 ${
+              className={`group flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer select-none transition-all duration-200 shrink-0 ${
                 isActive
-                  ? 'bg-white/10 border-indigo-500/30 text-white shadow-[0_0_12px_rgba(99,102,241,0.08)]'
-                  : 'bg-transparent border-transparent text-white/50 hover:text-white/80 hover:bg-white/5'
+                  ? 'bg-white/10 border-indigo-500/30 text-white shadow-[0_4px_12px_rgba(0,0,0,0.25)] backdrop-blur-sm'
+                  : 'bg-white/5 border-white/5 text-white/50 hover:text-white/80 hover:bg-white/10 hover:border-white/10 backdrop-blur-sm'
               }`}
             >
               <Layers size={11} className={isActive ? 'text-indigo-400' : 'text-white/30 group-hover:text-white/50'} />
@@ -89,9 +130,11 @@ export const WorkspaceTabs: React.FC = () => {
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span className="truncate max-w-[120px] tracking-wide" title={tab.name}>
-                  {truncateName(tab.name)}
-                </span>
+                <Tooltip content={tooltipContent} position="bottom" autoAlign={false}>
+                  <span className="truncate max-w-[120px] tracking-wide">
+                    {truncateName(tab.name)}
+                  </span>
+                </Tooltip>
               )}
 
               {/* Action buttons inside tab */}
@@ -99,43 +142,45 @@ export const WorkspaceTabs: React.FC = () => {
                 <div className="flex items-center gap-1">
                   {/* Small pencil icon visible on hover for active tab */}
                   {isActive && (
-                    <button
-                      onClick={(e) => handleStartEdit(e, tab)}
-                      className="opacity-0 group-hover:opacity-100 hover:text-indigo-400 p-0.5 rounded cursor-pointer transition-all duration-150"
-                      title="Rename workspace"
-                    >
-                      <Pencil size={9} />
-                    </button>
+                    <Tooltip content="Rename workspace" position="bottom" autoAlign={false}>
+                      <button
+                        onClick={(e) => handleStartEdit(e, tab)}
+                        className="contextual-actions hover:text-indigo-400 p-0.5 rounded cursor-pointer"
+                      >
+                        <Pencil size={9} />
+                      </button>
+                    </Tooltip>
                   )}
                   {/* Close tab button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(tab.id);
-                    }}
-                    className={`p-0.5 rounded hover:bg-white/10 hover:text-white cursor-pointer transition-all duration-150 ${
-                      isActive ? 'text-white/40' : 'text-white/20'
-                    }`}
-                    title="Close workspace tab"
-                  >
-                    <X size={10} />
-                  </button>
+                  <Tooltip content="Close workspace tab" position="bottom" autoAlign={false}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(tab.id);
+                      }}
+                      className={`p-0.5 rounded hover:bg-white/10 hover:text-white cursor-pointer transition-all duration-150 ${
+                        isActive ? 'text-white/40' : 'text-white/20'
+                      }`}
+                    >
+                      <X size={10} />
+                    </button>
+                  </Tooltip>
                 </div>
               )}
             </div>
           );
         })}
-
-        {/* Plus Button to add tab */}
-        <Tooltip content="Open a new algebra workspace" position="bottom">
-          <button
-            onClick={() => addTab()}
-            className="flex items-center justify-center p-2 rounded-lg border border-transparent hover:border-white/5 bg-transparent hover:bg-white/5 text-white/40 hover:text-white transition-all cursor-pointer"
-          >
-            <Plus size={13} />
-          </button>
-        </Tooltip>
       </div>
+
+      {/* Plus Button to add tab - Pinned to the right */}
+      <Tooltip content="Clone workspace" position="bottom" autoAlign={false}>
+        <button
+          onClick={() => addTab()}
+          className="flex items-center justify-center p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white/40 hover:text-white transition-all cursor-pointer shrink-0"
+        >
+          <Plus size={13} />
+        </button>
+      </Tooltip>
     </div>
   );
 };

@@ -519,7 +519,7 @@ export const ControlPanel: React.FC = () => {
                     </span>
 
                     {/* Hover Actions Toolbar */}
-                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/node:opacity-100 transition-all duration-150 z-20">
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 contextual-actions z-20">
                       <Tooltip content="Report issue with this step" position="top">
                         <button
                           onClick={(e) => {

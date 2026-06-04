@@ -7,6 +7,7 @@ import { PreviewEquationNode } from '../components/PreviewEquationNode';
 import { Sidebar } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import { FeedbackModal } from '../components/FeedbackModal';
+import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
 import { Tooltip } from '../components/Tooltip';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import {
@@ -33,10 +34,18 @@ import {
   feedbackModalOpenAtom,
   feedbackContextAtom,
   mathLoadingAtom,
+  hydrateWorkspaceTabsAtom,
+  toastAtom,
+  createNewSessionAtom,
+  currentTabNameAtom,
+  deleteSessionAtom,
+  deleteConfirmationModalOpenAtom,
+  tabsAtom,
+  activeTabIdAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
-import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus } from 'lucide-react';
+import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2 } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -61,6 +70,8 @@ export default function Home() {
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
   const [sharedCopied, setSharedCopied] = React.useState(false);
   const [savedSessions, setSavedSessions] = useAtom(savedSessionsAtom);
+  const tabs = useAtomValue(tabsAtom);
+  const activeTabId = useAtomValue(activeTabIdAtom);
   const [currentSessionId, setCurrentSessionId] = useAtom(currentSessionIdAtom);
 
   const syncMathState = useSetAtom(syncMathStateAtom);
@@ -68,6 +79,13 @@ export default function Home() {
   const setFeedbackModalOpen = useSetAtom(feedbackModalOpenAtom);
   const setFeedbackContext = useSetAtom(feedbackContextAtom);
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
+  const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
+  const createNewSession = useSetAtom(createNewSessionAtom);
+  const deleteSession = useSetAtom(deleteSessionAtom);
+  const setDeleteConfirmationModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
+  const currentTabName = useAtomValue(currentTabNameAtom);
+  const [toast, setToast] = useAtom(toastAtom);
+  const [isHydrated, setIsHydrated] = React.useState(false);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
@@ -80,187 +98,221 @@ export default function Home() {
 
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
-    // 0. Set default sidebar states for mobile/tablet
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-    if (isMobile) {
-      setLeftSidebarOpen(false);
-      setRightSidebarOpen(false);
-    }
+    const initialize = () => {
+      // Hydrate workspace tabs state
+      hydrateWorkspaceTabs();
 
-    // 1. First, load the library list of saved sessions
-    let sessions: SavedSession[] = [];
-    try {
-      const savedSessionsRaw = localStorage.getItem('algebranch_saved_sessions');
-      if (savedSessionsRaw) {
-        sessions = JSON.parse(savedSessionsRaw);
-        
-        // Auto-migrate legacy default equation to the new optimized default
-        let migrated = false;
-        sessions = sessions.map(s => {
-          if (s.id === 'session_initial' && s.name === '3 * x + 5 = x + 13') {
-            migrated = true;
-            const initialTree: Record<string, HistoryNode> = {
-              "0": {
-                id: "0",
-                equation: parseEquation(INITIAL_EQUATION_STRING),
-                parentId: null,
-                childrenIds: [],
-                label: "Initial",
+      // 0. Set default sidebar states for mobile/tablet
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+      if (isMobile) {
+        setLeftSidebarOpen(false);
+        setRightSidebarOpen(false);
+      }
+
+      // 1. First, load the library list of saved sessions
+      let sessions: SavedSession[] = [];
+      try {
+        const savedSessionsRaw = localStorage.getItem('algebranch_saved_sessions');
+        if (savedSessionsRaw) {
+          sessions = JSON.parse(savedSessionsRaw);
+          
+          // Auto-migrate legacy default equation to the new optimized default
+          let migrated = false;
+          sessions = sessions.map(s => {
+            if (s.id === 'session_initial' && s.name === '3 * x + 5 = x + 13') {
+              migrated = true;
+              const initialTree: Record<string, HistoryNode> = {
+                "0": {
+                  id: "0",
+                  equation: parseEquation(INITIAL_EQUATION_STRING),
+                  parentId: null,
+                  childrenIds: [],
+                  label: "Initial",
+                  timestamp: Date.now(),
+                }
+              };
+              return {
+                id: 'session_initial',
+                name: 'Sample Workspace',
                 timestamp: Date.now(),
-              }
-            };
-            return {
-              id: 'session_initial',
-              name: INITIAL_EQUATION_STRING,
-              timestamp: Date.now(),
-              tree: serializeTree(initialTree),
-              currentNodeId: "0",
-            };
-          }
-          return s;
-        });
+                tree: serializeTree(initialTree),
+                currentNodeId: "0",
+              };
+            }
+            return s;
+          });
 
-        if (migrated) {
-          localStorage.setItem('algebranch_saved_sessions', JSON.stringify(sessions));
+          if (migrated) {
+            localStorage.setItem('algebranch_saved_sessions', JSON.stringify(sessions));
+          }
+
+          setSavedSessions(sessions);
+        }
+      } catch (err) {
+        console.error('Failed to load saved sessions list:', err);
+      }
+
+      // Check if we have saved tabs to prevent overwriting hydrated tab trees with stale sessions
+      const hasSavedTabs = typeof window !== 'undefined' && localStorage.getItem('algebranch_workspace_tabs') !== null;
+      if (hasSavedTabs) {
+        const params = new URLSearchParams(window.location.search);
+        const urlEq = params.get('eq');
+        if (urlEq) {
+          try {
+            const cleanEqStr = decodeURIComponent(urlEq);
+            createNewSession(cleanEqStr);
+            // Clear query parameter from the URL to prevent duplicate tabs on page refresh
+            window.history.replaceState(null, '', window.location.pathname);
+          } catch (err) {
+            console.error('Failed to parse equation from URL query parameter:', err);
+          }
+        }
+        return;
+      }
+
+      // 2. Check URL query string precedence (if sharing) - for legacy/first load without workspace tabs
+      const params = new URLSearchParams(window.location.search);
+      const urlEq = params.get('eq');
+      
+      if (urlEq) {
+        try {
+          const cleanEqStr = decodeURIComponent(urlEq);
+          const newEq = ensureNodeIds(parseEquation(cleanEqStr));
+          const newTree: Record<string, HistoryNode> = {
+            "0": {
+              id: "0",
+              equation: newEq,
+              parentId: null,
+              childrenIds: [],
+              label: "Initial",
+              timestamp: Date.now(),
+            }
+          };
+
+          // Create a new session for the shared link so it doesn't overwrite existing work
+          const newSessionId = `session_shared_${Date.now()}`;
+          setTree(newTree);
+          setCurrentNodeId("0");
+          setCurrentSessionId(newSessionId);
+
+          // Add this new shared session to the library list
+          const newSession: SavedSession = {
+            id: newSessionId,
+            name: cleanEqStr,
+            timestamp: Date.now(),
+            tree: serializeTree(newTree),
+            currentNodeId: "0",
+          };
+          const updated = [newSession, ...sessions];
+          setSavedSessions(updated);
+          localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
+          localStorage.setItem('algebranch_current_session_id', newSessionId);
+          // Clear query parameter from the URL to prevent duplicate tabs on page refresh
+          window.history.replaceState(null, '', window.location.pathname);
+          return;
+        } catch (err) {
+          console.error('Failed to parse equation from URL query parameter:', err);
+        }
+      }
+      
+      // 3. Otherwise, check if there was a saved active session
+      try {
+        const savedSessionId = localStorage.getItem('algebranch_current_session_id');
+        if (savedSessionId && sessions.length > 0) {
+          const activeSession = sessions.find(s => s.id === savedSessionId);
+          if (activeSession) {
+            setTree(deserializeTree(activeSession.tree));
+            setCurrentNodeId(activeSession.currentNodeId);
+            setCurrentSessionId(savedSessionId);
+            return;
+          }
         }
 
-        setSavedSessions(sessions);
-      }
-    } catch (err) {
-      console.error('Failed to load saved sessions list:', err);
-    }
-
-    // 2. Check URL query string precedence (if sharing)
-    const params = new URLSearchParams(window.location.search);
-    const urlEq = params.get('eq');
-    
-    if (urlEq) {
-      try {
-        const cleanEqStr = decodeURIComponent(urlEq);
-        const newEq = ensureNodeIds(parseEquation(cleanEqStr));
-        const newTree: Record<string, HistoryNode> = {
-          "0": {
-            id: "0",
-            equation: newEq,
-            parentId: null,
-            childrenIds: [],
-            label: "Initial",
-            timestamp: Date.now(),
-          }
-        };
-
-        // Create a new session for the shared link so it doesn't overwrite existing work
-        const newSessionId = `session_shared_${Date.now()}`;
-        setTree(newTree);
-        setCurrentNodeId("0");
-        setCurrentSessionId(newSessionId);
-
-        // Add this new shared session to the library list
-        const newSession: SavedSession = {
-          id: newSessionId,
-          name: cleanEqStr,
-          timestamp: Date.now(),
-          tree: serializeTree(newTree),
-          currentNodeId: "0",
-        };
-        const updated = [newSession, ...sessions];
-        setSavedSessions(updated);
-        localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
-        localStorage.setItem('algebranch_current_session_id', newSessionId);
-        return;
-      } catch (err) {
-        console.error('Failed to parse equation from URL query parameter:', err);
-      }
-    }
-    
-    // 3. Otherwise, check if there was a saved active session
-    try {
-      const savedSessionId = localStorage.getItem('algebranch_current_session_id');
-      if (savedSessionId && sessions.length > 0) {
-        const activeSession = sessions.find(s => s.id === savedSessionId);
-        if (activeSession) {
+        // Fallback: If no active session found but we have sessions in the list, load the first one
+        if (sessions.length > 0) {
+          const activeSession = sessions[0];
           setTree(deserializeTree(activeSession.tree));
           setCurrentNodeId(activeSession.currentNodeId);
-          setCurrentSessionId(savedSessionId);
+          setCurrentSessionId(activeSession.id);
+          localStorage.setItem('algebranch_current_session_id', activeSession.id);
           return;
         }
+
+        // 4. Legacy migration fallback: Check old workspace storage keys (backward compatibility)
+        const savedTreeRaw = localStorage.getItem('algebranch_history_tree');
+        const savedNodeId = localStorage.getItem('algebranch_current_node_id');
+        if (savedTreeRaw && savedNodeId) {
+          const parsedRaw = JSON.parse(savedTreeRaw);
+          const deserializedTree = deserializeTree(parsedRaw);
+          setTree(deserializedTree);
+          setCurrentNodeId(savedNodeId);
+          
+          // Migrate legacy workspace into a new session
+          const initialEqStr = equationToString(deserializedTree["0"].equation);
+          const legacySessionId = `session_migrated_${Date.now()}`;
+          const newSession: SavedSession = {
+            id: legacySessionId,
+            name: initialEqStr,
+            timestamp: Date.now(),
+            tree: parsedRaw,
+            currentNodeId: savedNodeId,
+          };
+          const updated = [newSession, ...sessions];
+          setSavedSessions(updated);
+          setCurrentSessionId(legacySessionId);
+          localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
+          localStorage.setItem('algebranch_current_session_id', legacySessionId);
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to load history from local storage:', err);
       }
 
-      // Fallback: If no active session found but we have sessions in the list, load the first one
-      if (sessions.length > 0) {
-        const activeSession = sessions[0];
-        setTree(deserializeTree(activeSession.tree));
-        setCurrentNodeId(activeSession.currentNodeId);
-        setCurrentSessionId(activeSession.id);
-        localStorage.setItem('algebranch_current_session_id', activeSession.id);
-        return;
-      }
-
-      // 4. Legacy migration fallback: Check old workspace storage keys (backward compatibility)
-      const savedTreeRaw = localStorage.getItem('algebranch_history_tree');
-      const savedNodeId = localStorage.getItem('algebranch_current_node_id');
-      if (savedTreeRaw && savedNodeId) {
-        const parsedRaw = JSON.parse(savedTreeRaw);
-        const deserializedTree = deserializeTree(parsedRaw);
-        setTree(deserializedTree);
-        setCurrentNodeId(savedNodeId);
-        
-        // Migrate legacy workspace into a new session
-        const initialEqStr = equationToString(deserializedTree["0"].equation);
-        const legacySessionId = `session_migrated_${Date.now()}`;
-        const newSession: SavedSession = {
-          id: legacySessionId,
-          name: initialEqStr,
+      // 5. Default starting state if everything is empty
+      const defaultId = "session_initial";
+      setCurrentSessionId(defaultId);
+      const initialTree: Record<string, HistoryNode> = {
+        "0": {
+          id: "0",
+          equation: parseEquation(INITIAL_EQUATION_STRING),
+          parentId: null,
+          childrenIds: [],
+          label: "Initial",
           timestamp: Date.now(),
-          tree: parsedRaw,
-          currentNodeId: savedNodeId,
-        };
-        const updated = [newSession, ...sessions];
-        setSavedSessions(updated);
-        setCurrentSessionId(legacySessionId);
-        localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
-        localStorage.setItem('algebranch_current_session_id', legacySessionId);
-        return;
-      }
-    } catch (err) {
-      console.error('Failed to load history from local storage:', err);
-    }
-
-    // 5. Default starting state if everything is empty
-    const defaultId = "session_initial";
-    setCurrentSessionId(defaultId);
-    const initialTree: Record<string, HistoryNode> = {
-      "0": {
-        id: "0",
-        equation: parseEquation(INITIAL_EQUATION_STRING),
-        parentId: null,
-        childrenIds: [],
-        label: "Initial",
+        }
+      };
+      const defaultSession: SavedSession = {
+        id: defaultId,
+        name: "Sample Workspace",
         timestamp: Date.now(),
-      }
+        tree: serializeTree(initialTree),
+        currentNodeId: "0",
+      };
+      setSavedSessions([defaultSession]);
+      localStorage.setItem('algebranch_saved_sessions', JSON.stringify([defaultSession]));
+      localStorage.setItem('algebranch_current_session_id', defaultId);
     };
-    const defaultSession: SavedSession = {
-      id: defaultId,
-      name: INITIAL_EQUATION_STRING,
-      timestamp: Date.now(),
-      tree: serializeTree(initialTree),
-      currentNodeId: "0",
-    };
-    setSavedSessions([defaultSession]);
-    localStorage.setItem('algebranch_saved_sessions', JSON.stringify([defaultSession]));
-    localStorage.setItem('algebranch_current_session_id', defaultId);
 
-  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen]);
+    initialize();
+    setIsHydrated(true);
+  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession]);
 
   // Save derivation steps to local storage and update address bar URL reactively
   React.useEffect(() => {
     if (!tree || !currentNodeId || !tree[currentNodeId] || !currentSessionId) return;
 
+    // Do not save to the "Recents" library list unless the user has actually modified the workspace,
+    // or if the session is already registered in the library.
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    const isAlreadySaved = savedSessions.some(s => s.id === currentSessionId);
+    if (!isAlreadySaved && activeTab && !activeTab.isModified) {
+      return;
+    }
+
     // 1. Save active workspace to the current session's entry in savedSessions library
     try {
       const serialized = serializeTree(tree);
-      const startEq = tree["0"]?.equation;
-      const sessionName = startEq ? equationToString(startEq) : INITIAL_EQUATION_STRING;
+      const sessionName = currentTabName || "Sample Workspace";
 
       // Update the active session in our list
       setSavedSessions(prevSessions => {
@@ -302,32 +354,27 @@ export default function Home() {
       console.error('Failed to save history to local storage:', err);
     }
 
-    // 2. Update address bar URL query parameter reactively
-    try {
-      const currentEqVal = tree[currentNodeId].equation;
-      const eqStr = equationToString(currentEqVal);
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('eq') !== eqStr) {
-        params.set('eq', eqStr);
-        window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
-      }
-    } catch (err) {
-      console.error('Failed to update URL search parameter:', err);
-    }
-  }, [tree, currentNodeId, currentSessionId, setSavedSessions]);
+  }, [tree, currentNodeId, currentSessionId, setSavedSessions, currentTabName]);
 
   const handleShare = () => {
-    const shareUrl = window.location.href;
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      setSharedCopied(true);
-      trackEvent({
-        action: 'share_link',
-        category: 'interaction',
+    try {
+      const eqStr = currentEq ? equationToString(currentEq) : '';
+      const baseUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
+      const shareUrl = eqStr ? `${baseUrl}?eq=${encodeURIComponent(eqStr)}` : baseUrl;
+
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        setSharedCopied(true);
+        trackEvent({
+          action: 'share_link',
+          category: 'interaction',
+        });
+        setTimeout(() => {
+          setSharedCopied(false);
+        }, 2000);
       });
-      setTimeout(() => {
-        setSharedCopied(false);
-      }, 2000);
-    });
+    } catch (err) {
+      console.error('Failed to copy share link:', err);
+    }
   };
 
   // Register PWA Service Worker on mount
@@ -475,6 +522,15 @@ export default function Home() {
     };
   }, [leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen]);
 
+  // Auto-dismiss toast status messages after 2.5 seconds
+  React.useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [toast, setToast]);
+
 
   return (
     <div className="relative flex flex-col h-screen w-screen overflow-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(30,27,75,0.8),rgba(10,10,12,1))] text-white font-sans">
@@ -583,8 +639,16 @@ export default function Home() {
         </button>
 
         {/* Main workspace section */}
-        <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-          <WorkspaceTabs />
+        <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden gap-3">
+          {isHydrated ? (
+            <WorkspaceTabs />
+          ) : (
+            <div className="w-full flex items-center justify-between bg-transparent px-0 pt-2 pb-0 gap-4 shrink-0 select-none">
+              <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+                <div className="h-[30px] w-32 bg-white/5 border border-white/5 animate-pulse rounded-xl" />
+              </div>
+            </div>
+          )}
           <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
             
             {/* 1. Active Derivation Workspace (Top 2/3) */}
@@ -597,17 +661,22 @@ export default function Home() {
               }}
               className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light cursor-default relative group/canvas"
             >
-              {/* Calculating Math Engine Spinner */}
-              {isMathLoading && (
+              {/* Calculating Math Engine Spinner / Toast Notification */}
+              {toast ? (
+                <div key={`toast-${toast.key}`} className="absolute top-4 left-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/25 bg-neutral-900/80 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]">
+                  <Check size={12} className="text-emerald-400 shrink-0" />
+                  <span>{toast.message}</span>
+                </div>
+              ) : isMathLoading ? (
                 <div className="absolute top-4 left-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/20 bg-neutral-900/60 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]">
                   <span className="h-2 w-2 rounded-full bg-indigo-400 animate-ping shrink-0" />
-                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-indigo-500/20 border-t-indigo-400" />
+                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-indigo-500/20 border-t-indigo-400 shrink-0" />
                   <span>Calculating...</span>
                 </div>
-              )}
-              {/* Contextual Feedback Button for Active Equation */}
+              ) : null}
+              {/* Contextual Action Buttons for Active Workspace */}
               {currentEq && (
-                <div className="absolute top-4 right-4 z-30 opacity-0 group-hover/canvas:opacity-100 transition-opacity duration-300">
+                <div className="absolute top-4 right-4 z-30 contextual-actions flex items-center gap-2">
                   <Tooltip content="Report an issue with this active equation" position="left">
                     <button
                       onClick={(e) => {
@@ -620,26 +689,45 @@ export default function Home() {
                       <MessageSquarePlus size={14} />
                     </button>
                   </Tooltip>
+                  <Tooltip content="Delete workspace permanently" position="left">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirmationModalOpen(true);
+                      }}
+                      disabled={savedSessions.length <= 1}
+                      className="p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-red-500/10 text-white/40 hover:text-red-400 hover:border-red-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-md"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </Tooltip>
                 </div>
               )}
-              <div className="flex flex-col items-center justify-center gap-2 origin-center">
-                <div ref={activeScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max">
-                  {/* LHS Term Tree */}
-                  <div className="flex justify-end min-w-[5em]">
-                    <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />
-                  </div>
+              {!isHydrated ? (
+                <div className="flex flex-col items-center justify-center gap-3 select-none">
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500/20 border-t-indigo-400 shrink-0" />
+                  <span className="text-sm font-medium text-indigo-300/80 animate-pulse tracking-wide">Initializing workspace...</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 origin-center">
+                  <div ref={activeScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max">
+                    {/* LHS Term Tree */}
+                    <div className="flex justify-end min-w-[5em]">
+                      <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />
+                    </div>
 
-                  {/* Equals Operator sign */}
-                  <span className="text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black">
-                    =
-                  </span>
+                    {/* Equals Operator sign */}
+                    <span className="text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black">
+                      =
+                    </span>
 
-                  {/* RHS Term Tree */}
-                  <div className="flex justify-start min-w-[5em]">
-                    <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
+                    {/* RHS Term Tree */}
+                    <div className="flex justify-start min-w-[5em]">
+                      <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Elegant Dashed Separator */}
@@ -656,39 +744,41 @@ export default function Home() {
               className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light cursor-default relative group/preview"
             >
 
-              <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 origin-center ${
-                isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
-              }`}>
-                <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
-                  isSpeculative ? 'text-emerald-400' : 'text-zinc-500'
+              {isHydrated && (
+                <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 origin-center ${
+                  isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
                 }`}>
-                  <span>Preview</span>
-                  {isSpeculative && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                  )}
-                </span>
-                
-                <div ref={previewScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max pointer-events-none select-none">
-                  {/* LHS Preview Term Tree */}
-                  <div className="flex justify-end min-w-[5em]">
-                    <PreviewEquationNode path="lhs" />
-                  </div>
-
-                  {/* Equals Operator sign */}
-                  <span className={`text-[1.2em] font-light font-mono select-none px-[0.6em] py-[0.2em] border rounded-[0.4em] transition-all duration-300 ${
-                    isSpeculative
-                      ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
-                      : 'text-zinc-600 border-zinc-500/10 bg-zinc-500/5'
+                  <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
+                    isSpeculative ? 'text-emerald-400' : 'text-zinc-500'
                   }`}>
-                    =
+                    <span>Preview</span>
+                    {isSpeculative && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                    )}
                   </span>
+                  
+                  <div ref={previewScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max pointer-events-none select-none">
+                    {/* LHS Preview Term Tree */}
+                    <div className="flex justify-end min-w-[5em]">
+                      <PreviewEquationNode path="lhs" />
+                    </div>
 
-                  {/* RHS Preview Term Tree */}
-                  <div className="flex justify-start min-w-[5em]">
-                    <PreviewEquationNode path="rhs" />
+                    {/* Equals Operator sign */}
+                    <span className={`text-[1.2em] font-light font-mono select-none px-[0.6em] py-[0.2em] border rounded-[0.4em] transition-all duration-300 ${
+                      isSpeculative
+                        ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
+                        : 'text-zinc-600 border-zinc-500/10 bg-zinc-500/5'
+                    }`}>
+                      =
+                    </span>
+
+                    {/* RHS Preview Term Tree */}
+                    <div className="flex justify-start min-w-[5em]">
+                      <PreviewEquationNode path="rhs" />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </main>
@@ -717,6 +807,7 @@ export default function Home() {
         </div>
       </div>
       <FeedbackModal />
+      <DeleteWorkspaceModal />
     </div>
   );
 }

@@ -11,7 +11,6 @@ import {
   savedSessionsAtom,
   currentSessionIdAtom,
   loadSessionAtom,
-  deleteSessionAtom,
   presetCategoriesAtom,
   leftSidebarOpenAtom,
 } from '../store/equation';
@@ -52,6 +51,11 @@ const formatTimestamp = (ts: number): string => {
   return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
+const getStepCount = (tree: Record<string, any> | undefined | null): number => {
+  if (!tree) return 0;
+  return Math.max(0, Object.keys(tree).length - 1);
+};
+
 export const Sidebar: React.FC = () => {
   const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
   const resetToEquation = useSetAtom(resetToEquationStringAtom);
@@ -61,18 +65,18 @@ export const Sidebar: React.FC = () => {
   const currentSessionId = useAtomValue(currentSessionIdAtom);
   const currentSession = savedSessions.find(s => s.id === currentSessionId);
   const loadSession = useSetAtom(loadSessionAtom);
-  const deleteSession = useSetAtom(deleteSessionAtom);
   const presetCategories = useAtomValue(presetCategoriesAtom);
-  const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>({
-    'Linear Equations': true,
-    'Algebraic Identities': true, // expand algebraic identities by default for convenience
-  });
+  const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>({});
 
   const toggleCategory = (categoryName: string) => {
-    setExpandedCategories((prev) => ({
-      ...prev,
-      [categoryName]: !prev[categoryName],
-    }));
+    setExpandedCategories((prev) => {
+      const wasExpanded = !!prev[categoryName];
+      if (wasExpanded) {
+        return {};
+      } else {
+        return { [categoryName]: true };
+      }
+    });
   };
 
   const [inputStr, setInputStr] = React.useState('');
@@ -119,14 +123,14 @@ export const Sidebar: React.FC = () => {
     }
   };
 
-  const handlePresetSelect = (eqStr: string) => {
+  const handlePresetSelect = (eqStr: string, label: string) => {
     try {
       setErrorStr(null);
-      resetToEquation(eqStr);
+      resetToEquation(eqStr, label);
       trackEvent({
         action: 'load_preset',
         category: 'presets',
-        label: eqStr,
+        label: label,
       });
       if (window.innerWidth < 1024) {
         setLeftSidebarOpen(false);
@@ -180,7 +184,7 @@ export const Sidebar: React.FC = () => {
               placeholder="New equation, e.g. 2x + 4 = 10"
               className="flex-1 h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
             />
-            <Tooltip content="Load new equation">
+            <Tooltip content="Enter equation">
               <button
                 type="submit"
                 className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-95 transition-all duration-150 cursor-pointer"
@@ -199,13 +203,13 @@ export const Sidebar: React.FC = () => {
         )}
 
         {/* Recents Section */}
-        {savedSessions.length > 0 && (
-          <div className="flex flex-col gap-1.5 border-t border-white/5 pt-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
-              Recents
-            </span>
-            <div className="flex gap-2 items-center relative min-w-0">
-              <div className="flex-1 min-w-0 relative">
+        <div className="flex flex-col gap-1.5 border-t border-white/5 pt-3">
+          <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
+            Recents
+          </span>
+          <div className="relative w-full">
+            {savedSessions.length > 0 ? (
+              <>
                 {!isDropdownOpen && currentSession ? (
                   <Tooltip 
                     content={triggerTooltipContent} 
@@ -246,6 +250,7 @@ export const Sidebar: React.FC = () => {
                         .sort((a, b) => b.timestamp - a.timestamp)
                         .map((session) => {
                           const isActive = session.id === currentSessionId;
+                          const stepCount = getStepCount(session.tree);
                           return (
                             <button
                               key={session.id}
@@ -269,8 +274,10 @@ export const Sidebar: React.FC = () => {
                               <span className="truncate font-mono flex-1">
                                 {session.name}
                               </span>
-                              <span className="text-[10px] text-white/30 whitespace-nowrap font-sans shrink-0">
-                                {formatTimestamp(session.timestamp)}
+                              <span className="text-[10px] text-white/30 whitespace-nowrap font-sans shrink-0 flex items-center gap-1.5">
+                                <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
+                                <span>·</span>
+                                <span>{formatTimestamp(session.timestamp)}</span>
                               </span>
                             </button>
                           );
@@ -278,28 +285,21 @@ export const Sidebar: React.FC = () => {
                     </div>
                   </>
                 )}
-              </div>
-
-              <Tooltip content="Delete workspace">
-                <button
-                  type="button"
-                  onClick={() => {
-                    deleteSession(currentSessionId);
-                    trackEvent({
-                      action: 'delete_session',
-                      category: 'sessions',
-                      label: currentSessionId,
-                    });
-                  }}
-                  disabled={savedSessions.length <= 1}
-                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl border border-white/10 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <Trash2 size={13} />
-                </button>
-              </Tooltip>
-            </div>
+              </>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/5 rounded-xl text-white/30 transition-all font-mono flex items-center justify-between gap-2 min-w-0 cursor-not-allowed"
+              >
+                <span className="truncate flex-1 text-left">
+                  No recent workspaces
+                </span>
+                <ChevronDown size={12} className="text-white/20 shrink-0" />
+              </button>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* 2. Global Operations Panel */}
@@ -524,7 +524,7 @@ export const Sidebar: React.FC = () => {
                         content={preset.description}
                       >
                         <button
-                          onClick={() => handlePresetSelect(preset.equation)}
+                          onClick={() => handlePresetSelect(preset.equation, preset.label)}
                           className="w-full flex items-center justify-between text-left p-2.5 pl-3 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-indigo-500/5 hover:border-indigo-500/10 border-l-2 border-l-transparent hover:border-l-indigo-400/80 group transition-all duration-200 cursor-pointer shrink-0 shadow-sm shadow-black/20"
                         >
                           <div className="flex-1 min-w-0 pr-2">

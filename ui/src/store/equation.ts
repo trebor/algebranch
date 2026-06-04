@@ -55,6 +55,18 @@ export const deserializeTree = (serialized: Record<string, SerializedHistoryNode
   return tree;
 };
 
+export const getSessionLatestTimestamp = (tree: Record<string, HistoryNode> | Record<string, SerializedHistoryNode>): number => {
+  const nodes = Object.values(tree);
+  if (nodes.length === 0) return Date.now();
+  let maxTs = 0;
+  for (const node of nodes) {
+    if (node.timestamp && node.timestamp > maxTs) {
+      maxTs = node.timestamp;
+    }
+  }
+  return maxTs > 0 ? maxTs : Date.now();
+};
+
 export interface VisualTreeNode extends HistoryNode {
   depth: number;
   column: number;
@@ -74,56 +86,36 @@ export interface WorkspaceTab {
   name: string;
   historyTree: Record<string, HistoryNode>;
   currentNodeId: string;
+  isCustomNamed?: boolean;
+  isModified?: boolean;
+  sessionId?: string;
+  timestamp?: number;
 }
 
-// Helper to get initial tabs from localStorage or fallback
-const getInitialTabs = (): WorkspaceTab[] => {
-  if (typeof window !== 'undefined') {
-    try {
-      const saved = localStorage.getItem('algebranch_workspace_tabs');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.map((tab: any) => ({
-          ...tab,
-          historyTree: deserializeTree(tab.historyTree)
-        }));
+// Helper for fallback/static initial tabs
+const getFallbackTabs = (): WorkspaceTab[] => [
+  {
+    id: 'tab_initial',
+    name: 'Sample Workspace',
+    historyTree: {
+      "0": {
+        id: "0",
+        equation: ensureNodeIds(parseEquation(INITIAL_EQUATION_STRING)),
+        parentId: null,
+        childrenIds: [],
+        label: "Initial",
+        timestamp: Date.now(),
       }
-    } catch (err) {
-      console.error('Failed to load workspace tabs from localStorage:', err);
-    }
+    },
+    currentNodeId: "0",
+    isCustomNamed: true,
+    timestamp: Date.now(),
   }
-  return [
-    {
-      id: 'tab_initial',
-      name: INITIAL_EQUATION_STRING,
-      historyTree: {
-        "0": {
-          id: "0",
-          equation: parseEquation(INITIAL_EQUATION_STRING),
-          parentId: null,
-          childrenIds: [],
-          label: "Initial",
-          timestamp: Date.now(),
-        }
-      },
-      currentNodeId: "0"
-    }
-  ];
-};
+];
 
-const getInitialActiveTabId = (): string => {
-  if (typeof window !== 'undefined') {
-    try {
-      const saved = localStorage.getItem('algebranch_active_tab_id');
-      if (saved) return saved;
-    } catch {}
-  }
-  return 'tab_initial';
-};
-
-// Internal raw atoms
-export const rawTabsAtom = atom<WorkspaceTab[]>(getInitialTabs());
-export const rawActiveTabIdAtom = atom<string>(getInitialActiveTabId());
+// Internal raw atoms (always initialized to static fallback to prevent Next.js SSR hydration mismatches)
+export const rawTabsAtom = atom<WorkspaceTab[]>(getFallbackTabs());
+export const rawActiveTabIdAtom = atom<string>('tab_initial');
 
 // Helper to save tabs to localStorage
 const saveTabsToLocalStorage = (tabs: WorkspaceTab[], activeId: string) => {
@@ -176,11 +168,15 @@ export const historyTreeAtom = atom(
       if (t.id === activeId) {
         const nextTree = typeof update === 'function' ? update(t.historyTree) : update;
         const activeNode = nextTree[t.currentNodeId];
-        const tabName = activeNode ? equationToString(activeNode.equation) : t.name;
+        const tabName = t.isCustomNamed
+          ? t.name
+          : (activeNode ? equationToString(activeNode.equation) : t.name);
         return {
           ...t,
           historyTree: nextTree,
-          name: tabName
+          name: tabName,
+          isModified: true,
+          timestamp: Date.now()
         };
       }
       return t;
@@ -203,7 +199,9 @@ export const currentNodeIdAtom = atom(
       if (t.id === activeId) {
         const nextNodeId = typeof update === 'function' ? update(t.currentNodeId) : update;
         const activeNode = t.historyTree[nextNodeId];
-        const tabName = activeNode ? equationToString(activeNode.equation) : t.name;
+        const tabName = t.isCustomNamed
+          ? t.name
+          : (activeNode ? equationToString(activeNode.equation) : t.name);
         return {
           ...t,
           currentNodeId: nextNodeId,
@@ -216,9 +214,42 @@ export const currentNodeIdAtom = atom(
   }
 );
 
+export const currentTabNameAtom = atom<string>((get) => {
+  const tabs = get(tabsAtom);
+  const activeId = get(activeTabIdAtom);
+  const activeTab = tabs.find(t => t.id === activeId) || tabs[0];
+  return activeTab?.name || 'Sample Workspace';
+});
+
 // Saved sessions state
 export const savedSessionsAtom = atom<SavedSession[]>([]);
-export const currentSessionIdAtom = atom<string>("session_initial");
+export const rawCurrentSessionIdAtom = atom<string>("session_initial");
+
+export const currentSessionIdAtom = atom(
+  (get) => {
+    const tabs = get(tabsAtom);
+    const activeId = get(activeTabIdAtom);
+    const activeTab = tabs.find(t => t.id === activeId) || tabs[0];
+    return activeTab?.sessionId || get(rawCurrentSessionIdAtom);
+  },
+  (get, set, update: string | ((prev: string) => string)) => {
+    const tabs = get(tabsAtom);
+    const activeId = get(activeTabIdAtom);
+    const updatedTabs = tabs.map(t => {
+      if (t.id === activeId) {
+        const nextSessionId = typeof update === 'function' ? update(t.sessionId || "session_initial") : update;
+        return {
+          ...t,
+          sessionId: nextSessionId
+        };
+      }
+      return t;
+    });
+    set(tabsAtom, updatedTabs);
+    const nextSessionId = typeof update === 'function' ? update(get(rawCurrentSessionIdAtom)) : update;
+    set(rawCurrentSessionIdAtom, nextSessionId);
+  }
+);
 
 // Presets state atoms
 export const presetsAtom = atom<Preset[]>(PRESET_LIST);
@@ -254,6 +285,7 @@ export const leftSidebarOpenAtom = atom(true);
 export const rightSidebarOpenAtom = atom(true);
 export const feedbackModalOpenAtom = atom(false);
 export const feedbackContextAtom = atom<string | null>(null);
+export const deleteConfirmationModalOpenAtom = atom(false);
 
 export interface ReducibleActionInfo {
   equation: Equation;
@@ -507,9 +539,10 @@ export const pushEquationAtom = atom(
  */
 export const createNewSessionAtom = atom(
   null,
-  (get, set, initialEqStr?: string) => {
+  (get, set, initialEqStr?: string, customName?: string) => {
     const eqStr = initialEqStr || INITIAL_EQUATION_STRING;
     const newId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const tabName = customName || eqStr;
     
     try {
       const newEq = ensureNodeIds(parseEquation(eqStr));
@@ -524,14 +557,31 @@ export const createNewSessionAtom = atom(
         }
       };
 
-      set(historyTreeAtom, newTree);
-      set(currentNodeIdAtom, "0");
+      // Create a brand new workspace tab and select it
+      const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const newTab: WorkspaceTab = {
+        id: newTabId,
+        name: tabName,
+        historyTree: newTree,
+        currentNodeId: "0",
+        isCustomNamed: !!customName,
+        sessionId: newId,
+        timestamp: Date.now()
+      };
+
+      const prevTabs = get(tabsAtom);
+      set(tabsAtom, [...prevTabs, newTab]);
+      set(activeTabIdAtom, newTabId);
+
       set(currentSessionIdAtom, newId);
       set(sourcePathAtom, null);
       set(hoverPathAtom, null);
       set(hoverReducePathAtom, null);
       set(hoverReduceIndexAtom, null);
       set(hoveredLoopTargetIdAtom, null);
+
+      // Show transient status toast message
+      set(toastAtom, { message: "Created new workspace", key: Date.now() });
 
       // Add to saved sessions list immediately
       const sessions = get(savedSessionsAtom);
@@ -567,16 +617,42 @@ export const loadSessionAtom = atom(
     const session = sessions.find(s => s.id === sessionId);
     if (!session) return;
 
+    // Check if a tab with this sessionId is already open
+    const prevTabs = get(tabsAtom);
+    const existingTab = prevTabs.find(t => t.sessionId === sessionId);
+    if (existingTab) {
+      set(activeTabIdAtom, existingTab.id);
+      set(currentSessionIdAtom, sessionId);
+      return;
+    }
+
     try {
       const deserialized = deserializeTree(session.tree);
-      set(historyTreeAtom, deserialized);
-      set(currentNodeIdAtom, session.currentNodeId);
+      
+      // Create a brand new workspace tab for this session and select it
+      const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const fallbackTimestamp = getSessionLatestTimestamp(deserialized);
+      const newTab: WorkspaceTab = {
+        id: newTabId,
+        name: session.name,
+        historyTree: deserialized,
+        currentNodeId: session.currentNodeId,
+        sessionId: sessionId,
+        timestamp: session.timestamp || fallbackTimestamp
+      };
+
+      set(tabsAtom, [...prevTabs, newTab]);
+      set(activeTabIdAtom, newTabId);
+
       set(currentSessionIdAtom, sessionId);
       set(sourcePathAtom, null);
       set(hoverPathAtom, null);
       set(hoverReducePathAtom, null);
       set(hoverReduceIndexAtom, null);
       set(hoveredLoopTargetIdAtom, null);
+
+      // Show transient status toast message
+      set(toastAtom, { message: "Loaded workspace session", key: Date.now() });
 
       try {
         localStorage.setItem('algebranch_current_session_id', sessionId);
@@ -606,6 +682,28 @@ export const deleteSessionAtom = atom(
       console.error('Failed to save sessions after deletion:', err);
     }
 
+    // Find the tab associated with this session and close/remove it
+    const tabs = get(tabsAtom);
+    const tabToDelete = tabs.find(t => t.sessionId === sessionId);
+    if (tabToDelete) {
+      const filteredTabs = tabs.filter(t => t.id !== tabToDelete.id);
+      if (filteredTabs.length > 0) {
+        set(tabsAtom, filteredTabs);
+        
+        // If we are deleting the active tab, we need to switch activeTabId
+        const activeId = get(activeTabIdAtom);
+        if (activeId === tabToDelete.id) {
+          const closedIndex = tabs.findIndex(t => t.id === tabToDelete.id);
+          const nextActiveIndex = Math.min(closedIndex, filteredTabs.length - 1);
+          set(activeTabIdAtom, filteredTabs[nextActiveIndex].id);
+        }
+      } else {
+        // If no tabs left, reset to fallback tab
+        set(tabsAtom, getFallbackTabs());
+        set(activeTabIdAtom, 'tab_initial');
+      }
+    }
+
     const currentSessionId = get(currentSessionIdAtom);
     if (currentSessionId === sessionId) {
       if (updatedSessions.length > 0) {
@@ -625,8 +723,8 @@ export const deleteSessionAtom = atom(
  */
 export const resetToEquationStringAtom = atom(
   null,
-  (_get, set, eqStr: string) => {
-    set(createNewSessionAtom, eqStr);
+  (_get, set, eqStr: string, customName?: string) => {
+    set(createNewSessionAtom, eqStr, customName);
   }
 );
 
@@ -768,34 +866,96 @@ export const clearMathStateAtom = atom(
  */
 export const mathLoadingAtom = atom(false);
 
+export interface ToastState {
+  message: string;
+  key: number;
+}
+
+/**
+ * Atom: Tracks transient status messages shown to the user.
+ */
+export const toastAtom = atom<ToastState | null>(null);
+
 /**
  * Action: Add a new workspace tab.
  */
 export const addTabAtom = atom(
   null,
   (get, set, initialEqStr?: string) => {
-    const eqStr = initialEqStr || INITIAL_EQUATION_STRING;
     const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     try {
-      const newEq = ensureNodeIds(parseEquation(eqStr));
-      const newTab: WorkspaceTab = {
-        id: newTabId,
-        name: eqStr,
-        historyTree: {
-          "0": {
-            id: "0",
-            equation: newEq,
-            parentId: null,
-            childrenIds: [],
-            label: "Initial",
-            timestamp: Date.now(),
-          }
-        },
-        currentNodeId: "0"
-      };
-
+      let newTab: WorkspaceTab;
       const prevTabs = get(tabsAtom);
+      const activeId = get(activeTabIdAtom);
+      const activeTab = prevTabs.find(t => t.id === activeId) || prevTabs[0];
+
+      if (!initialEqStr && activeTab) {
+        // Clone the active tab's historyTree and current location to allow branching
+        const clonedHistoryTree: Record<string, HistoryNode> = {};
+        Object.keys(activeTab.historyTree).forEach(id => {
+          const node = activeTab.historyTree[id];
+          clonedHistoryTree[id] = {
+            ...node,
+            equation: {
+              lhs: node.equation.lhs.clone(),
+              rhs: node.equation.rhs.clone()
+            },
+            childrenIds: [...node.childrenIds]
+          };
+        });
+
+        // Generate a unique cloned tab name to avoid duplicate names
+        let baseName = activeTab.name;
+        const copyMatch = activeTab.name.match(/^(.*?)\s*\(Copy\s*(\d*)\)$/);
+        if (copyMatch) {
+          baseName = copyMatch[1];
+        }
+        
+        let suffixNum = 1;
+        let candidateName = copyMatch ? `${baseName} (Copy ${parseInt(copyMatch[2] || '1') + 1})` : `${baseName} (Copy)`;
+        
+        const existingNames = prevTabs.map(t => t.name);
+        while (existingNames.includes(candidateName)) {
+          suffixNum++;
+          candidateName = `${baseName} (Copy ${suffixNum})`;
+        }
+
+        newTab = {
+          id: newTabId,
+          name: candidateName,
+          historyTree: clonedHistoryTree,
+          currentNodeId: activeTab.currentNodeId,
+          isCustomNamed: activeTab.isCustomNamed,
+          sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: Date.now()
+        };
+
+        // Show transient success message
+        set(toastAtom, { message: "Cloned active workspace", key: Date.now() });
+      } else {
+        // Create a brand new workspace with the given equation or fallback
+        const eqStr = initialEqStr || INITIAL_EQUATION_STRING;
+        const newEq = ensureNodeIds(parseEquation(eqStr));
+        newTab = {
+          id: newTabId,
+          name: eqStr,
+          historyTree: {
+            "0": {
+              id: "0",
+              equation: newEq,
+              parentId: null,
+              childrenIds: [],
+              label: "Initial",
+              timestamp: Date.now(),
+            }
+          },
+          currentNodeId: "0",
+          sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: Date.now()
+        };
+      }
+
       set(tabsAtom, [...prevTabs, newTab]);
       set(activeTabIdAtom, newTabId);
       
@@ -823,7 +983,7 @@ export const closeTabAtom = atom(
       set(tabsAtom, [
         {
           id: 'tab_initial',
-          name: INITIAL_EQUATION_STRING,
+          name: 'Sample Workspace',
           historyTree: {
             "0": {
               id: "0",
@@ -834,7 +994,10 @@ export const closeTabAtom = atom(
               timestamp: Date.now(),
             }
           },
-          currentNodeId: "0"
+          currentNodeId: "0",
+          isCustomNamed: true,
+          sessionId: 'session_initial',
+          timestamp: Date.now()
         }
       ]);
       set(activeTabIdAtom, 'tab_initial');
@@ -870,11 +1033,57 @@ export const renameTabAtom = atom(
     const tabs = get(tabsAtom);
     const updated = tabs.map(t => {
       if (t.id === tabId) {
-        return { ...t, name: name.trim() };
+        return { 
+          ...t, 
+          name: name.trim(),
+          isCustomNamed: true,
+          isModified: true,
+          timestamp: Date.now()
+        };
       }
       return t;
     });
     set(tabsAtom, updated);
+  }
+);
+
+/**
+ * Action: Hydrates workspace tabs from localStorage on client-side mount.
+ */
+export const hydrateWorkspaceTabsAtom = atom(
+  null,
+  (get, set) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const savedTabs = localStorage.getItem('algebranch_workspace_tabs');
+      const savedActiveId = localStorage.getItem('algebranch_active_tab_id');
+      
+      if (savedTabs) {
+        const parsed = JSON.parse(savedTabs);
+        const deserialized = parsed.map((tab: any) => {
+          const tree = deserializeTree(tab.historyTree);
+          return {
+            ...tab,
+            historyTree: tree,
+            sessionId: tab.sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            timestamp: tab.timestamp || getSessionLatestTimestamp(tree)
+          };
+        });
+        set(rawTabsAtom, deserialized);
+
+        const activeId = savedActiveId || 'tab_initial';
+        const activeTab = deserialized.find((t: any) => t.id === activeId) || deserialized[0];
+        if (activeTab?.sessionId) {
+          set(rawCurrentSessionIdAtom, activeTab.sessionId);
+        }
+      }
+      
+      if (savedActiveId) {
+        set(rawActiveTabIdAtom, savedActiveId);
+      }
+    } catch (err) {
+      console.error('Failed to hydrate workspace tabs from localStorage:', err);
+    }
   }
 );
 

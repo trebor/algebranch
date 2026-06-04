@@ -74,6 +74,22 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(moves['rhs/1']).toBeUndefined();
   });
 
+  test('generateValidMoves rejects algebraically invalid transformations that happen to share root solutions', () => {
+    // 2 * (x + 3) = 10 -> LHS is 2 * (x + 3), which has paths:
+    // lhs/0 = 2
+    // lhs/1 = (x + 3)
+    // lhs/1/0 = x + 3
+    // lhs/1/0/1 = 3
+    const eq = parseEquation('2 * (x + 3) = 10');
+    
+    // Dragging '3' (lhs/1/0/1) to drop onto '2' (lhs/0)
+    const moves = generateValidMoves(eq, 'lhs/1/0/1');
+    
+    // This should NOT allow transforming the equation to (2 + 3) * x = 10,
+    // even though both equations share x = 2 as a unique solution.
+    expect(moves['lhs/0']).toBeUndefined();
+  });
+
   test('generateValidMoves rejects deep cross-equals drops', () => {
     const eq = parseEquation('x + 4 = (y - 1) * 2');
     // Path for '4' is 'lhs/1'.

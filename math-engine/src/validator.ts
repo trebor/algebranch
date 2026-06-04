@@ -17,6 +17,7 @@ import {
   removeNodeAtPath,
   getAllPaths,
   ensureNodeIds,
+  getChildren,
 } from './tree';
 
 // Global Constants
@@ -796,6 +797,67 @@ export const getQuadraticFormulaSolutions = (eq: Equation): QuadraticFormulaSolu
 };
 
 /**
+ * Maps a path from the temporary equation (after source node is removed)
+ * back to the corresponding node path in the original equation.
+ */
+export const mapPathTempToOrig = (
+  originalEq: Equation,
+  sourcePath: string,
+  targetPath: string
+): string => {
+  const sParts = sourcePath.split('/');
+  const tParts = targetPath.split('/');
+
+  if (sParts[0] !== tParts[0] || sParts.length === 1) {
+    return targetPath;
+  }
+
+  const parentLength = sParts.length - 1;
+  const parentPath = sParts.slice(0, parentLength).join('/');
+
+  // Check if targetPath starts with parentPath
+  let startsWithParent = true;
+  if (tParts.length < parentLength) {
+    startsWithParent = false;
+  } else {
+    for (let i = 0; i < parentLength; i++) {
+      if (sParts[i] !== tParts[i]) {
+        startsWithParent = false;
+        break;
+      }
+    }
+  }
+
+  if (!startsWithParent) {
+    return targetPath;
+  }
+
+  const parentNode = getNodeByPath(originalEq, parentPath);
+  const children = getChildren(parentNode);
+  const idxToRemove = parseInt(sParts[parentLength], 10);
+
+  if (children.length === 2) {
+    // Binary node: removing one child returns the other.
+    // The remaining child (which was at parentPath / remainingIdx) is now at parentPath in tempEq.
+    const remainingIdx = idxToRemove === 0 ? 1 : 0;
+    const rest = tParts.slice(parentLength);
+    return [parentPath, remainingIdx.toString(), ...rest].join('/');
+  } else if (children.length === 1) {
+    // Unary node: removing child returns 0.
+    return targetPath;
+  } else {
+    // N-ary node: filter out idxToRemove
+    const rest = tParts.slice(parentLength);
+    if (rest.length === 0) {
+      return targetPath;
+    }
+    const idxInTemp = parseInt(rest[0], 10);
+    const origIdx = idxInTemp >= idxToRemove ? idxInTemp + 1 : idxInTemp;
+    return [parentPath, origIdx.toString(), ...rest.slice(1)].join('/');
+  }
+};
+
+/**
  * Generates all mathematically valid target equations for a selected node.
  * Maps destination path string to the resulting Equation.
  */
@@ -885,7 +947,23 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
           originalEq.rhs.toString() === eqStandard.rhs.toString()
         );
 
-        if (!isNoOpStandard && areEquationsEquivalent(originalEq, eqStandard)) {
+        let isEquivalentStandard = false;
+        if (!isNoOpStandard) {
+          try {
+            const paramVar = new math.SymbolNode('__y');
+            const targetPathInOrig = mapPathTempToOrig(originalEq, sourcePath, targetPath);
+            const originalEqParam = replaceNodeAtPath(originalEq, targetPathInOrig, paramVar);
+
+            const nodeStandardParam = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [paramVar, removedNode]);
+            const eqStandardParam = replaceNodeAtPath(tempEq, targetPath, nodeStandardParam);
+
+            isEquivalentStandard = areEquationsEquivalent(originalEqParam, eqStandardParam);
+          } catch (e) {
+            isEquivalentStandard = areEquationsEquivalent(originalEq, eqStandard);
+          }
+        }
+
+        if (!isNoOpStandard && isEquivalentStandard) {
           moves[targetPath] = eqStandard;
         }
 
@@ -898,7 +976,23 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
             originalEq.rhs.toString() === eqReverse.rhs.toString()
           );
 
-          if (!isNoOpReverse && areEquationsEquivalent(originalEq, eqReverse)) {
+          let isEquivalentReverse = false;
+          if (!isNoOpReverse) {
+            try {
+              const paramVar = new math.SymbolNode('__y');
+              const targetPathInOrig = mapPathTempToOrig(originalEq, sourcePath, targetPath);
+              const originalEqParam = replaceNodeAtPath(originalEq, targetPathInOrig, paramVar);
+
+              const nodeReverseParam = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [removedNode, paramVar]);
+              const eqReverseParam = replaceNodeAtPath(tempEq, targetPath, nodeReverseParam);
+
+              isEquivalentReverse = areEquationsEquivalent(originalEqParam, eqReverseParam);
+            } catch (e) {
+              isEquivalentReverse = areEquationsEquivalent(originalEq, eqReverse);
+            }
+          }
+
+          if (!isNoOpReverse && isEquivalentReverse) {
             moves[targetPath] = eqReverse;
           }
         }

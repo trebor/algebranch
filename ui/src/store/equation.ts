@@ -498,14 +498,28 @@ export const createNewSessionAtom = atom(
         }
       };
 
-      set(historyTreeAtom, newTree);
-      set(currentNodeIdAtom, "0");
+      // Create a brand new workspace tab and select it
+      const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const newTab: WorkspaceTab = {
+        id: newTabId,
+        name: eqStr,
+        historyTree: newTree,
+        currentNodeId: "0"
+      };
+
+      const prevTabs = get(tabsAtom);
+      set(tabsAtom, [...prevTabs, newTab]);
+      set(activeTabIdAtom, newTabId);
+
       set(currentSessionIdAtom, newId);
       set(sourcePathAtom, null);
       set(hoverPathAtom, null);
       set(hoverReducePathAtom, null);
       set(hoverReduceIndexAtom, null);
       set(hoveredLoopTargetIdAtom, null);
+
+      // Show transient status toast message
+      set(toastAtom, { message: "Created new workspace", key: Date.now() });
 
       // Add to saved sessions list immediately
       const sessions = get(savedSessionsAtom);
@@ -543,14 +557,29 @@ export const loadSessionAtom = atom(
 
     try {
       const deserialized = deserializeTree(session.tree);
-      set(historyTreeAtom, deserialized);
-      set(currentNodeIdAtom, session.currentNodeId);
+      
+      // Create a brand new workspace tab for this session and select it
+      const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const newTab: WorkspaceTab = {
+        id: newTabId,
+        name: session.name,
+        historyTree: deserialized,
+        currentNodeId: session.currentNodeId
+      };
+
+      const prevTabs = get(tabsAtom);
+      set(tabsAtom, [...prevTabs, newTab]);
+      set(activeTabIdAtom, newTabId);
+
       set(currentSessionIdAtom, sessionId);
       set(sourcePathAtom, null);
       set(hoverPathAtom, null);
       set(hoverReducePathAtom, null);
       set(hoverReduceIndexAtom, null);
       set(hoveredLoopTargetIdAtom, null);
+
+      // Show transient status toast message
+      set(toastAtom, { message: "Loaded workspace session", key: Date.now() });
 
       try {
         localStorage.setItem('algebranch_current_session_id', sessionId);

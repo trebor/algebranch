@@ -180,7 +180,7 @@ export const Sidebar: React.FC = () => {
               placeholder="New equation, e.g. 2x + 4 = 10"
               className="flex-1 h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
             />
-            <Tooltip content="Load new equation">
+            <Tooltip content="Enter equation">
               <button
                 type="submit"
                 className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-95 transition-all duration-150 cursor-pointer"

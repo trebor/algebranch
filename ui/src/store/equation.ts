@@ -268,6 +268,7 @@ export const leftSidebarOpenAtom = atom(true);
 export const rightSidebarOpenAtom = atom(true);
 export const feedbackModalOpenAtom = atom(false);
 export const feedbackContextAtom = atom<string | null>(null);
+export const deleteConfirmationModalOpenAtom = atom(false);
 
 export interface ReducibleActionInfo {
   equation: Equation;

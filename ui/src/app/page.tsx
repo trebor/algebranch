@@ -7,6 +7,7 @@ import { PreviewEquationNode } from '../components/PreviewEquationNode';
 import { Sidebar } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import { FeedbackModal } from '../components/FeedbackModal';
+import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
 import { Tooltip } from '../components/Tooltip';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import {
@@ -38,6 +39,7 @@ import {
   createNewSessionAtom,
   currentTabNameAtom,
   deleteSessionAtom,
+  deleteConfirmationModalOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
@@ -76,6 +78,7 @@ export default function Home() {
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
   const createNewSession = useSetAtom(createNewSessionAtom);
   const deleteSession = useSetAtom(deleteSessionAtom);
+  const setDeleteConfirmationModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
   const currentTabName = useAtomValue(currentTabNameAtom);
   const [toast, setToast] = useAtom(toastAtom);
 
@@ -666,12 +669,7 @@ export default function Home() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteSession(currentSessionId);
-                        trackEvent({
-                          action: 'delete_session',
-                          category: 'sessions',
-                          label: currentSessionId,
-                        });
+                        setDeleteConfirmationModalOpen(true);
                       }}
                       disabled={savedSessions.length <= 1}
                       className="p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-red-500/10 text-white/40 hover:text-red-400 hover:border-red-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-md"
@@ -776,6 +774,7 @@ export default function Home() {
         </div>
       </div>
       <FeedbackModal />
+      <DeleteWorkspaceModal />
     </div>
   );
 }

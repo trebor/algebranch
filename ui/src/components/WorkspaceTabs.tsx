@@ -69,7 +69,7 @@ export const WorkspaceTabs: React.FC = () => {
               key={tab.id}
               onClick={() => !isEditing && setActiveTabId(tab.id)}
               onDoubleClick={(e) => handleStartEdit(e, tab)}
-              className={`group flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer select-none transition-all duration-200 ${
+              className={`group flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer select-none transition-all duration-200 shrink-0 ${
                 isActive
                   ? 'bg-white/10 border-indigo-500/30 text-white shadow-[0_4px_12px_rgba(0,0,0,0.25)] backdrop-blur-sm'
                   : 'bg-white/5 border-white/5 text-white/50 hover:text-white/80 hover:bg-white/10 hover:border-white/10 backdrop-blur-sm'
@@ -125,17 +125,17 @@ export const WorkspaceTabs: React.FC = () => {
             </div>
           );
         })}
-
-        {/* Plus Button to add tab */}
-        <Tooltip content="Open a new algebra workspace" position="bottom">
-          <button
-            onClick={() => addTab()}
-            className="flex items-center justify-center p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white/40 hover:text-white transition-all cursor-pointer"
-          >
-            <Plus size={13} />
-          </button>
-        </Tooltip>
       </div>
+
+      {/* Plus Button to add tab - Pinned to the right */}
+      <Tooltip content="New workspace" position="bottom">
+        <button
+          onClick={() => addTab()}
+          className="flex items-center justify-center p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white/40 hover:text-white transition-all cursor-pointer shrink-0"
+        >
+          <Plus size={13} />
+        </button>
+      </Tooltip>
     </div>
   );
 };

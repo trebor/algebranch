@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         path: string;
         simplified: Equation;
         serialized: SerializedEquation;
-        type: 'reduce' | 'distribute' | 'identity';
+        type: 'reduce' | 'distribute' | 'identity' | 'evaluate';
         label?: string;
       }
       const rawReductions: RawReduction[] = [];
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
                     path,
                     simplified: newEq,
                     serialized: serializeEquation(newEq),
-                    type: 'identity',
+                    type: 'evaluate',
                     label: 'Evaluate to Decimal'
                   });
                 }
@@ -242,7 +242,7 @@ export async function POST(req: NextRequest) {
         string,
         {
           equation: SerializedEquation;
-          type: 'reduce' | 'distribute' | 'identity';
+          type: 'reduce' | 'distribute' | 'identity' | 'evaluate';
           label?: string;
         }[]
       > = {};

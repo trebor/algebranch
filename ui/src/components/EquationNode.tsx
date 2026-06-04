@@ -18,7 +18,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
-import { Sparkles, Zap, Split } from 'lucide-react';
+import { ArrowLeftRight, Calculator, Zap, Split, RefreshCw } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 
 const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
@@ -466,7 +466,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               onClick={handleToggleRootSign}
               className="p-[0.1em] hover:bg-white/10 text-indigo-400 hover:text-indigo-300 rounded-[1em] transition-colors flex items-center gap-[0.2em] cursor-pointer"
             >
-              <Sparkles size={10} />
+              <RefreshCw size={10} />
               <span>± Sign</span>
             </button>
           </Tooltip>
@@ -503,6 +503,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       ? 'bg-purple-600 hover:bg-purple-500 text-white animate-pulse'
                       : type === 'identity'
                       ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                      : type === 'evaluate'
+                      ? 'bg-sky-600 hover:bg-sky-500 text-white'
                       : 'bg-amber-400 hover:bg-amber-300 text-neutral-950 shadow-inner'
                   } ${isActionHovered ? 'scale-110 ring-2 ring-white/50' : ''} ${
                     inExponent ? 'h-[0.6em] w-[0.6em] rounded-[0.15em]' : 'h-[18px] w-[18px] md:h-[16px] md:w-[16px] rounded-full'
@@ -534,6 +536,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       ? 'bg-purple-500/40' 
                       : type === 'identity'
                       ? 'bg-indigo-500/40'
+                      : type === 'evaluate'
+                      ? 'bg-sky-500/40'
                       : 'bg-amber-400/40'
                   } ${
                     inExponent ? 'rounded-[0.15em]' : 'rounded-full'
@@ -541,7 +545,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   {type === 'distribute' ? (
                     <Split size={inExponent ? 5 : 8} className="text-white stroke-[2.5]" />
                   ) : type === 'identity' ? (
-                    <Sparkles size={inExponent ? 5 : 8} className="text-white stroke-[2.5]" />
+                    <ArrowLeftRight size={inExponent ? 5 : 8} className="text-white stroke-[2.5]" />
+                  ) : type === 'evaluate' ? (
+                    <Calculator size={inExponent ? 5 : 8} className="text-white stroke-[2.5]" />
                   ) : (
                     <Zap size={inExponent ? 5 : 8} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
                   )}

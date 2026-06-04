@@ -1,6 +1,8 @@
 # Local Development Guardrails
 
 ## 🚀 Branch & Merge Management
-- **Pre-Merge Manual Testing Guardrail:** 
-  Before merging any feature branch into the `main` branch, the agent MUST stop and prompt the user to perform manual testing on the active branch. 
-  - **Constraint:** Never execute `git push` or `gh pr merge` / merge commits directly without explicit user instruction and validation of the working environment.
+- **Pre-Merge Testing & Verification Guardrail:** 
+  Before merging any feature branch into the `main` branch, the agent MUST:
+  1. Run all automated unit tests (`npm test`) and verify the build compiles cleanly (`npm run build`).
+  2. Halt execution, summarize changes, and wait for the user to perform manual verification in their local or preview environment.
+  - **Constraint:** Never execute `git push` or `gh pr merge` / merge commits directly without explicit user authorization and validation of the environment.

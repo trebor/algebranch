@@ -92,7 +92,16 @@ const ALL_RULE_TEST_CASES: RuleTestCase[] = [
   { ruleId: 'trig_double_tan_reverse', input: '(2 * tan(x)) / (1 - tan(x)^2)', expected: 'tan(2*x)' },
   { ruleId: 'repeated_addition_2', input: '2 * (x + 3)', expected: '(x+3)+(x+3)' },
   { ruleId: 'repeated_addition_2_right', input: '(x + 3) * 2', expected: '(x+3)+(x+3)' },
-  { ruleId: 'repeated_addition_2_reverse', input: '(x + 3) + (x + 3)', expected: '2*(x+3)' }
+  { ruleId: 'repeated_addition_2_reverse', input: '(x + 3) + (x + 3)', expected: '2*(x+3)' },
+  { ruleId: 'repeated_addition_3', input: '3 * (x + 3)', expected: '(x+3)+(x+3)+(x+3)' },
+  { ruleId: 'repeated_addition_3_right', input: '(x + 3) * 3', expected: '(x+3)+(x+3)+(x+3)' },
+  { ruleId: 'repeated_addition_3_reverse', input: '(x + 3) + (x + 3) + (x + 3)', expected: '3*(x+3)' },
+  { ruleId: 'repeated_addition_4', input: '4 * (x + 3)', expected: '(x+3)+(x+3)+(x+3)+(x+3)' },
+  { ruleId: 'repeated_addition_4_right', input: '(x + 3) * 4', expected: '(x+3)+(x+3)+(x+3)+(x+3)' },
+  { ruleId: 'repeated_addition_4_reverse', input: '(x + 3) + (x + 3) + (x + 3) + (x + 3)', expected: '4*(x+3)' },
+  { ruleId: 'repeated_addition_5', input: '5 * (x + 3)', expected: '(x+3)+(x+3)+(x+3)+(x+3)+(x+3)' },
+  { ruleId: 'repeated_addition_5_right', input: '(x + 3) * 5', expected: '(x+3)+(x+3)+(x+3)+(x+3)+(x+3)' },
+  { ruleId: 'repeated_addition_5_reverse', input: '(x + 3) + (x + 3) + (x + 3) + (x + 3) + (x + 3)', expected: '5*(x+3)' }
 ];
 
 describe('Exhaustive Bidirectional Identity Rules Verification', () => {

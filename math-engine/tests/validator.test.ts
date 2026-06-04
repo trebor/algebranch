@@ -74,6 +74,22 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(moves['rhs/1']).toBeUndefined();
   });
 
+  test('generateValidMoves rejects algebraically invalid transformations that happen to share root solutions', () => {
+    // 2 * (x + 3) = 10 -> LHS is 2 * (x + 3), which has paths:
+    // lhs/0 = 2
+    // lhs/1 = (x + 3)
+    // lhs/1/0 = x + 3
+    // lhs/1/0/1 = 3
+    const eq = parseEquation('2 * (x + 3) = 10');
+    
+    // Dragging '3' (lhs/1/0/1) to drop onto '2' (lhs/0)
+    const moves = generateValidMoves(eq, 'lhs/1/0/1');
+    
+    // This should NOT allow transforming the equation to (2 + 3) * x = 10,
+    // even though both equations share x = 2 as a unique solution.
+    expect(moves['lhs/0']).toBeUndefined();
+  });
+
   test('generateValidMoves rejects deep cross-equals drops', () => {
     const eq = parseEquation('x + 4 = (y - 1) * 2');
     // Path for '4' is 'lhs/1'.
@@ -121,6 +137,20 @@ describe('Math Engine Validator & Simplifier', () => {
     const eq4 = parseEquation('x + sqrt(4) = 5');
     const simplified4 = autoSimplify(eq4);
     expect(equationToString(simplified4)).toBe('x + 2 = 5');
+
+    // verify fraction reduction is NOT offered for decimal values
+    const eqDecimal1 = parseEquation('x + 2.5 / 5 = 5');
+    const simplifiedDecimal1 = autoSimplify(eqDecimal1);
+    expect(equationToString(simplifiedDecimal1)).toBe('x + 0.5 = 5');
+
+    const eqDecimal2 = parseEquation('x + 0.5 / 2 = 5');
+    const simplifiedDecimal2 = autoSimplify(eqDecimal2);
+    expect(equationToString(simplifiedDecimal2)).toBe('x + 0.25 = 5');
+
+    // verify integer division simplifies to integer constant instead of fraction
+    const eqInt = parseEquation('x + 6 / 2 = 5');
+    const simplifiedInt = autoSimplify(eqInt);
+    expect(equationToString(simplifiedInt)).toBe('x + 3 = 5');
   });
 
 
@@ -382,10 +412,10 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(resExpand!.toString()).toBe('x * x * x'); // Left-associative mathjs representation without redundant parenthesis
   });
 
-  test('generateValidMoves suggests quadratic formula solver moves for quadratic variable selection', () => {
+  test('generateValidMoves does NOT offer quadratic formula for variables nested inside power nodes', () => {
     const eq1 = parseEquation('a * x^2 + b * x + c = 0');
     
-    // Find path for 'x' dynamically
+    // Find path for 'x' dynamically - this will find the first 'x' which is inside x^2 (a power node)
     const findPathForSymbol = (node: math.MathNode, targetName: string, currentPath: string): string | null => {
       if (node.type === 'SymbolNode' && (node as math.SymbolNode).name === targetName) {
         return currentPath;
@@ -401,11 +431,34 @@ describe('Math Engine Validator & Simplifier', () => {
     const xPath = findPathForSymbol(eq1.lhs, 'x', 'lhs');
     expect(xPath).not.toBeNull();
 
+    // The x is inside a power node (x^2), so it should NOT be draggable and should return no moves.
+    // The quadratic formula is still available through getReducibleOptions (the identity/reduction system).
     const moves = generateValidMoves(eq1, xPath!);
-    expect(moves['rhs']).toBeDefined();
+    expect(Object.keys(moves).length).toBe(0);
+  });
 
-    const resultEq = equationToString(moves['rhs']);
-    expect(resultEq).toBe('x = (-b + sqrt(b ^ 2 - 4 * a * c)) / (2 * a)');
+  test('regression: clicking y in x^2 + y^2 = r^2 should not produce quadratic formula', () => {
+    const eq = parseEquation('x ^ 2 + y ^ 2 = r ^ 2');
+
+    // Find the 'y' symbol path (nested inside y^2)
+    const findPathForSymbol = (node: math.MathNode, targetName: string, currentPath: string): string | null => {
+      if (node.type === 'SymbolNode' && (node as math.SymbolNode).name === targetName) {
+        return currentPath;
+      }
+      const children = 'args' in node ? (node as any).args : ('content' in node ? [(node as any).content] : []);
+      for (let i = 0; i < children.length; i++) {
+        const path = findPathForSymbol(children[i], targetName, currentPath ? `${currentPath}/${i}` : (i === 0 ? 'lhs' : 'rhs'));
+        if (path) return path;
+      }
+      return null;
+    };
+
+    const yPath = findPathForSymbol(eq.lhs, 'y', 'lhs');
+    expect(yPath).not.toBeNull();
+
+    // y is inside y^2 (a power node) - clicking it should produce NO moves
+    const moves = generateValidMoves(eq, yPath!);
+    expect(Object.keys(moves).length).toBe(0);
   });
 
   test('should validate complex discriminant transpositions and variable-denominator moves', () => {

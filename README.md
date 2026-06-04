@@ -48,7 +48,7 @@ To ensure complete semantic consistency between the UI elements, Jotai state, an
 2.  **Source**: The selected term undergoing transposition. (Maximum of one active source at a time).
 3.  **Target**: Glowing emerald drop slots representing mathematically sound destination locations for the active **Source**.
 4.  **Static**: Inert, non-interactive terms styled in opaque slate/gray to form the visual landscape of the equation.
-5.  **Reduce**: Interactive amber dots representing constant folding (`13 - 5` $\rightarrow$ `8`), redundant terms (`+ 0`, `* 1`, `(x) -> x`), or distribution matches (`2*(x + 3)` $\rightarrow$ `2*x + 6`).
+5.  **Simplify**: Interactive amber dots representing constant folding (`13 - 5` $\rightarrow$ `8`), fraction simplification (`6 / 2` $\rightarrow$ `3`), redundant terms (`+ 0`, `* 1`, `(x) -> x`), or distribution matches (`2*(x + 3)` $\rightarrow$ `2*x + 6`).
 
 ---
 

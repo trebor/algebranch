@@ -487,7 +487,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         }`}>
           {actions.map((action, index) => {
             const type = action.type;
-            const label = action.label || (type === 'distribute' ? "Distribute this term" : type === 'identity' ? "Apply identity" : "Reduce this term");
+            const label = action.label || (type === 'distribute' ? "Distribute" : type === 'identity' ? "Apply Identity" : "Simplify");
             
             const isActionHovered = hoverReducePath === path && hoverReduceIndex === index;
 
@@ -519,11 +519,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    pushEquation(action.equation, action.type === 'identity' ? (action.label || 'Apply Identity') : (action.type === 'distribute' ? 'Distribute' : 'Reduce'));
+                    pushEquation(action.equation, action.label || (action.type === 'distribute' ? 'Distribute' : action.type === 'identity' ? 'Apply Identity' : 'Simplify'));
                     trackEvent({
                       action: 'apply_reduction',
                       category: 'math_interaction',
-                      label: `${action.type}: ${action.label || 'Reduce'}`,
+                      label: `${action.type}: ${action.label || (action.type === 'distribute' ? 'Distribute' : 'Simplify')}`,
                     });
                     setHoverReducePath(null);
                     setHoverReduceIndex(null);

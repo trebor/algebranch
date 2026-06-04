@@ -1,6 +1,8 @@
 import * as math from 'mathjs';
 import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, ensureNodeIds } from './tree';
-import { areEquationsEquivalent, getFunctionName } from './validator';
+import { areEquationsEquivalent, getFunctionName, getQuadraticFormulaSolutions } from './validator';
+import { HIGH_SCHOOL_IDENTITIES } from './rules';
+import { matchPattern, instantiatePattern, tryExpressAsPower } from './matcher';
 
 /**
  * Counts the total number of nodes in a mathematical syntax tree.
@@ -78,6 +80,22 @@ export const isConstantSubtree = (node: math.MathNode): boolean => {
 const mathFraction = math.create(math.all, { number: 'Fraction' });
 
 /**
+ * Checks if a mathematical node contains any constant node with a decimal point.
+ */
+const hasDecimalConstant = (node: math.MathNode): boolean => {
+  let hasDecimal = false;
+  node.traverse((n) => {
+    if (n.type === 'ConstantNode') {
+      const valStr = String((n as math.ConstantNode).value);
+      if (valStr.includes('.')) {
+        hasDecimal = true;
+      }
+    }
+  });
+  return hasDecimal;
+};
+
+/**
  * Evaluates a constant subtree to its simplified form, preserving fractions (e.g. 2/12 -> 1/6)
  * instead of converting to decimal float.
  */
@@ -85,44 +103,50 @@ export const evaluateConstantSubtree = (node: math.MathNode): math.MathNode | nu
   if (node.type === 'ConstantNode') return null;
   if (!isConstantSubtree(node)) return null;
 
-  try {
-    const val = mathFraction.evaluate(node.toString());
-    if (val && val.constructor?.name === 'Fraction') {
-      const s = Number(val.s);
-      const n = Number(val.n);
-      const d = Number(val.d);
-
-      if (d === 1) {
-        return new math.ConstantNode(s * n);
-      } else {
-        return new math.OperatorNode('/', 'divide', [
-          new math.ConstantNode(s * n),
-          new math.ConstantNode(d)
-        ]);
-      }
-    }
-  } catch {
-    // Fall back to standard numeric evaluation
+  // Try fraction evaluation first if it doesn't contain decimals
+  if (!hasDecimalConstant(node)) {
     try {
-      const val = node.compile().evaluate();
-      let numVal: number | null = null;
-      if (typeof val === 'number') {
-        numVal = val;
-      } else if (val && typeof val === 'object' && 'toNumber' in val) {
-        numVal = (val as unknown as { toNumber: () => number }).toNumber();
-      } else {
-        const parsed = parseFloat(val?.toString());
-        if (!isNaN(parsed)) {
-          numVal = parsed;
+      const val = mathFraction.evaluate(node.toString());
+      if (val && val.constructor?.name === 'Fraction') {
+        const s = Number(val.s);
+        const n = Number(val.n);
+        const d = Number(val.d);
+
+        if (d === 1) {
+          return new math.ConstantNode(s * n);
+        } else {
+          return new math.OperatorNode('/', 'divide', [
+            new math.ConstantNode(s * n),
+            new math.ConstantNode(d)
+          ]);
         }
       }
-      if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
-        return new math.ConstantNode(numVal);
-      }
     } catch {
-      // ignore
+      // Ignore and fall through to standard numeric evaluation
     }
   }
+
+  // Fall back to standard numeric evaluation
+  try {
+    const val = node.compile().evaluate();
+    let numVal: number | null = null;
+    if (typeof val === 'number') {
+      numVal = val;
+    } else if (val && typeof val === 'object' && 'toNumber' in val) {
+      numVal = (val as unknown as { toNumber: () => number }).toNumber();
+    } else {
+      const parsed = parseFloat(val?.toString());
+      if (!isNaN(parsed)) {
+        numVal = parsed;
+      }
+    }
+    if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
+      return new math.ConstantNode(numVal);
+    }
+  } catch {
+    // ignore
+  }
+
   return null;
 };
 
@@ -722,4 +746,271 @@ export const autoSimplify = (eq: Equation): Equation => {
   }
 
   return currentEq;
+};
+
+export interface ReductionOption {
+  readonly path: string;
+  readonly simplified: Equation;
+  readonly type: 'reduce' | 'distribute' | 'identity';
+  readonly label?: string;
+}
+
+/**
+ * Traverses an equation to discover all algebraic simplification, distribution,
+ * and identity-based reduction opportunities, returns them grouped by path,
+ * and deduplicates functionally identical outcomes favoring more specific labels.
+ */
+export const getReducibleOptions = (eq: Equation): Record<string, ReductionOption[]> => {
+  const allNodePaths: string[] = [];
+  const traversePaths = (node: math.MathNode, prefix: string) => {
+    if (!node) return;
+    allNodePaths.push(prefix);
+    const children = 'args' in node ? (node as any).args : ('content' in node ? [(node as any).content] : []);
+    children.forEach((child: math.MathNode, index: number) => {
+      if (child) traversePaths(child, `${prefix}/${index}`);
+    });
+  };
+  traversePaths(eq.lhs, 'lhs');
+  traversePaths(eq.rhs, 'rhs');
+
+  const rawReductions: ReductionOption[] = [];
+
+  allNodePaths.forEach((path) => {
+    // Try standard simplification/distribution
+    try {
+      const simplified = getSimplificationForPath(eq, path);
+      if (simplified) {
+        const node = getNodeByPath(eq, path);
+        const distNode = tryDistribution(node);
+        
+        const clean = (s: string) => s.replace(/[\s()]/g, '');
+        const targetNodeInSimplified = getNodeByPath(simplified, path);
+        const isActualDistribution = !!(
+          distNode &&
+          clean(targetNodeInSimplified.toString()) === clean(distNode.toString())
+        );
+
+        let label: string | undefined = undefined;
+        if (isActualDistribution) {
+          label = 'Distribute';
+        } else {
+          const isFraction = node.type === 'OperatorNode' && (node as math.OperatorNode).op === '/';
+          label = isFraction ? 'Simplify Fraction' : 'Simplify';
+        }
+
+        rawReductions.push({
+          path,
+          simplified,
+          type: isActualDistribution ? 'distribute' : 'reduce',
+          label
+        });
+
+        // If the node can be distributed but was simplified in a different way (e.g. constant folded),
+        // offer the distribution option separately.
+        if (distNode && !isActualDistribution) {
+          const eqDist = replaceNodeAtPath(eq, path, distNode);
+          const cleanEq = (e: Equation) => `${clean(e.lhs.toString())}=${clean(e.rhs.toString())}`;
+          if (cleanEq(eqDist) !== cleanEq(eq) && areEquationsEquivalent(eq, eqDist)) {
+            rawReductions.push({
+              path,
+              simplified: eqDist,
+              type: 'distribute',
+              label: 'Distribute'
+            });
+          }
+        }
+      }
+    } catch {}
+
+    // Try evaluating constant subtrees to decimal floats
+    try {
+      const node = getNodeByPath(eq, path);
+      if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
+        const val = node.compile().evaluate();
+        let numVal: number | null = null;
+        if (typeof val === 'number') {
+          numVal = val;
+        } else if (val && typeof val === 'object' && 'toNumber' in val) {
+          numVal = (val as unknown as { toNumber: () => number }).toNumber();
+        } else {
+          const parsed = parseFloat(val?.toString());
+          if (!isNaN(parsed)) {
+            numVal = parsed;
+          }
+        }
+
+        if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
+          if (!Number.isInteger(numVal)) {
+            const decNode = new math.ConstantNode(numVal);
+            const newEq = replaceNodeAtPath(eq, path, decNode);
+            
+            if (areEquationsEquivalent(eq, newEq)) {
+              const clean = (str: string) => str.replace(/[\s()]/g, '');
+              if (clean(decNode.toString()) !== clean(node.toString())) {
+                rawReductions.push({
+                  path,
+                  simplified: newEq,
+                  type: 'reduce',
+                  label: 'Evaluate to Decimal'
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // Try high-school algebraic identity matches
+    try {
+      const node = getNodeByPath(eq, path);
+      for (const rule of HIGH_SCHOOL_IDENTITIES) {
+        const bindings = matchPattern(rule.sourcePattern, node);
+        if (bindings) {
+          // Exclude n = 2 for nthRoot exponent rules to prevent duplicate square root rules
+          if (rule.id === 'exponent_nthRoot_reverse' || rule.id === 'exponent_nthRoot') {
+            const nNode = bindings['_n'];
+            if (nNode) {
+              let unwrapped = nNode;
+              while (unwrapped.type === 'ParenthesisNode') {
+                unwrapped = (unwrapped as math.ParenthesisNode).content;
+              }
+              if (unwrapped.type === 'ConstantNode' && (unwrapped as math.ConstantNode).value === 2) {
+                continue; // Skip offering nthRoot rule if index is 2 (handled by square root)
+              }
+            }
+          }
+
+          const instantiated = instantiatePattern(rule.targetPattern, bindings);
+          const newEq = replaceNodeAtPath(eq, path, instantiated);
+          if (areEquationsEquivalent(eq, newEq)) {
+            rawReductions.push({
+              path,
+              simplified: newEq,
+              type: 'identity',
+              label: rule.name
+            });
+          }
+        }
+      }
+    } catch {}
+
+    // Try expressing perfect power constants (e.g. 9 -> 3^2, 8 -> 2^3)
+    try {
+      const node = getNodeByPath(eq, path);
+      const powerForm = tryExpressAsPower(node);
+      if (powerForm) {
+        const newEq = replaceNodeAtPath(eq, path, powerForm);
+        if (areEquationsEquivalent(eq, newEq)) {
+          const exponent = ((powerForm as math.OperatorNode).args[1] as math.ConstantNode).value;
+          const label = exponent === 2 ? 'Express as Square' : 'Express as Cube';
+          rawReductions.push({
+            path,
+            simplified: newEq,
+            type: 'identity',
+            label
+          });
+        }
+      }
+    } catch {}
+
+    // Try expanding power terms (e.g. x^2 -> x * x, x^3 -> x * x * x)
+    try {
+      const node = getNodeByPath(eq, path);
+      const expandedForm = tryExpandPowerTerm(node);
+      if (expandedForm) {
+        const newEq = replaceNodeAtPath(eq, path, expandedForm);
+        if (areEquationsEquivalent(eq, newEq)) {
+          rawReductions.push({
+            path,
+            simplified: newEq,
+            type: 'identity',
+            label: 'Expand Power'
+          });
+        }
+      }
+    } catch {}
+  });
+
+  // Try equation-level quadratic formula solutions
+  try {
+    const quadSolutions = getQuadraticFormulaSolutions(eq);
+    for (const sol of quadSolutions) {
+      const hasVarOnLhs = (() => {
+        let found = false;
+        sol.pos.lhs.traverse((n) => {
+          if (n.type === 'SymbolNode' && (n as math.SymbolNode).name === sol.solveVar) found = true;
+        });
+        return found;
+      })();
+      const solvePath = hasVarOnLhs ? 'lhs' : 'rhs';
+      
+      rawReductions.push({
+        path: solvePath,
+        simplified: sol.pos,
+        type: 'identity',
+        label: `Apply Quadratic Formula (+)`
+      });
+
+      rawReductions.push({
+        path: solvePath,
+        simplified: sol.neg,
+        type: 'identity',
+        label: `Apply Quadratic Formula (-)`
+      });
+    }
+  } catch (err) {
+    console.error('Error adding quadratic formula reductions:', err);
+  }
+
+  // Deduplicate and group
+  const reduciblePaths: Record<string, ReductionOption[]> = {};
+  const simplifiedToStringMap = new Map<string, ReductionOption[]>();
+
+  const getCanonicalKey = (eqVal: Equation): string => {
+    return `${eqVal.lhs.toString()} = ${eqVal.rhs.toString()}`;
+  };
+
+  rawReductions.forEach((red) => {
+    const eqStrKey = getCanonicalKey(red.simplified);
+    if (!simplifiedToStringMap.has(eqStrKey)) {
+      simplifiedToStringMap.set(eqStrKey, []);
+    }
+    simplifiedToStringMap.get(eqStrKey)!.push(red);
+  });
+
+  simplifiedToStringMap.forEach((reds, _) => {
+    reds.sort((a, b) => {
+      const nodeA = getNodeByPath(eq, a.path);
+      const nodeB = getNodeByPath(eq, b.path);
+      
+      const isOpA = nodeA.type === 'OperatorNode' || nodeA.type === 'FunctionNode';
+      const isOpB = nodeB.type === 'OperatorNode' || nodeB.type === 'FunctionNode';
+      
+      if (isOpA && !isOpB) return -1;
+      if (!isOpA && isOpB) return 1;
+      
+      const depthDiff = b.path.split('/').length - a.path.split('/').length;
+      if (depthDiff !== 0) return depthDiff;
+
+      if (a.label && !b.label) return -1;
+      if (!a.label && b.label) return 1;
+
+      if (a.label && b.label) {
+        const isGenericA = a.label === 'Simplify' || a.label === 'Simplify Fraction';
+        const isGenericB = b.label === 'Simplify' || b.label === 'Simplify Fraction';
+        if (!isGenericA && isGenericB) return -1;
+        if (isGenericA && !isGenericB) return 1;
+      }
+
+      return 0;
+    });
+    
+    const bestRed = reds[0];
+    if (!reduciblePaths[bestRed.path]) {
+      reduciblePaths[bestRed.path] = [];
+    }
+    reduciblePaths[bestRed.path].push(bestRed);
+  });
+
+  return reduciblePaths;
 };

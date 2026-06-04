@@ -486,11 +486,7 @@ export const pushEquationAtom = atom(
         const action = actions?.[index];
         if (action) {
           const actionType = action.type;
-          if (actionType === 'identity') {
-            label = action.label || 'Apply Identity';
-          } else {
-            label = actionType === 'distribute' ? 'Distribute' : 'Reduce';
-          }
+          label = action.label || (actionType === 'distribute' ? 'Distribute' : 'Simplify');
         }
       } else if (get(sourcePathAtom)) {
         label = "Transpose";

@@ -412,10 +412,10 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(resExpand!.toString()).toBe('x * x * x'); // Left-associative mathjs representation without redundant parenthesis
   });
 
-  test('generateValidMoves suggests quadratic formula solver moves for quadratic variable selection', () => {
+  test('generateValidMoves does NOT offer quadratic formula for variables nested inside power nodes', () => {
     const eq1 = parseEquation('a * x^2 + b * x + c = 0');
     
-    // Find path for 'x' dynamically
+    // Find path for 'x' dynamically - this will find the first 'x' which is inside x^2 (a power node)
     const findPathForSymbol = (node: math.MathNode, targetName: string, currentPath: string): string | null => {
       if (node.type === 'SymbolNode' && (node as math.SymbolNode).name === targetName) {
         return currentPath;
@@ -431,11 +431,34 @@ describe('Math Engine Validator & Simplifier', () => {
     const xPath = findPathForSymbol(eq1.lhs, 'x', 'lhs');
     expect(xPath).not.toBeNull();
 
+    // The x is inside a power node (x^2), so it should NOT be draggable and should return no moves.
+    // The quadratic formula is still available through getReducibleOptions (the identity/reduction system).
     const moves = generateValidMoves(eq1, xPath!);
-    expect(moves['rhs']).toBeDefined();
+    expect(Object.keys(moves).length).toBe(0);
+  });
 
-    const resultEq = equationToString(moves['rhs']);
-    expect(resultEq).toBe('x = (-b + sqrt(b ^ 2 - 4 * a * c)) / (2 * a)');
+  test('regression: clicking y in x^2 + y^2 = r^2 should not produce quadratic formula', () => {
+    const eq = parseEquation('x ^ 2 + y ^ 2 = r ^ 2');
+
+    // Find the 'y' symbol path (nested inside y^2)
+    const findPathForSymbol = (node: math.MathNode, targetName: string, currentPath: string): string | null => {
+      if (node.type === 'SymbolNode' && (node as math.SymbolNode).name === targetName) {
+        return currentPath;
+      }
+      const children = 'args' in node ? (node as any).args : ('content' in node ? [(node as any).content] : []);
+      for (let i = 0; i < children.length; i++) {
+        const path = findPathForSymbol(children[i], targetName, currentPath ? `${currentPath}/${i}` : (i === 0 ? 'lhs' : 'rhs'));
+        if (path) return path;
+      }
+      return null;
+    };
+
+    const yPath = findPathForSymbol(eq.lhs, 'y', 'lhs');
+    expect(yPath).not.toBeNull();
+
+    // y is inside y^2 (a power node) - clicking it should produce NO moves
+    const moves = generateValidMoves(eq, yPath!);
+    expect(Object.keys(moves).length).toBe(0);
   });
 
   test('should validate complex discriminant transpositions and variable-denominator moves', () => {

@@ -865,6 +865,13 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
   const moves: Record<string, Equation> = {};
 
   try {
+    // IMPORTANT: Check draggability FIRST. If the node is inside a power or function node,
+    // it cannot be dragged and should not trigger any moves — including the quadratic formula.
+    // The quadratic formula is still offered through the reduction/identity system (getReducibleOptions).
+    if (!isPathDraggable(originalEq, sourcePath)) {
+      return moves;
+    }
+
     // Check if the selected node is a variable that can be solved via the quadratic formula
     const selectedNode = getNodeByPath(originalEq, sourcePath);
     if (selectedNode.type === 'SymbolNode') {
@@ -903,10 +910,6 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
 
         return moves; // Return early with the quadratic formula solve move!
       }
-    }
-
-    if (!isPathDraggable(originalEq, sourcePath)) {
-      return moves;
     }
 
     const { newEquation: tempEq, removedNode } = removeNodeAtPath(originalEq, sourcePath);

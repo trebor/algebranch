@@ -69,19 +69,152 @@ const BUBBLE_SIZE = 40;
 const PADDING_LEFT = 40;
 const PADDING_TOP = 32;
 
-// Base Atoms
-export const historyTreeAtom = atom<Record<string, HistoryNode>>({
-  "0": {
-    id: "0",
-    equation: parseEquation(INITIAL_EQUATION_STRING),
-    parentId: null,
-    childrenIds: [],
-    label: "Initial",
-    timestamp: Date.now(),
-  }
-});
+export interface WorkspaceTab {
+  id: string;
+  name: string;
+  historyTree: Record<string, HistoryNode>;
+  currentNodeId: string;
+}
 
-export const currentNodeIdAtom = atom<string>("0");
+// Helper to get initial tabs from localStorage or fallback
+const getInitialTabs = (): WorkspaceTab[] => {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('algebranch_workspace_tabs');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.map((tab: any) => ({
+          ...tab,
+          historyTree: deserializeTree(tab.historyTree)
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to load workspace tabs from localStorage:', err);
+    }
+  }
+  return [
+    {
+      id: 'tab_initial',
+      name: INITIAL_EQUATION_STRING,
+      historyTree: {
+        "0": {
+          id: "0",
+          equation: parseEquation(INITIAL_EQUATION_STRING),
+          parentId: null,
+          childrenIds: [],
+          label: "Initial",
+          timestamp: Date.now(),
+        }
+      },
+      currentNodeId: "0"
+    }
+  ];
+};
+
+const getInitialActiveTabId = (): string => {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('algebranch_active_tab_id');
+      if (saved) return saved;
+    } catch {}
+  }
+  return 'tab_initial';
+};
+
+// Internal raw atoms
+export const rawTabsAtom = atom<WorkspaceTab[]>(getInitialTabs());
+export const rawActiveTabIdAtom = atom<string>(getInitialActiveTabId());
+
+// Helper to save tabs to localStorage
+const saveTabsToLocalStorage = (tabs: WorkspaceTab[], activeId: string) => {
+  if (typeof window !== 'undefined') {
+    try {
+      const serialized = tabs.map(tab => ({
+        ...tab,
+        historyTree: serializeTree(tab.historyTree)
+      }));
+      localStorage.setItem('algebranch_workspace_tabs', JSON.stringify(serialized));
+      localStorage.setItem('algebranch_active_tab_id', activeId);
+    } catch (err) {
+      console.error('Failed to save workspace tabs to localStorage:', err);
+    }
+  }
+};
+
+// Base Atoms
+export const tabsAtom = atom(
+  (get) => get(rawTabsAtom),
+  (get, set, update: WorkspaceTab[] | ((prev: WorkspaceTab[]) => WorkspaceTab[])) => {
+    const prev = get(rawTabsAtom);
+    const next = typeof update === 'function' ? update(prev) : update;
+    set(rawTabsAtom, next);
+    saveTabsToLocalStorage(next, get(rawActiveTabIdAtom));
+  }
+);
+
+export const activeTabIdAtom = atom(
+  (get) => get(rawActiveTabIdAtom),
+  (get, set, update: string | ((prev: string) => string)) => {
+    const prev = get(rawActiveTabIdAtom);
+    const next = typeof update === 'function' ? update(prev) : update;
+    set(rawActiveTabIdAtom, next);
+    saveTabsToLocalStorage(get(rawTabsAtom), next);
+  }
+);
+
+export const historyTreeAtom = atom(
+  (get) => {
+    const tabs = get(tabsAtom);
+    const activeId = get(activeTabIdAtom);
+    const activeTab = tabs.find(t => t.id === activeId) || tabs[0];
+    return activeTab?.historyTree || {};
+  },
+  (get, set, update: Record<string, HistoryNode> | ((prev: Record<string, HistoryNode>) => Record<string, HistoryNode>)) => {
+    const tabs = get(tabsAtom);
+    const activeId = get(activeTabIdAtom);
+    const updatedTabs = tabs.map(t => {
+      if (t.id === activeId) {
+        const nextTree = typeof update === 'function' ? update(t.historyTree) : update;
+        const activeNode = nextTree[t.currentNodeId];
+        const tabName = activeNode ? equationToString(activeNode.equation) : t.name;
+        return {
+          ...t,
+          historyTree: nextTree,
+          name: tabName
+        };
+      }
+      return t;
+    });
+    set(tabsAtom, updatedTabs);
+  }
+);
+
+export const currentNodeIdAtom = atom(
+  (get) => {
+    const tabs = get(tabsAtom);
+    const activeId = get(activeTabIdAtom);
+    const activeTab = tabs.find(t => t.id === activeId) || tabs[0];
+    return activeTab?.currentNodeId || "0";
+  },
+  (get, set, update: string | ((prev: string) => string)) => {
+    const tabs = get(tabsAtom);
+    const activeId = get(activeTabIdAtom);
+    const updatedTabs = tabs.map(t => {
+      if (t.id === activeId) {
+        const nextNodeId = typeof update === 'function' ? update(t.currentNodeId) : update;
+        const activeNode = t.historyTree[nextNodeId];
+        const tabName = activeNode ? equationToString(activeNode.equation) : t.name;
+        return {
+          ...t,
+          currentNodeId: nextNodeId,
+          name: tabName
+        };
+      }
+      return t;
+    });
+    set(tabsAtom, updatedTabs);
+  }
+);
 
 // Saved sessions state
 export const savedSessionsAtom = atom<SavedSession[]>([]);
@@ -634,5 +767,116 @@ export const clearMathStateAtom = atom(
  * Atom: Tracks whether the backend math engine API is currently executing calculations.
  */
 export const mathLoadingAtom = atom(false);
+
+/**
+ * Action: Add a new workspace tab.
+ */
+export const addTabAtom = atom(
+  null,
+  (get, set, initialEqStr?: string) => {
+    const eqStr = initialEqStr || INITIAL_EQUATION_STRING;
+    const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      const newEq = ensureNodeIds(parseEquation(eqStr));
+      const newTab: WorkspaceTab = {
+        id: newTabId,
+        name: eqStr,
+        historyTree: {
+          "0": {
+            id: "0",
+            equation: newEq,
+            parentId: null,
+            childrenIds: [],
+            label: "Initial",
+            timestamp: Date.now(),
+          }
+        },
+        currentNodeId: "0"
+      };
+
+      const prevTabs = get(tabsAtom);
+      set(tabsAtom, [...prevTabs, newTab]);
+      set(activeTabIdAtom, newTabId);
+      
+      // Clear intermediate states
+      set(sourcePathAtom, null);
+      set(hoverPathAtom, null);
+      set(hoverReducePathAtom, null);
+      set(hoverReduceIndexAtom, null);
+      set(hoveredLoopTargetIdAtom, null);
+    } catch (err) {
+      console.error('Failed to add tab:', err);
+    }
+  }
+);
+
+/**
+ * Action: Close a workspace tab.
+ */
+export const closeTabAtom = atom(
+  null,
+  (get, set, tabId: string) => {
+    const tabs = get(tabsAtom);
+    if (tabs.length <= 1) {
+      // If closing the last tab, reset it rather than deleting it
+      set(tabsAtom, [
+        {
+          id: 'tab_initial',
+          name: INITIAL_EQUATION_STRING,
+          historyTree: {
+            "0": {
+              id: "0",
+              equation: parseEquation(INITIAL_EQUATION_STRING),
+              parentId: null,
+              childrenIds: [],
+              label: "Initial",
+              timestamp: Date.now(),
+            }
+          },
+          currentNodeId: "0"
+        }
+      ]);
+      set(activeTabIdAtom, 'tab_initial');
+      return;
+    }
+
+    const filtered = tabs.filter(t => t.id !== tabId);
+    set(tabsAtom, filtered);
+
+    const activeId = get(activeTabIdAtom);
+    if (activeId === tabId) {
+      // Switch active tab to the adjacent tab
+      const closedIndex = tabs.findIndex(t => t.id === tabId);
+      const nextActiveIndex = Math.min(closedIndex, filtered.length - 1);
+      set(activeTabIdAtom, filtered[nextActiveIndex].id);
+    }
+    
+    // Clear intermediate states
+    set(sourcePathAtom, null);
+    set(hoverPathAtom, null);
+    set(hoverReducePathAtom, null);
+    set(hoverReduceIndexAtom, null);
+    set(hoveredLoopTargetIdAtom, null);
+  }
+);
+
+/**
+ * Action: Rename a workspace tab.
+ */
+export const renameTabAtom = atom(
+  null,
+  (get, set, { tabId, name }: { tabId: string; name: string }) => {
+    const tabs = get(tabsAtom);
+    const updated = tabs.map(t => {
+      if (t.id === tabId) {
+        return { ...t, name: name.trim() };
+      }
+      return t;
+    });
+    set(tabsAtom, updated);
+  }
+);
+
 
 

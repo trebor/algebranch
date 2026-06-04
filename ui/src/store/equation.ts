@@ -76,54 +76,28 @@ export interface WorkspaceTab {
   currentNodeId: string;
 }
 
-// Helper to get initial tabs from localStorage or fallback
-const getInitialTabs = (): WorkspaceTab[] => {
-  if (typeof window !== 'undefined') {
-    try {
-      const saved = localStorage.getItem('algebranch_workspace_tabs');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.map((tab: any) => ({
-          ...tab,
-          historyTree: deserializeTree(tab.historyTree)
-        }));
+// Helper for fallback/static initial tabs
+const getFallbackTabs = (): WorkspaceTab[] => [
+  {
+    id: 'tab_initial',
+    name: INITIAL_EQUATION_STRING,
+    historyTree: {
+      "0": {
+        id: "0",
+        equation: parseEquation(INITIAL_EQUATION_STRING),
+        parentId: null,
+        childrenIds: [],
+        label: "Initial",
+        timestamp: Date.now(),
       }
-    } catch (err) {
-      console.error('Failed to load workspace tabs from localStorage:', err);
-    }
+    },
+    currentNodeId: "0"
   }
-  return [
-    {
-      id: 'tab_initial',
-      name: INITIAL_EQUATION_STRING,
-      historyTree: {
-        "0": {
-          id: "0",
-          equation: parseEquation(INITIAL_EQUATION_STRING),
-          parentId: null,
-          childrenIds: [],
-          label: "Initial",
-          timestamp: Date.now(),
-        }
-      },
-      currentNodeId: "0"
-    }
-  ];
-};
+];
 
-const getInitialActiveTabId = (): string => {
-  if (typeof window !== 'undefined') {
-    try {
-      const saved = localStorage.getItem('algebranch_active_tab_id');
-      if (saved) return saved;
-    } catch {}
-  }
-  return 'tab_initial';
-};
-
-// Internal raw atoms
-export const rawTabsAtom = atom<WorkspaceTab[]>(getInitialTabs());
-export const rawActiveTabIdAtom = atom<string>(getInitialActiveTabId());
+// Internal raw atoms (always initialized to static fallback to prevent Next.js SSR hydration mismatches)
+export const rawTabsAtom = atom<WorkspaceTab[]>(getFallbackTabs());
+export const rawActiveTabIdAtom = atom<string>('tab_initial');
 
 // Helper to save tabs to localStorage
 const saveTabsToLocalStorage = (tabs: WorkspaceTab[], activeId: string) => {
@@ -875,6 +849,35 @@ export const renameTabAtom = atom(
       return t;
     });
     set(tabsAtom, updated);
+  }
+);
+
+/**
+ * Action: Hydrates workspace tabs from localStorage on client-side mount.
+ */
+export const hydrateWorkspaceTabsAtom = atom(
+  null,
+  (get, set) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const savedTabs = localStorage.getItem('algebranch_workspace_tabs');
+      const savedActiveId = localStorage.getItem('algebranch_active_tab_id');
+      
+      if (savedTabs) {
+        const parsed = JSON.parse(savedTabs);
+        const deserialized = parsed.map((tab: any) => ({
+          ...tab,
+          historyTree: deserializeTree(tab.historyTree)
+        }));
+        set(rawTabsAtom, deserialized);
+      }
+      
+      if (savedActiveId) {
+        set(rawActiveTabIdAtom, savedActiveId);
+      }
+    } catch (err) {
+      console.error('Failed to hydrate workspace tabs from localStorage:', err);
+    }
   }
 );
 

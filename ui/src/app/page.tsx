@@ -33,6 +33,7 @@ import {
   feedbackModalOpenAtom,
   feedbackContextAtom,
   mathLoadingAtom,
+  hydrateWorkspaceTabsAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
@@ -68,6 +69,7 @@ export default function Home() {
   const setFeedbackModalOpen = useSetAtom(feedbackModalOpenAtom);
   const setFeedbackContext = useSetAtom(feedbackContextAtom);
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
+  const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
@@ -80,6 +82,9 @@ export default function Home() {
 
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
+    // Hydrate workspace tabs state
+    hydrateWorkspaceTabs();
+
     // 0. Set default sidebar states for mobile/tablet
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
     if (isMobile) {

@@ -662,7 +662,7 @@ export default function Home() {
                       <MessageSquarePlus size={14} />
                     </button>
                   </Tooltip>
-                  <Tooltip content="Delete workspace" position="left">
+                  <Tooltip content="Delete workspace permanently" position="left">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

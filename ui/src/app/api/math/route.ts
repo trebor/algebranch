@@ -78,13 +78,36 @@ export async function POST(req: NextRequest) {
           const simplified = getSimplificationForPath(eq, path);
           if (simplified) {
             const node = getNodeByPath(eq, path);
-            const isDist = !!tryDistribution(node);
+            const distNode = tryDistribution(node);
+            
+            const clean = (s: string) => s.replace(/[\s()]/g, '');
+            const targetNodeInSimplified = getNodeByPath(simplified, path);
+            const isActualDistribution = !!(
+              distNode &&
+              clean(targetNodeInSimplified.toString()) === clean(distNode.toString())
+            );
+
             rawReductions.push({
               path,
               simplified,
               serialized: serializeEquation(simplified),
-              type: isDist ? 'distribute' : 'reduce'
+              type: isActualDistribution ? 'distribute' : 'reduce'
             });
+
+            // If the node can be distributed but was simplified in a different way (e.g. constant folded),
+            // offer the distribution option separately.
+            if (distNode && !isActualDistribution) {
+              const eqDist = replaceNodeAtPath(eq, path, distNode);
+              const cleanEq = (e: Equation) => `${clean(e.lhs.toString())}=${clean(e.rhs.toString())}`;
+              if (cleanEq(eqDist) !== cleanEq(eq) && areEquationsEquivalent(eq, eqDist)) {
+                rawReductions.push({
+                  path,
+                  simplified: eqDist,
+                  serialized: serializeEquation(eqDist),
+                  type: 'distribute'
+                });
+              }
+            }
           }
         } catch {}
 

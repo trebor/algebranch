@@ -74,6 +74,7 @@ export interface WorkspaceTab {
   name: string;
   historyTree: Record<string, HistoryNode>;
   currentNodeId: string;
+  isCustomNamed?: boolean;
 }
 
 // Helper for fallback/static initial tabs
@@ -150,7 +151,9 @@ export const historyTreeAtom = atom(
       if (t.id === activeId) {
         const nextTree = typeof update === 'function' ? update(t.historyTree) : update;
         const activeNode = nextTree[t.currentNodeId];
-        const tabName = activeNode ? equationToString(activeNode.equation) : t.name;
+        const tabName = t.isCustomNamed
+          ? t.name
+          : (activeNode ? equationToString(activeNode.equation) : t.name);
         return {
           ...t,
           historyTree: nextTree,
@@ -177,7 +180,9 @@ export const currentNodeIdAtom = atom(
       if (t.id === activeId) {
         const nextNodeId = typeof update === 'function' ? update(t.currentNodeId) : update;
         const activeNode = t.historyTree[nextNodeId];
-        const tabName = activeNode ? equationToString(activeNode.equation) : t.name;
+        const tabName = t.isCustomNamed
+          ? t.name
+          : (activeNode ? equationToString(activeNode.equation) : t.name);
         return {
           ...t,
           currentNodeId: nextNodeId,
@@ -914,7 +919,11 @@ export const renameTabAtom = atom(
     const tabs = get(tabsAtom);
     const updated = tabs.map(t => {
       if (t.id === tabId) {
-        return { ...t, name: name.trim() };
+        return { 
+          ...t, 
+          name: name.trim(),
+          isCustomNamed: true 
+        };
       }
       return t;
     });

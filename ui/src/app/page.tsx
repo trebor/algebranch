@@ -652,7 +652,7 @@ export default function Home() {
               ) : null}
               {/* Contextual Action Buttons for Active Workspace */}
               {currentEq && (
-                <div className="absolute top-4 right-4 z-30 opacity-0 group-hover/canvas:opacity-100 transition-opacity duration-300 flex items-center gap-2">
+                <div className="absolute top-4 right-4 z-30 contextual-actions flex items-center gap-2">
                   <Tooltip content="Report an issue with this active equation" position="left">
                     <button
                       onClick={(e) => {

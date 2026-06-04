@@ -24,3 +24,25 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Custom responsive visibility class for contextual action buttons */
+.contextual-actions {
+  opacity: 0.25;
+  transition: opacity 0.3s ease-in-out;
+}
+
+@media (hover: hover) {
+  /* On devices supporting hover: start at low opacity, go to 100% on container hover */
+  .group\/canvas:hover .contextual-actions,
+  .group\/node:hover .contextual-actions,
+  .group:hover .contextual-actions {
+    opacity: 1;
+  }
+}
+
+@media (hover: none) {
+  /* On touch/no-hover devices: always fully visible */
+  .contextual-actions {
+    opacity: 1;
+  }
+}

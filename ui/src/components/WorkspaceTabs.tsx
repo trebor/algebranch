@@ -104,7 +104,7 @@ export const WorkspaceTabs: React.FC = () => {
                     <Tooltip content="Rename workspace" position="bottom" autoAlign={false}>
                       <button
                         onClick={(e) => handleStartEdit(e, tab)}
-                        className="opacity-0 group-hover:opacity-100 hover:text-indigo-400 p-0.5 rounded cursor-pointer transition-all duration-150"
+                        className="contextual-actions hover:text-indigo-400 p-0.5 rounded cursor-pointer"
                       >
                         <Pencil size={9} />
                       </button>

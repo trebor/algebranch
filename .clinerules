@@ -1,0 +1,6 @@
+# Local Development Guardrails
+
+## 🚀 Branch & Merge Management
+- **Pre-Merge Manual Testing Guardrail:** 
+  Before merging any feature branch into the `main` branch, the agent MUST stop and prompt the user to perform manual testing on the active branch. 
+  - **Constraint:** Never execute `git push` or `gh pr merge` / merge commits directly without explicit user instruction and validation of the working environment.

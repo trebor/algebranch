@@ -75,6 +75,57 @@ export const isConstantSubtree = (node: math.MathNode): boolean => {
   return false;
 };
 
+const mathFraction = math.create(math.all, { number: 'Fraction' });
+
+/**
+ * Evaluates a constant subtree to its simplified form, preserving fractions (e.g. 2/12 -> 1/6)
+ * instead of converting to decimal float.
+ */
+export const evaluateConstantSubtree = (node: math.MathNode): math.MathNode | null => {
+  if (node.type === 'ConstantNode') return null;
+  if (!isConstantSubtree(node)) return null;
+
+  try {
+    const val = mathFraction.evaluate(node.toString());
+    if (val && val.constructor?.name === 'Fraction') {
+      const s = Number(val.s);
+      const n = Number(val.n);
+      const d = Number(val.d);
+
+      if (d === 1) {
+        return new math.ConstantNode(s * n);
+      } else {
+        return new math.OperatorNode('/', 'divide', [
+          new math.ConstantNode(s * n),
+          new math.ConstantNode(d)
+        ]);
+      }
+    }
+  } catch {
+    // Fall back to standard numeric evaluation
+    try {
+      const val = node.compile().evaluate();
+      let numVal: number | null = null;
+      if (typeof val === 'number') {
+        numVal = val;
+      } else if (val && typeof val === 'object' && 'toNumber' in val) {
+        numVal = (val as unknown as { toNumber: () => number }).toNumber();
+      } else {
+        const parsed = parseFloat(val?.toString());
+        if (!isNaN(parsed)) {
+          numVal = parsed;
+        }
+      }
+      if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
+        return new math.ConstantNode(numVal);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+};
+
 /**
  * Helper to identify and simplify roots of matching powers (e.g. sqrt(x^2) -> x, nthRoot(x^3, 3) -> x).
  */
@@ -453,27 +504,15 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
 
     // 1. Try constant folding first (non-constant subtrees composed entirely of constants)
     if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
-      try {
-        const val = node.compile().evaluate();
-        let numVal: number | null = null;
-        if (typeof val === 'number') {
-          numVal = val;
-        } else if (val && typeof val === 'object' && 'toNumber' in val) {
-          numVal = (val as unknown as { toNumber: () => number }).toNumber();
-        } else {
-          const parsed = parseFloat(val?.toString());
-          if (!isNaN(parsed)) {
-            numVal = parsed;
-          }
-        }
-        if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
-          const candidate = replaceNodeAtPath(eq, p, new math.ConstantNode(numVal));
+      const folded = evaluateConstantSubtree(node);
+      if (folded) {
+        const clean = (str: string) => str.replace(/[\s()]/g, '');
+        if (clean(folded.toString()) !== clean(node.toString())) {
+          const candidate = replaceNodeAtPath(eq, p, folded);
           if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
             return candidate;
           }
         }
-      } catch {
-        // ignore
       }
     }
 
@@ -583,29 +622,17 @@ export const autoSimplify = (eq: Equation): Equation => {
 
       // Try constant folding first
       if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
-        try {
-          const val = node.compile().evaluate();
-          let numVal: number | null = null;
-          if (typeof val === 'number') {
-            numVal = val;
-          } else if (val && typeof val === 'object' && 'toNumber' in val) {
-            numVal = (val as unknown as { toNumber: () => number }).toNumber();
-          } else {
-            const parsed = parseFloat(val?.toString());
-            if (!isNaN(parsed)) {
-              numVal = parsed;
-            }
-          }
-          if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
-            const candidate = replaceNodeAtPath(currentEq, paths[i], new math.ConstantNode(numVal));
+        const folded = evaluateConstantSubtree(node);
+        if (folded) {
+          const clean = (str: string) => str.replace(/[\s()]/g, '');
+          if (clean(folded.toString()) !== clean(node.toString())) {
+            const candidate = replaceNodeAtPath(currentEq, paths[i], folded);
             if (areEquationsEquivalent(currentEq, candidate)) {
               currentEq = candidate;
               simplified = true;
               break; // Restart scan on the simplified tree
             }
           }
-        } catch {
-          // ignore
         }
       }
 

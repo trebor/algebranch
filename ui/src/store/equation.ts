@@ -630,4 +630,9 @@ export const clearMathStateAtom = atom(
   }
 );
 
+/**
+ * Atom: Tracks whether the backend math engine API is currently executing calculations.
+ */
+export const mathLoadingAtom = atom(false);
+
 

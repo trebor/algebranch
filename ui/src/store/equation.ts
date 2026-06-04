@@ -486,9 +486,10 @@ export const pushEquationAtom = atom(
  */
 export const createNewSessionAtom = atom(
   null,
-  (get, set, initialEqStr?: string) => {
+  (get, set, initialEqStr?: string, customName?: string) => {
     const eqStr = initialEqStr || INITIAL_EQUATION_STRING;
     const newId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const tabName = customName || eqStr;
     
     try {
       const newEq = ensureNodeIds(parseEquation(eqStr));
@@ -507,9 +508,10 @@ export const createNewSessionAtom = atom(
       const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const newTab: WorkspaceTab = {
         id: newTabId,
-        name: eqStr,
+        name: tabName,
         historyTree: newTree,
-        currentNodeId: "0"
+        currentNodeId: "0",
+        isCustomNamed: !!customName
       };
 
       const prevTabs = get(tabsAtom);
@@ -633,8 +635,8 @@ export const deleteSessionAtom = atom(
  */
 export const resetToEquationStringAtom = atom(
   null,
-  (_get, set, eqStr: string) => {
-    set(createNewSessionAtom, eqStr);
+  (_get, set, eqStr: string, customName?: string) => {
+    set(createNewSessionAtom, eqStr, customName);
   }
 );
 

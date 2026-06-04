@@ -116,14 +116,14 @@ export const Sidebar: React.FC = () => {
     }
   };
 
-  const handlePresetSelect = (eqStr: string) => {
+  const handlePresetSelect = (eqStr: string, label: string) => {
     try {
       setErrorStr(null);
-      resetToEquation(eqStr);
+      resetToEquation(eqStr, label);
       trackEvent({
         action: 'load_preset',
         category: 'presets',
-        label: eqStr,
+        label: label,
       });
       if (window.innerWidth < 1024) {
         setLeftSidebarOpen(false);
@@ -521,7 +521,7 @@ export const Sidebar: React.FC = () => {
                         content={preset.description}
                       >
                         <button
-                          onClick={() => handlePresetSelect(preset.equation)}
+                          onClick={() => handlePresetSelect(preset.equation, preset.label)}
                           className="w-full flex items-center justify-between text-left p-2.5 pl-3 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-indigo-500/5 hover:border-indigo-500/10 border-l-2 border-l-transparent hover:border-l-indigo-400/80 group transition-all duration-200 cursor-pointer shrink-0 shadow-sm shadow-black/20"
                         >
                           <div className="flex-1 min-w-0 pr-2">

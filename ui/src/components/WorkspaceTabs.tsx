@@ -89,9 +89,11 @@ export const WorkspaceTabs: React.FC = () => {
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span className="truncate max-w-[120px] tracking-wide" title={tab.name}>
-                  {truncateName(tab.name)}
-                </span>
+                <Tooltip content={tab.name} position="bottom">
+                  <span className="truncate max-w-[120px] tracking-wide">
+                    {truncateName(tab.name)}
+                  </span>
+                </Tooltip>
               )}
 
               {/* Action buttons inside tab */}

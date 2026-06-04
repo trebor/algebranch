@@ -742,6 +742,16 @@ export const clearMathStateAtom = atom(
  */
 export const mathLoadingAtom = atom(false);
 
+export interface ToastState {
+  message: string;
+  key: number;
+}
+
+/**
+ * Atom: Tracks transient status messages shown to the user.
+ */
+export const toastAtom = atom<ToastState | null>(null);
+
 /**
  * Action: Add a new workspace tab.
  */
@@ -777,6 +787,9 @@ export const addTabAtom = atom(
           historyTree: clonedHistoryTree,
           currentNodeId: activeTab.currentNodeId
         };
+
+        // Show transient success message
+        set(toastAtom, { message: "Cloned active workspace", key: Date.now() });
       } else {
         // Create a brand new workspace with the given equation or fallback
         const eqStr = initialEqStr || INITIAL_EQUATION_STRING;

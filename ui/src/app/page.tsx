@@ -34,6 +34,7 @@ import {
   feedbackContextAtom,
   mathLoadingAtom,
   hydrateWorkspaceTabsAtom,
+  toastAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
@@ -70,6 +71,7 @@ export default function Home() {
   const setFeedbackContext = useSetAtom(feedbackContextAtom);
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
+  const [toast, setToast] = useAtom(toastAtom);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
@@ -480,6 +482,15 @@ export default function Home() {
     };
   }, [leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen]);
 
+  // Auto-dismiss toast status messages after 2.5 seconds
+  React.useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [toast, setToast]);
+
 
   return (
     <div className="relative flex flex-col h-screen w-screen overflow-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(30,27,75,0.8),rgba(10,10,12,1))] text-white font-sans">
@@ -602,14 +613,19 @@ export default function Home() {
               }}
               className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light cursor-default relative group/canvas"
             >
-              {/* Calculating Math Engine Spinner */}
-              {isMathLoading && (
+              {/* Calculating Math Engine Spinner / Toast Notification */}
+              {toast ? (
+                <div key={`toast-${toast.key}`} className="absolute top-4 left-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/25 bg-neutral-900/80 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]">
+                  <Check size={12} className="text-emerald-400 shrink-0" />
+                  <span>{toast.message}</span>
+                </div>
+              ) : isMathLoading ? (
                 <div className="absolute top-4 left-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/20 bg-neutral-900/60 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]">
                   <span className="h-2 w-2 rounded-full bg-indigo-400 animate-ping shrink-0" />
-                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-indigo-500/20 border-t-indigo-400" />
+                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-indigo-500/20 border-t-indigo-400 shrink-0" />
                   <span>Calculating...</span>
                 </div>
-              )}
+              ) : null}
               {/* Contextual Feedback Button for Active Equation */}
               {currentEq && (
                 <div className="absolute top-4 right-4 z-30 opacity-0 group-hover/canvas:opacity-100 transition-opacity duration-300">

@@ -197,6 +197,13 @@ export const currentNodeIdAtom = atom(
   }
 );
 
+export const currentTabNameAtom = atom<string>((get) => {
+  const tabs = get(tabsAtom);
+  const activeId = get(activeTabIdAtom);
+  const activeTab = tabs.find(t => t.id === activeId) || tabs[0];
+  return activeTab?.name || INITIAL_EQUATION_STRING;
+});
+
 // Saved sessions state
 export const savedSessionsAtom = atom<SavedSession[]>([]);
 export const rawCurrentSessionIdAtom = atom<string>("session_initial");

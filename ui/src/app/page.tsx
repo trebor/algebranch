@@ -36,6 +36,7 @@ import {
   hydrateWorkspaceTabsAtom,
   toastAtom,
   createNewSessionAtom,
+  currentTabNameAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
@@ -73,6 +74,7 @@ export default function Home() {
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
   const createNewSession = useSetAtom(createNewSessionAtom);
+  const currentTabName = useAtomValue(currentTabNameAtom);
   const [toast, setToast] = useAtom(toastAtom);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
@@ -284,8 +286,7 @@ export default function Home() {
     // 1. Save active workspace to the current session's entry in savedSessions library
     try {
       const serialized = serializeTree(tree);
-      const startEq = tree["0"]?.equation;
-      const sessionName = startEq ? equationToString(startEq) : INITIAL_EQUATION_STRING;
+      const sessionName = currentTabName || INITIAL_EQUATION_STRING;
 
       // Update the active session in our list
       setSavedSessions(prevSessions => {
@@ -339,7 +340,7 @@ export default function Home() {
     } catch (err) {
       console.error('Failed to update URL search parameter:', err);
     }
-  }, [tree, currentNodeId, currentSessionId, setSavedSessions]);
+  }, [tree, currentNodeId, currentSessionId, setSavedSessions, currentTabName]);
 
   const handleShare = () => {
     const shareUrl = window.location.href;

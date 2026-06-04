@@ -203,90 +203,103 @@ export const Sidebar: React.FC = () => {
         )}
 
         {/* Recents Section */}
-        {savedSessions.length > 0 && (
-          <div className="flex flex-col gap-1.5 border-t border-white/5 pt-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
-              Recents
-            </span>
-            <div className="relative w-full">
-              {!isDropdownOpen && currentSession ? (
-                <Tooltip 
-                  content={triggerTooltipContent} 
-                  wrapperClassName="w-full min-w-0"
-                >
+        <div className="flex flex-col gap-1.5 border-t border-white/5 pt-3">
+          <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
+            Recents
+          </span>
+          <div className="relative w-full">
+            {savedSessions.length > 0 ? (
+              <>
+                {!isDropdownOpen && currentSession ? (
+                  <Tooltip 
+                    content={triggerTooltipContent} 
+                    wrapperClassName="w-full min-w-0"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
+                    >
+                      <span className="truncate flex-1 text-left">
+                        {currentSession.name}
+                      </span>
+                      <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  </Tooltip>
+                ) : (
                   <button
                     type="button"
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
                   >
                     <span className="truncate flex-1 text-left">
-                      {currentSession.name}
+                      {currentSession?.name || 'Select equation...'}
                     </span>
                     <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
-                </Tooltip>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
-                >
-                  <span className="truncate flex-1 text-left">
-                    {currentSession?.name || 'Select equation...'}
-                  </span>
-                  <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-              )}
+                )}
 
-              {isDropdownOpen && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40 cursor-default" 
-                    onClick={() => setIsDropdownOpen(false)} 
-                  />
-                  <div className="absolute left-0 right-0 mt-1.5 bg-neutral-950/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl overflow-y-auto max-h-60 z-50 py-1 animate-[fadeIn_0.15s_ease-out]">
-                    {[...savedSessions]
-                      .sort((a, b) => b.timestamp - a.timestamp)
-                      .map((session) => {
-                        const isActive = session.id === currentSessionId;
-                        const stepCount = getStepCount(session.tree);
-                        return (
-                          <button
-                            key={session.id}
-                            type="button"
-                            onClick={() => {
-                              loadSession(session.id);
-                              trackEvent({
-                                action: 'load_session',
-                                category: 'sessions',
-                                label: session.id,
-                              });
-                              setIsDropdownOpen(false);
-                              if (window.innerWidth < 1024) {
-                                setLeftSidebarOpen(false);
-                              }
-                            }}
-                            className={`w-full text-left px-3 py-2 text-xs flex justify-between items-center gap-4 hover:bg-indigo-600/20 transition-colors cursor-pointer ${
-                              isActive ? 'text-indigo-300 bg-indigo-600/5 font-semibold' : 'text-white/70'
-                            }`}
-                          >
-                            <span className="truncate font-mono flex-1">
-                              {session.name}
-                            </span>
-                            <span className="text-[10px] text-white/30 whitespace-nowrap font-sans shrink-0 flex items-center gap-1.5">
-                              <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
-                              <span>·</span>
-                              <span>{formatTimestamp(session.timestamp)}</span>
-                            </span>
-                          </button>
-                        );
-                      })}
-                  </div>
-                </>
-              )}
-            </div>
+                {isDropdownOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40 cursor-default" 
+                      onClick={() => setIsDropdownOpen(false)} 
+                    />
+                    <div className="absolute left-0 right-0 mt-1.5 bg-neutral-950/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl overflow-y-auto max-h-60 z-50 py-1 animate-[fadeIn_0.15s_ease-out]">
+                      {[...savedSessions]
+                        .sort((a, b) => b.timestamp - a.timestamp)
+                        .map((session) => {
+                          const isActive = session.id === currentSessionId;
+                          const stepCount = getStepCount(session.tree);
+                          return (
+                            <button
+                              key={session.id}
+                              type="button"
+                              onClick={() => {
+                                loadSession(session.id);
+                                trackEvent({
+                                  action: 'load_session',
+                                  category: 'sessions',
+                                  label: session.id,
+                                });
+                                setIsDropdownOpen(false);
+                                if (window.innerWidth < 1024) {
+                                  setLeftSidebarOpen(false);
+                                }
+                              }}
+                              className={`w-full text-left px-3 py-2 text-xs flex justify-between items-center gap-4 hover:bg-indigo-600/20 transition-colors cursor-pointer ${
+                                isActive ? 'text-indigo-300 bg-indigo-600/5 font-semibold' : 'text-white/70'
+                              }`}
+                            >
+                              <span className="truncate font-mono flex-1">
+                                {session.name}
+                              </span>
+                              <span className="text-[10px] text-white/30 whitespace-nowrap font-sans shrink-0 flex items-center gap-1.5">
+                                <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
+                                <span>·</span>
+                                <span>{formatTimestamp(session.timestamp)}</span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/5 rounded-xl text-white/30 transition-all font-mono flex items-center justify-between gap-2 min-w-0 cursor-not-allowed"
+              >
+                <span className="truncate flex-1 text-left">
+                  No recent workspaces
+                </span>
+                <ChevronDown size={12} className="text-white/20 shrink-0" />
+              </button>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* 2. Global Operations Panel */}

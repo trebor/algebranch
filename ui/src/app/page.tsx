@@ -85,6 +85,7 @@ export default function Home() {
   const setDeleteConfirmationModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
   const currentTabName = useAtomValue(currentTabNameAtom);
   const [toast, setToast] = useAtom(toastAtom);
+  const [isHydrated, setIsHydrated] = React.useState(false);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
@@ -97,199 +98,203 @@ export default function Home() {
 
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
-    // Hydrate workspace tabs state
-    hydrateWorkspaceTabs();
+    const initialize = () => {
+      // Hydrate workspace tabs state
+      hydrateWorkspaceTabs();
 
-    // 0. Set default sidebar states for mobile/tablet
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-    if (isMobile) {
-      setLeftSidebarOpen(false);
-      setRightSidebarOpen(false);
-    }
-
-    // 1. First, load the library list of saved sessions
-    let sessions: SavedSession[] = [];
-    try {
-      const savedSessionsRaw = localStorage.getItem('algebranch_saved_sessions');
-      if (savedSessionsRaw) {
-        sessions = JSON.parse(savedSessionsRaw);
-        
-        // Auto-migrate legacy default equation to the new optimized default
-        let migrated = false;
-        sessions = sessions.map(s => {
-          if (s.id === 'session_initial' && s.name === '3 * x + 5 = x + 13') {
-            migrated = true;
-            const initialTree: Record<string, HistoryNode> = {
-              "0": {
-                id: "0",
-                equation: parseEquation(INITIAL_EQUATION_STRING),
-                parentId: null,
-                childrenIds: [],
-                label: "Initial",
-                timestamp: Date.now(),
-              }
-            };
-            return {
-              id: 'session_initial',
-              name: INITIAL_EQUATION_STRING,
-              timestamp: Date.now(),
-              tree: serializeTree(initialTree),
-              currentNodeId: "0",
-            };
-          }
-          return s;
-        });
-
-        if (migrated) {
-          localStorage.setItem('algebranch_saved_sessions', JSON.stringify(sessions));
-        }
-
-        setSavedSessions(sessions);
+      // 0. Set default sidebar states for mobile/tablet
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+      if (isMobile) {
+        setLeftSidebarOpen(false);
+        setRightSidebarOpen(false);
       }
-    } catch (err) {
-      console.error('Failed to load saved sessions list:', err);
-    }
 
-    // Check if we have saved tabs to prevent overwriting hydrated tab trees with stale sessions
-    const hasSavedTabs = typeof window !== 'undefined' && localStorage.getItem('algebranch_workspace_tabs') !== null;
-    if (hasSavedTabs) {
+      // 1. First, load the library list of saved sessions
+      let sessions: SavedSession[] = [];
+      try {
+        const savedSessionsRaw = localStorage.getItem('algebranch_saved_sessions');
+        if (savedSessionsRaw) {
+          sessions = JSON.parse(savedSessionsRaw);
+          
+          // Auto-migrate legacy default equation to the new optimized default
+          let migrated = false;
+          sessions = sessions.map(s => {
+            if (s.id === 'session_initial' && s.name === '3 * x + 5 = x + 13') {
+              migrated = true;
+              const initialTree: Record<string, HistoryNode> = {
+                "0": {
+                  id: "0",
+                  equation: parseEquation(INITIAL_EQUATION_STRING),
+                  parentId: null,
+                  childrenIds: [],
+                  label: "Initial",
+                  timestamp: Date.now(),
+                }
+              };
+              return {
+                id: 'session_initial',
+                name: INITIAL_EQUATION_STRING,
+                timestamp: Date.now(),
+                tree: serializeTree(initialTree),
+                currentNodeId: "0",
+              };
+            }
+            return s;
+          });
+
+          if (migrated) {
+            localStorage.setItem('algebranch_saved_sessions', JSON.stringify(sessions));
+          }
+
+          setSavedSessions(sessions);
+        }
+      } catch (err) {
+        console.error('Failed to load saved sessions list:', err);
+      }
+
+      // Check if we have saved tabs to prevent overwriting hydrated tab trees with stale sessions
+      const hasSavedTabs = typeof window !== 'undefined' && localStorage.getItem('algebranch_workspace_tabs') !== null;
+      if (hasSavedTabs) {
+        const params = new URLSearchParams(window.location.search);
+        const urlEq = params.get('eq');
+        if (urlEq) {
+          try {
+            const cleanEqStr = decodeURIComponent(urlEq);
+            createNewSession(cleanEqStr);
+            // Clear query parameter from the URL to prevent duplicate tabs on page refresh
+            window.history.replaceState(null, '', window.location.pathname);
+          } catch (err) {
+            console.error('Failed to parse equation from URL query parameter:', err);
+          }
+        }
+        return;
+      }
+
+      // 2. Check URL query string precedence (if sharing) - for legacy/first load without workspace tabs
       const params = new URLSearchParams(window.location.search);
       const urlEq = params.get('eq');
+      
       if (urlEq) {
         try {
           const cleanEqStr = decodeURIComponent(urlEq);
-          createNewSession(cleanEqStr);
+          const newEq = ensureNodeIds(parseEquation(cleanEqStr));
+          const newTree: Record<string, HistoryNode> = {
+            "0": {
+              id: "0",
+              equation: newEq,
+              parentId: null,
+              childrenIds: [],
+              label: "Initial",
+              timestamp: Date.now(),
+            }
+          };
+
+          // Create a new session for the shared link so it doesn't overwrite existing work
+          const newSessionId = `session_shared_${Date.now()}`;
+          setTree(newTree);
+          setCurrentNodeId("0");
+          setCurrentSessionId(newSessionId);
+
+          // Add this new shared session to the library list
+          const newSession: SavedSession = {
+            id: newSessionId,
+            name: cleanEqStr,
+            timestamp: Date.now(),
+            tree: serializeTree(newTree),
+            currentNodeId: "0",
+          };
+          const updated = [newSession, ...sessions];
+          setSavedSessions(updated);
+          localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
+          localStorage.setItem('algebranch_current_session_id', newSessionId);
           // Clear query parameter from the URL to prevent duplicate tabs on page refresh
           window.history.replaceState(null, '', window.location.pathname);
+          return;
         } catch (err) {
           console.error('Failed to parse equation from URL query parameter:', err);
         }
       }
-      return;
-    }
-
-    // 2. Check URL query string precedence (if sharing) - for legacy/first load without workspace tabs
-    const params = new URLSearchParams(window.location.search);
-    const urlEq = params.get('eq');
-    
-    if (urlEq) {
+      
+      // 3. Otherwise, check if there was a saved active session
       try {
-        const cleanEqStr = decodeURIComponent(urlEq);
-        const newEq = ensureNodeIds(parseEquation(cleanEqStr));
-        const newTree: Record<string, HistoryNode> = {
-          "0": {
-            id: "0",
-            equation: newEq,
-            parentId: null,
-            childrenIds: [],
-            label: "Initial",
-            timestamp: Date.now(),
+        const savedSessionId = localStorage.getItem('algebranch_current_session_id');
+        if (savedSessionId && sessions.length > 0) {
+          const activeSession = sessions.find(s => s.id === savedSessionId);
+          if (activeSession) {
+            setTree(deserializeTree(activeSession.tree));
+            setCurrentNodeId(activeSession.currentNodeId);
+            setCurrentSessionId(savedSessionId);
+            return;
           }
-        };
+        }
 
-        // Create a new session for the shared link so it doesn't overwrite existing work
-        const newSessionId = `session_shared_${Date.now()}`;
-        setTree(newTree);
-        setCurrentNodeId("0");
-        setCurrentSessionId(newSessionId);
-
-        // Add this new shared session to the library list
-        const newSession: SavedSession = {
-          id: newSessionId,
-          name: cleanEqStr,
-          timestamp: Date.now(),
-          tree: serializeTree(newTree),
-          currentNodeId: "0",
-        };
-        const updated = [newSession, ...sessions];
-        setSavedSessions(updated);
-        localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
-        localStorage.setItem('algebranch_current_session_id', newSessionId);
-        // Clear query parameter from the URL to prevent duplicate tabs on page refresh
-        window.history.replaceState(null, '', window.location.pathname);
-        return;
-      } catch (err) {
-        console.error('Failed to parse equation from URL query parameter:', err);
-      }
-    }
-    
-    // 3. Otherwise, check if there was a saved active session
-    try {
-      const savedSessionId = localStorage.getItem('algebranch_current_session_id');
-      if (savedSessionId && sessions.length > 0) {
-        const activeSession = sessions.find(s => s.id === savedSessionId);
-        if (activeSession) {
+        // Fallback: If no active session found but we have sessions in the list, load the first one
+        if (sessions.length > 0) {
+          const activeSession = sessions[0];
           setTree(deserializeTree(activeSession.tree));
           setCurrentNodeId(activeSession.currentNodeId);
-          setCurrentSessionId(savedSessionId);
+          setCurrentSessionId(activeSession.id);
+          localStorage.setItem('algebranch_current_session_id', activeSession.id);
           return;
         }
+
+        // 4. Legacy migration fallback: Check old workspace storage keys (backward compatibility)
+        const savedTreeRaw = localStorage.getItem('algebranch_history_tree');
+        const savedNodeId = localStorage.getItem('algebranch_current_node_id');
+        if (savedTreeRaw && savedNodeId) {
+          const parsedRaw = JSON.parse(savedTreeRaw);
+          const deserializedTree = deserializeTree(parsedRaw);
+          setTree(deserializedTree);
+          setCurrentNodeId(savedNodeId);
+          
+          // Migrate legacy workspace into a new session
+          const initialEqStr = equationToString(deserializedTree["0"].equation);
+          const legacySessionId = `session_migrated_${Date.now()}`;
+          const newSession: SavedSession = {
+            id: legacySessionId,
+            name: initialEqStr,
+            timestamp: Date.now(),
+            tree: parsedRaw,
+            currentNodeId: savedNodeId,
+          };
+          const updated = [newSession, ...sessions];
+          setSavedSessions(updated);
+          setCurrentSessionId(legacySessionId);
+          localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
+          localStorage.setItem('algebranch_current_session_id', legacySessionId);
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to load history from local storage:', err);
       }
 
-      // Fallback: If no active session found but we have sessions in the list, load the first one
-      if (sessions.length > 0) {
-        const activeSession = sessions[0];
-        setTree(deserializeTree(activeSession.tree));
-        setCurrentNodeId(activeSession.currentNodeId);
-        setCurrentSessionId(activeSession.id);
-        localStorage.setItem('algebranch_current_session_id', activeSession.id);
-        return;
-      }
-
-      // 4. Legacy migration fallback: Check old workspace storage keys (backward compatibility)
-      const savedTreeRaw = localStorage.getItem('algebranch_history_tree');
-      const savedNodeId = localStorage.getItem('algebranch_current_node_id');
-      if (savedTreeRaw && savedNodeId) {
-        const parsedRaw = JSON.parse(savedTreeRaw);
-        const deserializedTree = deserializeTree(parsedRaw);
-        setTree(deserializedTree);
-        setCurrentNodeId(savedNodeId);
-        
-        // Migrate legacy workspace into a new session
-        const initialEqStr = equationToString(deserializedTree["0"].equation);
-        const legacySessionId = `session_migrated_${Date.now()}`;
-        const newSession: SavedSession = {
-          id: legacySessionId,
-          name: initialEqStr,
+      // 5. Default starting state if everything is empty
+      const defaultId = "session_initial";
+      setCurrentSessionId(defaultId);
+      const initialTree: Record<string, HistoryNode> = {
+        "0": {
+          id: "0",
+          equation: parseEquation(INITIAL_EQUATION_STRING),
+          parentId: null,
+          childrenIds: [],
+          label: "Initial",
           timestamp: Date.now(),
-          tree: parsedRaw,
-          currentNodeId: savedNodeId,
-        };
-        const updated = [newSession, ...sessions];
-        setSavedSessions(updated);
-        setCurrentSessionId(legacySessionId);
-        localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
-        localStorage.setItem('algebranch_current_session_id', legacySessionId);
-        return;
-      }
-    } catch (err) {
-      console.error('Failed to load history from local storage:', err);
-    }
-
-    // 5. Default starting state if everything is empty
-    const defaultId = "session_initial";
-    setCurrentSessionId(defaultId);
-    const initialTree: Record<string, HistoryNode> = {
-      "0": {
-        id: "0",
-        equation: parseEquation(INITIAL_EQUATION_STRING),
-        parentId: null,
-        childrenIds: [],
-        label: "Initial",
+        }
+      };
+      const defaultSession: SavedSession = {
+        id: defaultId,
+        name: INITIAL_EQUATION_STRING,
         timestamp: Date.now(),
-      }
+        tree: serializeTree(initialTree),
+        currentNodeId: "0",
+      };
+      setSavedSessions([defaultSession]);
+      localStorage.setItem('algebranch_saved_sessions', JSON.stringify([defaultSession]));
+      localStorage.setItem('algebranch_current_session_id', defaultId);
     };
-    const defaultSession: SavedSession = {
-      id: defaultId,
-      name: INITIAL_EQUATION_STRING,
-      timestamp: Date.now(),
-      tree: serializeTree(initialTree),
-      currentNodeId: "0",
-    };
-    setSavedSessions([defaultSession]);
-    localStorage.setItem('algebranch_saved_sessions', JSON.stringify([defaultSession]));
-    localStorage.setItem('algebranch_current_session_id', defaultId);
 
+    initialize();
+    setIsHydrated(true);
   }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession]);
 
   // Save derivation steps to local storage and update address bar URL reactively
@@ -635,7 +640,15 @@ export default function Home() {
 
         {/* Main workspace section */}
         <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden gap-3">
-          <WorkspaceTabs />
+          {isHydrated ? (
+            <WorkspaceTabs />
+          ) : (
+            <div className="w-full flex items-center justify-between bg-transparent px-0 pt-2 pb-0 gap-4 shrink-0 select-none">
+              <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+                <div className="h-[30px] w-32 bg-white/5 border border-white/5 animate-pulse rounded-xl" />
+              </div>
+            </div>
+          )}
           <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
             
             {/* 1. Active Derivation Workspace (Top 2/3) */}
@@ -690,24 +703,31 @@ export default function Home() {
                   </Tooltip>
                 </div>
               )}
-              <div className="flex flex-col items-center justify-center gap-2 origin-center">
-                <div ref={activeScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max">
-                  {/* LHS Term Tree */}
-                  <div className="flex justify-end min-w-[5em]">
-                    <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />
-                  </div>
+              {!isHydrated ? (
+                <div className="flex flex-col items-center justify-center gap-3 select-none">
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500/20 border-t-indigo-400 shrink-0" />
+                  <span className="text-sm font-medium text-indigo-300/80 animate-pulse tracking-wide">Initializing workspace...</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 origin-center">
+                  <div ref={activeScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max">
+                    {/* LHS Term Tree */}
+                    <div className="flex justify-end min-w-[5em]">
+                      <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />
+                    </div>
 
-                  {/* Equals Operator sign */}
-                  <span className="text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black">
-                    =
-                  </span>
+                    {/* Equals Operator sign */}
+                    <span className="text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black">
+                      =
+                    </span>
 
-                  {/* RHS Term Tree */}
-                  <div className="flex justify-start min-w-[5em]">
-                    <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
+                    {/* RHS Term Tree */}
+                    <div className="flex justify-start min-w-[5em]">
+                      <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Elegant Dashed Separator */}
@@ -724,39 +744,41 @@ export default function Home() {
               className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light cursor-default relative group/preview"
             >
 
-              <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 origin-center ${
-                isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
-              }`}>
-                <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
-                  isSpeculative ? 'text-emerald-400' : 'text-zinc-500'
+              {isHydrated && (
+                <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 origin-center ${
+                  isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
                 }`}>
-                  <span>Preview</span>
-                  {isSpeculative && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                  )}
-                </span>
-                
-                <div ref={previewScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max pointer-events-none select-none">
-                  {/* LHS Preview Term Tree */}
-                  <div className="flex justify-end min-w-[5em]">
-                    <PreviewEquationNode path="lhs" />
-                  </div>
-
-                  {/* Equals Operator sign */}
-                  <span className={`text-[1.2em] font-light font-mono select-none px-[0.6em] py-[0.2em] border rounded-[0.4em] transition-all duration-300 ${
-                    isSpeculative
-                      ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
-                      : 'text-zinc-600 border-zinc-500/10 bg-zinc-500/5'
+                  <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
+                    isSpeculative ? 'text-emerald-400' : 'text-zinc-500'
                   }`}>
-                    =
+                    <span>Preview</span>
+                    {isSpeculative && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                    )}
                   </span>
+                  
+                  <div ref={previewScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max pointer-events-none select-none">
+                    {/* LHS Preview Term Tree */}
+                    <div className="flex justify-end min-w-[5em]">
+                      <PreviewEquationNode path="lhs" />
+                    </div>
 
-                  {/* RHS Preview Term Tree */}
-                  <div className="flex justify-start min-w-[5em]">
-                    <PreviewEquationNode path="rhs" />
+                    {/* Equals Operator sign */}
+                    <span className={`text-[1.2em] font-light font-mono select-none px-[0.6em] py-[0.2em] border rounded-[0.4em] transition-all duration-300 ${
+                      isSpeculative
+                        ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
+                        : 'text-zinc-600 border-zinc-500/10 bg-zinc-500/5'
+                    }`}>
+                      =
+                    </span>
+
+                    {/* RHS Preview Term Tree */}
+                    <div className="flex justify-start min-w-[5em]">
+                      <PreviewEquationNode path="rhs" />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </main>

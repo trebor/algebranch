@@ -105,4 +105,15 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
     expect(negOption).toBeDefined();
     expect(equationToString(negOption!.simplified)).toBe('x = (-(-5) - sqrt((-5) ^ 2 - 4 * 1 * 6)) / (2 * 1)');
   });
+
+  test('should NOT offer quadratic formula when b=0 (solvable by isolation + square root)', () => {
+    const eq = parseEquation('x ^ 2 + y ^ 2 = r ^ 2');
+    const reductions = getReducibleOptions(eq);
+
+    // Collect all quadratic formula options across all paths
+    const allQuadOpts = Object.values(reductions).flat().filter(
+      r => r.label && r.label.includes('Quadratic')
+    );
+    expect(allQuadOpts.length).toBe(0);
+  });
 });

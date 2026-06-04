@@ -741,6 +741,11 @@ export const getQuadraticFormulaSolutions = (eq: Equation): QuadraticFormulaSolu
     if (coeffs) {
       const { a, b, c } = coeffs;
 
+      // Skip the quadratic formula when b=0 (no linear term).
+      // When b=0, the equation reduces to ax² = -c, which is solvable by
+      // simple isolation and square root — the pedagogically correct approach.
+      if (isZeroNode(b)) continue;
+
       const b_sq = new math.OperatorNode('^', 'pow', [b, new math.ConstantNode(2)]);
       const four_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(4), a]);
       const four_a_c = new math.OperatorNode('*', 'multiply', [four_a, c]);
@@ -880,6 +885,10 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
       if (coeffs) {
         const { a, b, c } = coeffs;
 
+        // Skip the quadratic formula when b=0 (no linear term).
+        // When b=0, the equation is solvable by isolation + square root.
+        if (!isZeroNode(b)) {
+
         const b_sq = new math.OperatorNode('^', 'pow', [b, new math.ConstantNode(2)]);
         const four_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(4), a]);
         const four_a_c = new math.OperatorNode('*', 'multiply', [four_a, c]);
@@ -909,6 +918,7 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
         }
 
         return moves; // Return early with the quadratic formula solve move!
+        }
       }
     }
 

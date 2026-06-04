@@ -89,7 +89,7 @@ export const WorkspaceTabs: React.FC = () => {
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <Tooltip content={tab.name} position="bottom">
+                <Tooltip content={tab.name} position="bottom" autoAlign={false}>
                   <span className="truncate max-w-[120px] tracking-wide">
                     {truncateName(tab.name)}
                   </span>
@@ -101,7 +101,7 @@ export const WorkspaceTabs: React.FC = () => {
                 <div className="flex items-center gap-1">
                   {/* Small pencil icon visible on hover for active tab */}
                   {isActive && (
-                    <Tooltip content="Rename workspace" position="bottom">
+                    <Tooltip content="Rename workspace" position="bottom" autoAlign={false}>
                       <button
                         onClick={(e) => handleStartEdit(e, tab)}
                         className="opacity-0 group-hover:opacity-100 hover:text-indigo-400 p-0.5 rounded cursor-pointer transition-all duration-150"
@@ -111,7 +111,7 @@ export const WorkspaceTabs: React.FC = () => {
                     </Tooltip>
                   )}
                   {/* Close tab button */}
-                  <Tooltip content="Close workspace tab" position="bottom">
+                  <Tooltip content="Close workspace tab" position="bottom" autoAlign={false}>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -132,7 +132,7 @@ export const WorkspaceTabs: React.FC = () => {
       </div>
 
       {/* Plus Button to add tab - Pinned to the right */}
-      <Tooltip content="Clone workspace" position="bottom">
+      <Tooltip content="Clone workspace" position="bottom" autoAlign={false}>
         <button
           onClick={() => addTab()}
           className="flex items-center justify-center p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white/40 hover:text-white transition-all cursor-pointer shrink-0"

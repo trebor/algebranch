@@ -66,10 +66,14 @@ export const Sidebar: React.FC = () => {
   const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>({});
 
   const toggleCategory = (categoryName: string) => {
-    setExpandedCategories((prev) => ({
-      ...prev,
-      [categoryName]: !prev[categoryName],
-    }));
+    setExpandedCategories((prev) => {
+      const wasExpanded = !!prev[categoryName];
+      if (wasExpanded) {
+        return {};
+      } else {
+        return { [categoryName]: true };
+      }
+    });
   };
 
   const [inputStr, setInputStr] = React.useState('');

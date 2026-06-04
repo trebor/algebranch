@@ -18,13 +18,14 @@ import {
   replaceNodeAtPath,
   tryExpressAsPower,
   tryExpandPowerTerm,
-  getQuadraticFormulaSolutions
+  getQuadraticFormulaSolutions,
+  isConstantSubtree
 } from 'math-engine';
 import * as math from 'mathjs';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as any;
     const { action } = body;
 
     if (action === 'sync-state') {
@@ -84,6 +85,43 @@ export async function POST(req: NextRequest) {
               serialized: serializeEquation(simplified),
               type: isDist ? 'distribute' : 'reduce'
             });
+          }
+        } catch {}
+
+        // Try evaluating constant subtrees to decimal floats
+        try {
+          const node = getNodeByPath(eq, path);
+          if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
+            const val = node.compile().evaluate();
+            let numVal: number | null = null;
+            if (typeof val === 'number') {
+              numVal = val;
+            } else if (val && typeof val === 'object' && 'toNumber' in val) {
+              numVal = (val as unknown as { toNumber: () => number }).toNumber();
+            } else {
+              const parsed = parseFloat(val?.toString());
+              if (!isNaN(parsed)) {
+                numVal = parsed;
+              }
+            }
+
+            if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
+              const decNode = new math.ConstantNode(numVal);
+              const newEq = replaceNodeAtPath(eq, path, decNode);
+              
+              if (areEquationsEquivalent(eq, newEq)) {
+                const clean = (str: string) => str.replace(/[\s()]/g, '');
+                if (clean(decNode.toString()) !== clean(node.toString())) {
+                  rawReductions.push({
+                    path,
+                    simplified: newEq,
+                    serialized: serializeEquation(newEq),
+                    type: 'identity',
+                    label: 'Evaluate to Decimal'
+                  });
+                }
+              }
+            }
           }
         } catch {}
 

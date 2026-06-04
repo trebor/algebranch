@@ -104,6 +104,26 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(equationToString(simplified3)).toBe('x = 5');
   });
 
+  test('autoSimplify simplifies arithmetic fractions using GCD reduction instead of decimals', () => {
+    const eq1 = parseEquation('x + 2 / 12 = 5');
+    const simplified1 = autoSimplify(eq1);
+    expect(equationToString(simplified1)).toBe('x + 1 / 6 = 5');
+
+    const eq2 = parseEquation('x + 12 / 18 = 5');
+    const simplified2 = autoSimplify(eq2);
+    expect(equationToString(simplified2)).toBe('x + 2 / 3 = 5');
+
+    const eq3 = parseEquation('x + 2 * (3 / 12) = 5');
+    const simplified3 = autoSimplify(eq3);
+    expect(equationToString(simplified3)).toBe('x + 1 / 2 = 5');
+
+    // verify fallback behavior for roots
+    const eq4 = parseEquation('x + sqrt(4) = 5');
+    const simplified4 = autoSimplify(eq4);
+    expect(equationToString(simplified4)).toBe('x + 2 = 5');
+  });
+
+
   test('getSimplificationForPath identifies simplification opportunities correctly', () => {
     // 1. Redundant parenthesis (manually constructed to bypass auto-stripping during parsing)
     const eq1: Equation = {

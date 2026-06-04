@@ -18,7 +18,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
-import { Sparkles, Zap, Split } from 'lucide-react';
+import { ArrowLeftRight, Zap, Split, RefreshCw } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 
 const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
@@ -466,7 +466,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               onClick={handleToggleRootSign}
               className="p-[0.1em] hover:bg-white/10 text-indigo-400 hover:text-indigo-300 rounded-[1em] transition-colors flex items-center gap-[0.2em] cursor-pointer"
             >
-              <Sparkles size={10} />
+              <RefreshCw size={10} />
               <span>± Sign</span>
             </button>
           </Tooltip>
@@ -541,7 +541,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   {type === 'distribute' ? (
                     <Split size={inExponent ? 5 : 8} className="text-white stroke-[2.5]" />
                   ) : type === 'identity' ? (
-                    <Sparkles size={inExponent ? 5 : 8} className="text-white stroke-[2.5]" />
+                    <ArrowLeftRight size={inExponent ? 5 : 8} className="text-white stroke-[2.5]" />
                   ) : (
                     <Zap size={inExponent ? 5 : 8} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
                   )}

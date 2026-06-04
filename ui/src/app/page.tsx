@@ -35,6 +35,7 @@ import {
   mathLoadingAtom,
   hydrateWorkspaceTabsAtom,
   toastAtom,
+  createNewSessionAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
@@ -71,6 +72,7 @@ export default function Home() {
   const setFeedbackContext = useSetAtom(feedbackContextAtom);
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
+  const createNewSession = useSetAtom(createNewSessionAtom);
   const [toast, setToast] = useAtom(toastAtom);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
@@ -137,7 +139,23 @@ export default function Home() {
       console.error('Failed to load saved sessions list:', err);
     }
 
-    // 2. Check URL query string precedence (if sharing)
+    // Check if we have saved tabs to prevent overwriting hydrated tab trees with stale sessions
+    const hasSavedTabs = typeof window !== 'undefined' && localStorage.getItem('algebranch_workspace_tabs') !== null;
+    if (hasSavedTabs) {
+      const params = new URLSearchParams(window.location.search);
+      const urlEq = params.get('eq');
+      if (urlEq) {
+        try {
+          const cleanEqStr = decodeURIComponent(urlEq);
+          createNewSession(cleanEqStr);
+        } catch (err) {
+          console.error('Failed to parse equation from URL query parameter:', err);
+        }
+      }
+      return;
+    }
+
+    // 2. Check URL query string precedence (if sharing) - for legacy/first load without workspace tabs
     const params = new URLSearchParams(window.location.search);
     const urlEq = params.get('eq');
     
@@ -257,7 +275,7 @@ export default function Home() {
     localStorage.setItem('algebranch_saved_sessions', JSON.stringify([defaultSession]));
     localStorage.setItem('algebranch_current_session_id', defaultId);
 
-  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen]);
+  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession]);
 
   // Save derivation steps to local storage and update address bar URL reactively
   React.useEffect(() => {

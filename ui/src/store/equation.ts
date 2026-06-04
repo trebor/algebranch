@@ -75,6 +75,7 @@ export interface WorkspaceTab {
   historyTree: Record<string, HistoryNode>;
   currentNodeId: string;
   isCustomNamed?: boolean;
+  sessionId?: string;
 }
 
 // Helper for fallback/static initial tabs
@@ -92,7 +93,8 @@ const getFallbackTabs = (): WorkspaceTab[] => [
         timestamp: Date.now(),
       }
     },
-    currentNodeId: "0"
+    currentNodeId: "0",
+    sessionId: "session_initial"
   }
 ];
 
@@ -197,7 +199,33 @@ export const currentNodeIdAtom = atom(
 
 // Saved sessions state
 export const savedSessionsAtom = atom<SavedSession[]>([]);
-export const currentSessionIdAtom = atom<string>("session_initial");
+export const rawCurrentSessionIdAtom = atom<string>("session_initial");
+
+export const currentSessionIdAtom = atom(
+  (get) => {
+    const tabs = get(tabsAtom);
+    const activeId = get(activeTabIdAtom);
+    const activeTab = tabs.find(t => t.id === activeId) || tabs[0];
+    return activeTab?.sessionId || get(rawCurrentSessionIdAtom);
+  },
+  (get, set, update: string | ((prev: string) => string)) => {
+    const tabs = get(tabsAtom);
+    const activeId = get(activeTabIdAtom);
+    const updatedTabs = tabs.map(t => {
+      if (t.id === activeId) {
+        const nextSessionId = typeof update === 'function' ? update(t.sessionId || "session_initial") : update;
+        return {
+          ...t,
+          sessionId: nextSessionId
+        };
+      }
+      return t;
+    });
+    set(tabsAtom, updatedTabs);
+    const nextSessionId = typeof update === 'function' ? update(get(rawCurrentSessionIdAtom)) : update;
+    set(rawCurrentSessionIdAtom, nextSessionId);
+  }
+);
 
 // Presets state atoms
 export const presetsAtom = atom<Preset[]>(PRESET_LIST);
@@ -511,7 +539,8 @@ export const createNewSessionAtom = atom(
         name: tabName,
         historyTree: newTree,
         currentNodeId: "0",
-        isCustomNamed: !!customName
+        isCustomNamed: !!customName,
+        sessionId: newId
       };
 
       const prevTabs = get(tabsAtom);
@@ -571,7 +600,8 @@ export const loadSessionAtom = atom(
         id: newTabId,
         name: session.name,
         historyTree: deserialized,
-        currentNodeId: session.currentNodeId
+        currentNodeId: session.currentNodeId,
+        sessionId: sessionId
       };
 
       const prevTabs = get(tabsAtom);
@@ -821,7 +851,8 @@ export const addTabAtom = atom(
           id: newTabId,
           name: activeTab.name,
           historyTree: clonedHistoryTree,
-          currentNodeId: activeTab.currentNodeId
+          currentNodeId: activeTab.currentNodeId,
+          sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         };
 
         // Show transient success message
@@ -843,7 +874,8 @@ export const addTabAtom = atom(
               timestamp: Date.now(),
             }
           },
-          currentNodeId: "0"
+          currentNodeId: "0",
+          sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         };
       }
 
@@ -885,7 +917,8 @@ export const closeTabAtom = atom(
               timestamp: Date.now(),
             }
           },
-          currentNodeId: "0"
+          currentNodeId: "0",
+          sessionId: 'session_initial'
         }
       ]);
       set(activeTabIdAtom, 'tab_initial');
@@ -948,9 +981,16 @@ export const hydrateWorkspaceTabsAtom = atom(
         const parsed = JSON.parse(savedTabs);
         const deserialized = parsed.map((tab: any) => ({
           ...tab,
-          historyTree: deserializeTree(tab.historyTree)
+          historyTree: deserializeTree(tab.historyTree),
+          sessionId: tab.sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         }));
         set(rawTabsAtom, deserialized);
+
+        const activeId = savedActiveId || 'tab_initial';
+        const activeTab = deserialized.find((t: any) => t.id === activeId) || deserialized[0];
+        if (activeTab?.sessionId) {
+          set(rawCurrentSessionIdAtom, activeTab.sessionId);
+        }
       }
       
       if (savedActiveId) {

@@ -99,27 +99,29 @@ export const WorkspaceTabs: React.FC = () => {
                 <div className="flex items-center gap-1">
                   {/* Small pencil icon visible on hover for active tab */}
                   {isActive && (
-                    <button
-                      onClick={(e) => handleStartEdit(e, tab)}
-                      className="opacity-0 group-hover:opacity-100 hover:text-indigo-400 p-0.5 rounded cursor-pointer transition-all duration-150"
-                      title="Rename workspace"
-                    >
-                      <Pencil size={9} />
-                    </button>
+                    <Tooltip content="Rename workspace" position="bottom">
+                      <button
+                        onClick={(e) => handleStartEdit(e, tab)}
+                        className="opacity-0 group-hover:opacity-100 hover:text-indigo-400 p-0.5 rounded cursor-pointer transition-all duration-150"
+                      >
+                        <Pencil size={9} />
+                      </button>
+                    </Tooltip>
                   )}
                   {/* Close tab button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(tab.id);
-                    }}
-                    className={`p-0.5 rounded hover:bg-white/10 hover:text-white cursor-pointer transition-all duration-150 ${
-                      isActive ? 'text-white/40' : 'text-white/20'
-                    }`}
-                    title="Close workspace tab"
-                  >
-                    <X size={10} />
-                  </button>
+                  <Tooltip content="Close workspace tab" position="bottom">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(tab.id);
+                      }}
+                      className={`p-0.5 rounded hover:bg-white/10 hover:text-white cursor-pointer transition-all duration-150 ${
+                        isActive ? 'text-white/40' : 'text-white/20'
+                      }`}
+                    >
+                      <X size={10} />
+                    </button>
+                  </Tooltip>
                 </div>
               )}
             </div>

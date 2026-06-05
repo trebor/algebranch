@@ -80,12 +80,6 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
     }
   }, [isOpen, anchorRef]);
 
-  // Listen for custom event from BottomNav
-  React.useEffect(() => {
-    const handleOpen = () => setIsOpen(true);
-    window.addEventListener('open-radial-menu', handleOpen);
-    return () => window.removeEventListener('open-radial-menu', handleOpen);
-  }, [setIsOpen]);
 
   // Close on Escape
   React.useEffect(() => {

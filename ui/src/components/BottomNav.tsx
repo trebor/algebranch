@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { motion } from 'framer-motion';
-import { Undo2, LayoutGrid, Equal, GitBranch, Redo2 } from 'lucide-react';
+import { Undo2, LayoutGrid, GitBranch, Redo2 } from 'lucide-react';
 import { historyTreeAtom, currentNodeIdAtom, activeBottomSheetAtom } from '../store/equation';
 
 /**
@@ -43,10 +43,6 @@ export const BottomNav: React.FC = () => {
     }
   }, [currentNode, setCurrentNodeId]);
 
-  // Center button dispatches event for RadialMenu
-  const handleOpenRadialMenu = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('open-radial-menu'));
-  }, []);
 
   const handleToggleWorkspace = useCallback(() => {
     setActiveBottomSheet((prev) => (prev === 'workspace' ? null : 'workspace'));
@@ -77,20 +73,6 @@ export const BottomNav: React.FC = () => {
           onClick={handleToggleWorkspace}
         />
 
-        {/* Center = button */}
-        <div className="flex flex-col items-center flex-1">
-          <motion.button
-            onClick={handleOpenRadialMenu}
-            className="relative -mt-3 w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/40"
-            whileTap={{ scale: 0.92 }}
-            whileHover={{ scale: 1.05 }}
-          >
-            <Equal size={24} className="text-white" />
-            {/* Glow ring */}
-            <div className="absolute inset-0 rounded-full bg-indigo-500/20 blur-md -z-10" />
-          </motion.button>
-          <span className="text-[10px] text-white/50 mt-0.5">Solve</span>
-        </div>
 
         {/* History */}
         <NavButton

@@ -855,7 +855,7 @@ export default function Home() {
         onClose={() => setActiveBottomSheet(null)}
         title="Workspace"
       >
-        <SidebarContent showGlobalOps={false} onCloseMobile={() => setActiveBottomSheet(null)} />
+        <SidebarContent onCloseMobile={() => setActiveBottomSheet(null)} />
       </BottomSheet>
 
       <BottomSheet

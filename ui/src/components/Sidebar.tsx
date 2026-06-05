@@ -7,7 +7,6 @@ import {
   currentEquationAtom,
   pushEquationAtom,
   resetToEquationStringAtom,
-  applyGlobalOpAtom,
   savedSessionsAtom,
   currentSessionIdAtom,
   loadSessionAtom,
@@ -57,17 +56,14 @@ const getStepCount = (tree: Record<string, any> | undefined | null): number => {
 };
 
 interface SidebarContentProps {
-  showGlobalOps?: boolean;
   onCloseMobile?: () => void;
 }
 
 export const SidebarContent: React.FC<SidebarContentProps> = ({
-  showGlobalOps = true,
   onCloseMobile,
 }) => {
   const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
   const resetToEquation = useSetAtom(resetToEquationStringAtom);
-  const applyGlobalOp = useSetAtom(applyGlobalOpAtom);
 
   const savedSessions = useAtomValue(savedSessionsAtom);
   const currentSessionId = useAtomValue(currentSessionIdAtom);
@@ -89,10 +85,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
 
   const [inputStr, setInputStr] = React.useState('');
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
-  const [termInput, setTermInput] = React.useState('');
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
-  const [isSquareDropdownOpen, setIsSquareDropdownOpen] = React.useState(false);
-  const [isSqrtDropdownOpen, setIsSqrtDropdownOpen] = React.useState(false);
 
   const handleLoadCustom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,21 +106,6 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
       onCloseMobile?.();
     } catch (err) {
       setErrorStr(err instanceof Error ? err.message : String(err));
-    }
-  };
-
-  const handleApplyGlobalOp = (type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div' | 'power' | 'root', power?: number) => {
-    try {
-      setErrorStr(null);
-      applyGlobalOp({ type, term: termInput, power });
-      trackEvent({
-        action: 'apply_global_op',
-        category: 'operations',
-        label: type,
-      });
-      setTermInput('');
-    } catch (err) {
-      setErrorStr(`Failed to apply operation: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -302,189 +280,6 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
         </div>
       </div>
 
-      {/* 2. Global Operations Panel */}
-      {showGlobalOps && (
-        <div className={`p-4 shrink-0 ${THEME_GLASS.CARD} flex flex-col gap-3`}>
-          <h3 className="text-xs font-bold text-white flex items-center gap-2 select-none">
-            <Sparkles className="text-indigo-400" size={14} />
-            <span>Global Operations</span>
-          </h3>
-
-          {/* Action button Grid */}
-          <div className="grid grid-cols-2 gap-2">
-            {/* Square Button with Dropdown */}
-            <div className="relative flex rounded-xl border border-white/10 bg-white/5 overflow-visible">
-              <button
-                onClick={() => handleApplyGlobalOp('square')}
-                className="flex-1 py-1.5 pl-3 pr-1 text-[11px] font-semibold text-indigo-200 hover:text-white hover:bg-white/5 transition-colors cursor-pointer text-left rounded-l-xl active:bg-white/10"
-              >
-                Square ( )²
-              </button>
-              <button
-                onClick={() => {
-                  setIsSquareDropdownOpen(!isSquareDropdownOpen);
-                  setIsSqrtDropdownOpen(false);
-                }}
-                className="px-2 flex items-center justify-center border-l border-white/10 text-indigo-300 hover:text-white hover:bg-white/5 transition-colors rounded-r-xl cursor-pointer active:bg-white/10"
-                title="Select other powers"
-              >
-                <ChevronDown
-                  size={12}
-                  className={`text-white/40 transition-transform duration-200 shrink-0 ${isSquareDropdownOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
-
-              {isSquareDropdownOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40 cursor-default"
-                    onClick={() => setIsSquareDropdownOpen(false)}
-                  />
-                  <div className="absolute left-0 right-0 top-full mt-1 bg-neutral-950/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl z-50 py-1 animate-[fadeIn_0.15s_ease-out]">
-                    <button
-                      onClick={() => {
-                        handleApplyGlobalOp('power', 3);
-                        setIsSquareDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-[10px] text-indigo-200 hover:bg-indigo-600/20 hover:text-white transition-colors cursor-pointer font-medium"
-                    >
-                      Cube ( )³
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleApplyGlobalOp('power', 4);
-                        setIsSquareDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-[10px] text-indigo-200 hover:bg-indigo-600/20 hover:text-white transition-colors cursor-pointer font-medium"
-                    >
-                      4th Power ( )⁴
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleApplyGlobalOp('power', 5);
-                        setIsSquareDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-[10px] text-indigo-200 hover:bg-indigo-600/20 hover:text-white transition-colors cursor-pointer font-medium"
-                    >
-                      5th Power ( )⁵
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Square Root Button with Dropdown */}
-            <div className="relative flex rounded-xl border border-white/10 bg-white/5 overflow-visible">
-              <button
-                onClick={() => handleApplyGlobalOp('sqrt')}
-                className="flex-1 py-1.5 pl-3 pr-1 text-[11px] font-semibold text-indigo-200 hover:text-white hover:bg-white/5 transition-colors cursor-pointer text-left rounded-l-xl active:bg-white/10"
-              >
-                Square Root √
-              </button>
-              <button
-                onClick={() => {
-                  setIsSqrtDropdownOpen(!isSqrtDropdownOpen);
-                  setIsSquareDropdownOpen(false);
-                }}
-                className="px-2 flex items-center justify-center border-l border-white/10 text-indigo-300 hover:text-white hover:bg-white/5 transition-colors rounded-r-xl cursor-pointer active:bg-white/10"
-                title="Select other roots"
-              >
-                <ChevronDown
-                  size={12}
-                  className={`text-white/40 transition-transform duration-200 shrink-0 ${isSqrtDropdownOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
-
-              {isSqrtDropdownOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40 cursor-default"
-                    onClick={() => setIsSqrtDropdownOpen(false)}
-                  />
-                  <div className="absolute left-0 right-0 top-full mt-1 bg-neutral-950/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl z-50 py-1 animate-[fadeIn_0.15s_ease-out]">
-                    <button
-                      onClick={() => {
-                        handleApplyGlobalOp('root', 3);
-                        setIsSqrtDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-[10px] text-indigo-200 hover:bg-indigo-600/20 hover:text-white transition-colors cursor-pointer font-medium"
-                    >
-                      Cube Root ∛
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleApplyGlobalOp('root', 4);
-                        setIsSqrtDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-[10px] text-indigo-200 hover:bg-indigo-600/20 hover:text-white transition-colors cursor-pointer font-medium"
-                    >
-                      4th Root ∜
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleApplyGlobalOp('root', 5);
-                        setIsSqrtDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-[10px] text-indigo-200 hover:bg-indigo-600/20 hover:text-white transition-colors cursor-pointer font-medium"
-                    >
-                      5th Root ⁵√
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="border-t border-white/5 pt-3 flex flex-col gap-2.5">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={termInput}
-                onChange={(e) => setTermInput(e.target.value)}
-                placeholder="Specify term, e.g. 5x"
-                className="flex-1 px-3 py-1.5 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
-              />
-            </div>
-
-            {/* Inline operations grid */}
-            <div className="grid grid-cols-4 gap-1.5">
-              <Tooltip content="Add term">
-                <button
-                  onClick={() => handleApplyGlobalOp('add')}
-                  className="p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer"
-                >
-                  <Plus size={12} />
-                </button>
-              </Tooltip>
-              <Tooltip content="Subtract term">
-                <button
-                  onClick={() => handleApplyGlobalOp('sub')}
-                  className="p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer"
-                >
-                  <Minus size={12} />
-                </button>
-              </Tooltip>
-              <Tooltip content="Multiply by term">
-                <button
-                  onClick={() => handleApplyGlobalOp('mul')}
-                  className="p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer"
-                >
-                  <X size={12} />
-                </button>
-              </Tooltip>
-              <Tooltip content="Divide by term">
-                <button
-                  onClick={() => handleApplyGlobalOp('div')}
-                  className="p-2 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-300 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer"
-                >
-                  <Percent size={12} className="rotate-45" />
-                </button>
-              </Tooltip>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 3. Presets Library */}
       <div className="flex-1 flex flex-col gap-3 min-h-0 border-t border-white/10 pt-4">
         <h3 className="text-xs font-bold text-white flex items-center gap-2 select-none px-1">
@@ -567,7 +362,7 @@ export const Sidebar: React.FC = () => {
         ? 'lg:w-80 lg:min-w-[20rem] lg:p-4 lg:mr-4 lg:opacity-100'
         : 'lg:w-0 lg:min-w-0 lg:p-0 lg:mr-0 lg:opacity-0 lg:border-0 lg:overflow-hidden lg:pointer-events-none'
     } ${THEME_GLASS.PANEL}`}>
-      <SidebarContent showGlobalOps={true} />
+      <SidebarContent />
     </div>
   );
 };

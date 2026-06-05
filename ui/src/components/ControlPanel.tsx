@@ -41,6 +41,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
 
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const activeCardRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -214,7 +219,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
     });
 
     // 3. Compute dynamic position and width on a row-by-row basis
-    const containerWidth = typeof window !== 'undefined' && window.innerWidth < 1024
+    const containerWidth = isMounted && typeof window !== 'undefined' && window.innerWidth < 1024
       ? Math.max(240, window.innerWidth - 64)
       : 240;
     const minColWidth = 110;
@@ -237,7 +242,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
         width: cardWidth,
       };
     });
-  }, [layoutNodes]);
+  }, [layoutNodes, isMounted]);
 
   const visualNodesMap = React.useMemo(() => {
     const map: Record<string, typeof visualNodes[0]> = {};

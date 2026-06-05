@@ -704,6 +704,7 @@ export default function Home() {
       } else {
         setLeftSidebarOpen(true);
         setRightSidebarOpen(true);
+        setActiveBottomSheet(null);
       }
     }
   }, [isMobile, isHydrated, setLeftSidebarOpen, setRightSidebarOpen, setActiveBottomSheet]);

@@ -124,7 +124,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           {/* Sheet */}
           <motion.div
             ref={sheetRef}
-            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl backdrop-blur-2xl bg-[#0d0b1c]/92 border-t border-white/10 flex flex-col"
+            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl backdrop-blur-2xl bg-gradient-to-br from-[#1b183a]/90 via-[#0e0c1f]/95 to-[#07070b]/98 border-t border-white/10 flex flex-col"
             style={{ height: sheetHeight, maxHeight: '95vh' }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}

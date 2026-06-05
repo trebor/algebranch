@@ -8,6 +8,7 @@ import { Sidebar, SidebarContent, EquationLibraryContent } from '../components/S
 import { ControlPanel, TimelineContent } from '../components/ControlPanel';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
+import { ResetHistoryModal } from '../components/ResetHistoryModal';
 import { Tooltip } from '../components/Tooltip';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { BottomNav } from '../components/BottomNav';
@@ -1014,6 +1015,7 @@ export default function Home() {
       </div>
       <FeedbackModal />
       <DeleteWorkspaceModal />
+      <ResetHistoryModal />
 
       {/* Mobile-only Bottom navigation and Sheets */}
       <BottomNav />

@@ -15,6 +15,7 @@ import {
   hoveredLoopTargetIdAtom,
   getCanonicalKey,
   rightSidebarOpenAtom,
+  resetHistoryModalOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitBranch, Infinity } from 'lucide-react';
@@ -34,6 +35,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
   const setHoverPath = useSetAtom(hoverPathAtom);
   const layout = useAtomValue(treeLayoutAtom);
   const setRightSidebarOpen = useSetAtom(rightSidebarOpenAtom);
+  const setResetHistoryModalOpen = useSetAtom(resetHistoryModalOpenAtom);
 
 
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
@@ -111,24 +113,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
 
   const handleResetAll = () => {
     if (Object.keys(tree).length > 1) {
-      const rootNode = tree["0"];
-      setTree({
-        "0": {
-          id: "0",
-          equation: rootNode.equation,
-          parentId: null,
-          childrenIds: [],
-          label: "Initial",
-          timestamp: rootNode.timestamp,
-        }
-      });
-      setCurrentNodeId("0");
-      trackEvent({
-        action: 'reset_history',
-        category: 'history',
-      });
-      setSourcePath(null);
-      setHoverPath(null);
+      setResetHistoryModalOpen(true);
     }
   };
 
@@ -569,6 +554,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
   const setSourcePath = useSetAtom(sourcePathAtom);
   const setHoverPath = useSetAtom(hoverPathAtom);
+  const setResetHistoryModalOpen = useSetAtom(resetHistoryModalOpenAtom);
 
   const activeNode = tree[currentNodeId];
   const canUndo = activeNode && activeNode.parentId !== null;
@@ -603,24 +589,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
 
   const handleResetAll = () => {
     if (Object.keys(tree).length > 1) {
-      const rootNode = tree["0"];
-      setTree({
-        "0": {
-          id: "0",
-          equation: rootNode.equation,
-          parentId: null,
-          childrenIds: [],
-          label: "Initial",
-          timestamp: rootNode.timestamp,
-        }
-      });
-      setCurrentNodeId("0");
-      trackEvent({
-        action: 'reset_history',
-        category: 'history',
-      });
-      setSourcePath(null);
-      setHoverPath(null);
+      setResetHistoryModalOpen(true);
     }
   };
 

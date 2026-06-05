@@ -71,7 +71,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<LayoutGrid size={24} />}
           label="Workspace"
-          tooltip="Workspace examples & templates (⌘B)"
+          tooltip="Workspace & examples (⌘B)"
           active={activeBottomSheet === 'workspace'}
           onClick={handleToggleWorkspace}
         />

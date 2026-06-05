@@ -641,6 +641,20 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
     return indices;
   }, [sortedNodes]);
 
+  const activeItemRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (activeItemRef.current) {
+        activeItemRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [currentNodeId]);
+
   return (
     <div className="flex flex-col gap-4 py-2 text-white">
       {/* Header toolbar */}
@@ -684,6 +698,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
           return (
             <div
               key={node.id}
+              ref={isCurrent ? activeItemRef : undefined}
               onClick={() => handleStepClick(node.id)}
               className="relative flex flex-col gap-1 cursor-pointer group select-none"
             >

@@ -130,29 +130,15 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
 
   return (
     <div className="shrink-0 flex flex-col gap-3">
-      {/* Header with Actions */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
-        {!isMobile && (
+      {/* Header (Desktop Only) */}
+      {!isMobile && (
+        <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
           <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
             <LayoutGrid className="text-indigo-400" size={18} />
             <span>Workspace</span>
           </h2>
-        )}
-        <div className="flex items-center gap-1.5 ml-auto">
-          <Tooltip content="Delete workspace permanently">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setDeleteModalOpen(true);
-              }}
-              disabled={savedSessions.length <= 1}
-              className={`p-1.5 rounded-lg border border-white/10 text-red-400 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
-            >
-              <Trash2 size={16} />
-            </button>
-          </Tooltip>
         </div>
-      </div>
+      )}
 
       {/* Recessed Content Box */}
       <div className={`p-4 flex flex-col gap-4 ${THEME_GLASS.TREE_BG}`}>

@@ -16,7 +16,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
-import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Layers, Triangle, Activity, Flame, BookOpen, Library } from 'lucide-react';
+import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Layers, Triangle, Activity, Flame, BookOpen, Library, LayoutGrid } from 'lucide-react';
 
 const getCategoryIcon = (category: string) => {
   switch (category) {
@@ -147,7 +147,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
       {/* 1. Workspace Card */}
       <div className={`p-4 shrink-0 flex flex-col gap-3 relative z-20 ${THEME_GLASS.CARD}`}>
         <h3 className="text-xs font-bold text-white flex items-center gap-2 select-none">
-          <Terminal className="text-indigo-400" size={14} />
+          <LayoutGrid className="text-indigo-400" size={14} />
           <span>Workspace</span>
         </h3>
 

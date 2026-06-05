@@ -746,12 +746,16 @@ export default function Home() {
 
         {/* Left Sidebar Edge Handle (Desktop Only) */}
         {!isMobile && (
-          <Tooltip content={leftSidebarOpen ? "Hide Workspace Sidebar (⌘B)" : "Show Workspace Sidebar (⌘B)"} position="right">
+          <Tooltip 
+            content={leftSidebarOpen ? "Hide Workspace Sidebar (⌘B)" : "Show Workspace Sidebar (⌘B)"} 
+            position="right"
+            wrapperClassName={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
+              leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'
+            }`}
+          >
             <button
               onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-              className={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 items-center justify-center w-5 h-20 rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 ease-in-out cursor-pointer hover:scale-105 active:scale-95 ${
-                leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'
-              }`}
+              className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
               aria-label={leftSidebarOpen ? "Close sidebar" : "Open sidebar"}
             >
               {leftSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
@@ -913,12 +917,16 @@ export default function Home() {
 
         {/* Right Sidebar Edge Handle (Desktop Only) */}
         {!isMobile && (
-          <Tooltip content={rightSidebarOpen ? "Hide History Sidebar (⌘H)" : "Show History Sidebar (⌘H)"} position="left">
+          <Tooltip 
+            content={rightSidebarOpen ? "Hide History Sidebar (⌘H)" : "Show History Sidebar (⌘H)"} 
+            position="left"
+            wrapperClassName={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
+              rightSidebarOpen ? 'right-[344px] translate-x-1/2' : 'right-[8px] translate-x-1/2'
+            }`}
+          >
             <button
               onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-              className={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 items-center justify-center w-5 h-20 rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 ease-in-out cursor-pointer hover:scale-105 active:scale-95 ${
-                rightSidebarOpen ? 'right-[344px] translate-x-1/2' : 'right-[8px] translate-x-1/2'
-              }`}
+              className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
               aria-label={rightSidebarOpen ? "Close history" : "Open history"}
             >
               {rightSidebarOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}

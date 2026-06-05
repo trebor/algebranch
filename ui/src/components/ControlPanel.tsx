@@ -342,7 +342,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
       <div className="flex-1 flex flex-col min-h-0">
 
         {/* Scrollable grid area for the Tree */}
-        <div className="flex-1 overflow-auto pr-1 relative border border-white/5 rounded-2xl bg-black/10 shadow-inner">
+        <div className="flex-1 overflow-auto pr-1 relative border border-white/5 rounded-2xl bg-black/15 shadow-inner">
           <div 
             style={{ width: `${svgWidth}px`, height: `${svgHeight}px`, minWidth: '100%' }}
             className="relative"

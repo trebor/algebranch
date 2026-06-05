@@ -292,8 +292,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
   }, [visualNodes, visualNodesMap, activePathSet]);
 
   return (
-    <div className={`w-full h-full flex flex-col gap-4 ${THEME_GLASS.PANEL} ${
-      isMobile ? 'p-3' : 'p-4'
+    <div className={`w-full h-full flex flex-col gap-4 ${
+      isMobile 
+        ? 'p-0 bg-transparent' 
+        : `${THEME_GLASS.PANEL} p-4`
     }`}>
       {/* Sidebar Header with Timeline Actions */}
       <div className={`flex items-center justify-between border-b border-white/10 pb-4 shrink-0 ${

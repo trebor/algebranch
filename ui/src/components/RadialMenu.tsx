@@ -9,7 +9,8 @@ import {
   radialMenuOpenAtom,
 } from '../store/equation';
 import { trackEvent } from '../utils/analytics';
-import { ArrowLeftRight, Plus, Minus, X, Divide, Radical, Superscript, Square } from 'lucide-react';
+import { ArrowLeftRight, Plus, Minus, X, Divide } from 'lucide-react';
+import { Tooltip } from './Tooltip';
 
 /**
  * Global operation types available in the radial menu.
@@ -29,18 +30,19 @@ type RadialAction =
 interface RadialPetal {
   icon: React.ReactNode;
   label: string;
+  tooltip: string;
   action: RadialAction;
   color: string;
 }
 
 const PETALS: RadialPetal[] = [
-  { icon: <span className="text-sm font-bold">ⁿ√</span>, label: 'ⁿ√', action: { type: 'root', power: 2 }, color: 'text-emerald-400' },
-  { icon: <span className="text-sm font-bold">xⁿ</span>, label: 'xⁿ', action: { type: 'power', power: 2 }, color: 'text-teal-400' },
-  { icon: <Plus size={18} />, label: '+', action: { type: 'add' }, color: 'text-indigo-400' },
-  { icon: <Minus size={18} />, label: '−', action: { type: 'sub' }, color: 'text-violet-400' },
-  { icon: <ArrowLeftRight size={18} />, label: '↔', action: { type: 'swap' }, color: 'text-amber-400' },
-  { icon: <X size={16} />, label: '×', action: { type: 'mul' }, color: 'text-rose-400' },
-  { icon: <Divide size={18} />, label: '÷', action: { type: 'div' }, color: 'text-pink-400' },
+  { icon: <ArrowLeftRight size={18} />, label: '↔', tooltip: 'Swap left and right sides', action: { type: 'swap' }, color: 'text-amber-400' },
+  { icon: <span className="text-sm font-bold">ⁿ√</span>, label: 'ⁿ√', tooltip: 'Take nth root of both sides', action: { type: 'root', power: 2 }, color: 'text-emerald-400' },
+  { icon: <span className="text-sm font-bold">xⁿ</span>, label: 'xⁿ', tooltip: 'Raise both sides to nth power', action: { type: 'power', power: 2 }, color: 'text-teal-400' },
+  { icon: <Plus size={18} />, label: '+', tooltip: 'Add term to both sides', action: { type: 'add' }, color: 'text-indigo-400' },
+  { icon: <Minus size={18} />, label: '−', tooltip: 'Subtract term from both sides', action: { type: 'sub' }, color: 'text-violet-400' },
+  { icon: <X size={16} />, label: '×', tooltip: 'Multiply both sides by term', action: { type: 'mul' }, color: 'text-rose-400' },
+  { icon: <Divide size={18} />, label: '÷', tooltip: 'Divide both sides by term', action: { type: 'div' }, color: 'text-pink-400' },
 ];
 
 // Radial layout: 8 items evenly spaced in a circle starting from top
@@ -220,23 +222,27 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
               const y = Math.sin(rad) * RADIUS;
 
               return (
-                <motion.button
+                <Tooltip
                   key={petal.label}
-                  initial={{ scale: 0, opacity: 0, x: 0, y: 0 }}
-                  animate={{ scale: 1, opacity: 1, x, y }}
-                  exit={{ scale: 0, opacity: 0, x: 0, y: 0 }}
-                  transition={{
-                    type: 'spring',
-                    duration: 0.4,
-                    bounce: 0.35,
-                    delay: i * 0.03,
-                  }}
-                  className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full backdrop-blur-xl bg-neutral-900/80 border border-white/15 shadow-lg shadow-black/40 flex items-center justify-center pointer-events-auto cursor-pointer hover:bg-white/10 hover:border-white/30 hover:scale-110 active:scale-95 transition-colors ${petal.color}`}
-                  onClick={() => handlePetalClick(petal)}
-                  title={petal.label}
+                  content={petal.tooltip}
+                  position="top"
                 >
-                  {petal.icon}
-                </motion.button>
+                  <motion.button
+                    initial={{ scale: 0, opacity: 0, x: 0, y: 0 }}
+                    animate={{ scale: 1, opacity: 1, x, y }}
+                    exit={{ scale: 0, opacity: 0, x: 0, y: 0 }}
+                    transition={{
+                      type: 'spring',
+                      duration: 0.4,
+                      bounce: 0.35,
+                      delay: i * 0.03,
+                    }}
+                    className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full backdrop-blur-xl bg-neutral-900/80 border border-white/15 shadow-lg shadow-black/40 flex items-center justify-center pointer-events-auto cursor-pointer hover:bg-white/10 hover:border-white/30 hover:scale-110 active:scale-95 transition-colors ${petal.color}`}
+                    onClick={() => handlePetalClick(petal)}
+                  >
+                    {petal.icon}
+                  </motion.button>
+                </Tooltip>
               );
             })}
 

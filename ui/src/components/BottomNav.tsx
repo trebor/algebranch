@@ -75,7 +75,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<LayoutGrid size={24} />}
           label="Workspace"
-          tooltip="Workspace (⌘E)"
+          tooltip="Workspace (W)"
           active={activeBottomSheet === 'workspace'}
           onClick={handleToggleWorkspace}
         />
@@ -84,7 +84,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<Library size={24} />}
           label="Library"
-          tooltip="Equation Library (⌘K)"
+          tooltip="Equation Library (L)"
           active={activeBottomSheet === 'library'}
           onClick={handleToggleLibrary}
         />
@@ -93,7 +93,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<GitBranch size={24} />}
           label="History"
-          tooltip="History (⌘H)"
+          tooltip="History (H)"
           active={activeBottomSheet === 'history'}
           onClick={handleToggleHistory}
         />

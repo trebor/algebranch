@@ -555,8 +555,7 @@ export default function Home() {
       description: 'Redo step (Ctrl+Y)',
     },
     {
-      key: 'e',
-      meta: true,
+      key: 'w',
       action: () => {
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
         if (isMobile) {
@@ -572,8 +571,7 @@ export default function Home() {
       description: 'Toggle Workspace',
     },
     {
-      key: 'k',
-      meta: true,
+      key: 'l',
       action: () => {
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
         if (isMobile) {
@@ -590,15 +588,19 @@ export default function Home() {
     },
     {
       key: 'h',
-      meta: true,
       action: () => {
-        setRightSidebarOpen((prev) => !prev);
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+        if (isMobile) {
+          setActiveBottomSheet((prev) => (prev === 'history' ? null : 'history'));
+        } else {
+          setRightSidebarOpen((prev) => !prev);
+        }
         trackEvent({
           action: 'shortcut_toggle_right_sidebar',
           category: 'keyboard',
         });
       },
-      description: 'Toggle history sidebar',
+      description: 'Toggle History Sidebar',
     },
     {
       key: 'escape',
@@ -819,7 +821,7 @@ export default function Home() {
         {/* Left Sidebar Edge Handle (Desktop Only) */}
         <div className="hidden lg:block">
           <Tooltip 
-            content={leftSidebarOpen ? "Hide Workspace Sidebar (⌘E)" : "Show Workspace Sidebar (⌘E)"} 
+            content={leftSidebarOpen ? "Hide Left Sidebar (W / L)" : "Show Left Sidebar (W / L)"} 
             position="right"
             wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
               leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'
@@ -990,7 +992,7 @@ export default function Home() {
         {/* Right Sidebar Edge Handle (Desktop Only) */}
         <div className="hidden lg:block">
           <Tooltip 
-            content={rightSidebarOpen ? "Hide History Sidebar (⌘H)" : "Show History Sidebar (⌘H)"} 
+            content={rightSidebarOpen ? "Hide History Sidebar (H)" : "Show History Sidebar (H)"} 
             position="left"
             wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
               rightSidebarOpen ? 'right-[344px] translate-x-1/2' : 'right-[8px] translate-x-1/2'

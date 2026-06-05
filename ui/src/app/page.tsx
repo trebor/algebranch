@@ -670,6 +670,20 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [toast, setToast]);
 
+  // Gracefully transition between desktop and mobile viewport states live on resize
+  React.useEffect(() => {
+    if (isHydrated) {
+      if (isMobile) {
+        setLeftSidebarOpen(false);
+        setRightSidebarOpen(false);
+        setActiveBottomSheet(null);
+      } else {
+        setLeftSidebarOpen(true);
+        setRightSidebarOpen(true);
+      }
+    }
+  }, [isMobile, isHydrated, setLeftSidebarOpen, setRightSidebarOpen, setActiveBottomSheet]);
+
 
   return (
     <div className="relative flex flex-col h-screen w-screen overflow-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(30,27,75,0.8),rgba(10,10,12,1))] text-white font-sans">

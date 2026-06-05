@@ -860,7 +860,7 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-xl lg:text-2xl xl:text-[2.2rem] font-light cursor-default relative group/canvas"
+              className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-4 lg:p-8 text-base font-light cursor-default relative group/canvas"
             >
               {/* Calculating Math Engine Spinner / Toast Notification */}
               {toast ? (
@@ -938,7 +938,7 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-xl lg:text-2xl xl:text-[2.2rem] font-light cursor-default relative group/preview"
+              className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-4 lg:p-8 text-base font-light cursor-default relative group/preview"
             >
 
               {isHydrated && (

@@ -9,7 +9,8 @@ export function useMathScale(
   currentEq: Equation | null,
   dependencies: unknown[] = [],
   extraBuffer = 24,
-  minScale = 0.4
+  minScale = 0.4,
+  maxScale = 3.0
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -44,9 +45,10 @@ export function useMathScale(
         const targetWidthScale = (containerWidth - paddingX) / contentWidth;
         const targetHeightScale = (containerHeight - paddingY) / contentHeight;
         
-        // 4. Select the smaller scale to guarantee fitting in both directions
+        // 4. Select the smaller scale to guarantee fitting in both directions.
+        //    Allow scaling above 1.0 to fill available space on all devices.
         const targetScale = Math.min(targetWidthScale, targetHeightScale);
-        const clampedScale = Math.max(minScale, Math.min(1, targetScale));
+        const clampedScale = Math.max(minScale, Math.min(maxScale, targetScale));
         
         // 5. Set state and apply directly to DOM to prevent layout loops
         setScale(clampedScale);
@@ -64,7 +66,7 @@ export function useMathScale(
     return () => {
       observer.disconnect();
     };
-  }, [currentEq, extraBuffer, minScale, ...dependencies]);
+  }, [currentEq, extraBuffer, minScale, maxScale, ...dependencies]);
 
   return { containerRef, contentRef, scale };
 }

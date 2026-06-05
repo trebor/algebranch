@@ -19,7 +19,7 @@ import {
   feedbackContextAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, BookOpen, Infinity, MessageSquarePlus } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitBranch, Infinity, MessageSquarePlus } from 'lucide-react';
 import { useIsMobile } from '../hooks/useBreakpoint';
 
 const COPIED_TIMEOUT = 2000;
@@ -299,7 +299,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
       }`}>
         {!isMobile && (
           <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
-            <BookOpen className="text-indigo-400" size={18} />
+            <GitBranch className="text-indigo-400" size={18} />
             <span>History</span>
           </h2>
         )}

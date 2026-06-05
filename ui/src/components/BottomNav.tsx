@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { motion } from 'framer-motion';
-import { Undo2, LayoutGrid, Library, GitBranch, Redo2 } from 'lucide-react';
+import { Undo2, Terminal, Library, GitBranch, Redo2 } from 'lucide-react';
 import { historyTreeAtom, currentNodeIdAtom, activeBottomSheetAtom } from '../store/equation';
 import { Tooltip } from './Tooltip';
 
@@ -73,7 +73,7 @@ export const BottomNav: React.FC = () => {
 
         {/* Workspace */}
         <NavButton
-          icon={<LayoutGrid size={24} />}
+          icon={<Terminal size={24} />}
           label="Workspace"
           tooltip="Workspace (W)"
           active={activeBottomSheet === 'workspace'}

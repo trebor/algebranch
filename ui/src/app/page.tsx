@@ -53,7 +53,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
-import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2 } from 'lucide-react';
+import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -793,7 +793,7 @@ export default function Home() {
             className="lg:hidden p-2 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-all"
             aria-label="Toggle history panel"
           >
-            <BookOpen size={20} />
+            <GitBranch size={20} />
           </button>
         </div>
       </header>

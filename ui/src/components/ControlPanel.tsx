@@ -20,10 +20,16 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, BookOpen, Infinity, MessageSquarePlus } from 'lucide-react';
+import { useIsMobile } from '../hooks/useBreakpoint';
 
 const COPIED_TIMEOUT = 2000;
 
-export const ControlPanel: React.FC = () => {
+interface ControlPanelProps {
+  onCloseMobile?: () => void;
+}
+
+export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => {
+  const isMobile = useIsMobile();
   const [tree, setTree] = useAtom(historyTreeAtom);
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
   const setSourcePath = useSetAtom(sourcePathAtom);
@@ -136,6 +142,7 @@ export const ControlPanel: React.FC = () => {
     if (window.innerWidth < 1024) {
       setRightSidebarOpen(false);
     }
+    onCloseMobile?.();
   };
 
   // Compute permanent chronological indices for visual rendering
@@ -207,7 +214,9 @@ export const ControlPanel: React.FC = () => {
     });
 
     // 3. Compute dynamic position and width on a row-by-row basis
-    const containerWidth = 240; // Printable area inside sidebar
+    const containerWidth = typeof window !== 'undefined' && window.innerWidth < 1024
+      ? Math.max(240, window.innerWidth - 64)
+      : 240;
     const minColWidth = 110;
 
     return layoutNodes.map(node => {
@@ -276,13 +285,19 @@ export const ControlPanel: React.FC = () => {
   }, [visualNodes, visualNodesMap, activePathSet]);
 
   return (
-    <div className={`w-full h-full flex flex-col gap-4 p-4 ${THEME_GLASS.PANEL}`}>
+    <div className={`w-full h-full flex flex-col gap-4 ${
+      isMobile ? 'p-1' : `p-4 border border-white/10 bg-neutral-900/60 backdrop-blur-xl rounded-2xl`
+    }`}>
       {/* Sidebar Header with Timeline Actions */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-4 shrink-0">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
-          <BookOpen className="text-indigo-400" size={18} />
-          <span>History</span>
-        </h2>
+      <div className={`flex items-center justify-between border-b border-white/10 pb-4 shrink-0 ${
+        isMobile ? 'justify-end' : ''
+      }`}>
+        {!isMobile && (
+          <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
+            <BookOpen className="text-indigo-400" size={18} />
+            <span>History</span>
+          </h2>
+        )}
         <div className="flex items-center gap-1.5">
           <Tooltip content="Undo step (⌘Z)">
             <button

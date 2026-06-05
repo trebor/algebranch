@@ -967,7 +967,7 @@ export default function Home() {
         onClose={() => setActiveBottomSheet(null)}
         title="History"
       >
-        <TimelineContent onCloseMobile={() => setActiveBottomSheet(null)} />
+        <ControlPanel onCloseMobile={() => setActiveBottomSheet(null)} />
       </BottomSheet>
 
       <RadialMenu anchorRef={equalsRef} />

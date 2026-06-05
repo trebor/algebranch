@@ -1008,6 +1008,7 @@ export default function Home() {
         isOpen={activeBottomSheet === 'workspace'}
         onClose={() => setActiveBottomSheet(null)}
         title="Workspace"
+        snapPoints={[0.28]}
       >
         <SidebarContent onCloseMobile={() => setActiveBottomSheet(null)} />
       </BottomSheet>

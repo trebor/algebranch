@@ -73,6 +73,16 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   const [inputStr, setInputStr] = React.useState('');
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const [isMobileRecentsOpen, setIsMobileRecentsOpen] = React.useState(false);
+
+  const handleRecentsClick = () => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+    if (isMobile) {
+      setIsMobileRecentsOpen(true);
+    } else {
+      setIsDropdownOpen(!isDropdownOpen);
+    }
+  };
 
   const handleLoadCustom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,7 +191,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                   >
                     <button
                       type="button"
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      onClick={handleRecentsClick}
                       className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
                     >
                       <span className="truncate flex-1 text-left">
@@ -193,7 +203,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    onClick={handleRecentsClick}
                     className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/80 hover:border-white/20 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
                   >
                     <span className="truncate flex-1 text-left">
@@ -266,6 +276,80 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
           </div>
         </div>
       </div>
+
+      {isMobileRecentsOpen && (
+        <div className="fixed inset-0 z-50 bg-neutral-950/98 backdrop-blur-xl flex flex-col p-6 pb-[env(safe-area-inset-bottom)] animate-[fadeIn_0.2s_ease-out]">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+            <div>
+              <h2 className="text-base font-bold text-white flex items-center gap-2 select-none">
+                <FolderGit2 className="text-indigo-400" size={16} />
+                <span>Select Workspace</span>
+              </h2>
+              <p className="text-[10px] text-white/40 mt-1 uppercase tracking-wider font-semibold">Explore and select a recent workspace</p>
+            </div>
+            <button
+              onClick={() => setIsMobileRecentsOpen(false)}
+              className="p-1.5 rounded-lg border border-white/10 hover:bg-white/5 text-white/50 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Content - Scrollable List */}
+          <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-1">
+            {[...savedSessions]
+              .sort((a, b) => b.timestamp - a.timestamp)
+              .map((session) => {
+                const isActive = session.id === currentSessionId;
+                const stepCount = getStepCount(session.tree);
+                return (
+                  <button
+                    key={session.id}
+                    onClick={() => {
+                      loadSession(session.id);
+                      trackEvent({
+                        action: 'load_session',
+                        category: 'sessions',
+                        label: session.id,
+                      });
+                      setIsMobileRecentsOpen(false);
+                      if (window.innerWidth < 1024) {
+                        setLeftSidebarOpen(false);
+                      }
+                      onCloseMobile?.();
+                    }}
+                    className={`w-full text-left p-4 rounded-2xl border transition-all flex justify-between items-center gap-4 cursor-pointer hover:scale-[1.01] active:scale-98 duration-150 ${
+                      isActive 
+                        ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.15)] font-semibold' 
+                        : 'border-white/5 bg-white/[0.01] hover:bg-white/5 text-white/80 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0 pr-2">
+                      <div className="font-mono text-xs truncate">
+                        {session.name}
+                      </div>
+                      <div className="text-[10px] text-white/40 mt-1 flex items-center gap-1.5 font-sans">
+                        <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
+                        <span>·</span>
+                        <span>{formatTimestamp(session.timestamp)}</span>
+                      </div>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2">
+                      {isActive ? (
+                        <span className="text-[9px] font-sans font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-400 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
+                          Active
+                        </span>
+                      ) : (
+                        <ChevronRight size={14} className="text-white/30" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+      )}
     </>
   );
 };

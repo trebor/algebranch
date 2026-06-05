@@ -14,6 +14,7 @@ import { BottomNav } from '../components/BottomNav';
 import { BottomSheet } from '../components/BottomSheet';
 import { RadialMenu } from '../components/RadialMenu';
 import { useIsMobile } from '../hooks/useBreakpoint';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import {
   currentEquationAtom,
   previewEquationAtom,
@@ -48,6 +49,7 @@ import {
   activeTabIdAtom,
   activeBottomSheetAtom,
   radialMenuOpenAtom,
+  swapSidesAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
@@ -65,7 +67,7 @@ const mathStateCache = new Map<string, any>();
 
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
-  const hoverPath = useAtomValue(hoverPathAtom);
+  const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
   const hoverReducePath = useAtomValue(hoverReducePathAtom);
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
@@ -95,6 +97,7 @@ export default function Home() {
 
   const [activeBottomSheet, setActiveBottomSheet] = useAtom(activeBottomSheetAtom);
   const [radialMenuOpen, setRadialMenuOpen] = useAtom(radialMenuOpenAtom);
+  const swapSides = useSetAtom(swapSidesAtom);
   const isMobile = useIsMobile();
   const equalsRef = React.useRef<HTMLSpanElement>(null);
 
@@ -459,24 +462,113 @@ export default function Home() {
     };
   }, [currentEq, sourcePath, syncMathState, clearMathState]);
 
-  // Escape key global listener to deselect/back out of active selections and close mobile drawers
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (leftSidebarOpen) {
-          setLeftSidebarOpen(false);
-        } else if (rightSidebarOpen) {
-          setRightSidebarOpen(false);
-        } else if (sourcePath !== null) {
+  // Keyboard Shortcuts (Issue #17)
+  useKeyboardShortcuts([
+    {
+      key: 'z',
+      meta: true,
+      action: () => {
+        const activeNode = tree[currentNodeId];
+        if (activeNode && activeNode.parentId) {
+          setCurrentNodeId(activeNode.parentId);
           setSourcePath(null);
+          setHoverPath(null);
+          trackEvent({
+            action: 'shortcut_undo',
+            category: 'keyboard',
+          });
         }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [sourcePath, setSourcePath, leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen]);
+      },
+      description: 'Undo step',
+    },
+    {
+      key: 'z',
+      meta: true,
+      shift: true,
+      action: () => {
+        const activeNode = tree[currentNodeId];
+        if (activeNode && activeNode.childrenIds && activeNode.childrenIds.length > 0) {
+          const nextId = activeNode.childrenIds[activeNode.childrenIds.length - 1];
+          setCurrentNodeId(nextId);
+          setSourcePath(null);
+          setHoverPath(null);
+          trackEvent({
+            action: 'shortcut_redo',
+            category: 'keyboard',
+          });
+        }
+      },
+      description: 'Redo step',
+    },
+    {
+      key: 'y',
+      meta: true,
+      action: () => {
+        const activeNode = tree[currentNodeId];
+        if (activeNode && activeNode.childrenIds && activeNode.childrenIds.length > 0) {
+          const nextId = activeNode.childrenIds[activeNode.childrenIds.length - 1];
+          setCurrentNodeId(nextId);
+          setSourcePath(null);
+          setHoverPath(null);
+          trackEvent({
+            action: 'shortcut_redo_y',
+            category: 'keyboard',
+          });
+        }
+      },
+      description: 'Redo step (Ctrl+Y)',
+    },
+    {
+      key: 'b',
+      meta: true,
+      action: () => {
+        setLeftSidebarOpen((prev) => !prev);
+        trackEvent({
+          action: 'shortcut_toggle_left_sidebar',
+          category: 'keyboard',
+        });
+      },
+      description: 'Toggle workspace sidebar',
+    },
+    {
+      key: 'h',
+      meta: true,
+      action: () => {
+        setRightSidebarOpen((prev) => !prev);
+        trackEvent({
+          action: 'shortcut_toggle_right_sidebar',
+          category: 'keyboard',
+        });
+      },
+      description: 'Toggle history sidebar',
+    },
+    {
+      key: 'escape',
+      action: () => {
+        if (sourcePath !== null) {
+          setSourcePath(null);
+          trackEvent({
+            action: 'shortcut_deselect_node',
+            category: 'keyboard',
+          });
+        }
+      },
+      description: 'Deselect current selection',
+    },
+    {
+      key: 's',
+      meta: true,
+      shift: true,
+      action: () => {
+        swapSides();
+        trackEvent({
+          action: 'shortcut_swap_sides',
+          category: 'keyboard',
+        });
+      },
+      description: 'Swap equation sides',
+    },
+  ]);
 
   // Mobile swipe gestures logic
   React.useEffect(() => {

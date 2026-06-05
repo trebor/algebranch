@@ -34,14 +34,13 @@ interface RadialPetal {
 }
 
 const PETALS: RadialPetal[] = [
-  { icon: <Radical size={18} />, label: '√', action: { type: 'sqrt' }, color: 'text-emerald-400' },
-  { icon: <span className="text-sm font-bold">x²</span>, label: 'x²', action: { type: 'square' }, color: 'text-sky-400' },
+  { icon: <span className="text-sm font-bold">ⁿ√</span>, label: 'ⁿ√', action: { type: 'root', power: 2 }, color: 'text-emerald-400' },
+  { icon: <span className="text-sm font-bold">xⁿ</span>, label: 'xⁿ', action: { type: 'power', power: 2 }, color: 'text-teal-400' },
   { icon: <Plus size={18} />, label: '+', action: { type: 'add' }, color: 'text-indigo-400' },
   { icon: <Minus size={18} />, label: '−', action: { type: 'sub' }, color: 'text-violet-400' },
   { icon: <ArrowLeftRight size={18} />, label: '↔', action: { type: 'swap' }, color: 'text-amber-400' },
   { icon: <X size={16} />, label: '×', action: { type: 'mul' }, color: 'text-rose-400' },
   { icon: <Divide size={18} />, label: '÷', action: { type: 'div' }, color: 'text-pink-400' },
-  { icon: <span className="text-sm font-bold">xⁿ</span>, label: 'xⁿ', action: { type: 'power', power: 3 }, color: 'text-teal-400' },
 ];
 
 // Radial layout: 8 items evenly spaced in a circle starting from top
@@ -63,6 +62,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
   const swapSides = useSetAtom(swapSidesAtom);
   const [termInputAction, setTermInputAction] = React.useState<RadialAction | null>(null);
   const [termValue, setTermValue] = React.useState('');
+  const [spinnerValue, setSpinnerValue] = React.useState(2);
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
   const termInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -113,44 +113,54 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
       return;
     }
 
-    // Operations that need a term input
-    if (action.type === 'add' || action.type === 'sub' || action.type === 'mul' || action.type === 'div') {
+    // Operations that need input (term input or spinner)
+    if (
+      action.type === 'add' ||
+      action.type === 'sub' ||
+      action.type === 'mul' ||
+      action.type === 'div' ||
+      action.type === 'power' ||
+      action.type === 'root'
+    ) {
       setTermInputAction(action);
-      return;
-    }
-
-    // Direct operations (square, sqrt, power, root)
-    try {
-      setErrorStr(null);
-      if (action.type === 'square') {
-        applyGlobalOp({ type: 'square' });
-      } else if (action.type === 'sqrt') {
-        applyGlobalOp({ type: 'sqrt' });
-      } else if (action.type === 'power') {
-        applyGlobalOp({ type: 'power', power: action.power });
-      } else if (action.type === 'root') {
-        applyGlobalOp({ type: 'root', power: action.power });
+      if (action.type === 'power' || action.type === 'root') {
+        setSpinnerValue(2); // Default spinner to 2
       }
-      trackEvent({ action: `radial_${action.type}`, category: 'operations' });
-      setIsOpen(false);
-    } catch (err) {
-      setErrorStr(err instanceof Error ? err.message : String(err));
+      return;
     }
   };
 
   const handleTermSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!termInputAction || !termValue.trim()) return;
+    if (!termInputAction) return;
 
     try {
       setErrorStr(null);
-      applyGlobalOp({ type: termInputAction.type as 'add' | 'sub' | 'mul' | 'div', term: termValue.trim() });
-      trackEvent({
-        action: `radial_${termInputAction.type}`,
-        category: 'operations',
-        label: termValue.trim(),
-      });
+      if (termInputAction.type === 'power') {
+        applyGlobalOp({ type: 'power', power: spinnerValue });
+        trackEvent({
+          action: 'radial_power',
+          category: 'operations',
+          label: String(spinnerValue),
+        });
+      } else if (termInputAction.type === 'root') {
+        applyGlobalOp({ type: 'root', power: spinnerValue });
+        trackEvent({
+          action: 'radial_root',
+          category: 'operations',
+          label: String(spinnerValue),
+        });
+      } else {
+        if (!termValue.trim()) return;
+        applyGlobalOp({ type: termInputAction.type as 'add' | 'sub' | 'mul' | 'div', term: termValue.trim() });
+        trackEvent({
+          action: `radial_${termInputAction.type}`,
+          category: 'operations',
+          label: termValue.trim(),
+        });
+      }
       setTermValue('');
+      setSpinnerValue(2);
       setTermInputAction(null);
       setIsOpen(false);
     } catch (err) {
@@ -242,17 +252,52 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                   className="absolute left-1/2 -translate-x-1/2 top-1/2 pointer-events-auto flex flex-col items-center gap-2"
                 >
                   <div className="flex items-center gap-2 bg-neutral-950/95 backdrop-blur-xl border border-white/15 rounded-xl px-3 py-2 shadow-2xl shadow-black/60">
-                    <span className="text-sm font-bold text-indigo-400 w-6 text-center">
-                      {termInputAction.type === 'add' ? '+' : termInputAction.type === 'sub' ? '−' : termInputAction.type === 'mul' ? '×' : '÷'}
+                    <span className="text-sm font-bold text-indigo-400 w-10 text-center flex items-center justify-center">
+                      {termInputAction.type === 'add' ? (
+                        '+'
+                      ) : termInputAction.type === 'sub' ? (
+                        '−'
+                      ) : termInputAction.type === 'mul' ? (
+                        '×'
+                      ) : termInputAction.type === 'div' ? (
+                        '÷'
+                      ) : termInputAction.type === 'power' ? (
+                        <span>( )<sup>{spinnerValue}</sup></span>
+                      ) : (
+                        <span><sup>{spinnerValue}</sup>√</span>
+                      )}
                     </span>
-                    <input
-                      ref={termInputRef}
-                      type="text"
-                      value={termValue}
-                      onChange={(e) => setTermValue(e.target.value)}
-                      placeholder="e.g. 5x"
-                      className="w-28 px-2 py-1 text-sm bg-neutral-900 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
-                    />
+                    {termInputAction.type === 'power' || termInputAction.type === 'root' ? (
+                      <div className="flex items-center gap-3 bg-neutral-900 border border-white/10 rounded-lg px-2 py-1">
+                        <button
+                          type="button"
+                          disabled={spinnerValue <= 2}
+                          onClick={() => setSpinnerValue((v) => Math.max(2, v - 1))}
+                          className="w-6 h-6 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all cursor-pointer"
+                        >
+                          <Minus size={12} className="text-white" />
+                        </button>
+                        <span className="w-6 text-center text-sm font-mono font-bold text-white">
+                          {spinnerValue}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSpinnerValue((v) => v + 1)}
+                          className="w-6 h-6 rounded-md hover:bg-white/5 flex items-center justify-center transition-all cursor-pointer"
+                        >
+                          <Plus size={12} className="text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        ref={termInputRef}
+                        type="text"
+                        value={termValue}
+                        onChange={(e) => setTermValue(e.target.value)}
+                        placeholder="e.g. 5x"
+                        className="w-28 px-2 py-1 text-sm bg-neutral-900 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
+                      />
+                    )}
                     <button
                       type="submit"
                       className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md cursor-pointer active:scale-95 transition-all"

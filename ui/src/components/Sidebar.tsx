@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useAtomValue, useSetAtom, useAtom } from 'jotai';
 import { Tooltip } from './Tooltip';
 import {
@@ -74,6 +75,11 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [isMobileRecentsOpen, setIsMobileRecentsOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleRecentsClick = () => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
@@ -277,7 +283,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
         </div>
       </div>
 
-      {isMobileRecentsOpen && (
+      {isMobileRecentsOpen && mounted && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-50 bg-neutral-950/98 backdrop-blur-xl flex flex-col p-6 pb-[env(safe-area-inset-bottom)] animate-[fadeIn_0.2s_ease-out]">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
@@ -348,7 +354,8 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                 );
               })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

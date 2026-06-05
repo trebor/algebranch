@@ -220,7 +220,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
 
     // 3. Compute dynamic position and width on a row-by-row basis
     const containerWidth = isMounted && typeof window !== 'undefined' && window.innerWidth < 1024
-      ? Math.max(240, window.innerWidth - 48)
+      ? Math.max(240, window.innerWidth - 40)
       : 240;
     const minColWidth = 110;
 
@@ -294,7 +294,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
   return (
     <div className={`w-full h-full flex flex-col gap-4 ${
       isMobile 
-        ? 'px-4 pb-4 pt-1 bg-transparent' 
+        ? 'p-0 bg-transparent' 
         : `${THEME_GLASS.PANEL} p-4`
     }`}>
       {/* Sidebar Header with Timeline Actions */}
@@ -342,7 +342,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
       <div className="flex-1 flex flex-col min-h-0">
 
         {/* Scrollable grid area for the Tree */}
-        <div className="flex-1 overflow-auto pr-1 relative border border-white/5 rounded-2xl bg-black/15 shadow-inner w-full">
+        <div className={`flex-1 overflow-auto pr-1 relative ${THEME_GLASS.TREE_BG}`}>
           <div 
             style={{ width: `${svgWidth}px`, height: `${svgHeight}px`, minWidth: '100%' }}
             className="relative"

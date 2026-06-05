@@ -320,7 +320,7 @@ export const feedbackContextAtom = atom<string | null>(null);
 export const deleteConfirmationModalOpenAtom = atom(false);
 
 // Mobile UI state atoms
-export type BottomSheetType = 'workspace' | 'history' | null;
+export type BottomSheetType = 'workspace' | 'history' | 'library' | null;
 export const activeBottomSheetAtom = atom<BottomSheetType>(null);
 export const radialMenuOpenAtom = atom(false);
 

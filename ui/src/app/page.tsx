@@ -4,7 +4,7 @@ import React from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
 import { PreviewEquationNode } from '../components/PreviewEquationNode';
-import { Sidebar, SidebarContent } from '../components/Sidebar';
+import { Sidebar, SidebarContent, EquationLibraryContent } from '../components/Sidebar';
 import { ControlPanel, TimelineContent } from '../components/ControlPanel';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
@@ -992,6 +992,14 @@ export default function Home() {
         title="Workspace"
       >
         <SidebarContent onCloseMobile={() => setActiveBottomSheet(null)} />
+      </BottomSheet>
+
+      <BottomSheet
+        isOpen={activeBottomSheet === 'library'}
+        onClose={() => setActiveBottomSheet(null)}
+        title="Equation Library"
+      >
+        <EquationLibraryContent showHeader={false} onCloseMobile={() => setActiveBottomSheet(null)} />
       </BottomSheet>
 
       <BottomSheet

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { motion } from 'framer-motion';
-import { Undo2, LayoutGrid, GitBranch, Redo2 } from 'lucide-react';
+import { Undo2, LayoutGrid, Library, GitBranch, Redo2 } from 'lucide-react';
 import { historyTreeAtom, currentNodeIdAtom, activeBottomSheetAtom } from '../store/equation';
 import { Tooltip } from './Tooltip';
 
@@ -49,6 +49,10 @@ export const BottomNav: React.FC = () => {
     setActiveBottomSheet((prev) => (prev === 'workspace' ? null : 'workspace'));
   }, [setActiveBottomSheet]);
 
+  const handleToggleLibrary = useCallback(() => {
+    setActiveBottomSheet((prev) => (prev === 'library' ? null : 'library'));
+  }, [setActiveBottomSheet]);
+
   const handleToggleHistory = useCallback(() => {
     setActiveBottomSheet((prev) => (prev === 'history' ? null : 'history'));
   }, [setActiveBottomSheet]);
@@ -71,11 +75,19 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<LayoutGrid size={24} />}
           label="Workspace"
-          tooltip="Workspace & examples (⌘B)"
+          tooltip="Workspace (⌘B)"
           active={activeBottomSheet === 'workspace'}
           onClick={handleToggleWorkspace}
         />
 
+        {/* Library */}
+        <NavButton
+          icon={<Library size={24} />}
+          label="Library"
+          tooltip="Equation Library"
+          active={activeBottomSheet === 'library'}
+          onClick={handleToggleLibrary}
+        />
 
         {/* History */}
         <NavButton

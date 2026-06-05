@@ -62,7 +62,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<Undo2 size={24} />}
           label="Undo"
-          tooltip="Undo last step"
+          tooltip="Undo last step (⌘Z)"
           disabled={!canUndo}
           onClick={handleUndo}
         />
@@ -71,7 +71,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<LayoutGrid size={24} />}
           label="Workspace"
-          tooltip="Workspace presets & templates"
+          tooltip="Workspace presets & templates (⌘B)"
           active={activeBottomSheet === 'workspace'}
           onClick={handleToggleWorkspace}
         />
@@ -81,7 +81,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<GitBranch size={24} />}
           label="History"
-          tooltip="History tree / timeline"
+          tooltip="History tree / timeline (⌘H)"
           active={activeBottomSheet === 'history'}
           onClick={handleToggleHistory}
         />
@@ -90,7 +90,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<Redo2 size={24} />}
           label="Redo"
-          tooltip="Redo step"
+          tooltip="Redo step (⌘⇧Z)"
           disabled={!canRedo}
           onClick={handleRedo}
         />

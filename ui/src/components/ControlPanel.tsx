@@ -284,7 +284,7 @@ export const ControlPanel: React.FC = () => {
           <span>History</span>
         </h2>
         <div className="flex items-center gap-1.5">
-          <Tooltip content="Undo step">
+          <Tooltip content="Undo step (⌘Z)">
             <button
               onClick={handleUndo}
               disabled={!canUndo}
@@ -293,7 +293,7 @@ export const ControlPanel: React.FC = () => {
               <ChevronLeft size={16} />
             </button>
           </Tooltip>
-          <Tooltip content="Redo step">
+          <Tooltip content="Redo step (⌘⇧Z)">
             <button
               onClick={handleRedo}
               disabled={!canRedo}
@@ -651,7 +651,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             onClick={handleUndo}
             disabled={!canUndo}
             className="p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
-            title="Undo"
+            title="Undo (⌘Z)"
           >
             <ChevronLeft size={16} />
           </button>
@@ -659,7 +659,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             onClick={handleRedo}
             disabled={!canRedo}
             className="p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
-            title="Redo"
+            title="Redo (⌘⇧Z)"
           >
             <ChevronRight size={16} />
           </button>

@@ -5,6 +5,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import { motion } from 'framer-motion';
 import { Undo2, LayoutGrid, GitBranch, Redo2 } from 'lucide-react';
 import { historyTreeAtom, currentNodeIdAtom, activeBottomSheetAtom } from '../store/equation';
+import { Tooltip } from './Tooltip';
 
 /**
  * BottomNav — Fixed bottom navigation bar for mobile.
@@ -61,6 +62,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<Undo2 size={24} />}
           label="Undo"
+          tooltip="Undo last step"
           disabled={!canUndo}
           onClick={handleUndo}
         />
@@ -69,6 +71,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<LayoutGrid size={24} />}
           label="Workspace"
+          tooltip="Workspace presets & templates"
           active={activeBottomSheet === 'workspace'}
           onClick={handleToggleWorkspace}
         />
@@ -78,6 +81,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<GitBranch size={24} />}
           label="History"
+          tooltip="History tree / timeline"
           active={activeBottomSheet === 'history'}
           onClick={handleToggleHistory}
         />
@@ -86,6 +90,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<Redo2 size={24} />}
           label="Redo"
+          tooltip="Redo step"
           disabled={!canRedo}
           onClick={handleRedo}
         />
@@ -100,6 +105,7 @@ export const BottomNav: React.FC = () => {
 interface NavButtonProps {
   icon: React.ReactNode;
   label: string;
+  tooltip: string;
   active?: boolean;
   disabled?: boolean;
   onClick?: () => void;
@@ -108,22 +114,25 @@ interface NavButtonProps {
 const NavButton: React.FC<NavButtonProps> = ({
   icon,
   label,
+  tooltip,
   active = false,
   disabled = false,
   onClick,
 }) => {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`
-        flex flex-col items-center justify-center flex-1 py-1.5 transition-colors
-        ${disabled ? 'opacity-30 pointer-events-none' : ''}
-        ${active ? 'text-indigo-400' : 'text-white/50 active:text-white/80'}
-      `}
-    >
-      {icon}
-      <span className="text-[10px] mt-0.5">{label}</span>
-    </button>
+    <Tooltip content={tooltip} position="top" wrapperClassName="flex-1 flex justify-center">
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`
+          flex flex-col items-center justify-center w-full py-1.5 transition-colors
+          ${disabled ? 'opacity-30 pointer-events-none' : ''}
+          ${active ? 'text-indigo-400' : 'text-white/50 active:text-white/80'}
+        `}
+      >
+        {icon}
+        <span className="text-[10px] mt-0.5">{label}</span>
+      </button>
+    </Tooltip>
   );
 };

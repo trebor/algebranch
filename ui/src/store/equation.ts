@@ -113,6 +113,38 @@ const getFallbackTabs = (): WorkspaceTab[] => [
   }
 ];
 
+// Safe wrapper around window.localStorage to prevent DOMException / SecurityError crashes on mobile browsers (incognito, LAN HTTP, etc.)
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+    } catch (e) {
+      console.warn('localStorage.getItem access denied:', e);
+    }
+    return null;
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+    } catch (e) {
+      console.warn('localStorage.setItem access denied:', e);
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch (e) {
+      console.warn('localStorage.removeItem access denied:', e);
+    }
+  }
+};
+
 // Internal raw atoms (always initialized to static fallback to prevent Next.js SSR hydration mismatches)
 export const rawTabsAtom = atom<WorkspaceTab[]>(getFallbackTabs());
 export const rawActiveTabIdAtom = atom<string>('tab_initial');
@@ -125,8 +157,8 @@ const saveTabsToLocalStorage = (tabs: WorkspaceTab[], activeId: string) => {
         ...tab,
         historyTree: serializeTree(tab.historyTree)
       }));
-      localStorage.setItem('algebranch_workspace_tabs', JSON.stringify(serialized));
-      localStorage.setItem('algebranch_active_tab_id', activeId);
+      safeLocalStorage.setItem('algebranch_workspace_tabs', JSON.stringify(serialized));
+      safeLocalStorage.setItem('algebranch_active_tab_id', activeId);
     } catch (err) {
       console.error('Failed to save workspace tabs to localStorage:', err);
     }
@@ -598,8 +630,8 @@ export const createNewSessionAtom = atom(
       set(savedSessionsAtom, updatedSessions);
 
       try {
-        localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
-        localStorage.setItem('algebranch_current_session_id', newId);
+        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
+        safeLocalStorage.setItem('algebranch_current_session_id', newId);
       } catch (err) {
         console.error('Failed to save sessions to localStorage:', err);
       }
@@ -657,7 +689,7 @@ export const loadSessionAtom = atom(
       set(toastAtom, { message: "Loaded workspace session", key: Date.now() });
 
       try {
-        localStorage.setItem('algebranch_current_session_id', sessionId);
+        safeLocalStorage.setItem('algebranch_current_session_id', sessionId);
       } catch (err) {
         console.error('Failed to save active session ID:', err);
       }
@@ -679,7 +711,7 @@ export const deleteSessionAtom = atom(
 
     // Save updated sessions to localStorage immediately
     try {
-      localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
+      safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
     } catch (err) {
       console.error('Failed to save sessions after deletion:', err);
     }
@@ -1072,8 +1104,8 @@ export const hydrateWorkspaceTabsAtom = atom(
   (get, set) => {
     if (typeof window === 'undefined') return;
     try {
-      const savedTabs = localStorage.getItem('algebranch_workspace_tabs');
-      const savedActiveId = localStorage.getItem('algebranch_active_tab_id');
+      const savedTabs = safeLocalStorage.getItem('algebranch_workspace_tabs');
+      const savedActiveId = safeLocalStorage.getItem('algebranch_active_tab_id');
       
       if (savedTabs) {
         const parsed = JSON.parse(savedTabs);

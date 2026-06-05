@@ -65,6 +65,38 @@ const API_MATH_ENDPOINT = '/api/math';
 // Client-side cache for deterministic mathematical API sync states
 const mathStateCache = new Map<string, any>();
 
+// Safe wrapper around window.localStorage to prevent DOMException / SecurityError crashes on mobile browsers (incognito, LAN HTTP, etc.)
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+    } catch (e) {
+      console.warn('localStorage.getItem access denied:', e);
+    }
+    return null;
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+    } catch (e) {
+      console.warn('localStorage.setItem access denied:', e);
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch (e) {
+      console.warn('localStorage.removeItem access denied:', e);
+    }
+  }
+};
+
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
@@ -113,198 +145,210 @@ export default function Home() {
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
     const initialize = () => {
-      // Hydrate workspace tabs state
-      hydrateWorkspaceTabs();
-
-      // 0. Set default sidebar states for mobile/tablet
-      const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-      if (isMobile) {
-        setLeftSidebarOpen(false);
-        setRightSidebarOpen(false);
-      }
-
-      // 1. First, load the library list of saved sessions
-      let sessions: SavedSession[] = [];
-      try {
-        const savedSessionsRaw = localStorage.getItem('algebranch_saved_sessions');
-        if (savedSessionsRaw) {
-          sessions = JSON.parse(savedSessionsRaw);
-          
-          // Auto-migrate legacy default equation to the new optimized default
-          let migrated = false;
-          sessions = sessions.map(s => {
-            if (s.id === 'session_initial' && s.name === '3 * x + 5 = x + 13') {
-              migrated = true;
-              const initialTree: Record<string, HistoryNode> = {
-                "0": {
-                  id: "0",
-                  equation: parseEquation(INITIAL_EQUATION_STRING),
-                  parentId: null,
-                  childrenIds: [],
-                  label: "Initial",
-                  timestamp: Date.now(),
-                }
-              };
-              return {
-                id: 'session_initial',
-                name: 'Sample Workspace',
-                timestamp: Date.now(),
-                tree: serializeTree(initialTree),
-                currentNodeId: "0",
-              };
-            }
-            return s;
-          });
-
-          if (migrated) {
-            localStorage.setItem('algebranch_saved_sessions', JSON.stringify(sessions));
-          }
-
-          setSavedSessions(sessions);
+      // Mark JS as running immediately on client execution
+      if (typeof document !== 'undefined') {
+        const statusEl = document.getElementById('js-status');
+        if (statusEl) {
+          statusEl.textContent = 'JS: running';
+          statusEl.style.color = '#22c55e';
         }
-      } catch (err) {
-        console.error('Failed to load saved sessions list:', err);
       }
+      try {
+        // Hydrate workspace tabs state
+        hydrateWorkspaceTabs();
 
-      // Check if we have saved tabs to prevent overwriting hydrated tab trees with stale sessions
-      const hasSavedTabs = typeof window !== 'undefined' && localStorage.getItem('algebranch_workspace_tabs') !== null;
-      if (hasSavedTabs) {
+        // 0. Set default sidebar states for mobile/tablet
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+        if (isMobile) {
+          setLeftSidebarOpen(false);
+          setRightSidebarOpen(false);
+        }
+
+        // 1. First, load the library list of saved sessions
+        let sessions: SavedSession[] = [];
+        try {
+          const savedSessionsRaw = safeLocalStorage.getItem('algebranch_saved_sessions');
+          if (savedSessionsRaw) {
+            sessions = JSON.parse(savedSessionsRaw);
+            
+            // Auto-migrate legacy default equation to the new optimized default
+            let migrated = false;
+            sessions = sessions.map(s => {
+              if (s.id === 'session_initial' && s.name === '3 * x + 5 = x + 13') {
+                migrated = true;
+                const initialTree: Record<string, HistoryNode> = {
+                  "0": {
+                    id: "0",
+                    equation: parseEquation(INITIAL_EQUATION_STRING),
+                    parentId: null,
+                    childrenIds: [],
+                    label: "Initial",
+                    timestamp: Date.now(),
+                  }
+                };
+                return {
+                  id: 'session_initial',
+                  name: 'Sample Workspace',
+                  timestamp: Date.now(),
+                  tree: serializeTree(initialTree),
+                  currentNodeId: "0",
+                };
+              }
+              return s;
+            });
+
+            if (migrated) {
+              safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(sessions));
+            }
+
+            setSavedSessions(sessions);
+          }
+        } catch (err) {
+          console.error('Failed to load saved sessions list:', err);
+        }
+
+        // Check if we have saved tabs to prevent overwriting hydrated tab trees with stale sessions
+        const hasSavedTabs = typeof window !== 'undefined' && safeLocalStorage.getItem('algebranch_workspace_tabs') !== null;
+        if (hasSavedTabs) {
+          const params = new URLSearchParams(window.location.search);
+          const urlEq = params.get('eq');
+          if (urlEq) {
+            try {
+              const cleanEqStr = decodeURIComponent(urlEq);
+              createNewSession(cleanEqStr);
+              // Clear query parameter from the URL to prevent duplicate tabs on page refresh
+              window.history.replaceState(null, '', window.location.pathname);
+            } catch (err) {
+              console.error('Failed to parse equation from URL query parameter:', err);
+            }
+          }
+          return;
+        }
+
+        // 2. Check URL query string precedence (if sharing) - for legacy/first load without workspace tabs
         const params = new URLSearchParams(window.location.search);
         const urlEq = params.get('eq');
+        
         if (urlEq) {
           try {
             const cleanEqStr = decodeURIComponent(urlEq);
-            createNewSession(cleanEqStr);
+            const newEq = ensureNodeIds(parseEquation(cleanEqStr));
+            const newTree: Record<string, HistoryNode> = {
+              "0": {
+                id: "0",
+                equation: newEq,
+                parentId: null,
+                childrenIds: [],
+                label: "Initial",
+                timestamp: Date.now(),
+              }
+            };
+
+            // Create a new session for the shared link so it doesn't overwrite existing work
+            const newSessionId = `session_shared_${Date.now()}`;
+            setTree(newTree);
+            setCurrentNodeId("0");
+            setCurrentSessionId(newSessionId);
+
+            // Add this new shared session to the library list
+            const newSession: SavedSession = {
+              id: newSessionId,
+              name: cleanEqStr,
+              timestamp: Date.now(),
+              tree: serializeTree(newTree),
+              currentNodeId: "0",
+            };
+            const updated = [newSession, ...sessions];
+            setSavedSessions(updated);
+            safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
+            safeLocalStorage.setItem('algebranch_current_session_id', newSessionId);
             // Clear query parameter from the URL to prevent duplicate tabs on page refresh
             window.history.replaceState(null, '', window.location.pathname);
+            return;
           } catch (err) {
             console.error('Failed to parse equation from URL query parameter:', err);
           }
         }
-        return;
-      }
-
-      // 2. Check URL query string precedence (if sharing) - for legacy/first load without workspace tabs
-      const params = new URLSearchParams(window.location.search);
-      const urlEq = params.get('eq');
-      
-      if (urlEq) {
+        
+        // 3. Otherwise, check if there was a saved active session
         try {
-          const cleanEqStr = decodeURIComponent(urlEq);
-          const newEq = ensureNodeIds(parseEquation(cleanEqStr));
-          const newTree: Record<string, HistoryNode> = {
-            "0": {
-              id: "0",
-              equation: newEq,
-              parentId: null,
-              childrenIds: [],
-              label: "Initial",
-              timestamp: Date.now(),
+          const savedSessionId = safeLocalStorage.getItem('algebranch_current_session_id');
+          if (savedSessionId && sessions.length > 0) {
+            const activeSession = sessions.find(s => s.id === savedSessionId);
+            if (activeSession) {
+              setTree(deserializeTree(activeSession.tree));
+              setCurrentNodeId(activeSession.currentNodeId);
+              setCurrentSessionId(savedSessionId);
+              return;
             }
-          };
+          }
 
-          // Create a new session for the shared link so it doesn't overwrite existing work
-          const newSessionId = `session_shared_${Date.now()}`;
-          setTree(newTree);
-          setCurrentNodeId("0");
-          setCurrentSessionId(newSessionId);
-
-          // Add this new shared session to the library list
-          const newSession: SavedSession = {
-            id: newSessionId,
-            name: cleanEqStr,
-            timestamp: Date.now(),
-            tree: serializeTree(newTree),
-            currentNodeId: "0",
-          };
-          const updated = [newSession, ...sessions];
-          setSavedSessions(updated);
-          localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
-          localStorage.setItem('algebranch_current_session_id', newSessionId);
-          // Clear query parameter from the URL to prevent duplicate tabs on page refresh
-          window.history.replaceState(null, '', window.location.pathname);
-          return;
-        } catch (err) {
-          console.error('Failed to parse equation from URL query parameter:', err);
-        }
-      }
-      
-      // 3. Otherwise, check if there was a saved active session
-      try {
-        const savedSessionId = localStorage.getItem('algebranch_current_session_id');
-        if (savedSessionId && sessions.length > 0) {
-          const activeSession = sessions.find(s => s.id === savedSessionId);
-          if (activeSession) {
+          // Fallback: If no active session found but we have sessions in the list, load the first one
+          if (sessions.length > 0) {
+            const activeSession = sessions[0];
             setTree(deserializeTree(activeSession.tree));
             setCurrentNodeId(activeSession.currentNodeId);
-            setCurrentSessionId(savedSessionId);
+            setCurrentSessionId(activeSession.id);
+            safeLocalStorage.setItem('algebranch_current_session_id', activeSession.id);
             return;
           }
+
+          // 4. Legacy migration fallback: Check old workspace storage keys (backward compatibility)
+          const savedTreeRaw = safeLocalStorage.getItem('algebranch_history_tree');
+          const savedNodeId = safeLocalStorage.getItem('algebranch_current_node_id');
+          if (savedTreeRaw && savedNodeId) {
+            const parsedRaw = JSON.parse(savedTreeRaw);
+            const deserializedTree = deserializeTree(parsedRaw);
+            setTree(deserializedTree);
+            setCurrentNodeId(savedNodeId);
+            
+            // Migrate legacy workspace into a new session
+            const initialEqStr = equationToString(deserializedTree["0"].equation);
+            const legacySessionId = `session_migrated_${Date.now()}`;
+            const newSession: SavedSession = {
+              id: legacySessionId,
+              name: initialEqStr,
+              timestamp: Date.now(),
+              tree: parsedRaw,
+              currentNodeId: savedNodeId,
+            };
+            const updated = [newSession, ...sessions];
+            setSavedSessions(updated);
+            setCurrentSessionId(legacySessionId);
+            safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
+            safeLocalStorage.setItem('algebranch_current_session_id', legacySessionId);
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to load history from local storage:', err);
         }
 
-        // Fallback: If no active session found but we have sessions in the list, load the first one
-        if (sessions.length > 0) {
-          const activeSession = sessions[0];
-          setTree(deserializeTree(activeSession.tree));
-          setCurrentNodeId(activeSession.currentNodeId);
-          setCurrentSessionId(activeSession.id);
-          localStorage.setItem('algebranch_current_session_id', activeSession.id);
-          return;
-        }
-
-        // 4. Legacy migration fallback: Check old workspace storage keys (backward compatibility)
-        const savedTreeRaw = localStorage.getItem('algebranch_history_tree');
-        const savedNodeId = localStorage.getItem('algebranch_current_node_id');
-        if (savedTreeRaw && savedNodeId) {
-          const parsedRaw = JSON.parse(savedTreeRaw);
-          const deserializedTree = deserializeTree(parsedRaw);
-          setTree(deserializedTree);
-          setCurrentNodeId(savedNodeId);
-          
-          // Migrate legacy workspace into a new session
-          const initialEqStr = equationToString(deserializedTree["0"].equation);
-          const legacySessionId = `session_migrated_${Date.now()}`;
-          const newSession: SavedSession = {
-            id: legacySessionId,
-            name: initialEqStr,
+        // 5. Default starting state if everything is empty
+        const defaultId = "session_initial";
+        setCurrentSessionId(defaultId);
+        const initialTree: Record<string, HistoryNode> = {
+          "0": {
+            id: "0",
+            equation: parseEquation(INITIAL_EQUATION_STRING),
+            parentId: null,
+            childrenIds: [],
+            label: "Initial",
             timestamp: Date.now(),
-            tree: parsedRaw,
-            currentNodeId: savedNodeId,
-          };
-          const updated = [newSession, ...sessions];
-          setSavedSessions(updated);
-          setCurrentSessionId(legacySessionId);
-          localStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
-          localStorage.setItem('algebranch_current_session_id', legacySessionId);
-          return;
-        }
-      } catch (err) {
-        console.error('Failed to load history from local storage:', err);
-      }
-
-      // 5. Default starting state if everything is empty
-      const defaultId = "session_initial";
-      setCurrentSessionId(defaultId);
-      const initialTree: Record<string, HistoryNode> = {
-        "0": {
-          id: "0",
-          equation: parseEquation(INITIAL_EQUATION_STRING),
-          parentId: null,
-          childrenIds: [],
-          label: "Initial",
+          }
+        };
+        const defaultSession: SavedSession = {
+          id: defaultId,
+          name: "Sample Workspace",
           timestamp: Date.now(),
-        }
-      };
-      const defaultSession: SavedSession = {
-        id: defaultId,
-        name: "Sample Workspace",
-        timestamp: Date.now(),
-        tree: serializeTree(initialTree),
-        currentNodeId: "0",
-      };
-      setSavedSessions([defaultSession]);
-      localStorage.setItem('algebranch_saved_sessions', JSON.stringify([defaultSession]));
-      localStorage.setItem('algebranch_current_session_id', defaultId);
+          tree: serializeTree(initialTree),
+          currentNodeId: "0",
+        };
+        setSavedSessions([defaultSession]);
+        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify([defaultSession]));
+        safeLocalStorage.setItem('algebranch_current_session_id', defaultId);
+      } catch (err) {
+        console.error('Initialization failed:', err);
+      }
     };
 
     initialize();
@@ -356,14 +400,14 @@ export default function Home() {
         }
 
         // Write the list to localStorage
-        localStorage.setItem('algebranch_saved_sessions', JSON.stringify(nextSessions));
+        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(nextSessions));
         return nextSessions;
       });
 
       // Also maintain the legacy/single active workspace key for other references
-      localStorage.setItem('algebranch_history_tree', JSON.stringify(serialized));
-      localStorage.setItem('algebranch_current_node_id', currentNodeId);
-      localStorage.setItem('algebranch_current_session_id', currentSessionId);
+      safeLocalStorage.setItem('algebranch_history_tree', JSON.stringify(serialized));
+      safeLocalStorage.setItem('algebranch_current_node_id', currentNodeId);
+      safeLocalStorage.setItem('algebranch_current_session_id', currentSessionId);
     } catch (err) {
       console.error('Failed to save history to local storage:', err);
     }
@@ -727,41 +771,39 @@ export default function Home() {
       {/* Under-header Layout (Sidebar + Main Workspace + Right Sidebar) */}
       <div className="flex-1 flex w-full overflow-hidden min-h-0 relative z-20 px-4 pb-4 pt-0">
         {/* Backdrop overlay for mobile drawers */}
-        {!isMobile && (
-          <div
-            onClick={() => {
-              setLeftSidebarOpen(false);
-              setRightSidebarOpen(false);
-            }}
-            className={`fixed top-16 left-0 right-0 bottom-0 bg-neutral-950/60 backdrop-blur-sm z-35 lg:hidden transition-all duration-300 ${
-              (leftSidebarOpen || rightSidebarOpen)
-                ? 'opacity-100 pointer-events-auto'
-                : 'opacity-0 pointer-events-none'
-            }`}
-          />
-        )}
+        <div
+          onClick={() => {
+            setLeftSidebarOpen(false);
+            setRightSidebarOpen(false);
+          }}
+          className={`fixed top-16 left-0 right-0 bottom-0 bg-neutral-950/60 backdrop-blur-sm z-35 lg:hidden transition-all duration-300 ${
+            (leftSidebarOpen || rightSidebarOpen)
+              ? 'opacity-100 pointer-events-auto'
+              : 'opacity-0 pointer-events-none'
+          }`}
+        />
 
         {/* 1. Left Control Sidebar (Loader, Global Operations, Presets Library) */}
-        {!isMobile && <Sidebar />}
+        <div className="hidden lg:block shrink-0">
+          <Sidebar />
+        </div>
 
         {/* Left Sidebar Edge Handle (Desktop Only) */}
-        {!isMobile && (
-          <Tooltip 
-            content={leftSidebarOpen ? "Hide Workspace Sidebar (⌘B)" : "Show Workspace Sidebar (⌘B)"} 
-            position="right"
-            wrapperClassName={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
-              leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'
-            }`}
+        <Tooltip 
+          content={leftSidebarOpen ? "Hide Workspace Sidebar (⌘B)" : "Show Workspace Sidebar (⌘B)"} 
+          position="right"
+          wrapperClassName={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
+            leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'
+          }`}
+        >
+          <button
+            onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+            className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
+            aria-label={leftSidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
-            <button
-              onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-              className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
-              aria-label={leftSidebarOpen ? "Close sidebar" : "Open sidebar"}
-            >
-              {leftSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-            </button>
-          </Tooltip>
-        )}
+            {leftSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+          </button>
+        </Tooltip>
 
         {/* Main workspace section */}
         <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden gap-3">
@@ -916,25 +958,23 @@ export default function Home() {
         </main>
 
         {/* Right Sidebar Edge Handle (Desktop Only) */}
-        {!isMobile && (
-          <Tooltip 
-            content={rightSidebarOpen ? "Hide History Sidebar (⌘H)" : "Show History Sidebar (⌘H)"} 
-            position="left"
-            wrapperClassName={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
-              rightSidebarOpen ? 'right-[344px] translate-x-1/2' : 'right-[8px] translate-x-1/2'
-            }`}
+        <Tooltip 
+          content={rightSidebarOpen ? "Hide History Sidebar (⌘H)" : "Show History Sidebar (⌘H)"} 
+          position="left"
+          wrapperClassName={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
+            rightSidebarOpen ? 'right-[344px] translate-x-1/2' : 'right-[8px] translate-x-1/2'
+          }`}
+        >
+          <button
+            onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
+            className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
+            aria-label={rightSidebarOpen ? "Close history" : "Open history"}
           >
-            <button
-              onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-              className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
-              aria-label={rightSidebarOpen ? "Close history" : "Open history"}
-            >
-              {rightSidebarOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-            </button>
-          </Tooltip>
-        )}
+            {rightSidebarOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
+        </Tooltip>
 
-        {!isMobile && (
+        <div className="hidden lg:block shrink-0">
           <div className={`flex flex-col fixed top-16 bottom-0 right-0 z-38 transform transition-all duration-300 ease-in-out ${
             rightSidebarOpen 
               ? 'w-80 translate-x-0 opacity-100' 
@@ -946,13 +986,13 @@ export default function Home() {
           } shrink-0`}>
             <ControlPanel />
           </div>
-        )}
+        </div>
       </div>
       <FeedbackModal />
       <DeleteWorkspaceModal />
 
       {/* Mobile-only Bottom navigation and Sheets */}
-      {isMobile && <BottomNav />}
+      <BottomNav />
 
       <BottomSheet
         isOpen={activeBottomSheet === 'workspace'}

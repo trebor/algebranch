@@ -58,8 +58,12 @@ function ensureInitialised(): void {
   };
 
   queries.forEach((mql) => {
-    // `addEventListener('change', …)` is the modern, spec-correct API.
-    mql.addEventListener('change', onChange);
+    // Standard event listener with safe fallback for older browsers/WebViews
+    if (mql.addEventListener) {
+      mql.addEventListener('change', onChange);
+    } else if ((mql as any).addListener) {
+      (mql as any).addListener(onChange);
+    }
   });
 }
 

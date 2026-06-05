@@ -219,9 +219,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
     });
 
     // 3. Compute dynamic position and width on a row-by-row basis
-    const containerWidth = isMounted && typeof window !== 'undefined' && window.innerWidth < 1024
-      ? Math.max(240, window.innerWidth - 64)
-      : 240;
+    const containerWidth = 240;
     const minColWidth = 110;
 
     return layoutNodes.map(node => {
@@ -342,7 +340,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
       <div className="flex-1 flex flex-col min-h-0">
 
         {/* Scrollable grid area for the Tree */}
-        <div className="flex-1 overflow-auto pr-1 relative border border-white/5 rounded-2xl bg-black/15 shadow-inner">
+        <div className="flex-1 overflow-auto pr-1 relative border border-white/5 rounded-2xl bg-black/15 shadow-inner w-full max-w-[350px] mx-auto">
           <div 
             style={{ width: `${svgWidth}px`, height: `${svgHeight}px`, minWidth: '100%' }}
             className="relative"

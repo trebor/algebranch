@@ -145,14 +145,6 @@ export default function Home() {
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
     const initialize = () => {
-      // Mark JS as running immediately on client execution
-      if (typeof document !== 'undefined') {
-        const statusEl = document.getElementById('js-status');
-        if (statusEl) {
-          statusEl.textContent = 'JS: running';
-          statusEl.style.color = '#22c55e';
-        }
-      }
       try {
         // Hydrate workspace tabs state
         hydrateWorkspaceTabs();

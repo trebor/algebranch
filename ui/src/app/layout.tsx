@@ -76,50 +76,6 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <script dangerouslySetInnerHTML={{ __html: `
-          window.addEventListener('error', function(e) {
-            var message = e.message;
-            var source = '';
-            if (e.target && (e.target.src || e.target.href)) {
-              message = 'Failed to load resource: ' + (e.target.src || e.target.href);
-            } else {
-              source = ' <br/><em>' + e.filename + ':' + e.lineno + '</em>';
-            }
-            var div = document.createElement('div');
-            div.style.position = 'fixed';
-            div.style.top = '0';
-            div.style.left = '0';
-            div.style.right = '0';
-            div.style.zIndex = '999999';
-            div.style.background = '#dc2626';
-            div.style.color = 'white';
-            div.style.padding = '16px';
-            div.style.fontFamily = 'monospace';
-            div.style.fontSize = '12px';
-            div.style.wordBreak = 'break-all';
-            div.style.borderBottom = '4px solid #991b1b';
-            div.innerHTML = '<strong>Startup Error:</strong> ' + message + source;
-            document.body.appendChild(div);
-          }, true);
-          window.addEventListener('unhandledrejection', function(e) {
-            var div = document.createElement('div');
-            div.style.position = 'fixed';
-            div.style.top = '0';
-            div.style.left = '0';
-            div.style.right = '0';
-            div.style.zIndex = '999999';
-            div.style.background = '#ea580c';
-            div.style.color = 'white';
-            div.style.padding = '16px';
-            div.style.fontFamily = 'monospace';
-            div.style.fontSize = '12px';
-            div.style.wordBreak = 'break-all';
-            div.style.borderBottom = '4px solid #9a3412';
-            div.innerHTML = '<strong>Promise Rejection:</strong> ' + e.reason;
-            document.body.appendChild(div);
-          });
-        ` }} />
-        <div id="js-status" style={{ position: 'fixed', bottom: '2px', left: '2px', zIndex: 999999, background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.15)', color: '#ef4444', fontFamily: 'monospace', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', pointerEvents: 'none' }}>JS: not started</div>
         <JotaiProvider>
           {children}
         </JotaiProvider>

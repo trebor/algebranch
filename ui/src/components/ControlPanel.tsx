@@ -554,3 +554,177 @@ export const ControlPanel: React.FC = () => {
     </div>
   );
 };
+
+interface TimelineContentProps {
+  onCloseMobile?: () => void;
+}
+
+export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile }) => {
+  const [tree, setTree] = useAtom(historyTreeAtom);
+  const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
+  const setSourcePath = useSetAtom(sourcePathAtom);
+  const setHoverPath = useSetAtom(hoverPathAtom);
+
+  const activeNode = tree[currentNodeId];
+  const canUndo = activeNode && activeNode.parentId !== null;
+  const canRedo = activeNode && activeNode.childrenIds.length > 0;
+
+  const handleUndo = () => {
+    if (canUndo && activeNode.parentId) {
+      setCurrentNodeId(activeNode.parentId);
+      trackEvent({
+        action: 'undo_step',
+        category: 'history',
+        label: activeNode.parentId,
+      });
+      setSourcePath(null);
+      setHoverPath(null);
+    }
+  };
+
+  const handleRedo = () => {
+    if (canRedo) {
+      const nextId = activeNode.childrenIds[activeNode.childrenIds.length - 1];
+      setCurrentNodeId(nextId);
+      trackEvent({
+        action: 'redo_step',
+        category: 'history',
+        label: nextId,
+      });
+      setSourcePath(null);
+      setHoverPath(null);
+    }
+  };
+
+  const handleResetAll = () => {
+    if (Object.keys(tree).length > 1) {
+      const rootNode = tree["0"];
+      setTree({
+        "0": {
+          id: "0",
+          equation: rootNode.equation,
+          parentId: null,
+          childrenIds: [],
+          label: "Initial",
+          timestamp: rootNode.timestamp,
+        }
+      });
+      setCurrentNodeId("0");
+      trackEvent({
+        action: 'reset_history',
+        category: 'history',
+      });
+      setSourcePath(null);
+      setHoverPath(null);
+    }
+  };
+
+  const handleStepClick = (id: string) => {
+    setCurrentNodeId(id);
+    trackEvent({
+      action: 'select_step',
+      category: 'history',
+      label: id,
+    });
+    setSourcePath(null);
+    setHoverPath(null);
+    onCloseMobile?.();
+  };
+
+  const sortedNodes = React.useMemo(() => {
+    return Object.values(tree).sort((a, b) => a.timestamp - b.timestamp);
+  }, [tree]);
+
+  const stepIndices = React.useMemo(() => {
+    const indices = new Map<string, number>();
+    sortedNodes.forEach((n, idx) => indices.set(n.id, idx));
+    return indices;
+  }, [sortedNodes]);
+
+  return (
+    <div className="flex flex-col gap-4 py-2 text-white">
+      {/* Header toolbar */}
+      <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
+        <span className="text-sm font-semibold text-indigo-300">Steps Timeline</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className="p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
+            title="Undo"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            onClick={handleRedo}
+            disabled={!canRedo}
+            className="p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
+            title="Redo"
+          >
+            <ChevronRight size={16} />
+          </button>
+          <button
+            onClick={handleResetAll}
+            disabled={sortedNodes.length <= 1}
+            className="p-1.5 rounded-lg border border-white/10 text-red-400 hover:text-red-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
+            title="Reset All"
+          >
+            <RotateCcw size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Timeline items list */}
+      <div className="relative flex flex-col gap-6 pl-4 border-l border-white/10 ml-2 py-2">
+        {sortedNodes.map((node, idx) => {
+          const isCurrent = node.id === currentNodeId;
+          const parentIndex = node.parentId ? stepIndices.get(node.parentId) : null;
+          const isBranch = parentIndex !== null && idx > 0 && sortedNodes[idx - 1].id !== node.parentId;
+
+          return (
+            <div
+              key={node.id}
+              onClick={() => handleStepClick(node.id)}
+              className="relative flex flex-col gap-1 cursor-pointer group select-none"
+            >
+              {/* Left timeline badge/dot */}
+              <div
+                className={`absolute -left-[25px] top-0.5 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center text-[8px] font-bold transition-all duration-300 ${
+                  isCurrent
+                    ? 'bg-indigo-600 border-indigo-400 text-white scale-110 shadow-[0_0_10px_rgba(99,102,241,0.5)]'
+                    : 'bg-neutral-900 border-white/20 text-white/50 group-hover:border-indigo-400/50 group-hover:text-indigo-300'
+                }`}
+              >
+                {idx}
+              </div>
+
+              {/* Step label / math string card */}
+              <div
+                className={`flex flex-col gap-1.5 p-3 rounded-xl border transition-all duration-300 ${
+                  isCurrent
+                    ? 'border-indigo-500/30 bg-indigo-500/10 shadow-[0_0_12px_rgba(99,102,241,0.15)]'
+                    : 'border-white/5 bg-neutral-900/60 hover:bg-neutral-900/90 hover:border-white/10'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[10px] text-white/40 font-semibold uppercase tracking-wider">
+                  <span className={isCurrent ? 'text-indigo-400 font-bold' : ''}>
+                    {node.label}
+                  </span>
+                  {isBranch && parentIndex !== null && (
+                    <span className="text-amber-400/80 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-500/10 font-sans tracking-normal uppercase text-[8px]">
+                      Branch from step {parentIndex}
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-sm font-mono text-white tracking-wide break-all">
+                  {equationToString(node.equation)}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};

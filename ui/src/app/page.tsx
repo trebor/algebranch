@@ -4,12 +4,16 @@ import React from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
 import { PreviewEquationNode } from '../components/PreviewEquationNode';
-import { Sidebar } from '../components/Sidebar';
-import { ControlPanel } from '../components/ControlPanel';
+import { Sidebar, SidebarContent } from '../components/Sidebar';
+import { ControlPanel, TimelineContent } from '../components/ControlPanel';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
 import { Tooltip } from '../components/Tooltip';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
+import { BottomNav } from '../components/BottomNav';
+import { BottomSheet } from '../components/BottomSheet';
+import { RadialMenu } from '../components/RadialMenu';
+import { useIsMobile } from '../hooks/useBreakpoint';
 import {
   currentEquationAtom,
   previewEquationAtom,
@@ -42,6 +46,8 @@ import {
   deleteConfirmationModalOpenAtom,
   tabsAtom,
   activeTabIdAtom,
+  activeBottomSheetAtom,
+  radialMenuOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
@@ -86,6 +92,11 @@ export default function Home() {
   const currentTabName = useAtomValue(currentTabNameAtom);
   const [toast, setToast] = useAtom(toastAtom);
   const [isHydrated, setIsHydrated] = React.useState(false);
+
+  const [activeBottomSheet, setActiveBottomSheet] = useAtom(activeBottomSheetAtom);
+  const [radialMenuOpen, setRadialMenuOpen] = useAtom(radialMenuOpenAtom);
+  const isMobile = useIsMobile();
+  const equalsRef = React.useRef<HTMLSpanElement>(null);
 
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
@@ -545,7 +556,13 @@ export default function Home() {
       <header className="h-16 px-4 flex items-center justify-between select-none shrink-0 w-full z-30">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+            onClick={() => {
+              if (isMobile) {
+                setActiveBottomSheet(activeBottomSheet === 'workspace' ? null : 'workspace');
+              } else {
+                setLeftSidebarOpen(!leftSidebarOpen);
+              }
+            }}
             className="lg:hidden p-2 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-all"
             aria-label="Toggle operations sidebar"
           >
@@ -600,7 +617,13 @@ export default function Home() {
             )}
           </button>
           <button
-            onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
+            onClick={() => {
+              if (isMobile) {
+                setActiveBottomSheet(activeBottomSheet === 'history' ? null : 'history');
+              } else {
+                setRightSidebarOpen(!rightSidebarOpen);
+              }
+            }}
             className="lg:hidden p-2 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-all"
             aria-label="Toggle history panel"
           >
@@ -612,31 +635,35 @@ export default function Home() {
       {/* Under-header Layout (Sidebar + Main Workspace + Right Sidebar) */}
       <div className="flex-1 flex w-full overflow-hidden min-h-0 relative z-20 px-4 pb-4 pt-0">
         {/* Backdrop overlay for mobile drawers */}
-        <div
-          onClick={() => {
-            setLeftSidebarOpen(false);
-            setRightSidebarOpen(false);
-          }}
-          className={`fixed top-16 left-0 right-0 bottom-0 bg-neutral-950/60 backdrop-blur-sm z-35 lg:hidden transition-all duration-300 ${
-            (leftSidebarOpen || rightSidebarOpen)
-              ? 'opacity-100 pointer-events-auto'
-              : 'opacity-0 pointer-events-none'
-          }`}
-        />
+        {!isMobile && (
+          <div
+            onClick={() => {
+              setLeftSidebarOpen(false);
+              setRightSidebarOpen(false);
+            }}
+            className={`fixed top-16 left-0 right-0 bottom-0 bg-neutral-950/60 backdrop-blur-sm z-35 lg:hidden transition-all duration-300 ${
+              (leftSidebarOpen || rightSidebarOpen)
+                ? 'opacity-100 pointer-events-auto'
+                : 'opacity-0 pointer-events-none'
+            }`}
+          />
+        )}
 
         {/* 1. Left Control Sidebar (Loader, Global Operations, Presets Library) */}
-        <Sidebar />
+        {!isMobile && <Sidebar />}
 
         {/* Left Sidebar Edge Handle (Desktop Only) */}
-        <button
-          onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-          className={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 items-center justify-center w-5 h-20 rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 ease-in-out cursor-pointer hover:scale-105 active:scale-95 ${
-            leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'
-          }`}
-          aria-label={leftSidebarOpen ? "Close sidebar" : "Open sidebar"}
-        >
-          {leftSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-        </button>
+        {!isMobile && (
+          <button
+            onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+            className={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 items-center justify-center w-5 h-20 rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 ease-in-out cursor-pointer hover:scale-105 active:scale-95 ${
+              leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'
+            }`}
+            aria-label={leftSidebarOpen ? "Close sidebar" : "Open sidebar"}
+          >
+            {leftSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+          </button>
+        )}
 
         {/* Main workspace section */}
         <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden gap-3">
@@ -659,7 +686,7 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light cursor-default relative group/canvas"
+              className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-xl lg:text-2xl xl:text-[2.2rem] font-light cursor-default relative group/canvas"
             >
               {/* Calculating Math Engine Spinner / Toast Notification */}
               {toast ? (
@@ -717,7 +744,14 @@ export default function Home() {
                     </div>
 
                     {/* Equals Operator sign */}
-                    <span className="text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black">
+                    <span
+                      ref={equalsRef}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRadialMenuOpen(!radialMenuOpen);
+                      }}
+                      className="text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95 transition-all"
+                    >
                       =
                     </span>
 
@@ -741,7 +775,7 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-2xl md:text-3xl lg:text-[2.2rem] font-light cursor-default relative group/preview"
+              className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-8 text-xl lg:text-2xl xl:text-[2.2rem] font-light cursor-default relative group/preview"
             >
 
               {isHydrated && (
@@ -784,30 +818,55 @@ export default function Home() {
         </main>
 
         {/* Right Sidebar Edge Handle (Desktop Only) */}
-        <button
-          onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-          className={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 items-center justify-center w-5 h-20 rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 ease-in-out cursor-pointer hover:scale-105 active:scale-95 ${
-            rightSidebarOpen ? 'right-[344px] translate-x-1/2' : 'right-[8px] translate-x-1/2'
-          }`}
-          aria-label={rightSidebarOpen ? "Close history" : "Open history"}
-        >
-          {rightSidebarOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
+        {!isMobile && (
+          <button
+            onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
+            className={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 items-center justify-center w-5 h-20 rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 ease-in-out cursor-pointer hover:scale-105 active:scale-95 ${
+              rightSidebarOpen ? 'right-[344px] translate-x-1/2' : 'right-[8px] translate-x-1/2'
+            }`}
+            aria-label={rightSidebarOpen ? "Close history" : "Open history"}
+          >
+            {rightSidebarOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
+        )}
 
-        <div className={`flex flex-col fixed top-16 bottom-0 right-0 z-38 transform transition-all duration-300 ease-in-out ${
-          rightSidebarOpen 
-            ? 'w-80 translate-x-0 opacity-100' 
-            : 'w-80 translate-x-full opacity-100 max-lg:pointer-events-none'
-        } lg:relative lg:top-0 lg:translate-x-0 lg:z-30 lg:flex lg:flex-col lg:h-full ${
-          rightSidebarOpen 
-            ? 'lg:w-80 lg:min-w-[20rem] lg:ml-4 lg:opacity-100' 
-            : 'lg:w-0 lg:min-w-0 lg:ml-0 lg:opacity-0 lg:overflow-hidden lg:pointer-events-none'
-        } shrink-0`}>
-          <ControlPanel />
-        </div>
+        {!isMobile && (
+          <div className={`flex flex-col fixed top-16 bottom-0 right-0 z-38 transform transition-all duration-300 ease-in-out ${
+            rightSidebarOpen 
+              ? 'w-80 translate-x-0 opacity-100' 
+              : 'w-80 translate-x-full opacity-100 max-lg:pointer-events-none'
+          } lg:relative lg:top-0 lg:translate-x-0 lg:z-30 lg:flex lg:flex-col lg:h-full ${
+            rightSidebarOpen 
+              ? 'lg:w-80 lg:min-w-[20rem] lg:ml-4 lg:opacity-100' 
+              : 'lg:w-0 lg:min-w-0 lg:ml-0 lg:opacity-0 lg:overflow-hidden lg:pointer-events-none'
+          } shrink-0`}>
+            <ControlPanel />
+          </div>
+        )}
       </div>
       <FeedbackModal />
       <DeleteWorkspaceModal />
+
+      {/* Mobile-only Bottom navigation and Sheets */}
+      {isMobile && <BottomNav />}
+
+      <BottomSheet
+        isOpen={activeBottomSheet === 'workspace'}
+        onClose={() => setActiveBottomSheet(null)}
+        title="Workspace"
+      >
+        <SidebarContent showGlobalOps={false} onCloseMobile={() => setActiveBottomSheet(null)} />
+      </BottomSheet>
+
+      <BottomSheet
+        isOpen={activeBottomSheet === 'history'}
+        onClose={() => setActiveBottomSheet(null)}
+        title="History"
+      >
+        <TimelineContent onCloseMobile={() => setActiveBottomSheet(null)} />
+      </BottomSheet>
+
+      <RadialMenu anchorRef={equalsRef} />
     </div>
   );
 }

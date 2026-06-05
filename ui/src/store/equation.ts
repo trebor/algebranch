@@ -287,6 +287,12 @@ export const feedbackModalOpenAtom = atom(false);
 export const feedbackContextAtom = atom<string | null>(null);
 export const deleteConfirmationModalOpenAtom = atom(false);
 
+// Mobile UI state atoms
+export type BottomSheetType = 'workspace' | 'history' | null;
+export const activeBottomSheetAtom = atom<BottomSheetType>(null);
+export const radialMenuOpenAtom = atom(false);
+
+
 export interface ReducibleActionInfo {
   equation: Equation;
   type: 'reduce' | 'distribute' | 'identity';
@@ -811,6 +817,21 @@ export const applyGlobalOpAtom = atom(
 
     const nextEq: Equation = { lhs: nextLhs, rhs: nextRhs };
     set(pushEquationAtom, nextEq, label);
+  }
+);
+
+/**
+ * Action: Swaps the left-hand side and right-hand side of the current equation.
+ * e.g. `a = b` becomes `b = a`
+ */
+export const swapSidesAtom = atom(
+  null,
+  (get, set) => {
+    const currentEq = get(currentEquationAtom);
+    if (!currentEq) return;
+
+    const nextEq: Equation = { lhs: currentEq.rhs, rhs: currentEq.lhs };
+    set(pushEquationAtom, nextEq, 'Swap Sides');
   }
 );
 

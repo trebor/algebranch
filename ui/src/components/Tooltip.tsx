@@ -61,10 +61,20 @@ export const Tooltip: React.FC<TooltipProps> = ({
       const triggerCenterX = rect.left + rect.width / 2;
       const triggerCenterY = rect.top + rect.height / 2;
       const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
       
-      const optimalDir = autoAlign 
-        ? (triggerCenterX > viewportWidth / 2 ? 'left' : 'right') 
-        : position;
+      const isNarrow = viewportWidth < 768;
+      let optimalDir = position;
+
+      if (autoAlign) {
+        if (isNarrow) {
+          // On mobile, prefer top/bottom to prevent horizontal clipping
+          optimalDir = triggerCenterY > viewportHeight / 2 ? 'top' : 'bottom';
+        } else {
+          // On desktop, prefer left/right based on screen half
+          optimalDir = triggerCenterX > viewportWidth / 2 ? 'left' : 'right';
+        }
+      }
         
       setCalculatedPosition(optimalDir);
 
@@ -84,6 +94,12 @@ export const Tooltip: React.FC<TooltipProps> = ({
       } else {
         top = rect.bottom + offset;
         left = triggerCenterX;
+      }
+
+      // Clamp horizontal coordinates for top/bottom tooltips to prevent edge clipping
+      if (optimalDir === 'top' || optimalDir === 'bottom') {
+        const halfWidth = 100; // max-w-[200px] / 2
+        left = Math.max(halfWidth + 8, Math.min(left, viewportWidth - halfWidth - 8));
       }
 
       setCoords({ top, left });

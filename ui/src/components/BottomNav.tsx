@@ -120,7 +120,7 @@ const NavButton: React.FC<NavButtonProps> = ({
   onClick,
 }) => {
   return (
-    <Tooltip content={tooltip} position="top" wrapperClassName="flex-1 flex justify-center">
+    <Tooltip content={tooltip} position="top" autoAlign={false} wrapperClassName="flex-1 flex justify-center">
       <button
         onClick={onClick}
         disabled={disabled}

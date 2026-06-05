@@ -123,7 +123,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
       }
       onCloseMobile?.();
     } catch (err) {
-      setErrorStr(`Error loading preset: ${err instanceof Error ? err.message : String(err)}`);
+      setErrorStr(`Error loading example: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -280,11 +280,11 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
         </div>
       </div>
 
-      {/* 3. Presets Library */}
+      {/* 3. Example Equations */}
       <div className="flex-1 flex flex-col gap-3 min-h-0 border-t border-white/10 pt-4">
         <h3 className="text-xs font-bold text-white flex items-center gap-2 select-none px-1">
           <FolderGit2 className="text-indigo-400" size={14} />
-          <span>Presets Library</span>
+          <span>Example Equations</span>
         </h3>
 
         {/* Tab Content List Container */}

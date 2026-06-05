@@ -37,15 +37,15 @@ interface RadialPetal {
 
 const PETALS: RadialPetal[] = [
   { icon: <ArrowLeftRight size={18} />, label: '↔', tooltip: 'Swap left and right sides', action: { type: 'swap' }, color: 'text-amber-400' },
-  { icon: <span className="text-sm font-bold">ⁿ√</span>, label: 'ⁿ√', tooltip: 'Take nth root of both sides', action: { type: 'root', power: 2 }, color: 'text-emerald-400' },
   { icon: <span className="text-sm font-bold">xⁿ</span>, label: 'xⁿ', tooltip: 'Raise both sides to nth power', action: { type: 'power', power: 2 }, color: 'text-teal-400' },
   { icon: <Plus size={18} />, label: '+', tooltip: 'Add term to both sides', action: { type: 'add' }, color: 'text-indigo-400' },
   { icon: <Minus size={18} />, label: '−', tooltip: 'Subtract term from both sides', action: { type: 'sub' }, color: 'text-violet-400' },
   { icon: <X size={16} />, label: '×', tooltip: 'Multiply both sides by term', action: { type: 'mul' }, color: 'text-rose-400' },
   { icon: <Divide size={18} />, label: '÷', tooltip: 'Divide both sides by term', action: { type: 'div' }, color: 'text-pink-400' },
+  { icon: <span className="text-sm font-bold">ⁿ√</span>, label: 'ⁿ√', tooltip: 'Take nth root of both sides', action: { type: 'root', power: 2 }, color: 'text-emerald-400' },
 ];
 
-// Radial layout: 8 items evenly spaced in a circle starting from top
+// Radial layout
 const RADIUS = 72; // px from center
 const ANGLE_START = -90; // Start from top (12 o'clock)
 

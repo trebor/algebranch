@@ -62,7 +62,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<Undo2 size={24} />}
           label="Undo"
-          tooltip="Undo last step (⌘Z)"
+          tooltip="Undo step (⌘Z)"
           disabled={!canUndo}
           onClick={handleUndo}
         />
@@ -81,7 +81,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<GitBranch size={24} />}
           label="History"
-          tooltip="History tree / timeline (⌘H)"
+          tooltip="History (⌘H)"
           active={activeBottomSheet === 'history'}
           onClick={handleToggleHistory}
         />

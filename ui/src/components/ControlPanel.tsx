@@ -15,11 +15,9 @@ import {
   hoveredLoopTargetIdAtom,
   getCanonicalKey,
   rightSidebarOpenAtom,
-  feedbackModalOpenAtom,
-  feedbackContextAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitBranch, Infinity, MessageSquarePlus } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitBranch, Infinity } from 'lucide-react';
 import { useIsMobile } from '../hooks/useBreakpoint';
 
 const COPIED_TIMEOUT = 2000;
@@ -36,8 +34,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
   const setHoverPath = useSetAtom(hoverPathAtom);
   const layout = useAtomValue(treeLayoutAtom);
   const setRightSidebarOpen = useSetAtom(rightSidebarOpenAtom);
-  const setFeedbackModalOpen = useSetAtom(feedbackModalOpenAtom);
-  const setFeedbackContext = useSetAtom(feedbackContextAtom);
+
 
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
@@ -540,19 +537,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
 
                     {/* Hover Actions Toolbar */}
                     <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 contextual-actions z-20">
-                      <Tooltip content="Report issue with this step" position="top">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFeedbackContext(`History Step ${stepNum} (${node.label}): ${equationToString(node.equation)}`);
-                            setFeedbackModalOpen(true);
-                          }}
-                          className="p-1 rounded-md border border-white/5 bg-neutral-950 text-white/40 hover:text-indigo-400 hover:bg-white/10 hover:border-white/15 cursor-pointer"
-                        >
-                          <MessageSquarePlus size={10} />
-                        </button>
-                      </Tooltip>
-                      
+
                       <Tooltip content="Copy Equation" position="top">
                         <button
                           onClick={(e) => handleCopyStep(e, node.equation, node.id)}

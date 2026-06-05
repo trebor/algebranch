@@ -877,18 +877,7 @@ export default function Home() {
               {/* Contextual Action Buttons for Active Workspace */}
               {currentEq && (
                 <div className="absolute top-4 right-4 z-30 contextual-actions flex items-center gap-2">
-                  <Tooltip content="Report an issue with this active equation" position="left">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFeedbackContext(`Active Equation: ${equationToString(currentEq)}`);
-                        setFeedbackModalOpen(true);
-                      }}
-                      className="p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-neutral-900/90 text-white/40 hover:text-indigo-400 hover:border-indigo-500/30 transition-all cursor-pointer shadow-md"
-                    >
-                      <MessageSquarePlus size={14} />
-                    </button>
-                  </Tooltip>
+
                   <Tooltip content="Delete workspace permanently" position="left">
                     <button
                       onClick={(e) => {

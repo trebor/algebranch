@@ -129,7 +129,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   ) : null;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-3">
+    <div className="shrink-0 flex flex-col gap-3">
       {/* Header with Actions */}
       <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
         {!isMobile && (
@@ -155,7 +155,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
       </div>
 
       {/* Recessed Content Box */}
-      <div className={`flex-1 overflow-y-auto p-4 flex flex-col gap-4 ${THEME_GLASS.TREE_BG}`}>
+      <div className={`p-4 flex flex-col gap-4 ${THEME_GLASS.TREE_BG}`}>
         {/* Define Section */}
         <div className="flex flex-col gap-1.5 shrink-0">
           <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">

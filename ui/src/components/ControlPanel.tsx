@@ -230,9 +230,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
       const sortedIdx = rowNodes.findIndex(n => n.id === node.id);
       
       const rowColWidth = Math.max(minColWidth, containerWidth / rowNodeCount);
-      const cardWidth = rowColWidth - 12; // 12px gap spacing
+      const maxCardWidth = 228; // Standard elegant desktop width
+      const cardWidth = Math.min(maxCardWidth, rowColWidth - 12);
       
-      const x = 16 + sortedIdx * rowColWidth; // 16px padding left
+      // Center the card in its column cell if it is smaller than the cell width
+      const x = 16 + sortedIdx * rowColWidth + (rowColWidth - 12 - cardWidth) / 2;
       const y = 20 + node.depth * 76; // 76px ROW_HEIGHT
 
       return {

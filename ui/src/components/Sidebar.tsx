@@ -284,7 +284,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
       </div>
 
       {isMobileRecentsOpen && mounted && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-50 bg-neutral-950/98 backdrop-blur-xl flex flex-col p-6 pb-[env(safe-area-inset-bottom)] animate-[fadeIn_0.2s_ease-out]">
+        <div className="fixed inset-0 z-50 bg-[#110f22]/98 backdrop-blur-xl flex flex-col p-6 pb-[env(safe-area-inset-bottom)] animate-[fadeIn_0.2s_ease-out]">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
             <div>

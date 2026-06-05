@@ -53,7 +53,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
-import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch } from 'lucide-react';
+import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -711,7 +711,7 @@ export default function Home() {
 
 
   return (
-    <div className="relative flex flex-col h-screen w-screen overflow-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(30,27,75,0.8),rgba(10,10,12,1))] text-white font-sans">
+    <div className="relative flex flex-col h-screen w-screen overflow-hidden bg-[#080711] text-white font-sans">
       {/* Background neon grid effect */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none -z-10" />
 
@@ -1032,7 +1032,12 @@ export default function Home() {
       <BottomSheet
         isOpen={activeBottomSheet === 'workspace'}
         onClose={() => setActiveBottomSheet(null)}
-        title="Workspace"
+        title={
+          <>
+            <LayoutGrid className="text-indigo-400" size={18} />
+            <span>Workspace</span>
+          </>
+        }
         snapPoints={[0.38]}
       >
         <SidebarContent onCloseMobile={() => setActiveBottomSheet(null)} />
@@ -1041,7 +1046,12 @@ export default function Home() {
       <BottomSheet
         isOpen={activeBottomSheet === 'library'}
         onClose={() => setActiveBottomSheet(null)}
-        title="Equation Library"
+        title={
+          <>
+            <Library className="text-indigo-400" size={18} />
+            <span>Equation Library</span>
+          </>
+        }
       >
         <EquationLibraryContent showHeader={false} onCloseMobile={() => setActiveBottomSheet(null)} />
       </BottomSheet>
@@ -1049,7 +1059,6 @@ export default function Home() {
       <BottomSheet
         isOpen={activeBottomSheet === 'history'}
         onClose={() => setActiveBottomSheet(null)}
-        title="History"
       >
         <ControlPanel onCloseMobile={() => setActiveBottomSheet(null)} />
       </BottomSheet>

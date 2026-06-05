@@ -3,7 +3,6 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { X } from 'lucide-react';
 
 /**
  * BottomSheet — A draggable bottom sheet component with snap points.
@@ -19,7 +18,7 @@ import { X } from 'lucide-react';
 interface BottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
+  title?: React.ReactNode;
   snapPoints?: number[];  // Default [0.5, 0.92] (50% and 92% of viewport)
   children: React.ReactNode;
 }
@@ -142,15 +141,14 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
             {/* Title bar */}
             {title && (
-              <div className="flex items-center justify-between px-5 py-2">
-                <h2 className="text-base font-semibold text-white">{title}</h2>
-                <button
-                  onClick={onClose}
-                  className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
-                  aria-label="Close"
-                >
-                  <X size={18} />
-                </button>
+              <div className="flex items-center px-5 pb-3 border-b border-white/10 mb-3">
+                {typeof title === 'string' ? (
+                  <h2 className="text-base font-semibold text-white">{title}</h2>
+                ) : (
+                  <div className="text-base font-semibold text-white flex items-center gap-2 select-none">
+                    {title}
+                  </div>
+                )}
               </div>
             )}
 

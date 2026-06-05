@@ -114,7 +114,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
     }
   };
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+
 
   const triggerTooltipContent = currentSession ? (
     <div className="flex flex-col gap-1 text-left max-w-xs select-none">
@@ -131,14 +131,12 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   return (
     <div className="shrink-0 flex flex-col gap-3">
       {/* Header (Desktop Only) */}
-      {!isMobile && (
-        <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
-            <LayoutGrid className="text-indigo-400" size={18} />
-            <span>Workspace</span>
-          </h2>
-        </div>
-      )}
+      <div className="hidden xl:flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
+        <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
+          <LayoutGrid className="text-indigo-400" size={18} />
+          <span>Workspace</span>
+        </h2>
+      </div>
 
       {/* Recessed Content Box */}
       <div className={`p-4 flex flex-col gap-4 ${THEME_GLASS.TREE_BG}`}>
@@ -396,13 +394,13 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
     }
   };
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+
 
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-3">
       {/* Header */}
-      {showHeader && !isMobile && (
-        <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
+      {showHeader && (
+        <div className="hidden xl:flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
           <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
             <Library className="text-indigo-400" size={18} />
             <span>Equation Library</span>

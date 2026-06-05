@@ -781,21 +781,23 @@ export default function Home() {
         </div>
 
         {/* Left Sidebar Edge Handle (Desktop Only) */}
-        <Tooltip 
-          content={leftSidebarOpen ? "Hide Workspace Sidebar (⌘B)" : "Show Workspace Sidebar (⌘B)"} 
-          position="right"
-          wrapperClassName={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
-            leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'
-          }`}
-        >
-          <button
-            onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-            className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
-            aria-label={leftSidebarOpen ? "Close sidebar" : "Open sidebar"}
+        <div className="hidden lg:block">
+          <Tooltip 
+            content={leftSidebarOpen ? "Hide Workspace Sidebar (⌘B)" : "Show Workspace Sidebar (⌘B)"} 
+            position="right"
+            wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
+              leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'
+            }`}
           >
-            {leftSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-          </button>
-        </Tooltip>
+            <button
+              onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+              className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
+              aria-label={leftSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            >
+              {leftSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+            </button>
+          </Tooltip>
+        </div>
 
         {/* Main workspace section */}
         <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden gap-3">
@@ -950,21 +952,23 @@ export default function Home() {
         </main>
 
         {/* Right Sidebar Edge Handle (Desktop Only) */}
-        <Tooltip 
-          content={rightSidebarOpen ? "Hide History Sidebar (⌘H)" : "Show History Sidebar (⌘H)"} 
-          position="left"
-          wrapperClassName={`hidden lg:flex absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
-            rightSidebarOpen ? 'right-[344px] translate-x-1/2' : 'right-[8px] translate-x-1/2'
-          }`}
-        >
-          <button
-            onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-            className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
-            aria-label={rightSidebarOpen ? "Close history" : "Open history"}
+        <div className="hidden lg:block">
+          <Tooltip 
+            content={rightSidebarOpen ? "Hide History Sidebar (⌘H)" : "Show History Sidebar (⌘H)"} 
+            position="left"
+            wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
+              rightSidebarOpen ? 'right-[344px] translate-x-1/2' : 'right-[8px] translate-x-1/2'
+            }`}
           >
-            {rightSidebarOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-          </button>
-        </Tooltip>
+            <button
+              onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
+              className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
+              aria-label={rightSidebarOpen ? "Close history" : "Open history"}
+            >
+              {rightSidebarOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
+          </Tooltip>
+        </div>
 
         <div className="hidden lg:block shrink-0">
           <div className={`flex flex-col fixed top-16 bottom-0 right-0 z-38 transform transition-all duration-300 ease-in-out ${

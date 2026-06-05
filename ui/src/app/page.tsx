@@ -555,16 +555,38 @@ export default function Home() {
       description: 'Redo step (Ctrl+Y)',
     },
     {
-      key: 'b',
+      key: 'e',
       meta: true,
       action: () => {
-        setLeftSidebarOpen((prev) => !prev);
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+        if (isMobile) {
+          setActiveBottomSheet((prev) => (prev === 'workspace' ? null : 'workspace'));
+        } else {
+          setLeftSidebarOpen((prev) => !prev);
+        }
         trackEvent({
-          action: 'shortcut_toggle_left_sidebar',
+          action: 'shortcut_toggle_workspace',
           category: 'keyboard',
         });
       },
-      description: 'Toggle workspace sidebar',
+      description: 'Toggle Workspace',
+    },
+    {
+      key: 'k',
+      meta: true,
+      action: () => {
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+        if (isMobile) {
+          setActiveBottomSheet((prev) => (prev === 'library' ? null : 'library'));
+        } else {
+          setLeftSidebarOpen((prev) => !prev);
+        }
+        trackEvent({
+          action: 'shortcut_toggle_library',
+          category: 'keyboard',
+        });
+      },
+      description: 'Toggle Equation Library',
     },
     {
       key: 'h',
@@ -797,7 +819,7 @@ export default function Home() {
         {/* Left Sidebar Edge Handle (Desktop Only) */}
         <div className="hidden lg:block">
           <Tooltip 
-            content={leftSidebarOpen ? "Hide Workspace Sidebar (⌘B)" : "Show Workspace Sidebar (⌘B)"} 
+            content={leftSidebarOpen ? "Hide Workspace Sidebar (⌘E)" : "Show Workspace Sidebar (⌘E)"} 
             position="right"
             wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
               leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'

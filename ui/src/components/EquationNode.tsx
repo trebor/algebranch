@@ -87,6 +87,32 @@ const canToggleRoot = (eq: math.MathNode | unknown): boolean => {
   return false;
 };
 
+/**
+ * Layout design tokens (in relative em units) used to calculate node dimensions dynamically.
+ */
+const MATH_LAYOUT = {
+  // Normal layouts
+  normal: {
+    btnSize: 0.8,
+    btnGap: 0.05,
+    btnTop: 0.08,
+    btnRight: 0.15,
+    nodePx: 0.35,
+    nodePy: 0.18,
+    textGap: 0.07,
+  },
+  // Exponent layouts
+  exponent: {
+    btnSize: 0.55,
+    btnGap: 0.05,
+    btnTop: 0.05,
+    btnRight: 0.1,
+    nodePx: 0.2,
+    nodePy: 0.12,
+    textGap: 0.05,
+  }
+};
+
 export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = false }) => {
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
@@ -418,26 +444,35 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     return <span>{node.toString()}</span>;
   };
 
+  const layout = inExponent ? MATH_LAYOUT.exponent : MATH_LAYOUT.normal;
+
+  const isInteractive = !isStatic || isReducible;
+
   const minWidth = isReducible 
-    ? (inExponent 
-        ? `${actions.length * 0.55 + (actions.length - 1) * 0.05 + 0.35}em`
-        : `${actions.length * 0.8 + (actions.length - 1) * 0.05 + 0.4}em`)
+    ? `${actions.length * layout.btnSize + (actions.length - 1) * layout.btnGap + layout.nodePx * 2}em`
     : undefined;
+
+  const px = isInteractive ? layout.nodePx : (inExponent ? 0.02 : 0.05);
+  const py = isInteractive ? layout.nodePy : (inExponent ? 0.02 : 0.05);
+
+  const paddingTop = isReducible 
+    ? layout.btnTop + layout.btnSize + layout.textGap 
+    : py;
 
   const customStyle: React.CSSProperties = {
     transition: 'border-color 150ms, background-color 150ms, box-shadow 150ms, opacity 150ms',
     minWidth: minWidth,
+    paddingLeft: `${px}em`,
+    paddingRight: `${px}em`,
+    paddingTop: `${paddingTop}em`,
+    paddingBottom: `${py}em`,
   };
-
-  const paddingClass = isReducible 
-    ? (inExponent ? 'pt-[0.65em] pb-[0.08em] px-[0.2em]' : 'pt-[0.95em] pb-[0.18em] px-[0.35em]') 
-    : (inExponent ? 'py-[0.12em] px-[0.2em]' : 'py-[0.18em] px-[0.3em]');
 
   return (
     <div
       data-flip-id={nodeId}
       style={customStyle}
-      className={`relative inline-flex items-center justify-center border rounded-[0.4em] select-none ${semanticStyle} ${paddingClass}`}
+      className={`relative inline-flex items-center justify-center border rounded-[0.4em] select-none ${semanticStyle}`}
       onMouseEnter={() => setHoverPath(path)}
       onMouseLeave={() => {
         const lastSlash = path.lastIndexOf('/');
@@ -470,11 +505,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
       {/* Compact Inline Operations Toolbar - sits inside the top-padding area to prevent layout overlap */}
       {isReducible && (
-        <div className={`absolute flex items-center z-25 ${
-          inExponent 
-            ? 'top-[0.05em] right-[0.1em] gap-[0.05em]' 
-            : 'top-[0.08em] right-[0.15em] gap-[0.05em]'
-        }`}>
+        <div 
+          className="absolute flex items-center z-25"
+          style={{
+            top: `${layout.btnTop}em`,
+            right: `${layout.btnRight}em`,
+            gap: `${layout.btnGap}em`,
+          }}
+        >
           {actions.map((action, index) => {
             const type = action.type;
             const label = action.label || (type === 'distribute' ? "Distribute" : type === 'identity' ? "Apply Identity" : "Simplify");
@@ -494,9 +532,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       : type === 'identity'
                       ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
                       : 'bg-amber-400 hover:bg-amber-300 text-neutral-950 shadow-inner'
-                  } ${isActionHovered ? 'scale-110 ring-2 ring-white/50' : ''} ${
-                    inExponent ? 'h-[0.55em] w-[0.55em] rounded-[0.12em]' : 'h-[0.8em] w-[0.8em] rounded-full'
-                  }`}
+                  } ${isActionHovered ? 'scale-110 ring-2 ring-white/50' : ''}`}
+                  style={{
+                    width: `${layout.btnSize}em`,
+                    height: `${layout.btnSize}em`,
+                    borderRadius: inExponent ? '0.12em' : '9999px',
+                  }}
                   onMouseEnter={(e) => {
                     e.stopPropagation();
                     setHoverReducePath(path);
@@ -519,15 +560,18 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                     setHoverReduceIndex(null);
                   }}
                 >
-                  <span className={`absolute inset-0 animate-ping group-hover:opacity-0 pointer-events-none ${
-                    type === 'distribute' 
-                      ? 'bg-purple-500/40' 
-                      : type === 'identity'
-                      ? 'bg-indigo-500/40'
-                      : 'bg-amber-400/40'
-                  } ${
-                    inExponent ? 'rounded-[0.12em]' : 'rounded-full'
-                  }`} />
+                  <span 
+                    className={`absolute inset-0 animate-ping group-hover:opacity-0 pointer-events-none ${
+                      type === 'distribute' 
+                        ? 'bg-purple-500/40' 
+                        : type === 'identity'
+                        ? 'bg-indigo-500/40'
+                        : 'bg-amber-400/40'
+                    }`}
+                    style={{
+                      borderRadius: inExponent ? '0.12em' : '9999px',
+                    }}
+                  />
                   {type === 'distribute' ? (
                     <Split className="h-[65%] w-[65%] text-white stroke-[2.5]" />
                   ) : type === 'identity' ? (

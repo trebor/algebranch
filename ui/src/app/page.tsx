@@ -140,13 +140,17 @@ export default function Home() {
   const previewEq = useAtomValue(previewEquationAtom);
   const activeScale = useMathScale(
     currentEq,
-    [targetPaths, reduciblePaths, sourcePath, isHydrated],
-    isMobile ? 8 : 24
+    [targetPaths, reduciblePaths, sourcePath, isHydrated, isMathLoading],
+    isMobile ? 8 : 24,
+    0.4,
+    isMathLoading ? 1.1 : 1.5
   );
   const previewScale = useMathScale(
     previewEq,
     [targetPaths, reduciblePaths, sourcePath, isSpeculative, isHydrated],
-    isMobile ? 8 : 24
+    isMobile ? 8 : 24,
+    0.4,
+    1.3
   );
 
   useFLIPAnimation(activeScale.containerRef, currentEq);

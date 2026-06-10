@@ -59,7 +59,10 @@ export function useKeyboardShortcuts(shortcuts: ShortcutConfig[]): void {
   // Keep a mutable ref so the keydown handler always sees the latest
   // shortcuts without needing to re-register the listener.
   const shortcutsRef = useRef<ShortcutConfig[]>(shortcuts);
-  shortcutsRef.current = shortcuts;
+
+  useEffect(() => {
+    shortcutsRef.current = shortcuts;
+  }, [shortcuts]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {

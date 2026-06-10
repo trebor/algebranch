@@ -40,7 +40,10 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
   // Safely mount to prevent SSR hydration mismatches
   useEffect(() => {
-    setMounted(true);
+    const handle = requestAnimationFrame(() => {
+      setMounted(true);
+    });
+    return () => cancelAnimationFrame(handle);
   }, []);
 
   // Dismiss tooltip instantly upon scrolling any container in the viewport

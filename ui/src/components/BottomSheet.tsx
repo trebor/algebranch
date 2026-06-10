@@ -34,6 +34,14 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 }) => {
   const [activeSnapIndex, setActiveSnapIndex] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const handle = requestAnimationFrame(() => {
+      setMounted(true);
+    });
+    return () => cancelAnimationFrame(handle);
+  }, []);
 
   // Sorted snap points (ascending) for consistent behavior
   const sortedSnaps = [...snapPoints].sort((a, b) => a - b);
@@ -104,7 +112,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       ? window.innerHeight * sortedSnaps[activeSnapIndex]
       : 500;
 
-  if (typeof window === 'undefined') return null;
+  if (!mounted) return null;
 
   return createPortal(
     <AnimatePresence>

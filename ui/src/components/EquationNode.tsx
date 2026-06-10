@@ -234,14 +234,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     ? THEME_GLASS.CARD_CANDIDATE
     : THEME_GLASS.CARD_CANDIDATE + ' cursor-default';
 
-  // Highlight identity-reducible nodes with a delicate glowing indigo border when hovered, only if the node is active/selectable
-  const hasIdentityAction = actions.some((a) => a.type === 'identity');
-  const isHoveredActionIdentity = hoverReducePath === path && hoverReduceIndex !== null && actions[hoverReduceIndex]?.type === 'identity';
-  const isIdentityHovered = !isStatic && isReducible && (hasIdentityAction && isHovered || isHoveredActionIdentity);
-  if (isIdentityHovered) {
-    semanticStyle = 'border-indigo-400/80 bg-indigo-500/10 text-indigo-100 shadow-[0_0_15px_rgba(99,102,241,0.45)] cursor-pointer';
-  }
-
   // Recursive Render logic depending on Node type
   const renderContent = () => {
     if (node.type === 'ConstantNode') {
@@ -429,7 +421,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const minWidth = isReducible 
     ? (inExponent 
         ? `${actions.length * 0.6 + (actions.length - 1) * 0.05 + 0.4}em`
-        : `${actions.length * 18 + (actions.length - 1) * 4 + 12}px`)
+        : `${actions.length * 15 + (actions.length - 1) * 3 + 8}px`)
     : undefined;
 
   const customStyle: React.CSSProperties = {
@@ -440,7 +432,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const paddingClass = isReducible 
     ? (inExponent 
         ? 'pt-[1.0em] pb-[0.05em] px-[0.25em]' 
-        : 'pt-[1.5rem] pb-[0.2em] px-[0.45em]') 
+        : 'pt-[1.1rem] pb-[0.2em] px-[0.4em]') 
     : 'py-[0.2em] px-[0.35em]';
 
   return (
@@ -483,7 +475,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         <div className={`absolute flex items-center z-25 ${
           inExponent 
             ? 'top-[0.2em] right-[0.2em] gap-[0.05em]' 
-            : 'top-1.5 right-1.5 gap-1'
+            : 'top-1 right-1 gap-0.5'
         }`}>
           {actions.map((action, index) => {
             const type = action.type;
@@ -505,7 +497,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
                       : 'bg-amber-400 hover:bg-amber-300 text-neutral-950 shadow-inner'
                   } ${isActionHovered ? 'scale-110 ring-2 ring-white/50' : ''} ${
-                    inExponent ? 'h-[0.6em] w-[0.6em] rounded-[0.15em]' : 'h-[18px] w-[18px] md:h-[16px] md:w-[16px] rounded-full'
+                    inExponent ? 'h-[0.6em] w-[0.6em] rounded-[0.15em]' : 'h-[15px] w-[15px] md:h-[14px] md:w-[14px] rounded-full'
                   }`}
                   onMouseEnter={(e) => {
                     e.stopPropagation();
@@ -539,11 +531,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                     inExponent ? 'rounded-[0.15em]' : 'rounded-full'
                   }`} />
                   {type === 'distribute' ? (
-                    <Split size={inExponent ? 5 : 8} className="text-white stroke-[2.5]" />
+                    <Split size={inExponent ? 5 : 7.5} className="text-white stroke-[2.5]" />
                   ) : type === 'identity' ? (
-                    <ArrowLeftRight size={inExponent ? 5 : 8} className="text-white stroke-[2.5]" />
+                    <ArrowLeftRight size={inExponent ? 5 : 7.5} className="text-white stroke-[2.5]" />
                   ) : (
-                    <Zap size={inExponent ? 5 : 8} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
+                    <Zap size={inExponent ? 5 : 7.5} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
                   )}
                 </button>
               </Tooltip>

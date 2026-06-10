@@ -76,6 +76,73 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('error', function(event) {
+                var container = document.getElementById('mobile-debug-container');
+                if (!container) {
+                  container = document.createElement('div');
+                  container.id = 'mobile-debug-container';
+                  container.style.position = 'fixed';
+                  container.style.top = '0';
+                  container.style.left = '0';
+                  container.style.right = '0';
+                  container.style.bottom = '0';
+                  container.style.zIndex = '999999';
+                  container.style.backgroundColor = 'rgba(0,0,0,0.95)';
+                  container.style.color = '#ff6b6b';
+                  container.style.padding = '20px';
+                  container.style.fontFamily = 'monospace';
+                  container.style.overflow = 'auto';
+                  container.style.fontSize = '12px';
+                  container.style.whiteSpace = 'pre-wrap';
+                  document.body.appendChild(container);
+                }
+                var errDiv = document.createElement('div');
+                errDiv.style.borderBottom = '1px solid #333';
+                errDiv.style.paddingBottom = '10px';
+                errDiv.style.marginBottom = '10px';
+                
+                if (event.target && (event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK')) {
+                  var url = event.target.src || event.target.href;
+                  errDiv.innerText = 'RESOURCE FAILED TO LOAD: ' + url + '\\nTag: ' + event.target.tagName;
+                } else {
+                  errDiv.innerText = 'ERROR: ' + event.message + '\\nSource: ' + event.filename + ':' + event.lineno + ':' + event.colno + '\\nStack: ' + (event.error ? event.error.stack : 'N/A');
+                }
+                container.appendChild(errDiv);
+              }, true);
+
+              window.addEventListener('unhandledrejection', function(event) {
+                var container = document.getElementById('mobile-debug-container');
+                if (!container) {
+                  container = document.createElement('div');
+                  container.id = 'mobile-debug-container';
+                  container.style.position = 'fixed';
+                  container.style.top = '0';
+                  container.style.left = '0';
+                  container.style.right = '0';
+                  container.style.bottom = '0';
+                  container.style.zIndex = '999999';
+                  container.style.backgroundColor = 'rgba(0,0,0,0.95)';
+                  container.style.color = '#ff6b6b';
+                  container.style.padding = '20px';
+                  container.style.fontFamily = 'monospace';
+                  container.style.overflow = 'auto';
+                  container.style.fontSize = '12px';
+                  container.style.whiteSpace = 'pre-wrap';
+                  document.body.appendChild(container);
+                }
+                var errDiv = document.createElement('div');
+                errDiv.style.borderBottom = '1px solid #333';
+                errDiv.style.paddingBottom = '10px';
+                errDiv.style.marginBottom = '10px';
+                errDiv.innerText = 'UNHANDLED REJECTION: ' + event.reason + '\\nStack: ' + (event.reason && event.reason.stack ? event.reason.stack : 'N/A');
+                container.appendChild(errDiv);
+              });
+            `
+          }}
+        />
         <JotaiProvider>
           {children}
         </JotaiProvider>

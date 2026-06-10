@@ -5,6 +5,15 @@ import { Equation } from 'math-engine-client';
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
+/**
+ * useMathScale — Calculates and applies a dynamic scale factor to make equation expressions
+ * fit perfectly within the boundaries of their container.
+ *
+ * Prevents recursive ResizeObserver infinite layout loops by:
+ * 1. Deriving natural (unscaled) size mathematically (rendered size / scale)
+ *    instead of thrashing the DOM by resetting font-size to '1em' on every callback.
+ * 2. Applying a small tolerance threshold (1%) to ignore trivial/sub-pixel dimensions updates.
+ */
 export function useMathScale(
   currentEq: Equation | null,
   dependencies: unknown[] = [],
@@ -21,50 +30,74 @@ export function useMathScale(
     const content = contentRef.current;
     if (!container || !content) return;
 
-    const adjustScale = () => {
-      // 1. Reset scale temporarily to measure natural boundaries
-      content.style.fontSize = '1em';
-      
+    let currentAppliedScale = 1;
+
+    const adjustScale = (force = false) => {
+      if (force) {
+        currentAppliedScale = 1;
+        content.style.fontSize = '1em';
+      }
+
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
-      const contentWidth = content.scrollWidth;
-      const contentHeight = content.scrollHeight;
 
-      if (contentWidth > 0 && containerWidth > 0 && contentHeight > 0 && containerHeight > 0) {
-        // 2. Read computed padding dynamically from the container
-        const style = window.getComputedStyle(container);
-        const paddingLeft = parseFloat(style.paddingLeft) || 0;
-        const paddingRight = parseFloat(style.paddingRight) || 0;
-        const paddingTop = parseFloat(style.paddingTop) || 0;
-        const paddingBottom = parseFloat(style.paddingBottom) || 0;
+      if (containerWidth <= 0 || containerHeight <= 0) return;
 
-        const paddingX = paddingLeft + paddingRight + extraBuffer;
-        const paddingY = paddingTop + paddingBottom + extraBuffer;
+      const renderedWidth = content.scrollWidth;
+      const renderedHeight = content.scrollHeight;
 
-        // 3. Calculate scale ratios for both dimensions
-        const targetWidthScale = (containerWidth - paddingX) / contentWidth;
-        const targetHeightScale = (containerHeight - paddingY) / contentHeight;
-        
-        // 4. Select the smaller scale to guarantee fitting in both directions.
-        //    Allow scaling above 1.0 to fill available space on all devices.
-        const targetScale = Math.min(targetWidthScale, targetHeightScale);
-        const clampedScale = Math.max(minScale, Math.min(maxScale, targetScale));
-        
-        // 5. Set state and apply directly to DOM to prevent layout loops
+      if (renderedWidth <= 0 || renderedHeight <= 0) return;
+
+      // 1. Derively calculate natural size from current applied scale
+      const naturalWidth = renderedWidth / currentAppliedScale;
+      const naturalHeight = renderedHeight / currentAppliedScale;
+
+      // 2. Read padding to calculate available canvas area
+      const style = window.getComputedStyle(container);
+      const paddingLeft = parseFloat(style.paddingLeft) || 0;
+      const paddingRight = parseFloat(style.paddingRight) || 0;
+      const paddingTop = parseFloat(style.paddingTop) || 0;
+      const paddingBottom = parseFloat(style.paddingBottom) || 0;
+
+      const paddingX = extraBuffer === 0 ? 0 : (paddingLeft + paddingRight + extraBuffer);
+      const paddingY = extraBuffer === 0 ? 0 : (paddingTop + paddingBottom + extraBuffer);
+
+      // 3. Compute target scales for both axes
+      const targetWidthScale = (containerWidth - paddingX) / naturalWidth;
+      const targetHeightScale = (containerHeight - paddingY) / naturalHeight;
+      
+      const targetScale = Math.min(targetWidthScale, targetHeightScale);
+      const clampedScale = Math.max(minScale, Math.min(maxScale, targetScale));
+      
+      // 4. Skip updates if difference is negligible (<1%) to avoid loop oscillation
+      if (force || Math.abs(clampedScale - currentAppliedScale) > 0.01) {
+        currentAppliedScale = clampedScale;
         setScale(clampedScale);
         content.style.fontSize = `${clampedScale}em`;
       }
     };
 
-    // Run adjustment immediately
-    adjustScale();
+    // Initial measurement
+    adjustScale(true);
 
-    // Attach ResizeObserver to handle container shifts (sidebar toggle, window resize)
-    const observer = new ResizeObserver(() => adjustScale());
-    observer.observe(container);
+    let observer: ResizeObserver | null = null;
+    const handleResize = () => adjustScale(false);
+
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        adjustScale(false);
+      });
+      observer.observe(container);
+    } else {
+      window.addEventListener('resize', handleResize);
+    }
 
     return () => {
-      observer.disconnect();
+      if (observer) {
+        observer.disconnect();
+      } else {
+        window.removeEventListener('resize', handleResize);
+      }
     };
   }, [currentEq, extraBuffer, minScale, maxScale, ...dependencies]);
 

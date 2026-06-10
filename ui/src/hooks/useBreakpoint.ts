@@ -42,6 +42,12 @@ function ensureInitialised(): void {
   if (queries !== null) return;
   if (typeof window === 'undefined') return;
 
+  if (typeof window.matchMedia === 'undefined') {
+    queries = [];
+    currentSnapshot = 'sm';
+    return;
+  }
+
   queries = BREAKPOINTS.map((bp) =>
     window.matchMedia(`(min-width: ${bp.min}px)`)
   );

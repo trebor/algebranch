@@ -127,6 +127,7 @@ export default function Home() {
   const currentTabName = useAtomValue(currentTabNameAtom);
   const [toast, setToast] = useAtom(toastAtom);
   const [isHydrated, setIsHydrated] = React.useState(false);
+  const [initError, setInitError] = React.useState<string | null>(null);
 
   const [activeBottomSheet, setActiveBottomSheet] = useAtom(activeBottomSheetAtom);
   const [radialMenuOpen, setRadialMenuOpen] = useAtom(radialMenuOpenAtom);
@@ -137,8 +138,16 @@ export default function Home() {
   const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
   const previewEq = useAtomValue(previewEquationAtom);
-  const activeScale = useMathScale(currentEq, [targetPaths, reduciblePaths, sourcePath]);
-  const previewScale = useMathScale(previewEq, [targetPaths, reduciblePaths, sourcePath, isSpeculative]);
+  const activeScale = useMathScale(
+    currentEq,
+    [targetPaths, reduciblePaths, sourcePath, isHydrated],
+    isMobile ? 8 : 24
+  );
+  const previewScale = useMathScale(
+    previewEq,
+    [targetPaths, reduciblePaths, sourcePath, isSpeculative, isHydrated],
+    isMobile ? 8 : 24
+  );
 
   useFLIPAnimation(activeScale.containerRef, currentEq);
   useFLIPAnimation(previewScale.containerRef, previewEq);
@@ -341,6 +350,7 @@ export default function Home() {
         safeLocalStorage.setItem('algebranch_current_session_id', defaultId);
       } catch (err) {
         console.error('Initialization failed:', err);
+        setInitError(err instanceof Error ? err.message : String(err));
       }
     };
 
@@ -428,20 +438,31 @@ export default function Home() {
     }
   };
 
-  // Register PWA Service Worker on mount
+  // Register PWA Service Worker on mount (production only)
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      const registerSW = () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((reg) => console.log('Service worker registered successfully:', reg.scope))
-          .catch((err) => console.error('Service worker registration failed:', err));
-      };
+      if (process.env.NODE_ENV === 'production') {
+        const registerSW = () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => console.log('Service worker registered successfully:', reg.scope))
+            .catch((err) => console.error('Service worker registration failed:', err));
+        };
 
-      if (document.readyState === 'complete') {
-        registerSW();
+        if (document.readyState === 'complete') {
+          registerSW();
+        } else {
+          window.addEventListener('load', registerSW);
+          return () => window.removeEventListener('load', registerSW);
+        }
       } else {
-        window.addEventListener('load', registerSW);
-        return () => window.removeEventListener('load', registerSW);
+        // In development, unregister service workers to avoid hot-reloading caching issues
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const registration of registrations) {
+            registration.unregister().then(() => {
+              console.log('Unregistered service worker in development mode.');
+            });
+          }
+        });
       }
     }
   }, []);
@@ -723,19 +744,6 @@ export default function Home() {
       {/* Top Header */}
       <header className="h-16 px-4 flex items-center justify-between select-none shrink-0 w-full z-30">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              if (isMobile) {
-                setActiveBottomSheet(activeBottomSheet === 'workspace' ? null : 'workspace');
-              } else {
-                setLeftSidebarOpen(!leftSidebarOpen);
-              }
-            }}
-            className="lg:hidden p-2 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-all"
-            aria-label="Toggle operations sidebar"
-          >
-            <Menu size={20} />
-          </button>
           <a href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-90 active:scale-98 transition-all">
             <Image
               src="/logo.png"
@@ -763,39 +771,26 @@ export default function Home() {
               }
               setFeedbackModalOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group"
+            className="flex items-center gap-1.5 p-2 sm:px-3.5 sm:py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group"
           >
-            <MessageSquarePlus size={13} className="text-indigo-400 group-hover:scale-110 transition-transform" />
-            <span>Feedback</span>
+            <MessageSquarePlus size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
+            <span className="hidden sm:inline">Feedback</span>
           </button>
           <button
             onClick={handleShare}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group`}
+            className={`flex items-center gap-1.5 p-2 sm:px-3.5 sm:py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group`}
           >
             {sharedCopied ? (
               <>
-                <Check size={13} className="text-emerald-400" />
-                <span className="text-emerald-400 font-bold">Link Copied!</span>
+                <Check size={14} className="text-emerald-400" />
+                <span className="text-emerald-400 font-bold hidden sm:inline">Link Copied!</span>
               </>
             ) : (
               <>
-                <Share2 size={13} className="text-indigo-400 group-hover:scale-110 transition-transform" />
-                <span>Share</span>
+                <Share2 size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Share</span>
               </>
             )}
-          </button>
-          <button
-            onClick={() => {
-              if (isMobile) {
-                setActiveBottomSheet(activeBottomSheet === 'history' ? null : 'history');
-              } else {
-                setRightSidebarOpen(!rightSidebarOpen);
-              }
-            }}
-            className="lg:hidden p-2 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-all"
-            aria-label="Toggle history panel"
-          >
-            <GitBranch size={20} />
           </button>
         </div>
       </header>
@@ -809,7 +804,7 @@ export default function Home() {
             setRightSidebarOpen(false);
           }}
           className={`fixed top-16 left-0 right-0 bottom-0 bg-neutral-950/60 backdrop-blur-sm z-35 lg:hidden transition-all duration-300 ${
-            (leftSidebarOpen || rightSidebarOpen)
+            (isHydrated && (leftSidebarOpen || rightSidebarOpen))
               ? 'opacity-100 pointer-events-auto'
               : 'opacity-0 pointer-events-none'
           }`}
@@ -860,7 +855,7 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-4 lg:p-8 text-base font-light cursor-default relative group/canvas"
+              className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto px-2 py-4 sm:p-4 lg:p-8 text-base font-light cursor-default relative group/canvas"
             >
               {/* Calculating Math Engine Spinner / Toast Notification */}
               {toast ? (
@@ -897,12 +892,17 @@ export default function Home() {
                 <div className="flex flex-col items-center justify-center gap-3 select-none">
                   <div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500/20 border-t-indigo-400 shrink-0" />
                   <span className="text-sm font-medium text-indigo-300/80 animate-pulse tracking-wide">Initializing workspace...</span>
+                  {initError && (
+                    <div className="mt-4 p-3 rounded bg-red-500/10 border border-red-500/25 text-xs text-red-400 max-w-xs text-center break-all shadow-lg">
+                      Error: {initError}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2 origin-center">
-                  <div ref={activeScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max">
+                  <div ref={activeScale.contentRef} className="flex items-center justify-center gap-[0.4em] sm:gap-[0.6em] lg:gap-[0.8em] flex-nowrap w-max">
                     {/* LHS Term Tree */}
-                    <div className="flex justify-end min-w-[5em]">
+                    <div className="flex justify-end min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
                       <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />
                     </div>
 
@@ -919,7 +919,7 @@ export default function Home() {
                     </span>
 
                     {/* RHS Term Tree */}
-                    <div className="flex justify-start min-w-[5em]">
+                    <div className="flex justify-start min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
                       <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
                     </div>
                   </div>
@@ -938,7 +938,7 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto p-4 lg:p-8 text-base font-light cursor-default relative group/preview"
+              className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto px-2 py-4 sm:p-4 lg:p-8 text-base font-light cursor-default relative group/preview"
             >
 
               {isHydrated && (
@@ -954,9 +954,9 @@ export default function Home() {
                     )}
                   </span>
                   
-                  <div ref={previewScale.contentRef} className="flex items-center justify-center gap-[0.8em] flex-nowrap w-max pointer-events-none select-none">
+                  <div ref={previewScale.contentRef} className="flex items-center justify-center gap-[0.4em] sm:gap-[0.6em] lg:gap-[0.8em] flex-nowrap w-max pointer-events-none select-none">
                     {/* LHS Preview Term Tree */}
-                    <div className="flex justify-end min-w-[5em]">
+                    <div className="flex justify-end min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
                       <PreviewEquationNode path="lhs" />
                     </div>
 
@@ -970,7 +970,7 @@ export default function Home() {
                     </span>
 
                     {/* RHS Preview Term Tree */}
-                    <div className="flex justify-start min-w-[5em]">
+                    <div className="flex justify-start min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
                       <PreviewEquationNode path="rhs" />
                     </div>
                   </div>

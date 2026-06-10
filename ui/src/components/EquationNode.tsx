@@ -420,8 +420,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
   const minWidth = isReducible 
     ? (inExponent 
-        ? `${actions.length * 0.6 + (actions.length - 1) * 0.05 + 0.4}em`
-        : `${actions.length * 15 + (actions.length - 1) * 3 + 8}px`)
+        ? `${actions.length * 0.55 + (actions.length - 1) * 0.05 + 0.35}em`
+        : `${actions.length * 0.8 + (actions.length - 1) * 0.05 + 0.4}em`)
     : undefined;
 
   const customStyle: React.CSSProperties = {
@@ -430,10 +430,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   };
 
   const paddingClass = isReducible 
-    ? (inExponent 
-        ? 'pt-[1.0em] pb-[0.05em] px-[0.25em]' 
-        : 'pt-[1.1rem] pb-[0.2em] px-[0.4em]') 
-    : 'py-[0.2em] px-[0.35em]';
+    ? (inExponent ? 'pt-[0.65em] pb-[0.08em] px-[0.2em]' : 'pt-[0.95em] pb-[0.18em] px-[0.35em]') 
+    : (inExponent ? 'py-[0.12em] px-[0.2em]' : 'py-[0.18em] px-[0.3em]');
 
   return (
     <div
@@ -470,12 +468,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         <div className="absolute -inset-0.5 bg-emerald-400/20 blur-md rounded-lg -z-10 animate-pulse" />
       )}
 
-      {/* Compact Inline Operations Toolbar */}
+      {/* Compact Inline Operations Toolbar - sits inside the top-padding area to prevent layout overlap */}
       {isReducible && (
         <div className={`absolute flex items-center z-25 ${
           inExponent 
-            ? 'top-[0.2em] right-[0.2em] gap-[0.05em]' 
-            : 'top-1 right-1 gap-0.5'
+            ? 'top-[0.05em] right-[0.1em] gap-[0.05em]' 
+            : 'top-[0.08em] right-[0.15em] gap-[0.05em]'
         }`}>
           {actions.map((action, index) => {
             const type = action.type;
@@ -497,7 +495,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
                       : 'bg-amber-400 hover:bg-amber-300 text-neutral-950 shadow-inner'
                   } ${isActionHovered ? 'scale-110 ring-2 ring-white/50' : ''} ${
-                    inExponent ? 'h-[0.6em] w-[0.6em] rounded-[0.15em]' : 'h-[15px] w-[15px] md:h-[14px] md:w-[14px] rounded-full'
+                    inExponent ? 'h-[0.55em] w-[0.55em] rounded-[0.12em]' : 'h-[0.8em] w-[0.8em] rounded-full'
                   }`}
                   onMouseEnter={(e) => {
                     e.stopPropagation();
@@ -528,14 +526,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       ? 'bg-indigo-500/40'
                       : 'bg-amber-400/40'
                   } ${
-                    inExponent ? 'rounded-[0.15em]' : 'rounded-full'
+                    inExponent ? 'rounded-[0.12em]' : 'rounded-full'
                   }`} />
                   {type === 'distribute' ? (
-                    <Split size={inExponent ? 5 : 7.5} className="text-white stroke-[2.5]" />
+                    <Split className="h-[65%] w-[65%] text-white stroke-[2.5]" />
                   ) : type === 'identity' ? (
-                    <ArrowLeftRight size={inExponent ? 5 : 7.5} className="text-white stroke-[2.5]" />
+                    <ArrowLeftRight className="h-[65%] w-[65%] text-white stroke-[2.5]" />
                   ) : (
-                    <Zap size={inExponent ? 5 : 7.5} className="text-neutral-950 fill-neutral-950 stroke-[2.5]" />
+                    <Zap className="h-[65%] w-[65%] text-neutral-950 fill-neutral-950 stroke-[2.5]" />
                   )}
                 </button>
               </Tooltip>

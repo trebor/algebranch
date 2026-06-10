@@ -869,7 +869,6 @@ export default function Home() {
                 </div>
               ) : isMathLoading ? (
                 <div className="absolute top-4 left-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/20 bg-neutral-900/60 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]">
-                  <span className="h-2 w-2 rounded-full bg-indigo-400 animate-ping shrink-0" />
                   <div className="animate-spin rounded-full h-3 w-3 border-2 border-indigo-500/20 border-t-indigo-400 shrink-0" />
                   <span>Calculating...</span>
                 </div>

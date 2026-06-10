@@ -19,7 +19,7 @@ export function useMathScale(
   dependencies: unknown[] = [],
   extraBuffer = 24,
   minScale = 0.4,
-  maxScale = 1.25
+  maxScale = 2.8
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -73,6 +73,9 @@ export function useMathScale(
     // Run adjustment immediately
     adjustScale();
 
+    // Schedule a settled measurement after animations/transitions complete to resolve race conditions
+    const settleTimer = setTimeout(adjustScale, 380);
+
     let observer: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined') {
       observer = new ResizeObserver((entries) => {
@@ -90,10 +93,14 @@ export function useMathScale(
     } else {
       const handleResize = () => adjustScale();
       window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        clearTimeout(settleTimer);
+      };
     }
 
     return () => {
+      clearTimeout(settleTimer);
       if (observer) {
         observer.disconnect();
       }

@@ -16,3 +16,7 @@ yarn-error.log*
 # System files
 .DS_Store
 Thumbs.db
+
+# Screenshots and temporary layout captures
+/*.png
+/screenshots/

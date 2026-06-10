@@ -143,14 +143,14 @@ export default function Home() {
     [targetPaths, reduciblePaths, sourcePath, isHydrated, isMathLoading],
     isMobile ? 8 : 24,
     0.4,
-    isMathLoading ? 1.1 : 1.5
+    isMathLoading ? 1.6 : 2.8
   );
   const previewScale = useMathScale(
     previewEq,
     [targetPaths, reduciblePaths, sourcePath, isSpeculative, isHydrated],
     isMobile ? 8 : 24,
     0.4,
-    1.3
+    1.8
   );
 
   useFLIPAnimation(activeScale.containerRef, currentEq);

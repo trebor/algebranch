@@ -205,11 +205,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   };
 
   const handleNodeClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-
     if (isStatic) {
       return;
     }
+
+    e.stopPropagation();
 
     const activeTargetPath = getTargetPath();
     if (activeTargetPath && sourcePath) {
@@ -253,7 +253,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     : isTarget
     ? THEME_GLASS.TARGET
     : isStatic
-    ? THEME_GLASS.STATIC + ' select-none'
+    ? ((isReducible && !sourcePath) 
+        ? THEME_GLASS.CARD_CANDIDATE_SCAN.replace('cursor-pointer', 'cursor-default') + ' select-none' 
+        : THEME_GLASS.STATIC + ' select-none')
     : isHighlightedCandidate
     ? THEME_GLASS.CARD_CANDIDATE_SCAN
     : canClick
@@ -446,26 +448,21 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
   const layout = inExponent ? MATH_LAYOUT.exponent : MATH_LAYOUT.normal;
 
-  const isInteractive = !isStatic || isReducible;
-
   const minWidth = isReducible 
     ? `${actions.length * layout.btnSize + (actions.length - 1) * layout.btnGap + layout.nodePx * 2}em`
     : undefined;
 
-  const px = isInteractive ? layout.nodePx : (inExponent ? 0.02 : 0.05);
-  const py = isInteractive ? layout.nodePy : (inExponent ? 0.02 : 0.05);
-
   const paddingTop = isReducible 
     ? layout.btnTop + layout.btnSize + layout.textGap 
-    : py;
+    : layout.nodePy;
 
   const customStyle: React.CSSProperties = {
     transition: 'border-color 150ms, background-color 150ms, box-shadow 150ms, opacity 150ms',
     minWidth: minWidth,
-    paddingLeft: `${px}em`,
-    paddingRight: `${px}em`,
+    paddingLeft: `${layout.nodePx}em`,
+    paddingRight: `${layout.nodePx}em`,
     paddingTop: `${paddingTop}em`,
-    paddingBottom: `${py}em`,
+    paddingBottom: `${layout.nodePy}em`,
   };
 
   return (

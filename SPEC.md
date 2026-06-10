@@ -35,7 +35,14 @@ Instead of relying on computationally heavy symbolic implication testing, the en
 The equation will be rendered via a direct mapping of the math engine's expression tree to the DOM. 
 *   Each node (variables, constants, operations) will be rendered within its own distinct bounding box, visually exposing the recursive structure of the equation.
 
-### 5.2 The "Two-Click" Interaction Model
+### 5.2 Sizing and Layout Auto-Scaler
+To ensure equations fit perfectly inside their container and are highly readable, a dynamic auto-scaler is used:
+*   **Measurement**: Resets the font size temporarily to `1em` to measure the true, natural scroll dimensions of the equation in the DOM, then computes the optimal scale ratio.
+*   **Accessible Scale Cap**: Caps the maximum font scale at `2.8em` (44.8px) for fully loaded equations, allowing small equations to scale up and fill the screen space for dyslexic and learning-disabled students. During pre-analysis loading, the cap is set to `1.6em` to maintain visual stability.
+*   **Relative em Units**: All component paddings, min-widths, and handles offsets use relative `em` units so they shrink and grow linearly with the calculated font size.
+*   **Animation Settle Guard**: Sized measurements are automatically run again 380ms after changes to ensure that all layout-altering transitions (such as 350ms FLIP position animations) have fully ended, preventing race conditions from locking the equation to a shrunken size.
+
+### 5.3 The "Two-Click" Interaction Model
 The primary method of manipulating the equation relies on the recursive structure to avoid standard drag-based selection, which can be time-consuming:
 1.  **Click to Select:** The user clicks or hovers over a node in the rendered expression tree. To select larger parent terms, the user may click a symbol and drag up or down to indicate how large a term to select.
 2.  **System Hinting:** Upon selection, the UI queries the math engine to run interval-based identity testing to check in real time which places the term can be correctly inserted. 
@@ -58,8 +65,20 @@ The primary method of manipulating the equation relies on the recursive structur
 ## 8. Nomenclature Framework
 To ensure complete semantic consistency between visual rendering, user interaction, state management, and the codebase, Algebranch defines a strict five-state conceptual framework for all nodes in the expression tree:
 
-1.  **Candidate:** Interactive terms that possess valid algebraic transformations in the current context. These are highlighted as ready for user interaction.
-2.  **Source:** The selected Candidate node undergoing transposition. There can be at most one Source selected at any time.
-3.  **Target:** A valid mathematical destination slot receptive to receiving the **Source** node.
-4.  **Static:** Inert terms that are non-interactive in the current state. They display as fully opaque gray elements to establish the stable visual landscape of the equation.
-5.  **Simplify:** Terms containing active constant folding or simplification opportunities. Clicking a **Simplify** point immediately simplifies the term.
+1.  **Candidate (Movable)**:
+    *   *Semantics*: Interactive nodes that can be repositioned (moved to a different node in the AST).
+    *   *Visuals (Idle)*: Bluish interior (`THEME_GLASS.CARD_CANDIDATE_SCAN`) and blue border.
+    *   *Visuals (Active Selection)*: Fades to a black interior and default cursor (Static styling) if not part of the active selection/target path.
+2.  **Source**:
+    *   *Semantics*: The currently selected Candidate node undergoing transposition. At most one Source exists at a time.
+    *   *Visuals*: Indigo/bluish interior (`THEME_GLASS.SOURCE`) with an indigo glow shadow.
+3.  **Target (Destination)**:
+    *   *Semantics*: Valid mathematical destination slots receptive to receiving the active **Source** node.
+    *   *Visuals*: Emerald green interior (`THEME_GLASS.TARGET`) with a pulsing green shadow.
+4.  **Static (Inert)**:
+    *   *Semantics*: Inert terms that cannot be repositioned in the current state.
+    *   *Visuals*: Black interior (`THEME_GLASS.STATIC`) and dark gray border to establish the stable visual landscape.
+5.  **Simplify / Reducible (Transformable)**:
+    *   *Semantics*: Nodes containing active constant folding, distribution, or identity simplification opportunities (displaying handles/buttons).
+    *   *Visuals (Idle)*: Bluish interior (`THEME_GLASS.CARD_CANDIDATE_SCAN`) showing transformability.
+    *   *Visuals (Active Selection)*: Transitioned to a black interior (Static styling) with `cursor-default` to keep the user focused solely on target transpositions. Handles are still clickable but node backgrounds do not compete with the green targets.

@@ -919,10 +919,7 @@ export default function Home() {
                     >
                       =
                       {!!onboardingChapterId && onboardingGlobalOp && (
-                        <span
-                          aria-hidden="true"
-                          className="absolute -inset-[0.4em] rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] pointer-events-none z-20 animate-[onboarding-circle-breathe_1.8s_ease-in-out_infinite]"
-                        />
+                        <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
                       )}
                     </span>
 

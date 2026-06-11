@@ -29,4 +29,8 @@ export const THEME_GLASS = {
   CARD_CANDIDATE_SCAN: 'border-sky-400/30 bg-sky-500/10 text-sky-100 shadow-[0_0_15px_rgba(56,189,248,0.1)] cursor-pointer',
   CARD_HOVER: 'border-indigo-400/40 bg-neutral-900/90 text-white font-medium shadow-md shadow-indigo-500/5 cursor-pointer',
   TREE_BG: 'bg-[#1c1a35] border border-white/5 rounded-2xl shadow-inner w-full',
+  // Tutorial annotation circle marking the next element to click. Deliberately
+  // outside the app's rounded-rect/hue vocabulary. Pair with an -inset-* class
+  // to control how far it overshoots the marked element.
+  ONBOARDING_CIRCLE: 'absolute rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] pointer-events-none z-20 animate-[onboarding-circle-breathe_1.8s_ease-in-out_infinite]',
 } as const;

@@ -135,8 +135,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   // The circle marks the reduce handle itself when one produces the step's expected
   // equation; otherwise it marks the node box (selection/transposition steps).
   const isHandleMarked = isOnboardingActive && onboardingReduceHandle?.path === path;
+  // The "click here" circle yields once its node is selected as Source — from
+  // there the Source styling acknowledges the click and the target circle
+  // takes over guiding the next one.
   const isOnboardingMarked = !isHandleMarked &&
-    (path === onboardingHighlightPath || (isOnboardingActive && path === onboardingTargetPath));
+    ((path === onboardingHighlightPath && sourcePath !== path) ||
+      (isOnboardingActive && path === onboardingTargetPath));
 
   const node = React.useMemo(() => {
     try {
@@ -521,10 +525,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
           deliberately outside the app's rounded-rect + hue vocabulary. Rendered as a
           child so it tracks FLIP moves, scaling, and reflows for free. */}
       {isOnboardingMarked && (
-        <span
-          aria-hidden="true"
-          className="absolute -inset-[0.4em] rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.6),inset_0_0_8px_rgba(255,255,255,0.25)] pointer-events-none z-20 animate-[onboarding-circle-breathe_1.8s_ease-in-out_infinite]"
-        />
+        <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
       )}
 
       {/* Hover selection controls toolbar */}
@@ -617,10 +618,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                     }}
                   />
                   {isHandleMarked && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute -inset-[0.3em] rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] pointer-events-none z-20 animate-[onboarding-circle-breathe_1.8s_ease-in-out_infinite]"
-                    />
+                    <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
                   )}
                   {type === 'distribute' ? (
                     <Split className="h-[65%] w-[65%] text-white stroke-[2.5]" />

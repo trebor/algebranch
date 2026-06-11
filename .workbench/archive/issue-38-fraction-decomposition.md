@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 issue: "#38 — Support fraction decomposition transpositions (e.g. x/5 -> x * (1/5))"
 branch: feat/fraction-decomposition
 updated: 2026-06-11

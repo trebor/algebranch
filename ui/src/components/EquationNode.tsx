@@ -231,16 +231,25 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   };
 
   const handleNodeClick = (e: React.MouseEvent) => {
+    // During the tour no node click may bubble to the workspace canvas, whose
+    // onClick deselects the source (page.tsx). Otherwise a blocked/static click
+    // would clear the selection and desync step order. The gating below still
+    // decides which clicks actually do something.
+    if (isOnboardingActive) {
+      e.stopPropagation();
+    }
+
     if (isStatic) {
       return;
     }
 
     if (isOnboardingActive) {
       if (sourcePath) {
-        if (!isSelected) {
-          const activeTargetPath = getTargetPath();
-          if (!activeTargetPath) return;
-        }
+        // A source is selected: only a valid target is actionable. Re-clicking
+        // the source (or any non-target node) is blocked — otherwise the
+        // toggle-select branch below would deselect it and desync step order.
+        const activeTargetPath = getTargetPath();
+        if (!activeTargetPath) return;
       } else {
         // Steps that expect a handle click lock out node selection entirely —
         // only the handle button (which stops propagation itself) is live.

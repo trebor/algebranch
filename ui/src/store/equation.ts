@@ -32,6 +32,8 @@ export interface SavedSession {
   timestamp: number;
   tree: Record<string, SerializedHistoryNode>;
   currentNodeId: string;
+  /** Set when this session belongs to an onboarding chapter (one per chapter). */
+  chapterId?: string;
 }
 
 export const serializeTree = (tree: Record<string, HistoryNode>): Record<string, SerializedHistoryNode> => {
@@ -91,6 +93,8 @@ export interface WorkspaceTab {
   isModified?: boolean;
   sessionId?: string;
   timestamp?: number;
+  /** Set when this tab belongs to an onboarding chapter (one per chapter). */
+  chapterId?: string;
 }
 
 // Helper for fallback/static initial tabs
@@ -256,6 +260,12 @@ export const currentTabNameAtom = atom<string>((get) => {
 
 // Saved sessions state
 export const savedSessionsAtom = atom<SavedSession[]>([]);
+
+// True once the main client-side hydration (tabs + saved sessions) has run.
+// Consumers that mutate persisted workspace state on mount (e.g. the onboarding
+// auto-resume) must wait for this so they don't clobber localStorage with a
+// pre-hydration empty state.
+export const appHydratedAtom = atom<boolean>(false);
 export const rawCurrentSessionIdAtom = atom<string>("session_initial");
 
 export const currentSessionIdAtom = atom(
@@ -1129,6 +1139,36 @@ export const onboardingStepIndexAtom = atom<number | null>(null);
 export const onboardingHighlightPathAtom = atom<string | null>(null);
 export const onboardingShowDirectoryAtom = atom<boolean>(false);
 
+// Onboarding step progress is stored PER CHAPTER (chapterId -> stepIndex) so
+// starting/resuming one chapter never clobbers another chapter's saved step.
+// `algebranch_onboarding_chapter_id` remains a single "currently active chapter"
+// pointer used only for auto-resume on reload.
+export const ONBOARDING_STEPS_KEY = 'algebranch_onboarding_steps';
+
+export const readOnboardingSteps = (): Record<string, number> => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = safeLocalStorage.getItem(ONBOARDING_STEPS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeOnboardingStep = (chapterId: string, stepIndex: number) => {
+  if (typeof window === 'undefined') return;
+  const map = readOnboardingSteps();
+  map[chapterId] = stepIndex;
+  safeLocalStorage.setItem(ONBOARDING_STEPS_KEY, JSON.stringify(map));
+};
+
+const clearOnboardingStep = (chapterId: string) => {
+  if (typeof window === 'undefined') return;
+  const map = readOnboardingSteps();
+  delete map[chapterId];
+  safeLocalStorage.setItem(ONBOARDING_STEPS_KEY, JSON.stringify(map));
+};
+
 export const startOnboardingChapterAtom = atom(
   null,
   (get, set, chapterId: string, resumeStepIndex?: number) => {
@@ -1145,13 +1185,105 @@ export const startOnboardingChapterAtom = atom(
       ? chapter.steps[stepIdx - 1].nextEquation
       : chapter.initialEquation;
 
-    // Create a new session for this tutorial
+    // One workspace per chapter: reuse this chapter's existing tab/session
+    // (resetting it to the chapter's start state) instead of spawning a
+    // duplicate every time the tutorial is started or resumed. Visiting each
+    // chapter thus bootstraps the recent-workspaces list with one recognizable,
+    // explorable workspace per chapter.
     const title = `🎓 Tutorial: ${chapter.title.split('. ')[1]}`;
-    set(createNewSessionAtom, stepStartEq, title);
+    try {
+      const newEq = ensureNodeIds(parseEquation(stepStartEq));
+      const freshTree: Record<string, HistoryNode> = {
+        "0": {
+          id: "0",
+          equation: newEq,
+          parentId: null,
+          childrenIds: [],
+          label: "Initial",
+          timestamp: Date.now(),
+        },
+      };
+
+      const prevTabs = get(tabsAtom);
+      const sessions = get(savedSessionsAtom);
+      const existingTab = prevTabs.find(t => t.chapterId === chapterId);
+      const existingSession = sessions.find(s => s.chapterId === chapterId);
+      const sessionId = existingTab?.sessionId
+        || existingSession?.id
+        || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Resuming mid-chapter (step > 0) into an open tab preserves the user's
+      // in-progress derivation; a fresh start (step 0) or a closed tab resets to
+      // the chapter's start state.
+      const resuming = !!existingTab && stepIdx > 0;
+      const tabTree = resuming ? existingTab!.historyTree : freshTree;
+      const tabNodeId = resuming ? existingTab!.currentNodeId : "0";
+
+      // Refresh (or create) the single saved session for this chapter, keyed by
+      // a stable sessionId so the recent-workspaces list never accumulates dupes.
+      const refreshedSession: SavedSession = {
+        id: sessionId,
+        name: title,
+        chapterId,
+        timestamp: Date.now(),
+        tree: serializeTree(tabTree),
+        currentNodeId: tabNodeId,
+      };
+      const updatedSessions = [refreshedSession, ...sessions.filter(s => s.id !== sessionId)];
+      set(savedSessionsAtom, updatedSessions);
+
+      if (existingTab) {
+        // Reuse the open chapter tab in place (preserving progress on resume).
+        set(tabsAtom, prevTabs.map(t => t.id === existingTab.id
+          ? {
+              ...t,
+              name: title,
+              historyTree: tabTree,
+              currentNodeId: tabNodeId,
+              isCustomNamed: true,
+              isModified: resuming ? t.isModified : false,
+              chapterId,
+              sessionId,
+              timestamp: Date.now(),
+            }
+          : t));
+        set(activeTabIdAtom, existingTab.id);
+      } else {
+        const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newTab: WorkspaceTab = {
+          id: newTabId,
+          name: title,
+          historyTree: freshTree,
+          currentNodeId: "0",
+          isCustomNamed: true,
+          chapterId,
+          sessionId,
+          timestamp: Date.now(),
+        };
+        set(tabsAtom, [...prevTabs, newTab]);
+        set(activeTabIdAtom, newTabId);
+      }
+
+      set(currentSessionIdAtom, sessionId);
+      set(sourcePathAtom, null);
+      set(hoverPathAtom, null);
+      set(hoverReducePathAtom, null);
+      set(hoverReduceIndexAtom, null);
+      set(hoveredLoopTargetIdAtom, null);
+
+      try {
+        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
+        safeLocalStorage.setItem('algebranch_current_session_id', sessionId);
+      } catch (err) {
+        console.error('Failed to save tutorial session to localStorage:', err);
+      }
+    } catch (err) {
+      console.error('Failed to start onboarding chapter:', err);
+    }
 
     if (typeof window !== 'undefined') {
       safeLocalStorage.setItem('algebranch_onboarding_chapter_id', chapterId);
-      safeLocalStorage.setItem('algebranch_onboarding_step_index', String(stepIdx));
+      writeOnboardingStep(chapterId, stepIdx);
       safeLocalStorage.setItem('algebranch_onboarding_active', 'true');
     }
   }
@@ -1177,9 +1309,9 @@ export const setOnboardingStepAtom = atom(
         if (nextIndex !== null && nextIndex >= chapter.steps.length) {
           safeLocalStorage.setItem('algebranch_onboarding_completed', 'true');
           safeLocalStorage.removeItem('algebranch_onboarding_chapter_id');
-          safeLocalStorage.removeItem('algebranch_onboarding_step_index');
           safeLocalStorage.removeItem('algebranch_onboarding_active');
-          
+          if (finishedChapterId) clearOnboardingStep(finishedChapterId);
+
           if (finishedChapterId) {
             try {
               const completed = safeLocalStorage.getItem('algebranch_completed_chapters');
@@ -1258,10 +1390,10 @@ export const setOnboardingStepAtom = atom(
     set(onboardingStepIndexAtom, nextIndex);
     set(onboardingHighlightPathAtom, chapter.steps[nextIndex].highlightPath);
 
-    // Save current step to localStorage!
+    // Save current step to localStorage (per chapter) so other chapters keep theirs.
     if (typeof window !== 'undefined' && chapterId) {
       safeLocalStorage.setItem('algebranch_onboarding_chapter_id', chapterId);
-      safeLocalStorage.setItem('algebranch_onboarding_step_index', String(nextIndex));
+      writeOnboardingStep(chapterId, nextIndex);
       safeLocalStorage.setItem('algebranch_onboarding_active', 'true');
     }
 

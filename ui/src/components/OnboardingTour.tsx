@@ -11,7 +11,9 @@ import {
   ONBOARDING_CHAPTERS,
   setOnboardingStepAtom,
   startOnboardingChapterAtom,
-  sourcePathAtom
+  sourcePathAtom,
+  appHydratedAtom,
+  readOnboardingSteps
 } from '../store/equation';
 import { equationToString } from 'math-engine-client';
 import { prefetchChapterScans } from '../utils/mathScan';
@@ -72,8 +74,8 @@ const ConfettiBurst: React.FC = () => {
 export const OnboardingTour: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   const [completedChapters, setCompletedChapters] = useState<string[]>([]);
-  const [savedChapterId, setSavedChapterId] = useState<string | null>(null);
-  const [savedStepIndex, setSavedStepIndex] = useState<number | null>(null);
+  // Per-chapter saved step (chapterId -> stepIndex) for the directory's resume UI.
+  const [chapterProgress, setChapterProgress] = useState<Record<string, number>>({});
 
   const chapterId = useAtomValue(onboardingChapterIdAtom);
   const stepIndex = useAtomValue(onboardingStepIndexAtom);
@@ -100,31 +102,31 @@ export const OnboardingTour: React.FC = () => {
         }
       }
 
-      // Check if there is a saved chapter progress
-      const savedChId = localStorage.getItem('algebranch_onboarding_chapter_id');
-      const savedStepIdxStr = localStorage.getItem('algebranch_onboarding_step_index');
-      const isActive = localStorage.getItem('algebranch_onboarding_active') === 'true';
-      
-      if (savedChId && savedStepIdxStr) {
-        const savedStepIdx = parseInt(savedStepIdxStr, 10);
-        setSavedChapterId(savedChId);
-        setSavedStepIndex(savedStepIdx);
-        
-        // Auto-resume if it was active when they left/refreshed
-        if (isActive) {
-          startChapter(savedChId, savedStepIdx);
-        }
-      }
+      // Load per-chapter saved step progress (for the directory's resume UI)
+      setChapterProgress(readOnboardingSteps());
     }
   }, []);
+
+  // Auto-resume an active tutorial only AFTER the main workspace/session
+  // hydration has run. Resuming earlier would call startChapter against empty
+  // tabs/sessions atoms and overwrite localStorage, wiping other saved
+  // workspaces (the per-chapter tutorial tabs included). Reads localStorage
+  // directly so it is independent of async state updates from the mount effect.
+  const appHydrated = useAtomValue(appHydratedAtom);
+  useEffect(() => {
+    if (!appHydrated || chapterId || typeof window === 'undefined') return;
+    const isActive = localStorage.getItem('algebranch_onboarding_active') === 'true';
+    const savedChId = localStorage.getItem('algebranch_onboarding_chapter_id');
+    if (isActive && savedChId) {
+      const savedStep = readOnboardingSteps()[savedChId] ?? 0;
+      startChapter(savedChId, savedStep);
+    }
+  }, [appHydrated, chapterId, startChapter]);
 
   // Update saved progress state in real-time as local storage changes (so the directory dialog updates dynamically)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedChId = localStorage.getItem('algebranch_onboarding_chapter_id');
-      const savedStepIdxStr = localStorage.getItem('algebranch_onboarding_step_index');
-      setSavedChapterId(savedChId);
-      setSavedStepIndex(savedStepIdxStr ? parseInt(savedStepIdxStr, 10) : null);
+      setChapterProgress(readOnboardingSteps());
 
       const completedList = localStorage.getItem('algebranch_completed_chapters');
       if (completedList) {
@@ -238,11 +240,9 @@ export const OnboardingTour: React.FC = () => {
   const handleStartChapter = (id: string) => {
     setShowPrompt(false);
     setShowDirectory(false);
-    if (savedChapterId === id && savedStepIndex !== null) {
-      startChapter(id, savedStepIndex);
-    } else {
-      startChapter(id, 0);
-    }
+    // Resume this chapter at its own saved step (if any), else start fresh.
+    const savedStep = chapterProgress[id];
+    startChapter(id, savedStep ?? 0);
   };
 
   const handleAllChapters = () => {
@@ -265,6 +265,21 @@ export const OnboardingTour: React.FC = () => {
     }
     const timer = setTimeout(() => setCelebrationReady(true), 2000);
     return () => clearTimeout(timer);
+  }, [isLastStep, chapterId]);
+
+  // Record a chapter as completed the moment its celebration (last step) is
+  // reached, so the directory shows a green check regardless of which finish
+  // action the user takes (next chapter / finish / all chapters / explore).
+  useEffect(() => {
+    if (!isLastStep || !chapterId) return;
+    setCompletedChapters((prev) => {
+      if (prev.includes(chapterId)) return prev;
+      const next = [...prev, chapterId];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('algebranch_completed_chapters', JSON.stringify(next));
+      }
+      return next;
+    });
   }, [isLastStep, chapterId]);
 
   // Render the initial Welcome/Chapter directory prompt
@@ -303,7 +318,8 @@ export const OnboardingTour: React.FC = () => {
             <div className="flex flex-col gap-2.5 mt-2">
               {ONBOARDING_CHAPTERS.map((chapter) => {
                 const isCompleted = completedChapters.includes(chapter.id);
-                const hasProgress = savedChapterId === chapter.id && savedStepIndex !== null;
+                const savedStep = chapterProgress[chapter.id];
+                const hasProgress = !isCompleted && savedStep !== undefined && savedStep > 0;
 
                 return (
                   <button
@@ -336,7 +352,7 @@ export const OnboardingTour: React.FC = () => {
                           </p>
                           {hasProgress && (
                             <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
-                              Resume Step {savedStepIndex + 1}
+                              Resume Step {savedStep + 1}
                             </span>
                           )}
                         </div>

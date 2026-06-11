@@ -41,6 +41,7 @@ import {
   feedbackContextAtom,
   mathLoadingAtom,
   hydrateWorkspaceTabsAtom,
+  appHydratedAtom,
   toastAtom,
   createNewSessionAtom,
   currentTabNameAtom,
@@ -119,6 +120,7 @@ export default function Home() {
   const setFeedbackContext = useSetAtom(feedbackContextAtom);
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
+  const setAppHydrated = useSetAtom(appHydratedAtom);
   const createNewSession = useSetAtom(createNewSessionAtom);
   const deleteSession = useSetAtom(deleteSessionAtom);
   const setDeleteConfirmationModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
@@ -354,7 +356,10 @@ export default function Home() {
 
     initialize();
     setIsHydrated(true);
-  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession]);
+    // Signal global hydration so mount-time consumers (onboarding auto-resume)
+    // can safely mutate persisted workspace state without clobbering it.
+    setAppHydrated(true);
+  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession, setAppHydrated]);
 
   // Save derivation steps to local storage and update address bar URL reactively
   React.useEffect(() => {

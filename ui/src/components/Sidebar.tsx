@@ -15,6 +15,7 @@ import {
   leftSidebarOpenAtom,
   deleteConfirmationModalOpenAtom,
   equationInputModalOpenAtom,
+  onboardingShowDirectoryAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
@@ -75,6 +76,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   const setDeleteModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
 
   const setIsInputModalOpen = useSetAtom(equationInputModalOpenAtom);
+  const setOnboardingShowDirectory = useSetAtom(onboardingShowDirectoryAtom);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [isMobileRecentsOpen, setIsMobileRecentsOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
@@ -118,22 +120,34 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
 
       {/* Recessed Content Box */}
       <div className={`p-4 flex flex-col gap-4 ${THEME_GLASS.TREE_BG}`}>
-        {/* Define Section */}
         <div className="flex flex-col gap-1.5 shrink-0">
           <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
             Define Equation
           </span>
-          <button
-            type="button"
-            onClick={() => {
-              setIsInputModalOpen(true);
-              onCloseMobile?.();
-            }}
-            className="w-full h-9 px-4 text-xs font-bold bg-indigo-600/95 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/10 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer border border-indigo-400/20"
-          >
-            <PenTool size={13} />
-            <span>New Equation</span>
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsInputModalOpen(true);
+                onCloseMobile?.();
+              }}
+              className="h-9 px-3 text-[11px] font-bold bg-indigo-600/95 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/10 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-indigo-400/20"
+            >
+              <PenTool size={12} />
+              <span>Write</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOnboardingShowDirectory(true);
+                onCloseMobile?.();
+              }}
+              className="h-9 px-3 text-[11px] font-bold bg-neutral-900 border border-white/10 hover:bg-neutral-800 hover:border-white/20 text-white rounded-xl active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <BookOpen size={12} className="text-indigo-400" />
+              <span>Tutorial</span>
+            </button>
+          </div>
         </div>
 
         {/* Recents Dropdown Selector Section */}

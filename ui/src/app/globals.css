@@ -25,6 +25,12 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Onboarding tutorial: gentle breathe for the white annotation circle marking the next-click element */
+@keyframes onboarding-circle-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.95; }
+  50% { transform: scale(1.06); opacity: 0.65; }
+}
+
 /* Custom responsive visibility class for contextual action buttons */
 .contextual-actions {
   opacity: 0.25;

@@ -15,6 +15,10 @@ import {
   hoverReduceIndexAtom,
   reduciblePathsAtom,
   toggleRootSignAtom,
+  onboardingChapterIdAtom,
+  onboardingHighlightPathAtom,
+  onboardingTargetPathAtom,
+  onboardingReduceHandleAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
@@ -124,6 +128,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const currentEq = useAtomValue(currentEquationAtom);
   const candidatePaths = useAtomValue(candidatePathsAtom);
   const toggleRootSign = useSetAtom(toggleRootSignAtom);
+  const isOnboardingActive = !!useAtomValue(onboardingChapterIdAtom);
+  const onboardingHighlightPath = useAtomValue(onboardingHighlightPathAtom);
+  const onboardingTargetPath = useAtomValue(onboardingTargetPathAtom);
+  const onboardingReduceHandle = useAtomValue(onboardingReduceHandleAtom);
+  // The circle marks the reduce handle itself when one produces the step's expected
+  // equation; otherwise it marks the node box (selection/transposition steps).
+  const isHandleMarked = isOnboardingActive && onboardingReduceHandle?.path === path;
+  const isOnboardingMarked = !isHandleMarked &&
+    (path === onboardingHighlightPath || (isOnboardingActive && path === onboardingTargetPath));
 
   const node = React.useMemo(() => {
     try {
@@ -177,7 +190,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     return false;
   }, [hoverPath, candidatePaths]);
 
-  const actions = reduciblePaths[path] || [];
+  const actions = isOnboardingActive
+    ? (path === onboardingHighlightPath ? (reduciblePaths[path] || []) : [])
+    : (reduciblePaths[path] || []);
   const isReducible = actions.length > 0;
 
   // Toggle Root Sign (+/- branches) via global action
@@ -207,6 +222,17 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const handleNodeClick = (e: React.MouseEvent) => {
     if (isStatic) {
       return;
+    }
+
+    if (isOnboardingActive) {
+      if (sourcePath) {
+        if (!isSelected) {
+          const activeTargetPath = getTargetPath();
+          if (!activeTargetPath) return;
+        }
+      } else {
+        if (path !== onboardingHighlightPath) return;
+      }
     }
 
     e.stopPropagation();
@@ -470,7 +496,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       data-flip-id={nodeId}
       style={customStyle}
       className={`relative inline-flex items-center justify-center border rounded-[0.4em] select-none ${semanticStyle}`}
-      onMouseEnter={() => setHoverPath(path)}
+      onMouseEnter={() => {
+        setHoverPath(path);
+      }}
       onMouseLeave={() => {
         const lastSlash = path.lastIndexOf('/');
         const parentPath = lastSlash !== -1 ? path.substring(0, lastSlash) : null;
@@ -479,6 +507,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       onClick={handleNodeClick}
     >
       {renderContent()}
+
+      {/* Onboarding annotation circle: a bright white loop overshooting the node box,
+          deliberately outside the app's rounded-rect + hue vocabulary. Rendered as a
+          child so it tracks FLIP moves, scaling, and reflows for free. */}
+      {isOnboardingMarked && (
+        <span
+          aria-hidden="true"
+          className="absolute -inset-[0.4em] rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.6),inset_0_0_8px_rgba(255,255,255,0.25)] pointer-events-none z-20 animate-[onboarding-circle-breathe_1.8s_ease-in-out_infinite]"
+        />
+      )}
 
       {/* Hover selection controls toolbar */}
       {isSelected && canToggleRoot(node) && (
@@ -569,6 +607,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       borderRadius: inExponent ? '0.12em' : '9999px',
                     }}
                   />
+                  {isHandleMarked && onboardingReduceHandle?.index === index && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -inset-[0.3em] rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] pointer-events-none z-20 animate-[onboarding-circle-breathe_1.8s_ease-in-out_infinite]"
+                    />
+                  )}
                   {type === 'distribute' ? (
                     <Split className="h-[65%] w-[65%] text-white stroke-[2.5]" />
                   ) : type === 'identity' ? (

@@ -10,6 +10,7 @@ import { FeedbackModal } from '../components/FeedbackModal';
 import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
 import { ResetHistoryModal } from '../components/ResetHistoryModal';
 import { EquationInputModal } from '../components/EquationInputModal';
+import { OnboardingTour } from '../components/OnboardingTour';
 import { Tooltip } from '../components/Tooltip';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { BottomNav } from '../components/BottomNav';
@@ -1034,6 +1035,7 @@ export default function Home() {
       <DeleteWorkspaceModal />
       <ResetHistoryModal />
       <EquationInputModal />
+      <OnboardingTour />
 
       {/* Mobile-only Bottom navigation and Sheets */}
       <BottomNav />

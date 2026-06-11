@@ -1152,6 +1152,8 @@ export interface OnboardingStep {
   selectPath?: string;
   /** When set, the Next button performs this both-sides operation via applyGlobalOpAtom */
   globalOp?: { type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div' | 'power' | 'root'; term?: string; power?: number };
+  /** Renders a color legend on this step's coach card: node kinds, or the source/target selection states */
+  legend?: 'nodeTypes' | 'sourceTarget';
 }
 
 export interface OnboardingChapter {
@@ -1174,7 +1176,8 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
         description: 'This is an interactive math playground. Active terms can be clicked and moved around. Immobile terms (locked in place) cannot be moved and have a dark background.',
         highlightPath: null,
         nextEquation: '3 * x - 4 = 11',
-        stepLabel: 'Start'
+        stepLabel: 'Start',
+        legend: 'nodeTypes'
       },
       {
         title: 'Isolate the Variable',
@@ -1189,7 +1192,8 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
         highlightPath: null,
         nextEquation: '3 * x = 11 + 4',
         stepLabel: 'Transpose',
-        selectPath: 'lhs/1'
+        selectPath: 'lhs/1',
+        legend: 'sourceTarget'
       },
       {
         title: 'Simplify Constants',

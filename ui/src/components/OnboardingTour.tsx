@@ -13,6 +13,7 @@ import {
   sourcePathAtom
 } from '../store/equation';
 import { equationToString } from 'math-engine-client';
+import { prefetchChapterScans } from '../utils/mathScan';
 import { Play, ArrowRight, ArrowLeft, CheckCircle2, X, Sparkles, BookOpen, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { THEME_GLASS } from '../constants/theme';
@@ -27,6 +28,8 @@ const SWATCH_MOVABLE = THEME_GLASS.CARD_CANDIDATE_SCAN
   .replace('text-sky-100', '')
   .replace('cursor-pointer', '');
 const SWATCH_LOCKED = THEME_GLASS.STATIC.replace('cursor-default', '');
+const SWATCH_SOURCE = THEME_GLASS.SOURCE.replace('cursor-pointer', '');
+const SWATCH_TARGET = THEME_GLASS.TARGET.replace('cursor-pointer', '');
 
 const ConfettiBurst: React.FC = () => {
   const pieces = React.useMemo(
@@ -87,6 +90,24 @@ export const OnboardingTour: React.FC = () => {
       }
     }
   }, [chapterId, showDirectory]);
+
+  // Pre-warm the math scan cache for the chapter's known derivation chain so
+  // stepping through the tutorial never waits on the backend. Runs once per
+  // chapter start (the initial-equation guard makes later re-runs no-ops).
+  useEffect(() => {
+    if (!chapterId || !currentEq) return;
+    const chapter = ONBOARDING_CHAPTERS.find(c => c.id === chapterId);
+    if (!chapter) return;
+    if (equationToString(currentEq).replace(/\s+/g, '') !== chapter.initialEquation.replace(/\s+/g, '')) return;
+
+    let active = true;
+    prefetchChapterScans(chapter, currentEq, () => active).catch(err => {
+      console.warn('Tutorial scan prefetch failed (live fetches will cover):', err);
+    });
+    return () => {
+      active = false;
+    };
+  }, [chapterId, currentEq]);
 
   // Synchronize walkthrough step index automatically when the user performs the correct math operation or selects a node
   useEffect(() => {
@@ -335,8 +356,8 @@ export const OnboardingTour: React.FC = () => {
             </p>
           </div>
 
-          {/* Node Color Legend (shown on step 0) */}
-          {stepIndex === 0 && (
+          {/* Node-kind color legend (steps with legend: 'nodeTypes') */}
+          {activeStep.legend === 'nodeTypes' && (
             <div className="grid grid-cols-2 gap-2 mt-1">
               <div className="flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border border-white/10 text-white/95">
                 <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-sky-300 font-serif italic font-medium text-[10px]`}>x</span>
@@ -367,6 +388,27 @@ export const OnboardingTour: React.FC = () => {
                 <div className="flex flex-col">
                   <span className="font-bold text-zinc-400 text-[9px] leading-tight font-medium">Immobile</span>
                   <span className="text-zinc-500/80 text-[7px] leading-none font-sans">Locked in place</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Selection-state color legend (steps with legend: 'sourceTarget') */}
+          {activeStep.legend === 'sourceTarget' && (
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <div className="flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border border-white/10 text-white/95">
+                <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_SOURCE} text-[10px]`}>4</span>
+                <div className="flex flex-col">
+                  <span className="font-bold text-white/90 text-[9px] leading-tight">Source</span>
+                  <span className="text-indigo-300/80 text-[7px] leading-none">The term you picked up</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border border-white/10 text-white/95">
+                <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_TARGET} text-[10px]`}>11</span>
+                <div className="flex flex-col">
+                  <span className="font-bold text-white/90 text-[9px] leading-tight">Target</span>
+                  <span className="text-emerald-300/80 text-[7px] leading-none">Tap to drop it there</span>
                 </div>
               </div>
             </div>

@@ -58,16 +58,11 @@ import {
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
 import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library } from 'lucide-react';
-import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
+import { Equation, parseEquation, ensureNodeIds, equationToString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
 import { trackEvent } from '../utils/analytics';
-
-// Local Constants
-const API_MATH_ENDPOINT = '/api/math';
-
-// Client-side cache for deterministic mathematical API sync states
-const mathStateCache = new Map<string, any>();
+import { fetchMathScan } from '../utils/mathScan';
 
 // Safe wrapper around window.localStorage to prevent DOMException / SecurityError crashes on mobile browsers (incognito, LAN HTTP, etc.)
 const safeLocalStorage = {
@@ -485,31 +480,9 @@ export default function Home() {
     const syncState = async () => {
       try {
         setMathLoading(true);
-        const eqStr = equationToString(currentEq);
-        const serializedEq = serializeEquation(currentEq);
-        
-        // Generate a cache key based on the deterministic calculation inputs
-        const cacheKey = JSON.stringify({ eqStr, serializedEq, sourcePath });
-        const cachedData = mathStateCache.get(cacheKey);
-        
-        if (cachedData) {
-          if (active) {
-            syncMathState(cachedData);
-          }
-          return;
-        }
-
-        const res = await fetch(API_MATH_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sync-state', eqStr, serializedEq, sourcePath })
-        });
-        const data = await res.json();
+        const data = await fetchMathScan(currentEq, sourcePath);
 
         if (!active) return;
-
-        // Store response in cache for instant sub-millisecond retrieval on repeat visits/history navigation
-        mathStateCache.set(cacheKey, data);
 
         // Atomically synchronize state inside Jotai store action
         syncMathState(data);

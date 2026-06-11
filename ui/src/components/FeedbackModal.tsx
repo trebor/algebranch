@@ -163,14 +163,14 @@ ${formattedTree}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }}
-            className={`w-full max-w-lg overflow-hidden relative z-10 flex flex-col p-6 max-h-[90vh] ${THEME_GLASS.PANEL} shadow-[0_0_50px_rgba(99,102,241,0.15)]`}
+            className={`w-full max-w-lg overflow-hidden relative z-10 flex flex-col p-6 max-h-[90vh] ${THEME_GLASS.PANEL} ${THEME_GLASS.TOOLTIP_DETAILS}`}
           >
             {/* Glow orb */}
             <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none -z-10 animate-pulse" />
             <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none -z-10" />
 
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4 select-none">
+            <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER_SUBTLE} pb-4 mb-4 select-none`}>
               <div>
                 <h2 className="text-lg font-bold text-white tracking-wide">Share Feedback</h2>
                 <p className="text-xs text-indigo-300 font-semibold tracking-wider uppercase mt-0.5">
@@ -179,7 +179,7 @@ ${formattedTree}
               </div>
               <button
                 onClick={handleClose}
-                className="p-1.5 rounded-lg border border-white/5 bg-white/5 text-white/50 hover:text-white hover:bg-white/10 hover:border-white/15 transition-all cursor-pointer"
+                className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-white/5 text-white/50 hover:text-white hover:bg-white/10 hover:border-white/15 transition-all cursor-pointer`}
                 aria-label="Close dialog"
               >
                 <X size={16} />
@@ -208,7 +208,7 @@ ${formattedTree}
                   </p>
                   <button
                     onClick={handleClose}
-                    className="mt-8 px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all duration-150 active:scale-95 shadow-lg shadow-indigo-600/25 cursor-pointer"
+                    className={`mt-8 px-6 py-2 text-sm font-semibold ${THEME_GLASS.BUTTON_PRIMARY}`}
                   >
                     Close Window
                   </button>
@@ -218,7 +218,7 @@ ${formattedTree}
                 <form className="flex flex-col gap-4">
                   {/* Context Attachment Display */}
                   {context && (
-                    <div className="flex items-center gap-2 p-2.5 rounded-xl border border-indigo-500/10 bg-indigo-500/5 text-indigo-300 select-none">
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-300 select-none">
                       <Paperclip size={13} className="shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="text-[9px] uppercase tracking-wider font-bold text-indigo-400">
@@ -233,7 +233,7 @@ ${formattedTree}
 
                   {/* Subject Input */}
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
+                    <label className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
                       Subject
                     </label>
                     <input
@@ -242,13 +242,13 @@ ${formattedTree}
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       placeholder="What is this feedback about?"
-                      className="w-full h-9 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-medium"
+                      className={`w-full h-9 px-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-medium ${THEME_GLASS.FIELD_SELECT}`}
                     />
                   </div>
 
                   {/* Message Input */}
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
+                    <label className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
                       Description & Details
                     </label>
                     <textarea
@@ -257,13 +257,13 @@ ${formattedTree}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder="Explain your thoughts, steps to reproduce, or details about your request..."
-                      className="w-full p-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-medium resize-none"
+                      className={`w-full p-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-medium resize-none ${THEME_GLASS.FIELD_SELECT}`}
                     />
                   </div>
 
                   {/* Rating Selector */}
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
+                    <label className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
                       Rate Your Experience (Optional)
                     </label>
                     <div className="flex items-center gap-1">
@@ -293,18 +293,18 @@ ${formattedTree}
                   </div>
 
                   {errorStr && (
-                    <div className="flex items-start gap-2 text-[10px] text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl p-2.5 animate-[fadeIn_0.2s_ease-out]">
+                    <div className={`flex items-start gap-2 text-[10px] p-2.5 animate-[fadeIn_0.2s_ease-out] ${THEME_GLASS.BUTTON_DANGER}`}>
                       <X size={13} className="shrink-0 mt-0.5" />
                       <span>{errorStr}</span>
                     </div>
                   )}
 
                   {/* Footer Submit Buttons */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-2 border-t border-white/5 pt-4">
+                  <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-2 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} pt-4`}>
                     <button
                       type="button"
                       onClick={handleClose}
-                      className="px-4 py-2 h-9 rounded-xl border border-white/10 hover:border-white/20 text-xs font-semibold text-white/80 hover:text-white bg-white/0 hover:bg-white/5 transition-all cursor-pointer text-center"
+                      className={`px-4 py-2 h-9 text-xs font-semibold cursor-pointer text-center ${THEME_GLASS.BUTTON_SECONDARY}`}
                     >
                       Cancel
                     </button>
@@ -313,7 +313,7 @@ ${formattedTree}
                       <button
                         type="button"
                         onClick={(e) => handleSubmitType(e, 'bug')}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 h-9 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 shadow-lg shadow-rose-600/25 active:scale-95 transition-all cursor-pointer text-center"
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 h-9 text-xs font-bold text-center ${THEME_GLASS.BUTTON_DANGER_FILL}`}
                       >
                         <Bug size={12} />
                         <span>Report Bug</span>
@@ -322,7 +322,7 @@ ${formattedTree}
                       <button
                         type="button"
                         onClick={(e) => handleSubmitType(e, 'feature')}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 h-9 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 shadow-lg shadow-amber-600/25 active:scale-95 transition-all cursor-pointer text-center"
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 h-9 text-xs font-bold text-center ${THEME_GLASS.BUTTON_WARNING_FILL}`}
                       >
                         <Lightbulb size={12} />
                         <span>Idea</span>
@@ -331,7 +331,7 @@ ${formattedTree}
                       <button
                         type="button"
                         onClick={(e) => handleSubmitType(e, 'other')}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 h-9 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/25 active:scale-95 transition-all cursor-pointer text-center"
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 h-9 text-xs font-bold text-center ${THEME_GLASS.BUTTON_PRIMARY}`}
                       >
                         <MessageSquare size={12} />
                         <span>Other</span>

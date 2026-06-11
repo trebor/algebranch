@@ -88,5 +88,7 @@ export const THEME_GLASS = {
 
   // --- Onboarding / Tour specific ---
   BUTTON_SUCCESS: 'bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer shadow-md shadow-emerald-600/20 border border-emerald-400/20',
+  BUTTON_DANGER_FILL: 'bg-rose-600 hover:bg-rose-500 text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer shadow-md shadow-rose-600/20 border border-rose-500/20',
+  BUTTON_WARNING_FILL: 'bg-amber-600 hover:bg-amber-500 text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer shadow-md shadow-amber-600/20 border border-amber-500/20',
   COACH_CARD: 'w-full p-4 rounded-2xl backdrop-blur-xl bg-[#110f22]/95 border border-indigo-500/30 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col gap-3',
 } as const;

@@ -718,7 +718,7 @@ export default function Home() {
 
 
   return (
-    <div className="relative flex flex-col h-screen w-screen overflow-hidden bg-[#080711] text-white font-sans">
+    <div className="relative flex flex-col h-dvh w-screen overflow-hidden overscroll-none bg-[#080711] text-white font-sans">
       {/* Background neon grid effect */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none -z-10" />
 
@@ -844,7 +844,9 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className="active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto px-2 py-4 sm:p-4 lg:p-8 text-base font-light cursor-default relative group/canvas"
+              className={`active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full px-2 py-4 sm:p-4 lg:p-8 text-base font-light cursor-default relative group/canvas ${
+                onboardingChapterId ? 'overflow-hidden' : 'overflow-auto'
+              }`}
             >
               {/* Calculating Math Engine Spinner / Toast Notification */}
               {toast ? (

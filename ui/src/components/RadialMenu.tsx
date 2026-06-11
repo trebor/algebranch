@@ -2,15 +2,18 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSetAtom, useAtom } from 'jotai';
+import { useSetAtom, useAtom, useAtomValue } from 'jotai';
 import {
   applyGlobalOpAtom,
   swapSidesAtom,
   radialMenuOpenAtom,
+  onboardingChapterIdAtom,
+  onboardingGlobalOpAtom,
 } from '../store/equation';
 import { trackEvent } from '../utils/analytics';
 import { ArrowLeftRight, Plus, Minus, X, Divide } from 'lucide-react';
 import { Tooltip } from './Tooltip';
+import { THEME_GLASS } from '../constants/theme';
 
 /**
  * Global operation types available in the radial menu.
@@ -62,6 +65,8 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
   const [isOpen, setIsOpen] = useAtom(radialMenuOpenAtom);
   const applyGlobalOp = useSetAtom(applyGlobalOpAtom);
   const swapSides = useSetAtom(swapSidesAtom);
+  const isTourActive = !!useAtomValue(onboardingChapterIdAtom);
+  const tourGlobalOp = useAtomValue(onboardingGlobalOpAtom);
   const [termInputAction, setTermInputAction] = React.useState<RadialAction | null>(null);
   const [termValue, setTermValue] = React.useState('');
   const [spinnerValue, setSpinnerValue] = React.useState(2);
@@ -98,15 +103,38 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen, setIsOpen]);
 
-  // Focus term input when it appears
+  // Focus term input when it appears (not during the tour — the value is
+  // locked, and focusing would pop the keyboard on mobile for nothing)
   React.useEffect(() => {
-    if (termInputAction && termInputRef.current) {
+    if (termInputAction && termInputRef.current && !isTourActive) {
       termInputRef.current.focus();
     }
-  }, [termInputAction]);
+  }, [termInputAction, isTourActive]);
+
+  // During the tour, only the petal performing the active step's global op is
+  // live; the spinner/term petals share one petal per family (sqrt -> nth root).
+  const petalMatchesTourOp = (action: RadialAction): boolean => {
+    if (!tourGlobalOp) return false;
+    if (action.type === 'root') return tourGlobalOp.type === 'root' || tourGlobalOp.type === 'sqrt';
+    if (action.type === 'power') return tourGlobalOp.type === 'power' || tourGlobalOp.type === 'square';
+    return action.type === tourGlobalOp.type;
+  };
+
+  // Whether the staged input matches what the tour step expects; gates Apply
+  // so the learner can't fire an off-script operation mid-tutorial.
+  const tourExpectedPower = tourGlobalOp?.power ?? 2;
+  const tourInputSatisfied = !isTourActive
+    ? true
+    : !tourGlobalOp
+      ? false
+      : termInputAction?.type === 'power' || termInputAction?.type === 'root'
+        ? spinnerValue === tourExpectedPower
+        : termValue.trim() === (tourGlobalOp.term ?? '');
 
   const handlePetalClick = (petal: RadialPetal) => {
     const { action } = petal;
+
+    if (isTourActive && !petalMatchesTourOp(action)) return;
 
     if (action.type === 'swap') {
       swapSides();
@@ -125,8 +153,11 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
       action.type === 'root'
     ) {
       setTermInputAction(action);
+      // Tour steps arrive with their parameter preset (and locked in the UI)
       if (action.type === 'power' || action.type === 'root') {
-        setSpinnerValue(2); // Default spinner to 2
+        setSpinnerValue(isTourActive && tourGlobalOp ? tourGlobalOp.power ?? 2 : 2);
+      } else if (isTourActive && tourGlobalOp?.term) {
+        setTermValue(tourGlobalOp.term);
       }
       return;
     }
@@ -221,6 +252,9 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
               const x = Math.cos(rad) * RADIUS;
               const y = Math.sin(rad) * RADIUS;
 
+              const isTourPetal = isTourActive && petalMatchesTourOp(petal.action);
+              const isPetalLocked = isTourActive && !isTourPetal;
+
               return (
                 <Tooltip
                   key={petal.label}
@@ -229,7 +263,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                 >
                   <motion.button
                     initial={{ scale: 0, opacity: 0, x: 0, y: 0 }}
-                    animate={{ scale: 1, opacity: 1, x, y }}
+                    animate={{ scale: 1, opacity: isPetalLocked ? 0.35 : 1, x, y }}
                     exit={{ scale: 0, opacity: 0, x: 0, y: 0 }}
                     transition={{
                       type: 'spring',
@@ -237,10 +271,17 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                       bounce: 0.35,
                       delay: i * 0.03,
                     }}
-                    className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full backdrop-blur-xl bg-neutral-900/80 border border-white/15 shadow-lg shadow-black/40 flex items-center justify-center pointer-events-auto cursor-pointer hover:bg-white/10 hover:border-white/30 hover:scale-110 active:scale-95 transition-colors ${petal.color}`}
+                    className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full backdrop-blur-xl bg-neutral-900/80 border border-white/15 shadow-lg shadow-black/40 flex items-center justify-center pointer-events-auto transition-colors ${petal.color} ${
+                      isPetalLocked
+                        ? 'cursor-default'
+                        : 'cursor-pointer hover:bg-white/10 hover:border-white/30 hover:scale-110 active:scale-95'
+                    }`}
                     onClick={() => handlePetalClick(petal)}
                   >
                     {petal.icon}
+                    {isTourPetal && (
+                      <span aria-hidden="true" className={`-inset-[0.35em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                    )}
                   </motion.button>
                 </Tooltip>
               );
@@ -274,10 +315,13 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                       )}
                     </span>
                     {termInputAction.type === 'power' || termInputAction.type === 'root' ? (
-                      <div className="flex items-center gap-3 bg-neutral-900 border border-white/10 rounded-lg px-2 py-1">
+                      <div className="relative flex items-center gap-3 bg-neutral-900 border border-white/10 rounded-lg px-2 py-1">
+                        {isTourActive && tourGlobalOp && !tourInputSatisfied && (
+                          <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                        )}
                         <button
                           type="button"
-                          disabled={spinnerValue <= 2}
+                          disabled={spinnerValue <= 2 || isTourActive}
                           onClick={() => setSpinnerValue((v) => Math.max(2, v - 1))}
                           className="w-6 h-6 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all cursor-pointer"
                         >
@@ -288,27 +332,40 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                         </span>
                         <button
                           type="button"
+                          disabled={isTourActive}
                           onClick={() => setSpinnerValue((v) => v + 1)}
-                          className="w-6 h-6 rounded-md hover:bg-white/5 flex items-center justify-center transition-all cursor-pointer"
+                          className="w-6 h-6 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all cursor-pointer"
                         >
                           <Plus size={12} className="text-white" />
                         </button>
                       </div>
                     ) : (
-                      <input
-                        ref={termInputRef}
-                        type="text"
-                        value={termValue}
-                        onChange={(e) => setTermValue(e.target.value)}
-                        placeholder="e.g. 5x"
-                        className="w-28 px-2 py-1 text-sm bg-neutral-900 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
-                      />
+                      <span className="relative">
+                        <input
+                          ref={termInputRef}
+                          type="text"
+                          value={termValue}
+                          readOnly={isTourActive}
+                          onChange={(e) => setTermValue(e.target.value)}
+                          placeholder="e.g. 5x"
+                          className={`w-28 px-2 py-1 text-sm bg-neutral-900 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none transition-all font-mono ${
+                            isTourActive ? 'cursor-default text-white/80' : 'focus:border-indigo-500/80'
+                          }`}
+                        />
+                        {isTourActive && tourGlobalOp && !tourInputSatisfied && (
+                          <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                        )}
+                      </span>
                     )}
                     <button
                       type="submit"
-                      className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md cursor-pointer active:scale-95 transition-all"
+                      disabled={isTourActive && !tourInputSatisfied}
+                      className="relative px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md cursor-pointer active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none"
                     >
                       Apply
+                      {isTourActive && tourInputSatisfied && (
+                        <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                      )}
                     </button>
                   </div>
                   {errorStr && (

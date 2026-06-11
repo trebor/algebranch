@@ -10,6 +10,7 @@ import { FeedbackModal } from '../components/FeedbackModal';
 import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
 import { ResetHistoryModal } from '../components/ResetHistoryModal';
 import { EquationInputModal } from '../components/EquationInputModal';
+import { OnboardingTour } from '../components/OnboardingTour';
 import { Tooltip } from '../components/Tooltip';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { BottomNav } from '../components/BottomNav';
@@ -53,20 +54,17 @@ import {
   radialMenuOpenAtom,
   swapSidesAtom,
   addTabAtom,
+  onboardingChapterIdAtom,
+  onboardingGlobalOpAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
 import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library } from 'lucide-react';
-import { Equation, parseEquation, ensureNodeIds, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
+import { Equation, parseEquation, ensureNodeIds, equationToString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
 import { trackEvent } from '../utils/analytics';
-
-// Local Constants
-const API_MATH_ENDPOINT = '/api/math';
-
-// Client-side cache for deterministic mathematical API sync states
-const mathStateCache = new Map<string, any>();
+import { fetchMathScan } from '../utils/mathScan';
 
 // Safe wrapper around window.localStorage to prevent DOMException / SecurityError crashes on mobile browsers (incognito, LAN HTTP, etc.)
 const safeLocalStorage = {
@@ -134,6 +132,10 @@ export default function Home() {
 
   const [activeBottomSheet, setActiveBottomSheet] = useAtom(activeBottomSheetAtom);
   const [radialMenuOpen, setRadialMenuOpen] = useAtom(radialMenuOpenAtom);
+  const onboardingChapterId = useAtomValue(onboardingChapterIdAtom);
+  const onboardingGlobalOp = useAtomValue(onboardingGlobalOpAtom);
+  // During the tour the equals sign is locked except on global-op steps
+  const equalsLocked = !!onboardingChapterId && !onboardingGlobalOp;
   const swapSides = useSetAtom(swapSidesAtom);
   const isMobile = useIsMobile();
   const equalsRef = React.useRef<HTMLSpanElement>(null);
@@ -484,31 +486,9 @@ export default function Home() {
     const syncState = async () => {
       try {
         setMathLoading(true);
-        const eqStr = equationToString(currentEq);
-        const serializedEq = serializeEquation(currentEq);
-        
-        // Generate a cache key based on the deterministic calculation inputs
-        const cacheKey = JSON.stringify({ eqStr, serializedEq, sourcePath });
-        const cachedData = mathStateCache.get(cacheKey);
-        
-        if (cachedData) {
-          if (active) {
-            syncMathState(cachedData);
-          }
-          return;
-        }
-
-        const res = await fetch(API_MATH_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sync-state', eqStr, serializedEq, sourcePath })
-        });
-        const data = await res.json();
+        const data = await fetchMathScan(currentEq, sourcePath);
 
         if (!active) return;
-
-        // Store response in cache for instant sub-millisecond retrieval on repeat visits/history navigation
-        mathStateCache.set(cacheKey, data);
 
         // Atomically synchronize state inside Jotai store action
         syncMathState(data);
@@ -928,11 +908,19 @@ export default function Home() {
                       ref={equalsRef}
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (equalsLocked) return;
                         setRadialMenuOpen(!radialMenuOpen);
                       }}
-                      className="text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95 transition-all"
+                      className={`relative text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black transition-all ${
+                        equalsLocked
+                          ? 'cursor-default'
+                          : 'cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95'
+                      }`}
                     >
                       =
+                      {!!onboardingChapterId && onboardingGlobalOp && (
+                        <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                      )}
                     </span>
 
                     {/* RHS Term Tree */}
@@ -1034,6 +1022,7 @@ export default function Home() {
       <DeleteWorkspaceModal />
       <ResetHistoryModal />
       <EquationInputModal />
+      <OnboardingTour />
 
       {/* Mobile-only Bottom navigation and Sheets */}
       <BottomNav />

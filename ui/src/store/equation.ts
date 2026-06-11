@@ -2,6 +2,7 @@ import { atom } from 'jotai';
 import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
 import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
+import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
 
 // Global Initial Value Constants
 export const INITIAL_EQUATION_STRING = '2 * (x + 3) = 10';
@@ -1139,4 +1140,183 @@ export const hydrateWorkspaceTabsAtom = atom(
 );
 
 
+// ==========================================
+// Onboarding Tour State Atoms
+// (chapter content lives in constants/onboarding.ts; re-exported for consumers)
+// ==========================================
 
+export { ONBOARDING_CHAPTERS };
+export type { OnboardingStep, OnboardingChapter } from '../constants/onboarding';
+
+export const onboardingChapterIdAtom = atom<string | null>(null);
+export const onboardingStepIndexAtom = atom<number | null>(null);
+export const onboardingHighlightPathAtom = atom<string | null>(null);
+export const onboardingShowDirectoryAtom = atom<boolean>(false);
+
+export const startOnboardingChapterAtom = atom(
+  null,
+  (get, set, chapterId: string) => {
+    const chapter = ONBOARDING_CHAPTERS.find(c => c.id === chapterId);
+    if (!chapter) return;
+    
+    set(onboardingChapterIdAtom, chapterId);
+    set(onboardingStepIndexAtom, 0);
+    set(onboardingHighlightPathAtom, chapter.steps[0].highlightPath);
+    set(onboardingShowDirectoryAtom, false);
+
+    // Create a new session for this tutorial
+    const title = `🎓 Tutorial: ${chapter.title.split('. ')[1]}`;
+    set(createNewSessionAtom, chapter.initialEquation, title);
+  }
+);
+
+export const setOnboardingStepAtom = atom(
+  null,
+  (get, set, nextIndex: number | null) => {
+    const chapterId = get(onboardingChapterIdAtom);
+    const chapter = ONBOARDING_CHAPTERS.find(c => c.id === chapterId);
+    if (!chapter) return;
+
+    if (nextIndex === null || nextIndex < 0 || nextIndex >= chapter.steps.length) {
+      // End the onboarding tour
+      set(onboardingChapterIdAtom, null);
+      set(onboardingStepIndexAtom, null);
+      set(onboardingHighlightPathAtom, null);
+      set(onboardingShowDirectoryAtom, false);
+      set(sourcePathAtom, null);
+      if (typeof window !== 'undefined') {
+        safeLocalStorage.setItem('algebranch_onboarding_completed', 'true');
+      }
+      return;
+    }
+
+    const currentStepIndex = get(onboardingStepIndexAtom);
+    const currentEq = get(currentEquationAtom);
+    
+    // Advancing past an action step the user hasn't performed themselves:
+    // perform it for them, preferring the same live mechanisms a real click
+    // uses (synced target slots / reduce handles) so FLIP animations and
+    // history labels match a manual derivation. Falls back to parsing the
+    // expected equation when no live action produces it.
+    if (currentStepIndex !== null && nextIndex > currentStepIndex) {
+      const prevStep = chapter.steps[currentStepIndex];
+      if (prevStep.nextEquation && currentEq) {
+        const stripEq = (eq: Equation) => equationToString(eq).replace(/\s+/g, '');
+        const currentStr = stripEq(currentEq);
+        const targetStr = prevStep.nextEquation.replace(/\s+/g, '');
+
+        if (currentStr !== targetStr) {
+          // 1. Live transposition: a synced target slot already yields the expected equation
+          const targetResult = Object.values(get(targetPathsAtom)).find(eq => stripEq(eq) === targetStr);
+          // 2. Live reduction: a simplify/distribute handle yields the expected equation
+          const reduceAction = !targetResult
+            ? Object.values(get(reduciblePathsAtom)).flat().find(a => stripEq(a.equation) === targetStr)
+            : undefined;
+
+          if (targetResult) {
+            set(pushEquationAtom, targetResult, prevStep.stepLabel || 'Move');
+          } else if (reduceAction) {
+            set(pushEquationAtom, reduceAction.equation, reduceAction.label || prevStep.stepLabel || 'Simplify');
+          } else if (prevStep.globalOp) {
+            // 3. Global operation applied to both sides
+            set(applyGlobalOpAtom, prevStep.globalOp);
+          } else {
+            // 4. Fallback: push the parsed expected equation directly
+            const parsed = parseEquation(prevStep.nextEquation);
+            set(pushEquationAtom, parsed, prevStep.stepLabel || 'Step');
+          }
+        }
+      }
+    }
+    // If going back, only move to parent if equation doesn't already match the previous step's nextEquation
+    else if (currentStepIndex !== null && nextIndex < currentStepIndex) {
+      const prevStep = nextIndex > 0 ? chapter.steps[nextIndex - 1] : null;
+      const targetEqStr = prevStep ? prevStep.nextEquation : chapter.initialEquation;
+      
+      if (targetEqStr && currentEq) {
+        const currentStr = equationToString(currentEq).replace(/\s+/g, '');
+        const targetStr = targetEqStr.replace(/\s+/g, '');
+        
+        if (currentStr !== targetStr) {
+          const tree = get(historyTreeAtom);
+          const nodeId = get(currentNodeIdAtom);
+          const activeNode = tree[nodeId];
+          if (activeNode?.parentId) {
+            set(currentNodeIdAtom, activeNode.parentId);
+          }
+        }
+      }
+    }
+
+    set(onboardingStepIndexAtom, nextIndex);
+    set(onboardingHighlightPathAtom, chapter.steps[nextIndex].highlightPath);
+
+    // Update selection based on next step's selectPath
+    const nextStep = chapter.steps[nextIndex];
+    if (nextStep && nextStep.selectPath) {
+      set(sourcePathAtom, nextStep.selectPath);
+    } else {
+      set(sourcePathAtom, null);
+    }
+  }
+);
+
+
+
+
+/**
+ * The target slot the tutorial wants clicked next: the synced target path whose
+ * resulting equation matches the active step's expected nextEquation. Null when
+ * no source is selected (targetPathsAtom empty) or no slot produces the result.
+ */
+export const onboardingTargetPathAtom = atom<string | null>((get) => {
+  const chapterId = get(onboardingChapterIdAtom);
+  const stepIndex = get(onboardingStepIndexAtom);
+  if (!chapterId || stepIndex === null) return null;
+
+  const chapter = ONBOARDING_CHAPTERS.find(c => c.id === chapterId);
+  const step = chapter?.steps[stepIndex];
+  if (!step || !step.nextEquation) return null;
+
+  const targetStr = step.nextEquation.replace(/\s+/g, '');
+  for (const [path, eq] of Object.entries(get(targetPathsAtom))) {
+    if (equationToString(eq).replace(/\s+/g, '') === targetStr) return path;
+  }
+  return null;
+});
+
+/**
+ * The reduce handle the tutorial wants clicked next: the synced reducible action
+ * whose resulting equation matches the active step's expected nextEquation.
+ * When set, the annotation circle marks this handle instead of the node box.
+ */
+export const onboardingReduceHandleAtom = atom<{ path: string; index: number } | null>((get) => {
+  const chapterId = get(onboardingChapterIdAtom);
+  const stepIndex = get(onboardingStepIndexAtom);
+  if (!chapterId || stepIndex === null) return null;
+
+  const chapter = ONBOARDING_CHAPTERS.find(c => c.id === chapterId);
+  const step = chapter?.steps[stepIndex];
+  if (!step || !step.nextEquation) return null;
+
+  const targetStr = step.nextEquation.replace(/\s+/g, '');
+  for (const [path, actions] of Object.entries(get(reduciblePathsAtom))) {
+    const index = actions.findIndex(a => equationToString(a.equation).replace(/\s+/g, '') === targetStr);
+    if (index !== -1) return { path, index };
+  }
+  return null;
+});
+
+/**
+ * The active step's global operation, if any. During the tour the equals sign
+ * (global-ops radial menu) is locked except on steps that teach a global op,
+ * where it carries the annotation circle instead.
+ */
+export const onboardingGlobalOpAtom = atom((get) => {
+  const chapterId = get(onboardingChapterIdAtom);
+  const stepIndex = get(onboardingStepIndexAtom);
+  if (!chapterId || stepIndex === null) return null;
+
+  const chapter = ONBOARDING_CHAPTERS.find(c => c.id === chapterId);
+  return chapter?.steps[stepIndex]?.globalOp ?? null;
+});

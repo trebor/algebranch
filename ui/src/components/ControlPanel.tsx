@@ -280,7 +280,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
         : `${THEME_GLASS.PANEL} p-4`
     }`}>
       {/* Sidebar Header with Timeline Actions */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-4 shrink-0">
+      <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER} pb-4 shrink-0`}>
         <h2 className="text-base lg:text-lg font-semibold lg:font-bold text-white flex items-center gap-2 select-none">
           <GitFork className="text-indigo-400 rotate-180" size={18} />
           <span>History</span>
@@ -290,7 +290,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
             <button
               onClick={handleUndo}
               disabled={!canUndo}
-              className={`p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+              className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
             >
               <ChevronLeft size={16} />
             </button>
@@ -299,7 +299,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
             <button
               onClick={handleRedo}
               disabled={!canRedo}
-              className={`p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+              className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
             >
               <ChevronRight size={16} />
             </button>
@@ -308,7 +308,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
             <button
               onClick={handleResetAll}
               disabled={Object.keys(tree).length <= 1}
-              className={`p-1.5 rounded-lg border border-white/10 text-red-400 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+              className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-red-400 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
             >
               <RotateCcw size={16} />
             </button>
@@ -428,7 +428,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
                         <div className="text-[10px] lowercase-none normal-case leading-tight">
                           This action leads back to <strong>Step {loopAncestor.stepIndex} ({loopAncestor.label})</strong>.
                         </div>
-                        <div className="text-[9px] text-white/40 mt-1 italic">
+                        <div className={`text-[9px] ${THEME_GLASS.TEXT_MUTED} mt-1 italic`}>
                           Click to select and return to Step {loopAncestor.stepIndex}.
                         </div>
                       </div>
@@ -438,16 +438,16 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
                       onClick={() => handleStepClick(loopAncestor.id)} // Selects and jumps back to the original ancestor!
                       onMouseEnter={() => setHoveredLoopTargetId(loopAncestor.id)}
                       onMouseLeave={() => setHoveredLoopTargetId(null)}
-                      className={`w-11 h-11 rounded-full flex items-center justify-center border select-none cursor-pointer transition-all duration-300 relative group/node ${
+                      className={`w-11 h-11 rounded-full flex items-center justify-center border select-none transition-all duration-300 relative group/node ${
                         isLoopHighlight
-                          ? 'border-fuchsia-500 bg-fuchsia-500/20 shadow-[0_0_15px_rgba(217,70,239,0.45)] scale-[1.05]'
-                          : 'border-fuchsia-500/40 hover:border-fuchsia-500/80 bg-fuchsia-950/60 hover:bg-fuchsia-950/80 text-fuchsia-400 hover:text-fuchsia-300 shadow-md shadow-fuchsia-950/20'
+                          ? THEME_GLASS.LOOP_NODE_ACTIVE
+                          : THEME_GLASS.LOOP_NODE_DEFAULT
                       }`}
                     >
                       {/* Step index badge on top-left */}
                       <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
                         isLoopHighlight
-                          ? 'bg-fuchsia-600 border-fuchsia-400 text-fuchsia-100'
+                          ? THEME_GLASS.TREE_NODE_BADGE_LOOP
                           : 'bg-fuchsia-950 border-fuchsia-500/30 text-fuchsia-400'
                       }`}>
                         {stepNum}
@@ -472,12 +472,12 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
                     width: `${node.width}px`,
                     height: `${cardHeight}px`,
                   }}
-                  className="max-w-[85vw] w-max p-4 z-50 text-left lowercase-none normal-case flex flex-col gap-2 pointer-events-auto font-sans bg-neutral-950/98 shadow-[0_0_30px_rgba(99,102,241,0.25)] border border-indigo-500/20"
+                  className={`max-w-[85vw] w-max p-4 z-50 text-left lowercase-none normal-case flex flex-col gap-2 pointer-events-auto font-sans ${THEME_GLASS.TOOLTIP_DETAILS}`}
                   content={
                     <>
                       <div className="text-[10px] text-indigo-400 font-bold tracking-wider uppercase select-none border-b border-indigo-500/10 pb-1.5 mb-1 flex items-center justify-between gap-12">
                         <span>Step Details — {node.label}</span>
-                        <span className="text-[9px] text-white/30 font-sans normal-case font-medium">Step {stepNum}</span>
+                        <span className={`text-[9px] ${THEME_GLASS.TEXT_MUTED_EXTRA} font-sans normal-case font-medium`}>Step {stepNum}</span>
                       </div>
                       <div className="flex items-center justify-center gap-2 py-2 overflow-x-auto select-all text-base sm:text-lg font-semibold text-indigo-100">
                         <PreviewEquationNode path="lhs" customEquation={node.equation} />
@@ -496,21 +496,21 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
                     onMouseLeave={() => {
                       setHoveredLoopTargetId(null);
                     }}
-                    className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none cursor-pointer transition-all duration-300 relative group/node p-1.5 ${
+                    className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none transition-all duration-300 relative group/node ${
                       isLoopHighlight
-                        ? 'border-fuchsia-500/80 text-fuchsia-300 bg-fuchsia-500/10 shadow-[0_0_15px_rgba(217,70,239,0.35)] scale-[1.02]'
+                        ? THEME_GLASS.TREE_NODE_LOOP
                         : isCurrent
-                        ? 'border-indigo-400/85 text-indigo-300 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.25)] scale-[1.02]'
-                        : 'border-white/5 hover:border-white/12 bg-neutral-950/80 hover:bg-neutral-900/90 text-white/55 hover:text-white/85 shadow-md'
+                        ? THEME_GLASS.TREE_NODE_ACTIVE
+                        : THEME_GLASS.TREE_NODE_DEFAULT
                     }`}
                   >
                     {/* Step index badge on top-left */}
                     <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
                       isLoopHighlight
-                        ? 'bg-fuchsia-600 border-fuchsia-400 text-fuchsia-100'
+                        ? THEME_GLASS.TREE_NODE_BADGE_LOOP
                         : isCurrent 
-                        ? 'bg-indigo-600 border-indigo-400 text-indigo-100'
-                        : 'bg-neutral-900 border-white/10 text-white/60'
+                        ? THEME_GLASS.TREE_NODE_BADGE_ACTIVE
+                        : THEME_GLASS.TREE_NODE_BADGE_DEFAULT
                     }`}>
                       {stepNum}
                     </span>
@@ -526,7 +526,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
                       <Tooltip content="Copy Equation" position="top">
                         <button
                           onClick={(e) => handleCopyStep(e, node.equation, node.id)}
-                          className={`p-1 rounded-md border border-white/5 bg-neutral-950 text-white/40 hover:text-white hover:bg-white/10 hover:border-white/15 cursor-pointer ${
+                          className={`p-1 rounded-md border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-neutral-950 ${THEME_GLASS.TEXT_MUTED} hover:text-white hover:bg-white/10 hover:border-white/15 cursor-pointer ${
                             isCopied ? 'text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10 opacity-100' : ''
                           }`}
                         >
@@ -632,13 +632,13 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
   return (
     <div className="flex flex-col gap-4 py-2 text-white">
       {/* Header toolbar */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
+      <div className={`flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
         <span className="text-sm font-semibold text-indigo-300">Steps Timeline</span>
         <div className="flex items-center gap-2">
           <button
             onClick={handleUndo}
             disabled={!canUndo}
-            className="p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
+            className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer`}
             title="Undo (⌘Z)"
           >
             <ChevronLeft size={16} />
@@ -646,7 +646,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
           <button
             onClick={handleRedo}
             disabled={!canRedo}
-            className="p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
+            className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer`}
             title="Redo (⌘⇧Z)"
           >
             <ChevronRight size={16} />
@@ -654,7 +654,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
           <button
             onClick={handleResetAll}
             disabled={sortedNodes.length <= 1}
-            className="p-1.5 rounded-lg border border-white/10 text-red-400 hover:text-red-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
+            className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-red-400 hover:text-red-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer`}
             title="Reset All"
           >
             <RotateCcw size={16} />
@@ -663,7 +663,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
       </div>
 
       {/* Timeline items list */}
-      <div className="relative flex flex-col gap-6 pl-4 border-l border-white/10 ml-2 py-2">
+      <div className={`relative flex flex-col gap-6 pl-4 border-l ${THEME_GLASS.PANEL_BORDER} ml-2 py-2`}>
         {sortedNodes.map((node, idx) => {
           const isCurrent = node.id === currentNodeId;
           const parentIndex = node.parentId ? stepIndices.get(node.parentId) : null;
@@ -680,8 +680,8 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
               <div
                 className={`absolute -left-[25px] top-0.5 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center text-[8px] font-bold transition-all duration-300 ${
                   isCurrent
-                    ? 'bg-indigo-600 border-indigo-400 text-white scale-110 shadow-[0_0_10px_rgba(99,102,241,0.5)]'
-                    : 'bg-neutral-900 border-white/20 text-white/50 group-hover:border-indigo-400/50 group-hover:text-indigo-300'
+                    ? THEME_GLASS.TIMELINE_BADGE_ACTIVE
+                    : THEME_GLASS.TIMELINE_BADGE_DEFAULT
                 }`}
               >
                 {idx}
@@ -691,11 +691,11 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
               <div
                 className={`flex flex-col gap-1.5 p-3 rounded-xl border transition-all duration-300 ${
                   isCurrent
-                    ? 'border-indigo-500/30 bg-indigo-500/10 shadow-[0_0_12px_rgba(99,102,241,0.15)]'
-                    : 'border-white/5 bg-neutral-900/60 hover:bg-neutral-900/90 hover:border-white/10'
+                    ? THEME_GLASS.TIMELINE_CARD_ACTIVE
+                    : THEME_GLASS.TIMELINE_CARD_DEFAULT
                 }`}
               >
-                <div className="flex items-center justify-between text-[10px] text-white/40 font-semibold uppercase tracking-wider">
+                <div className={`flex items-center justify-between text-[10px] ${THEME_GLASS.TEXT_MUTED} font-semibold uppercase tracking-wider`}>
                   <span className={isCurrent ? 'text-indigo-400 font-bold' : ''}>
                     {node.label}
                   </span>

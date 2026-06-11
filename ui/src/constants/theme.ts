@@ -85,4 +85,8 @@ export const THEME_GLASS = {
   TIMELINE_BADGE_DEFAULT: 'bg-neutral-900 border-white/20 text-white/55 group-hover:border-indigo-400/50 group-hover:text-indigo-300',
   TIMELINE_CARD_ACTIVE: 'border-indigo-500/30 bg-indigo-500/10 shadow-[0_0_12px_rgba(99,102,241,0.15)]',
   TIMELINE_CARD_DEFAULT: 'border-white/5 bg-neutral-900/60 hover:bg-neutral-900/90 hover:border-white/10',
+
+  // --- Onboarding / Tour specific ---
+  BUTTON_SUCCESS: 'bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer shadow-md shadow-emerald-600/20 border border-emerald-400/20',
+  COACH_CARD: 'w-full p-4 rounded-2xl backdrop-blur-xl bg-[#110f22]/95 border border-indigo-500/30 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col gap-3',
 } as const;

@@ -207,11 +207,11 @@ export const OnboardingTour: React.FC = () => {
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className={`${THEME_GLASS.PANEL} max-w-md w-full p-6 flex flex-col gap-6 shadow-[0_0_30px_rgba(99,102,241,0.25)] border border-indigo-500/20`}
+          className={`${THEME_GLASS.PANEL} max-w-md w-full p-6 flex flex-col gap-6 ${THEME_GLASS.TOOLTIP_DETAILS}`}
         >
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
                 <Sparkles size={18} />
               </div>
               <div>
@@ -221,14 +221,14 @@ export const OnboardingTour: React.FC = () => {
             </div>
             <button
               onClick={handleSkipPrompt}
-              className="text-white/40 hover:text-white hover:bg-white/5 p-1 rounded-lg transition-colors cursor-pointer"
+              className={`hover:bg-white/5 p-1 rounded-lg transition-colors cursor-pointer ${THEME_GLASS.TEXT_MUTED} hover:text-white`}
             >
               <X size={16} />
             </button>
           </div>
 
           <div className="flex flex-col gap-3">
-            <p className="text-xs text-white/70 leading-relaxed">
+            <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed`}>
               Algebranch is an interactive sandbox where you manipulate equations by tapping and transposing terms. Choose an interactive chapter below to learn the ropes!
             </p>
             
@@ -237,22 +237,22 @@ export const OnboardingTour: React.FC = () => {
                 <button
                   key={chapter.id}
                   onClick={() => handleStartChapter(chapter.id)}
-                  className="w-full text-left p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 active:scale-[0.99] transition-all flex items-center justify-between gap-3 cursor-pointer group"
+                  className={`w-full text-left p-3 rounded-xl border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-white/5 hover:bg-white/10 hover:border-white/10 active:scale-[0.99] transition-all flex items-center justify-between gap-3 cursor-pointer group`}
                 >
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors">{chapter.title}</p>
-                    <p className="text-[10px] text-white/50 truncate mt-0.5">{chapter.description}</p>
+                    <p className={`text-[10px] ${THEME_GLASS.TEXT_MUTED_LIGHT} truncate mt-0.5`}>{chapter.description}</p>
                   </div>
-                  <ArrowRight size={14} className="text-white/30 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+                  <ArrowRight size={14} className={`${THEME_GLASS.TEXT_MUTED_EXTRA} group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all shrink-0`} />
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/10">
+          <div className={`flex items-center justify-end gap-3 pt-2 border-t ${THEME_GLASS.PANEL_BORDER}`}>
             <button
               onClick={handleSkipPrompt}
-              className="px-4 py-2 text-xs font-bold text-white/60 hover:text-white transition-colors cursor-pointer"
+              className={`px-4 py-2 text-xs font-bold ${THEME_GLASS.TEXT_MUTED_LIGHT} hover:text-white transition-colors cursor-pointer`}
             >
               Skip and Solve Freely
             </button>
@@ -307,14 +307,14 @@ export const OnboardingTour: React.FC = () => {
               Chapter Complete — {activeChapter.title}
             </span>
             <h3 className="font-bold text-white text-base lg:text-lg">{activeStep.title}</h3>
-            <p className="text-xs text-white/70 leading-relaxed">{activeStep.description}</p>
+            <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed`}>{activeStep.description}</p>
           </div>
 
           <div className="flex flex-col gap-2.5 w-full pt-2">
             {nextChapter ? (
               <button
                 onClick={() => startChapter(nextChapter.id)}
-                className="w-full h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95 transition-all text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-indigo-600/20 border border-indigo-400/20"
+                className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_PRIMARY}`}
               >
                 <span>Next: {nextChapter.title.split('. ')[1] || nextChapter.title}</span>
                 <ArrowRight size={13} />
@@ -322,7 +322,7 @@ export const OnboardingTour: React.FC = () => {
             ) : (
               <button
                 onClick={handleFinish}
-                className="w-full h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 transition-all text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-emerald-600/20 border border-emerald-400/20"
+                className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_SUCCESS}`}
               >
                 <CheckCircle2 size={13} />
                 <span>Finish &amp; Explore Freely</span>
@@ -332,7 +332,7 @@ export const OnboardingTour: React.FC = () => {
             <div className="flex items-center justify-center gap-4">
               <button
                 onClick={handleAllChapters}
-                className="text-[11px] font-bold text-white/50 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
+                className={`text-[11px] font-bold ${THEME_GLASS.TEXT_MUTED_LIGHT} hover:text-white transition-colors cursor-pointer flex items-center gap-1.5`}
               >
                 <BookOpen size={11} />
                 <span>All Chapters</span>
@@ -340,7 +340,7 @@ export const OnboardingTour: React.FC = () => {
               {nextChapter && (
                 <button
                   onClick={handleFinish}
-                  className="text-[11px] font-bold text-white/50 hover:text-white transition-colors cursor-pointer"
+                  className={`text-[11px] font-bold ${THEME_GLASS.TEXT_MUTED_LIGHT} hover:text-white transition-colors cursor-pointer`}
                 >
                   Explore Freely
                 </button>
@@ -361,7 +361,7 @@ export const OnboardingTour: React.FC = () => {
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="w-full p-4 rounded-2xl backdrop-blur-xl bg-[#110f22]/95 border border-indigo-500/30 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col gap-3"
+          className={THEME_GLASS.COACH_CARD}
         >
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -369,7 +369,7 @@ export const OnboardingTour: React.FC = () => {
               <BookOpen size={13} />
               <span className="text-[10px] font-bold tracking-wider uppercase">{activeChapter.title}</span>
             </div>
-            <span className="text-[10px] text-white/40 font-bold">
+            <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} font-bold`}>
               Step {stepIndex + 1} of {activeChapter.steps.length}
             </span>
           </div>
@@ -377,7 +377,7 @@ export const OnboardingTour: React.FC = () => {
           {/* Title & Desc */}
           <div className="flex flex-col gap-1">
             <h4 className="text-xs font-bold text-white">{activeStep.title}</h4>
-            <p className="text-[11px] text-white/70 leading-relaxed mt-0.5">
+            <p className={`text-[11px] ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed mt-0.5`}>
               {activeStep.description}
             </p>
           </div>
@@ -385,7 +385,7 @@ export const OnboardingTour: React.FC = () => {
           {/* Node-kind color legend (steps with legend: 'nodeTypes') */}
           {activeStep.legend === 'nodeTypes' && (
             <div className="grid grid-cols-2 gap-2 mt-1">
-              <div className="flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border border-white/10 text-white/95">
+              <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
                 <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-sky-300 font-serif italic font-medium text-[10px]`}>x</span>
                 <div className="flex flex-col">
                   <span className="font-bold text-white/90 text-[9px] leading-tight">Variable</span>
@@ -393,7 +393,7 @@ export const OnboardingTour: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border border-white/10 text-white/95">
+              <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
                 <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-yellow-400/90 font-semibold text-[10px]`}>3</span>
                 <div className="flex flex-col">
                   <span className="font-bold text-white/90 text-[9px] leading-tight">Constant</span>
@@ -401,11 +401,11 @@ export const OnboardingTour: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border border-white/10 text-white/95">
+              <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
                 <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-white/90 font-bold text-[10px]`}>+</span>
                 <div className="flex flex-col">
                   <span className="font-bold text-white/90 text-[9px] leading-tight">Operator</span>
-                  <span className="text-white/45 text-[7px] leading-none">Combines terms</span>
+                  <span className={`${THEME_GLASS.TEXT_MUTED} text-[7px] leading-none`}>Combines terms</span>
                 </div>
               </div>
 
@@ -422,7 +422,7 @@ export const OnboardingTour: React.FC = () => {
           {/* Selection-state color legend (steps with legend: 'sourceTarget') */}
           {activeStep.legend === 'sourceTarget' && (
             <div className="grid grid-cols-2 gap-2 mt-1">
-              <div className="flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border border-white/10 text-white/95">
+              <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
                 <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_SOURCE} text-[10px]`}>4</span>
                 <div className="flex flex-col">
                   <span className="font-bold text-white/90 text-[9px] leading-tight">Source</span>
@@ -430,7 +430,7 @@ export const OnboardingTour: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border border-white/10 text-white/95">
+              <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
                 <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_TARGET} text-[10px]`}>11</span>
                 <div className="flex flex-col">
                   <span className="font-bold text-white/90 text-[9px] leading-tight">Target</span>
@@ -441,10 +441,10 @@ export const OnboardingTour: React.FC = () => {
           )}
 
           {/* Controls */}
-          <div className="flex items-center justify-between pt-2 border-t border-white/10 mt-1">
+          <div className={`flex items-center justify-between pt-2 border-t ${THEME_GLASS.PANEL_BORDER} mt-1`}>
             <button
               onClick={() => setStep(null)}
-              className="text-[10px] font-bold text-white/40 hover:text-white transition-colors cursor-pointer"
+              className={`text-[10px] font-bold ${THEME_GLASS.TEXT_MUTED} hover:text-white transition-colors cursor-pointer`}
             >
               Exit Tour
             </button>
@@ -453,7 +453,7 @@ export const OnboardingTour: React.FC = () => {
               {stepIndex > 0 && (
                 <button
                   onClick={() => setStep(stepIndex - 1)}
-                  className="h-7 px-2.5 rounded-lg border border-white/10 hover:bg-white/5 text-white/80 active:scale-95 transition-all text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                  className={`h-7 px-2.5 text-[10px] font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_SECONDARY}`}
                 >
                   <ArrowLeft size={10} />
                   <span>Back</span>
@@ -462,7 +462,7 @@ export const OnboardingTour: React.FC = () => {
               
               <button
                 onClick={() => setStep(isLastStep ? null : stepIndex + 1)}
-                className="h-7 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95 transition-all text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-md shadow-indigo-600/20"
+                className={`h-7 px-3 text-[10px] font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_PRIMARY}`}
               >
                 <span>{isLastStep ? 'Finish' : 'Next'}</span>
                 {isLastStep ? <CheckCircle2 size={10} /> : <ArrowRight size={10} />}

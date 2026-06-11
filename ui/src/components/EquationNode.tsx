@@ -190,9 +190,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     return false;
   }, [hoverPath, candidatePaths]);
 
-  const actions = isOnboardingActive
-    ? (path === onboardingHighlightPath ? (reduciblePaths[path] || []) : [])
-    : (reduciblePaths[path] || []);
+  // During the tour, only the specific handle the tutorial wants clicked is
+  // offered (the one whose result matches the step's expected equation);
+  // every other handle is locked out like the rest of the UI.
+  const allActions = reduciblePaths[path] || [];
+  const actions = !isOnboardingActive
+    ? allActions
+    : isHandleMarked && onboardingReduceHandle && allActions[onboardingReduceHandle.index]
+      ? [allActions[onboardingReduceHandle.index]]
+      : [];
   const isReducible = actions.length > 0;
 
   // Toggle Root Sign (+/- branches) via global action
@@ -231,6 +237,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
           if (!activeTargetPath) return;
         }
       } else {
+        // Steps that expect a handle click lock out node selection entirely —
+        // only the handle button (which stops propagation itself) is live.
+        if (onboardingReduceHandle) return;
         if (path !== onboardingHighlightPath) return;
       }
     }
@@ -607,7 +616,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       borderRadius: inExponent ? '0.12em' : '9999px',
                     }}
                   />
-                  {isHandleMarked && onboardingReduceHandle?.index === index && (
+                  {isHandleMarked && (
                     <span
                       aria-hidden="true"
                       className="absolute -inset-[0.3em] rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] pointer-events-none z-20 animate-[onboarding-circle-breathe_1.8s_ease-in-out_infinite]"

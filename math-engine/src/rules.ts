@@ -675,6 +675,22 @@ const RAW_RULES: RawRule[] = [
     targetPatternStr: '5 * _A',
     description: 'Combines five identical terms into multiplication by 5.',
   },
+  {
+    id: 'fraction_decompose',
+    name: 'Decompose Fraction',
+    category: 'Basic Arithmetic',
+    sourcePatternStr: '_A / _B',
+    targetPatternStr: '_A * (1 / _B)',
+    description: 'Decomposes a division into multiplication by a reciprocal.',
+  },
+  {
+    id: 'fraction_compose',
+    name: 'Decompose Fraction (Reverse)',
+    category: 'Basic Arithmetic',
+    sourcePatternStr: '_A * (1 / _B)',
+    targetPatternStr: '_A / _B',
+    description: 'Combines multiplication by a reciprocal into a division.',
+  },
 ];
 
 export const HIGH_SCHOOL_IDENTITIES: RewriteRule[] = RAW_RULES.map((rule) => {

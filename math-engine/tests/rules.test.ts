@@ -101,7 +101,9 @@ const ALL_RULE_TEST_CASES: RuleTestCase[] = [
   { ruleId: 'repeated_addition_4_reverse', input: '(x + 3) + (x + 3) + (x + 3) + (x + 3)', expected: '4*(x+3)' },
   { ruleId: 'repeated_addition_5', input: '5 * (x + 3)', expected: '(x+3)+(x+3)+(x+3)+(x+3)+(x+3)' },
   { ruleId: 'repeated_addition_5_right', input: '(x + 3) * 5', expected: '(x+3)+(x+3)+(x+3)+(x+3)+(x+3)' },
-  { ruleId: 'repeated_addition_5_reverse', input: '(x + 3) + (x + 3) + (x + 3) + (x + 3) + (x + 3)', expected: '5*(x+3)' }
+  { ruleId: 'repeated_addition_5_reverse', input: '(x + 3) + (x + 3) + (x + 3) + (x + 3) + (x + 3)', expected: '5*(x+3)' },
+  { ruleId: 'fraction_decompose', input: 'x / 5', expected: 'x*(1/5)' },
+  { ruleId: 'fraction_compose', input: 'x * (1 / 5)', expected: 'x/5' }
 ];
 
 describe('Exhaustive Bidirectional Identity Rules Verification', () => {

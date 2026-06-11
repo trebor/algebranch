@@ -33,4 +33,37 @@ export const THEME_GLASS = {
   // outside the app's rounded-rect/hue vocabulary. Pair with an -inset-* class
   // to control how far it overshoots the marked element.
   ONBOARDING_CIRCLE: 'absolute rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] pointer-events-none z-20 animate-[onboarding-circle-breathe_1.8s_ease-in-out_infinite]',
+
+  // --- Chrome Design Tokens (Issue #39) ---
+  PANEL_HEADER: 'border-b border-white/10 pb-3',
+  PANEL_BORDER: 'border-white/10',
+  PANEL_BORDER_SUBTLE: 'border-white/5',
+  
+  // Text & Colors
+  TEXT_MUTED: 'text-white/40',
+  TEXT_MUTED_EXTRA: 'text-white/30',
+  TEXT_MUTED_LIGHT: 'text-white/50',
+  TEXT_MUTED_BRIGHT: 'text-white/70',
+
+  // Buttons
+  BUTTON_PRIMARY: 'bg-indigo-600/95 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/10 border border-indigo-400/20 active:scale-95 transition-all duration-150 cursor-pointer',
+  BUTTON_SECONDARY: 'bg-neutral-900 border border-white/10 hover:bg-neutral-800 hover:border-white/20 text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer',
+  BUTTON_SECONDARY_MUTED: 'bg-neutral-950 border border-white/5 rounded-xl text-white/30 transition-all duration-150 cursor-not-allowed',
+  BUTTON_DANGER: 'bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 transition-all duration-150 cursor-pointer',
+  
+  // Controls & Popovers
+  FIELD_SELECT: 'bg-neutral-950/80 border border-white/5 hover:border-white/10 text-indigo-100 hover:text-white focus:outline-none focus:border-indigo-500/80 transition-all duration-150 font-mono cursor-pointer rounded-xl',
+  OVERLAY_BG: 'bg-[#16142a] border border-white/10 rounded-xl shadow-2xl',
+  OVERLAY_MOBILE: 'bg-[#110f22]/98 backdrop-blur-xl',
+  
+  // List items & groups
+  LIST_ITEM_ACTIVE: 'text-indigo-300 bg-indigo-600/5 font-semibold',
+  LIST_ITEM_HOVER: 'hover:bg-indigo-600/20 transition-colors',
+  ACTIVE_BADGE: 'bg-indigo-500/20 text-indigo-400 rounded-full border border-indigo-500/30',
+  BADGE_MUTED: 'text-white/40 bg-white/5 rounded-full border border-white/5',
+  ACCENT_PLAY: 'p-1.5 rounded-lg bg-white/0 group-hover:bg-indigo-600/20 text-white/20 group-hover:text-indigo-400 border border-transparent group-hover:border-indigo-500/30 transform group-hover:scale-105 transition-all duration-200',
+  
+  // Library specific
+  CATEGORY_HEADER: 'bg-neutral-950/60 border border-white/5 rounded-xl text-indigo-300 hover:text-indigo-200 hover:border-white/10 hover:bg-neutral-900/20 transition-all select-none cursor-pointer',
+  CATEGORY_ITEM: 'rounded-xl border border-white/5 bg-neutral-950/80 hover:bg-neutral-900/90 text-white/55 hover:text-white/85 transition-all duration-200 cursor-pointer shadow-sm',
 } as const;

@@ -98,10 +98,10 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
 
   const triggerTooltipContent = currentSession ? (
     <div className="flex flex-col gap-1 text-left max-w-xs select-none">
-      <span className="text-[9px] text-white/30 uppercase tracking-wider font-semibold">Full Expression</span>
+      <span className={`text-[9px] ${THEME_GLASS.TEXT_MUTED_EXTRA} uppercase tracking-wider font-semibold`}>Full Expression</span>
       <span className="font-mono text-xs text-indigo-300 break-all">{currentSession.name}</span>
-      <div className="border-t border-white/5 my-0.5" />
-      <div className="text-[10px] text-white/40 flex items-center gap-1.5">
+      <div className={`border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} my-0.5`} />
+      <div className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} flex items-center gap-1.5`}>
         <span>Last used:</span>
         <span className="text-indigo-300 font-medium">{formatTimestamp(currentSession.timestamp)}</span>
       </div>
@@ -111,7 +111,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   return (
     <div className="shrink-0 flex flex-col gap-3">
       {/* Header (Desktop Only) */}
-      <div className="hidden xl:flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
+      <div className={`hidden xl:flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
         <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
           <LayoutGrid className="text-indigo-400" size={18} />
           <span>Workspace</span>
@@ -121,7 +121,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
       {/* Recessed Content Box */}
       <div className={`p-4 flex flex-col gap-4 ${THEME_GLASS.TREE_BG}`}>
         <div className="flex flex-col gap-1.5 shrink-0">
-          <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
+          <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
             Define Equation
           </span>
           <div className="grid grid-cols-2 gap-2">
@@ -131,7 +131,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                 setIsInputModalOpen(true);
                 onCloseMobile?.();
               }}
-              className="h-9 px-3 text-[11px] font-bold bg-indigo-600/95 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/10 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-indigo-400/20"
+              className={`h-9 px-3 text-[11px] font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_PRIMARY}`}
             >
               <PenTool size={12} />
               <span>Write</span>
@@ -142,7 +142,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                 setOnboardingShowDirectory(true);
                 onCloseMobile?.();
               }}
-              className="h-9 px-3 text-[11px] font-bold bg-neutral-900 border border-white/10 hover:bg-neutral-800 hover:border-white/20 text-white rounded-xl active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className={`h-9 px-3 text-[11px] font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_SECONDARY}`}
             >
               <BookOpen size={12} className="text-indigo-400" />
               <span>Tutorial</span>
@@ -151,8 +151,8 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
         </div>
 
         {/* Recents Dropdown Selector Section */}
-        <div className="flex flex-col gap-1.5 border-t border-white/5 pt-3 shrink-0">
-          <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
+        <div className={`flex flex-col gap-1.5 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} pt-3 shrink-0`}>
+          <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
             Saved Workspaces
           </span>
           <div className="relative w-full">
@@ -166,24 +166,24 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                     <button
                       type="button"
                       onClick={handleRecentsClick}
-                      className="w-full h-8 px-3 text-xs bg-neutral-950/80 border border-white/5 hover:border-white/10 rounded-xl text-indigo-100 hover:text-white focus:outline-none focus:border-indigo-500/80 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
+                      className={`w-full h-8 px-3 text-xs flex items-center justify-between gap-2 min-w-0 ${THEME_GLASS.FIELD_SELECT}`}
                     >
                       <span className="truncate flex-1 text-left font-semibold">
                         {currentSession.name}
                       </span>
-                      <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={12} className={`${THEME_GLASS.TEXT_MUTED} transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
                   </Tooltip>
                 ) : (
                   <button
                     type="button"
                     onClick={handleRecentsClick}
-                    className="w-full h-8 px-3 text-xs bg-neutral-950/80 border border-white/5 hover:border-white/10 rounded-xl text-indigo-100 hover:text-white focus:outline-none focus:border-indigo-500/80 transition-all font-mono cursor-pointer flex items-center justify-between gap-2 min-w-0"
+                    className={`w-full h-8 px-3 text-xs flex items-center justify-between gap-2 min-w-0 ${THEME_GLASS.FIELD_SELECT}`}
                   >
                     <span className="truncate flex-1 text-left">
                       {currentSession?.name || 'Select workspace...'}
                     </span>
-                    <ChevronDown size={12} className={`text-white/40 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={12} className={`${THEME_GLASS.TEXT_MUTED} transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
                 )}
 
@@ -193,7 +193,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                       className="fixed inset-0 z-40 cursor-default" 
                       onClick={() => setIsDropdownOpen(false)} 
                     />
-                    <div className="absolute left-0 right-0 mt-1.5 bg-[#16142a] border border-white/10 rounded-xl shadow-2xl overflow-y-auto max-h-60 z-50 py-1 animate-[fadeIn_0.15s_ease-out]">
+                    <div className={`absolute left-0 right-0 mt-1.5 overflow-y-auto max-h-60 z-50 py-1 animate-[fadeIn_0.15s_ease-out] ${THEME_GLASS.OVERLAY_BG}`}>
                       {[...savedSessions]
                         .sort((a, b) => b.timestamp - a.timestamp)
                         .map((session) => {
@@ -216,14 +216,14 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                                 }
                                 onCloseMobile?.();
                               }}
-                              className={`w-full text-left px-3 py-2 text-xs flex justify-between items-center gap-4 hover:bg-indigo-600/20 transition-colors cursor-pointer ${
-                                isActive ? 'text-indigo-300 bg-indigo-600/5 font-semibold' : 'text-white/70'
+                              className={`w-full text-left px-3 py-2 text-xs flex justify-between items-center gap-4 ${THEME_GLASS.LIST_ITEM_HOVER} cursor-pointer ${
+                                isActive ? THEME_GLASS.LIST_ITEM_ACTIVE : THEME_GLASS.TEXT_MUTED_BRIGHT
                               }`}
                             >
                               <span className="truncate font-mono flex-1">
                                 {session.name}
                               </span>
-                              <span className="text-[10px] text-white/30 whitespace-nowrap font-sans shrink-0 flex items-center gap-1.5">
+                              <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED_EXTRA} whitespace-nowrap font-sans shrink-0 flex items-center gap-1.5`}>
                                 <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
                                 <span>·</span>
                                 <span>{formatTimestamp(session.timestamp)}</span>
@@ -239,12 +239,12 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
               <button
                 type="button"
                 disabled
-                className="w-full h-8 px-3 text-xs bg-neutral-950 border border-white/5 rounded-xl text-white/30 transition-all font-mono flex items-center justify-between gap-2 min-w-0 cursor-not-allowed"
+                className={`w-full h-8 px-3 text-xs flex items-center justify-between gap-2 min-w-0 ${THEME_GLASS.BUTTON_SECONDARY_MUTED}`}
               >
                 <span className="truncate flex-1 text-left">
                   No recent workspaces
                 </span>
-                <ChevronDown size={12} className="text-white/20 shrink-0" />
+                <ChevronDown size={12} className={`${THEME_GLASS.TEXT_MUTED_EXTRA} shrink-0`} />
               </button>
             )}
           </div>
@@ -252,19 +252,19 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
       </div>
 
       {isMobileRecentsOpen && mounted && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-50 bg-[#110f22]/98 backdrop-blur-xl flex flex-col p-6 pb-[env(safe-area-inset-bottom)] animate-[fadeIn_0.2s_ease-out]">
+        <div className={`fixed inset-0 z-50 flex flex-col p-6 pb-[env(safe-area-inset-bottom)] animate-[fadeIn_0.2s_ease-out] ${THEME_GLASS.OVERLAY_MOBILE}`}>
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+          <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER} pb-4 mb-6`}>
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2 select-none">
                 <FolderGit2 className="text-indigo-400" size={16} />
                 <span>Select Workspace</span>
               </h2>
-              <p className="text-[10px] text-white/40 mt-1 uppercase tracking-wider font-semibold">Explore and select a recent workspace</p>
+              <p className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} mt-1 uppercase tracking-wider font-semibold`}>Explore and select a recent workspace</p>
             </div>
             <button
               onClick={() => setIsMobileRecentsOpen(false)}
-              className="p-1.5 rounded-lg border border-white/10 hover:bg-white/5 text-white/50 hover:text-white transition-colors cursor-pointer"
+              className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} hover:bg-white/5 text-white/50 hover:text-white transition-colors cursor-pointer`}
             >
               <X size={16} />
             </button>
@@ -296,14 +296,14 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                     className={`w-full text-left p-4 rounded-2xl border transition-all flex justify-between items-center gap-4 cursor-pointer hover:scale-[1.01] active:scale-98 duration-150 ${
                       isActive 
                         ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.15)] font-semibold' 
-                        : 'border-white/5 bg-[#16142a]/30 hover:bg-[#16142a]/60 text-white/80 hover:text-white'
+                        : `border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-[#16142a]/30 hover:bg-[#16142a]/60 ${THEME_GLASS.TEXT_MUTED_LIGHT} hover:text-white`
                     }`}
                   >
                     <div className="flex-1 min-w-0 pr-2">
                       <div className="font-mono text-xs truncate text-indigo-50">
                         {session.name}
                       </div>
-                      <div className="text-[10px] text-white/40 mt-1 flex items-center gap-1.5 font-sans">
+                      <div className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} mt-1 flex items-center gap-1.5 font-sans`}>
                         <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
                         <span>·</span>
                         <span>{formatTimestamp(session.timestamp)}</span>
@@ -311,11 +311,11 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                     </div>
                     <div className="shrink-0 flex items-center gap-2">
                       {isActive ? (
-                        <span className="text-[9px] font-sans font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-400 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
+                        <span className={`text-[9px] font-sans font-bold uppercase tracking-wider px-2.5 py-0.5 ${THEME_GLASS.ACTIVE_BADGE}`}>
                           Active
                         </span>
                       ) : (
-                        <ChevronRight size={14} className="text-white/30" />
+                        <ChevronRight size={14} className={THEME_GLASS.TEXT_MUTED_EXTRA} />
                       )}
                     </div>
                   </button>
@@ -379,7 +379,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
     <div className="flex-1 flex flex-col min-h-0 gap-3">
       {/* Header */}
       {showHeader && (
-        <div className="hidden xl:flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
+        <div className={`hidden xl:flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
           <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
             <Library className="text-indigo-400" size={18} />
             <span>Equation Library</span>
@@ -388,7 +388,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
       )}
 
       {errorStr && (
-        <div className="flex items-start gap-2 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-2 animate-[fadeIn_0.2s_ease-out] shrink-0">
+        <div className={`flex items-start gap-2 text-[10px] p-2 animate-[fadeIn_0.2s_ease-out] shrink-0 ${THEME_GLASS.BUTTON_DANGER}`}>
           <ShieldAlert size={12} className="shrink-0 mt-0.5" />
           <span className="break-all">{errorStr}</span>
         </div>
@@ -403,10 +403,10 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
               {/* Category Header */}
               <button
                 onClick={() => toggleCategory(group.category)}
-                className="w-full flex items-center justify-between py-2 px-3 bg-neutral-950/60 border border-white/5 rounded-xl text-[10px] font-bold uppercase tracking-wider text-indigo-300 hover:text-indigo-200 transition-all select-none cursor-pointer hover:border-white/10 hover:bg-neutral-900/20"
+                className={`w-full flex items-center justify-between py-2 px-3 text-[10px] font-bold uppercase tracking-wider ${THEME_GLASS.CATEGORY_HEADER}`}
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-white/40">
+                  <span className={THEME_GLASS.TEXT_MUTED}>
                     {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -414,14 +414,14 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
                     <span>{group.category}</span>
                   </div>
                 </div>
-                <span className="text-[9px] font-sans font-semibold text-white/40 bg-white/5 px-2 py-0.5 rounded-full border border-white/5 group-hover:text-white">
+                <span className={`text-[9px] font-sans font-semibold px-2 py-0.5 group-hover:text-white ${THEME_GLASS.BADGE_MUTED}`}>
                   {group.presets.length}
                 </span>
               </button>
 
               {/* Category Items (Collapsible) */}
               {isExpanded && (
-                <div className="flex flex-col gap-2 pl-2 border-l border-white/5 ml-3 mt-1.5 animate-[fadeIn_0.2s_ease-out]">
+                <div className={`flex flex-col gap-2 pl-2 border-l ${THEME_GLASS.PANEL_BORDER_SUBTLE} ml-3 mt-1.5 animate-[fadeIn_0.2s_ease-out]`}>
                   {group.presets.map((preset) => (
                     <Tooltip
                       key={preset.id}
@@ -429,7 +429,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
                     >
                       <button
                         onClick={() => handlePresetSelect(preset.equation, preset.label)}
-                        className="w-full flex items-center justify-between text-left p-2.5 pl-3 rounded-xl border border-white/5 bg-neutral-950/80 hover:bg-neutral-900/90 text-white/55 hover:text-white/85 transition-all duration-200 cursor-pointer shrink-0 shadow-sm"
+                        className={`w-full flex items-center justify-between text-left p-2.5 pl-3 shrink-0 ${THEME_GLASS.CATEGORY_ITEM}`}
                       >
                         <div className="flex-1 min-w-0 pr-2">
                           <div className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">
@@ -439,7 +439,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
                             {preset.equation}
                           </div>
                         </div>
-                        <div className="p-1.5 rounded-lg bg-white/0 group-hover:bg-indigo-600/20 text-white/20 group-hover:text-indigo-400 border border-transparent group-hover:border-indigo-500/30 transform group-hover:scale-105 transition-all duration-200 shrink-0">
+                        <div className={THEME_GLASS.ACCENT_PLAY}>
                           <Play size={10} />
                         </div>
                       </button>

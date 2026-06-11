@@ -4,7 +4,7 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-(none)
+- [plans/issue-39-semantic-styling.md](plans/issue-39-semantic-styling.md) — `active` — Issue #39: Adopt semantic styling tokens and replace raw Tailwind colors with theme constants.
 
 ## Archive
 

@@ -54,6 +54,8 @@ import {
   radialMenuOpenAtom,
   swapSidesAtom,
   addTabAtom,
+  onboardingChapterIdAtom,
+  onboardingGlobalOpAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
@@ -130,6 +132,10 @@ export default function Home() {
 
   const [activeBottomSheet, setActiveBottomSheet] = useAtom(activeBottomSheetAtom);
   const [radialMenuOpen, setRadialMenuOpen] = useAtom(radialMenuOpenAtom);
+  const onboardingChapterId = useAtomValue(onboardingChapterIdAtom);
+  const onboardingGlobalOp = useAtomValue(onboardingGlobalOpAtom);
+  // During the tour the equals sign is locked except on global-op steps
+  const equalsLocked = !!onboardingChapterId && !onboardingGlobalOp;
   const swapSides = useSetAtom(swapSidesAtom);
   const isMobile = useIsMobile();
   const equalsRef = React.useRef<HTMLSpanElement>(null);
@@ -902,11 +908,22 @@ export default function Home() {
                       ref={equalsRef}
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (equalsLocked) return;
                         setRadialMenuOpen(!radialMenuOpen);
                       }}
-                      className="text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95 transition-all"
+                      className={`relative text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black transition-all ${
+                        equalsLocked
+                          ? 'cursor-default'
+                          : 'cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95'
+                      }`}
                     >
                       =
+                      {!!onboardingChapterId && onboardingGlobalOp && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute -inset-[0.4em] rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] pointer-events-none z-20 animate-[onboarding-circle-breathe_1.8s_ease-in-out_infinite]"
+                        />
+                      )}
                     </span>
 
                     {/* RHS Term Tree */}

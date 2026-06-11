@@ -10,6 +10,57 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(equationToString(eq)).toBe('x + 2 = 5');
   });
 
+  test('parseEquation rejects reserved keywords as variable names', () => {
+    expect(() => parseEquation('x = undefined')).toThrow();
+    expect(() => parseEquation('undefined = y')).toThrow();
+    expect(() => parseEquation('x = null')).toThrow();
+    expect(() => parseEquation('x = NaN')).toThrow();
+    expect(() => parseEquation('x = infinity')).toThrow();
+    expect(() => parseEquation('x = true')).toThrow();
+  });
+
+  test('parseEquation rejects empty sides', () => {
+    expect(() => parseEquation('x =')).toThrow();
+    expect(() => parseEquation('= 5')).toThrow();
+    expect(() => parseEquation('=')).toThrow();
+  });
+
+  test('parseEquation rejects unsupported operations and gray area features', () => {
+    // Logical operations
+    expect(() => parseEquation('x and y = z')).toThrow();
+    expect(() => parseEquation('x or y = z')).toThrow();
+    expect(() => parseEquation('not x = y')).toThrow();
+    
+    // Bitwise operations
+    expect(() => parseEquation('x & y = z')).toThrow();
+    expect(() => parseEquation('x | y = z')).toThrow();
+    expect(() => parseEquation('~x = y')).toThrow();
+    
+    // Conditional / Ternary
+    expect(() => parseEquation('x ? y : z = 5')).toThrow();
+    
+    // Matrix / Array / Ranges
+    expect(() => parseEquation('[1, 2] = x')).toThrow();
+    expect(() => parseEquation('x = A[1]')).toThrow();
+    expect(() => parseEquation('x = 1:5')).toThrow();
+    
+    // Inequalities
+    expect(() => parseEquation('x < y')).toThrow();
+    expect(() => parseEquation('x > y')).toThrow();
+    expect(() => parseEquation('x <= y')).toThrow();
+    expect(() => parseEquation('x >= y')).toThrow();
+    
+    // Function Assignment
+    expect(() => parseEquation('f(x) = x^2')).toThrow();
+    
+    // Unit conversion
+    expect(() => parseEquation('5 cm to m = x')).toThrow();
+    
+    // Unsupported functions
+    expect(() => parseEquation('x = random(1)')).toThrow();
+    expect(() => parseEquation('x = log10(y)')).toThrow();
+  });
+
   test('areEquationsEquivalent verifies algebraic identities', () => {
     const eq1 = parseEquation('x + 2 = 5');
 

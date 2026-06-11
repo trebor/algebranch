@@ -21,6 +21,7 @@ interface BottomSheetProps {
   title?: React.ReactNode;
   snapPoints?: number[];  // Default [0.5, 0.92] (50% and 92% of viewport)
   children: React.ReactNode;
+  fitContent?: boolean;
 }
 
 const DEFAULT_SNAP_POINTS = [0.5, 0.92];
@@ -31,6 +32,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   title,
   snapPoints = DEFAULT_SNAP_POINTS,
   children,
+  fitContent = false,
 }) => {
   const [activeSnapIndex, setActiveSnapIndex] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -66,22 +68,30 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   // Handle drag end — close or snap
   const handleDragEnd = useCallback(
     (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      const sheetHeight = getSnapHeight(activeSnapIndex);
       const draggedDistance = info.offset.y;
       const velocity = info.velocity.y;
+ 
+      if (fitContent) {
+        const height = sheetRef.current?.offsetHeight || 300;
+        if (velocity > 500 || draggedDistance > height * 0.3) {
+          onClose();
+        }
+        return;
+      }
 
+      const sheetHeight = getSnapHeight(activeSnapIndex);
       // Close if velocity is high or dragged past 30% of sheet height
       if (velocity > 500 || draggedDistance > sheetHeight * 0.3) {
         onClose();
         return;
       }
-
+ 
       // Snap to nearest snap point based on where the sheet ended up
       const currentFraction =
         typeof window !== 'undefined'
           ? (sheetHeight - draggedDistance) / window.innerHeight
           : sortedSnaps[0];
-
+ 
       let closestIndex = 0;
       let closestDist = Infinity;
       sortedSnaps.forEach((snap, idx) => {
@@ -91,10 +101,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           closestIndex = idx;
         }
       });
-
+ 
       setActiveSnapIndex(closestIndex);
     },
-    [onClose, sortedSnaps, activeSnapIndex],
+    [onClose, sortedSnaps, activeSnapIndex, fitContent],
   );
 
   // Reset snap index when opening
@@ -132,7 +142,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           <motion.div
             ref={sheetRef}
             className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl backdrop-blur-2xl bg-[#110f22]/95 border-t border-white/10 flex flex-col"
-            style={{ height: sheetHeight, maxHeight: '95vh' }}
+            style={{ height: fitContent ? 'auto' : sheetHeight, maxHeight: '95vh' }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -149,7 +159,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
             {/* Title bar */}
             {title && (
-              <div className="flex items-center px-5 pb-3 border-b border-white/10 mb-3">
+              <div
+                onClick={onClose}
+                className="flex items-center px-5 pb-3 border-b border-white/10 mb-3 cursor-pointer hover:opacity-80 active:scale-[0.98] transition-all select-none"
+              >
                 {typeof title === 'string' ? (
                   <h2 className="text-base font-semibold text-white">{title}</h2>
                 ) : (

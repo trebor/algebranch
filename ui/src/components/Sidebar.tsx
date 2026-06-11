@@ -14,10 +14,11 @@ import {
   presetCategoriesAtom,
   leftSidebarOpenAtom,
   deleteConfirmationModalOpenAtom,
+  equationInputModalOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
-import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Layers, Triangle, Activity, Flame, BookOpen, Library, LayoutGrid } from 'lucide-react';
+import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Layers, Triangle, Activity, Flame, BookOpen, Library, LayoutGrid, PenTool } from 'lucide-react';
 
 const getCategoryIcon = (category: string) => {
   switch (category) {
@@ -73,8 +74,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   const loadSession = useSetAtom(loadSessionAtom);
   const setDeleteModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
 
-  const [inputStr, setInputStr] = React.useState('');
-  const [errorStr, setErrorStr] = React.useState<string | null>(null);
+  const setIsInputModalOpen = useSetAtom(equationInputModalOpenAtom);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [isMobileRecentsOpen, setIsMobileRecentsOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
@@ -82,28 +82,6 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   React.useEffect(() => {
     setMounted(true);
   }, []);
-
-  const handleLoadCustom = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputStr.trim()) return;
-
-    try {
-      setErrorStr(null);
-      resetToEquation(inputStr);
-      trackEvent({
-        action: 'load_custom_equation',
-        category: 'presets',
-        label: inputStr,
-      });
-      setInputStr('');
-      if (window.innerWidth < 1024) {
-        setLeftSidebarOpen(false);
-      }
-      onCloseMobile?.();
-    } catch (err) {
-      setErrorStr(err instanceof Error ? err.message : String(err));
-    }
-  };
 
   const handleRecentsClick = () => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
@@ -145,31 +123,18 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
           <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold select-none">
             Define Equation
           </span>
-          <form onSubmit={handleLoadCustom} className="flex gap-2">
-            <input
-              type="text"
-              value={inputStr}
-              onChange={(e) => setInputStr(e.target.value)}
-              placeholder="New equation, e.g. 2x + 4 = 10"
-              className="flex-1 h-8 px-3 text-xs bg-neutral-950 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
-            />
-            <Tooltip content="Enter equation">
-              <button
-                type="submit"
-                className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-95 transition-all duration-150 cursor-pointer"
-              >
-                <Plus size={13} />
-              </button>
-            </Tooltip>
-          </form>
+          <button
+            type="button"
+            onClick={() => {
+              setIsInputModalOpen(true);
+              onCloseMobile?.();
+            }}
+            className="w-full h-9 px-4 text-xs font-bold bg-indigo-600/95 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/10 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer border border-indigo-400/20"
+          >
+            <PenTool size={13} />
+            <span>New Equation</span>
+          </button>
         </div>
-
-        {errorStr && (
-          <div className="flex items-start gap-2 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-2 animate-[fadeIn_0.2s_ease-out] shrink-0">
-            <ShieldAlert size={12} className="shrink-0 mt-0.5" />
-            <span className="break-all">{errorStr}</span>
-          </div>
-        )}
 
         {/* Recents Dropdown Selector Section */}
         <div className="flex flex-col gap-1.5 border-t border-white/5 pt-3 shrink-0">

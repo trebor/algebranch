@@ -319,6 +319,7 @@ export const feedbackModalOpenAtom = atom(false);
 export const feedbackContextAtom = atom<string | null>(null);
 export const deleteConfirmationModalOpenAtom = atom(false);
 export const resetHistoryModalOpenAtom = atom(false);
+export const equationInputModalOpenAtom = atom(false);
 
 // Mobile UI state atoms
 export type BottomSheetType = 'workspace' | 'history' | 'library' | null;

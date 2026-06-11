@@ -9,6 +9,7 @@ import { ControlPanel, TimelineContent } from '../components/ControlPanel';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
 import { ResetHistoryModal } from '../components/ResetHistoryModal';
+import { EquationInputModal } from '../components/EquationInputModal';
 import { Tooltip } from '../components/Tooltip';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { BottomNav } from '../components/BottomNav';
@@ -1019,6 +1020,7 @@ export default function Home() {
       <FeedbackModal />
       <DeleteWorkspaceModal />
       <ResetHistoryModal />
+      <EquationInputModal />
 
       {/* Mobile-only Bottom navigation and Sheets */}
       <BottomNav />
@@ -1032,7 +1034,7 @@ export default function Home() {
             <span>Workspace</span>
           </>
         }
-        snapPoints={[0.38]}
+        fitContent
       >
         <SidebarContent onCloseMobile={() => setActiveBottomSheet(null)} />
       </BottomSheet>

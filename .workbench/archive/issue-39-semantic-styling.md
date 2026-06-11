@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 issue: "#39 — Adopt semantic styling tokens: replace hardcoded Tailwind colors with theme constants"
 branch: feat/styling-tokens
 updated: 2026-06-11
@@ -30,13 +30,13 @@ We will centralize styling concepts like:
 
 ### Phase 2: Incremental Component Sweeps
 We will update components one by one, verifying the build and tests after each sweep:
-1. **[Sidebar.tsx](file:///Users/trebor/src/algebranch/ui/src/components/Sidebar.tsx)** (~105 inline colors)
-2. **[ControlPanel.tsx](file:///Users/trebor/src/algebranch/ui/src/components/ControlPanel.tsx)** (~81 inline colors)
-3. **[OnboardingTour.tsx](file:///Users/trebor/src/algebranch/ui/src/components/OnboardingTour.tsx)** (~92 inline colors)
-4. **[FeedbackModal.tsx](file:///Users/trebor/src/algebranch/ui/src/components/FeedbackModal.tsx)** (~60 inline colors)
-5. **[page.tsx](file:///Users/trebor/src/algebranch/ui/src/app/page.tsx)** (~82 inline colors)
-6. **[EquationNode.tsx](file:///Users/trebor/src/algebranch/ui/src/components/EquationNode.tsx)** (~52 inline colors)
-7. **[RadialMenu.tsx](file:///Users/trebor/src/algebranch/ui/src/components/RadialMenu.tsx)** (~37 inline colors)
+1. **[Sidebar.tsx](file:///Users/trebor/src/algebranch/ui/src/components/Sidebar.tsx)** (Committed in `015395a`)
+2. **[ControlPanel.tsx](file:///Users/trebor/src/algebranch/ui/src/components/ControlPanel.tsx)** (Committed in `27f3ad5`)
+3. **[OnboardingTour.tsx](file:///Users/trebor/src/algebranch/ui/src/components/OnboardingTour.tsx)** (Committed in `84cf696`)
+4. **[FeedbackModal.tsx](file:///Users/trebor/src/algebranch/ui/src/components/FeedbackModal.tsx)** (Committed in `e58ca2a`)
+5. **[page.tsx](file:///Users/trebor/src/algebranch/ui/src/app/page.tsx)** (Committed in `6805369`)
+6. **[EquationNode.tsx](file:///Users/trebor/src/algebranch/ui/src/components/EquationNode.tsx)** (Swept, uncommitted)
+7. **[RadialMenu.tsx](file:///Users/trebor/src/algebranch/ui/src/components/RadialMenu.tsx)** (Swept, uncommitted)
 
 ### Phase 3: Add Guardrails
 * Update [AGENTS.md](file:///Users/trebor/src/algebranch/AGENTS.md) or a new custom linter rule to warn about raw tailwind color classes.

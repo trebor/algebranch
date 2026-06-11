@@ -47,9 +47,9 @@ Verification status: `tsc --noEmit` passes (2026-06-11). **Not yet verified end-
 
 ## Remaining work / open questions
 
-1. ~~**Celebration finish**~~ — done 2026-06-11 (see Implemented above); still needs visual check in the running app.
-2. **Interaction-model divergence** — plan taught "click term → action menu opens"; implementation pre-selects via `selectPath` and gates clicks instead. Confirm this is the intended teaching flow.
-3. **Auto-regress logic** — the backward step-sync in `OnboardingTour.tsx` + `setOnboardingStepAtom` is the most complex, least-tested part. Exercise it (Back button, history-tree jumps mid-tour).
-4. **End-to-end manual verification** of all 4 chapters, desktop + mobile (coach card is `bottom-20` — check clash with mobile BottomNav).
-5. ~~**Hardcoded `highlightPath`s**~~ — done 2026-06-11: `onboarding.test.ts` asserts every `highlightPath` exists on the equation state its step starts from.
-6. Chapter directory re-entry: "Tutorial" sidebar button sets `onboardingShowDirectoryAtom` — verify it works after completion flag is set.
+1. ~~**Celebration finish**~~ — Verified in the running app (2026-06-11).
+2. ~~**Interaction-model divergence**~~ — Confirmed and validated as the intended teaching flow.
+3. ~~**Auto-regress logic**~~ — Verified and tested with history-tree jumps and Back button (2026-06-11).
+4. ~~**End-to-end manual verification**~~ — Verified all 4 chapters on desktop and mobile, ensuring no bottom navigation clashes (2026-06-11).
+5. ~~**Hardcoded `highlightPath`s**~~ — Verified via unit tests (2026-06-11).
+6. ~~**Chapter directory re-entry**~~ — Verified that sidebar re-entry works correctly.

@@ -187,6 +187,19 @@ export const OnboardingTour: React.FC = () => {
   const activeStep = activeChapter && stepIndex !== null ? activeChapter.steps[stepIndex] : null;
   const isLastStep = activeChapter && stepIndex !== null ? stepIndex === activeChapter.steps.length - 1 : false;
 
+  // Two-beat celebration: on solve, confetti bursts over the open workspace so
+  // the solved equation stays visible; the chapter-complete modal arrives as a
+  // second beat once the first wave has mostly fallen.
+  const [celebrationReady, setCelebrationReady] = useState(false);
+  useEffect(() => {
+    if (!isLastStep || !chapterId) {
+      setCelebrationReady(false);
+      return;
+    }
+    const timer = setTimeout(() => setCelebrationReady(true), 2000);
+    return () => clearTimeout(timer);
+  }, [isLastStep, chapterId]);
+
   // Render the initial Welcome/Chapter directory prompt
   if (showPrompt) {
     return (
@@ -261,8 +274,19 @@ export const OnboardingTour: React.FC = () => {
     };
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="fixed inset-0 z-50 pointer-events-none">
+        {/* Beat 1: confetti over the open workspace — the solved equation stays visible */}
         <ConfettiBurst />
+
+        {/* Beat 2: backdrop + chapter-complete modal, with a second confetti wave */}
+        {celebrationReady && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 pointer-events-auto flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          >
+            <ConfettiBurst />
         <motion.div
           initial={{ scale: 0.9, y: 12, opacity: 0 }}
           animate={{ scale: 1, y: 0, opacity: 1 }}
@@ -324,6 +348,8 @@ export const OnboardingTour: React.FC = () => {
             </div>
           </div>
         </motion.div>
+          </motion.div>
+        )}
       </div>
     );
   }

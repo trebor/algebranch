@@ -103,12 +103,13 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen, setIsOpen]);
 
-  // Focus term input when it appears
+  // Focus term input when it appears (not during the tour — the value is
+  // locked, and focusing would pop the keyboard on mobile for nothing)
   React.useEffect(() => {
-    if (termInputAction && termInputRef.current) {
+    if (termInputAction && termInputRef.current && !isTourActive) {
       termInputRef.current.focus();
     }
-  }, [termInputAction]);
+  }, [termInputAction, isTourActive]);
 
   // During the tour, only the petal performing the active step's global op is
   // live; the spinner/term petals share one petal per family (sqrt -> nth root).
@@ -152,8 +153,11 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
       action.type === 'root'
     ) {
       setTermInputAction(action);
+      // Tour steps arrive with their parameter preset (and locked in the UI)
       if (action.type === 'power' || action.type === 'root') {
-        setSpinnerValue(2); // Default spinner to 2
+        setSpinnerValue(isTourActive && tourGlobalOp ? tourGlobalOp.power ?? 2 : 2);
+      } else if (isTourActive && tourGlobalOp?.term) {
+        setTermValue(tourGlobalOp.term);
       }
       return;
     }
@@ -317,7 +321,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                         )}
                         <button
                           type="button"
-                          disabled={spinnerValue <= 2}
+                          disabled={spinnerValue <= 2 || isTourActive}
                           onClick={() => setSpinnerValue((v) => Math.max(2, v - 1))}
                           className="w-6 h-6 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all cursor-pointer"
                         >
@@ -328,8 +332,9 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                         </span>
                         <button
                           type="button"
+                          disabled={isTourActive}
                           onClick={() => setSpinnerValue((v) => v + 1)}
-                          className="w-6 h-6 rounded-md hover:bg-white/5 flex items-center justify-center transition-all cursor-pointer"
+                          className="w-6 h-6 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all cursor-pointer"
                         >
                           <Plus size={12} className="text-white" />
                         </button>
@@ -340,9 +345,12 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                           ref={termInputRef}
                           type="text"
                           value={termValue}
+                          readOnly={isTourActive}
                           onChange={(e) => setTermValue(e.target.value)}
-                          placeholder={isTourActive && tourGlobalOp?.term ? tourGlobalOp.term : 'e.g. 5x'}
-                          className="w-28 px-2 py-1 text-sm bg-neutral-900 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-mono"
+                          placeholder="e.g. 5x"
+                          className={`w-28 px-2 py-1 text-sm bg-neutral-900 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none transition-all font-mono ${
+                            isTourActive ? 'cursor-default text-white/80' : 'focus:border-indigo-500/80'
+                          }`}
                         />
                         {isTourActive && tourGlobalOp && !tourInputSatisfied && (
                           <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />

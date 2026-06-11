@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import {
@@ -13,7 +13,11 @@ import {
   startOnboardingChapterAtom,
   sourcePathAtom,
   appHydratedAtom,
-  readOnboardingSteps
+  readOnboardingSteps,
+  clearOnboardingStep,
+  syncTourToActiveTabAtom,
+  activeTabIdAtom,
+  tabsAtom
 } from '../store/equation';
 import { equationToString } from 'math-engine-client';
 import { prefetchChapterScans } from '../utils/mathScan';
@@ -107,21 +111,26 @@ export const OnboardingTour: React.FC = () => {
     }
   }, []);
 
-  // Auto-resume an active tutorial only AFTER the main workspace/session
-  // hydration has run. Resuming earlier would call startChapter against empty
-  // tabs/sessions atoms and overwrite localStorage, wiping other saved
-  // workspaces (the per-chapter tutorial tabs included). Reads localStorage
-  // directly so it is independent of async state updates from the mount effect.
+  // The coach card follows the active workspace tab. Returning to an in-progress
+  // tutorial tab reopens the tour at that chapter's saved step; switching to any
+  // other tab (a fresh workspace, another chapter) hides it. This also handles
+  // auto-resume on reload (the restored active tab drives the initial state),
+  // and runs only after hydration so it sees the real tabs/sessions.
+  //
+  // Guarded to fire only on an actual tab switch, so the in-tour Exit/Finish
+  // buttons (which don't change tabs) are respected and not undone.
   const appHydrated = useAtomValue(appHydratedAtom);
+  const activeTabId = useAtomValue(activeTabIdAtom);
+  const tabs = useAtomValue(tabsAtom);
+  const syncTourToTab = useSetAtom(syncTourToActiveTabAtom);
+  const prevTabIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!appHydrated || chapterId || typeof window === 'undefined') return;
-    const isActive = localStorage.getItem('algebranch_onboarding_active') === 'true';
-    const savedChId = localStorage.getItem('algebranch_onboarding_chapter_id');
-    if (isActive && savedChId) {
-      const savedStep = readOnboardingSteps()[savedChId] ?? 0;
-      startChapter(savedChId, savedStep);
-    }
-  }, [appHydrated, chapterId, startChapter]);
+    if (!appHydrated) return;
+    if (prevTabIdRef.current === activeTabId) return;
+    prevTabIdRef.current = activeTabId;
+    const activeChapterId = tabs.find(t => t.id === activeTabId)?.chapterId ?? null;
+    syncTourToTab(activeChapterId);
+  }, [appHydrated, activeTabId, tabs, syncTourToTab]);
 
   // Update saved progress state in real-time as local storage changes (so the directory dialog updates dynamically)
   useEffect(() => {
@@ -139,11 +148,14 @@ export const OnboardingTour: React.FC = () => {
     }
   }, [chapterId, stepIndex, showPrompt]);
 
-  // Check localStorage and showDirectory atom on mount / change to show prompt
+  // Show the welcome prompt when explicitly requested (Tutorial button), or once
+  // for a genuine first-time visitor. The progress-map check keeps it from
+  // popping when a tab switch clears the active chapter mid-tour.
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const completed = localStorage.getItem('algebranch_onboarding_completed');
-      if (showDirectory || (!completed && !chapterId)) {
+      const neverStarted = Object.keys(readOnboardingSteps()).length === 0;
+      if (showDirectory || (!completed && !chapterId && neverStarted)) {
         setShowPrompt(true);
       } else {
         setShowPrompt(false);
@@ -280,6 +292,10 @@ export const OnboardingTour: React.FC = () => {
       }
       return next;
     });
+    // Drop the in-progress step so the coach won't reopen on this (now finished)
+    // tab; the directory shows its green check instead.
+    clearOnboardingStep(chapterId);
+    setChapterProgress(readOnboardingSteps());
   }, [isLastStep, chapterId]);
 
   // Render the initial Welcome/Chapter directory prompt

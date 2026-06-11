@@ -1162,12 +1162,48 @@ const writeOnboardingStep = (chapterId: string, stepIndex: number) => {
   safeLocalStorage.setItem(ONBOARDING_STEPS_KEY, JSON.stringify(map));
 };
 
-const clearOnboardingStep = (chapterId: string) => {
+export const clearOnboardingStep = (chapterId: string) => {
   if (typeof window === 'undefined') return;
   const map = readOnboardingSteps();
   delete map[chapterId];
   safeLocalStorage.setItem(ONBOARDING_STEPS_KEY, JSON.stringify(map));
 };
+
+// Make the coach card follow the active workspace tab. Given the active tab's
+// chapterId (or null for a non-tutorial tab), activate the tour view for that
+// chapter at its saved step, or hide it. Never resets the tab tree or touches
+// per-chapter progress — it only reflects existing state, so switching tabs is
+// non-destructive and reversible.
+export const syncTourToActiveTabAtom = atom(
+  null,
+  (get, set, chapterId: string | null) => {
+    const chapter = chapterId ? ONBOARDING_CHAPTERS.find(c => c.id === chapterId) : undefined;
+    const stepIdx = chapter ? readOnboardingSteps()[chapter.id] : undefined;
+
+    // Hide the coach for non-tutorial tabs and for completed / never-started
+    // chapters (no in-progress step entry).
+    if (!chapter || stepIdx === undefined) {
+      set(onboardingChapterIdAtom, null);
+      set(onboardingStepIndexAtom, null);
+      set(onboardingHighlightPathAtom, null);
+      set(sourcePathAtom, null);
+      if (typeof window !== 'undefined') {
+        safeLocalStorage.setItem('algebranch_onboarding_active', 'false');
+      }
+      return;
+    }
+
+    set(onboardingChapterIdAtom, chapter.id);
+    set(onboardingStepIndexAtom, stepIdx);
+    set(onboardingHighlightPathAtom, chapter.steps[stepIdx]?.highlightPath || null);
+    set(onboardingShowDirectoryAtom, false);
+    set(sourcePathAtom, chapter.steps[stepIdx]?.selectPath || null);
+    if (typeof window !== 'undefined') {
+      safeLocalStorage.setItem('algebranch_onboarding_chapter_id', chapter.id);
+      safeLocalStorage.setItem('algebranch_onboarding_active', 'true');
+    }
+  }
+);
 
 export const startOnboardingChapterAtom = atom(
   null,

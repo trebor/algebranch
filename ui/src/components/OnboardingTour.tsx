@@ -464,7 +464,7 @@ export const OnboardingTour: React.FC = () => {
         initial={{ height: 0, opacity: 0 }}
         animate={{ height: 'auto', opacity: 1 }}
         transition={THEME_ANIMATIONS.LAYOUT_TRANSITION}
-        className="w-full shrink-0 border-t border-white/10 bg-[#110f22]/60 backdrop-blur-md rounded-b-2xl px-4 py-3 sm:px-6 z-40 max-lg:mb-[calc(3.5rem+env(safe-area-inset-bottom))] overflow-hidden"
+        className="w-full shrink-0 border-t border-white/10 bg-[#110f22]/60 backdrop-blur-md rounded-b-2xl px-4 py-3 sm:px-6 z-40 overflow-hidden"
       >
         <div className="max-w-2xl mx-auto w-full flex flex-col gap-2.5">
           {/* Header */}

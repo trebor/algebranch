@@ -822,11 +822,15 @@ export default function Home() {
         {/* Main workspace section */}
         <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden gap-3">
           {isHydrated ? (
-            <WorkspaceTabs />
+            <div className={onboardingChapterId ? "max-lg:hidden shrink-0" : "shrink-0"}>
+              <WorkspaceTabs />
+            </div>
           ) : (
-            <div className="w-full flex items-center justify-between bg-transparent px-0 pt-2 pb-0 gap-4 shrink-0 select-none">
-              <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
-                <div className="h-[30px] w-32 bg-white/5 border border-white/5 animate-pulse rounded-xl" />
+            <div className={onboardingChapterId ? "max-lg:hidden shrink-0" : "shrink-0"}>
+              <div className="w-full flex items-center justify-between bg-transparent px-0 pt-2 pb-0 gap-4 shrink-0 select-none">
+                <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+                  <div className="h-[30px] w-32 bg-white/5 border border-white/5 animate-pulse rounded-xl" />
+                </div>
               </div>
             </div>
           )}
@@ -972,7 +976,7 @@ export default function Home() {
       <EquationInputModal />
 
       {/* Mobile-only Bottom navigation and Sheets */}
-      <BottomNav />
+      {!onboardingChapterId && <BottomNav />}
 
       <BottomSheet
         isOpen={activeBottomSheet === 'workspace'}

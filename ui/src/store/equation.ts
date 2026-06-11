@@ -1131,18 +1131,29 @@ export const onboardingShowDirectoryAtom = atom<boolean>(false);
 
 export const startOnboardingChapterAtom = atom(
   null,
-  (get, set, chapterId: string) => {
+  (get, set, chapterId: string, resumeStepIndex?: number) => {
     const chapter = ONBOARDING_CHAPTERS.find(c => c.id === chapterId);
     if (!chapter) return;
     
+    const stepIdx = resumeStepIndex ?? 0;
     set(onboardingChapterIdAtom, chapterId);
-    set(onboardingStepIndexAtom, 0);
-    set(onboardingHighlightPathAtom, chapter.steps[0].highlightPath);
+    set(onboardingStepIndexAtom, stepIdx);
+    set(onboardingHighlightPathAtom, chapter.steps[stepIdx]?.highlightPath || null);
     set(onboardingShowDirectoryAtom, false);
+
+    const stepStartEq = stepIdx > 0
+      ? chapter.steps[stepIdx - 1].nextEquation
+      : chapter.initialEquation;
 
     // Create a new session for this tutorial
     const title = `🎓 Tutorial: ${chapter.title.split('. ')[1]}`;
-    set(createNewSessionAtom, chapter.initialEquation, title);
+    set(createNewSessionAtom, stepStartEq, title);
+
+    if (typeof window !== 'undefined') {
+      safeLocalStorage.setItem('algebranch_onboarding_chapter_id', chapterId);
+      safeLocalStorage.setItem('algebranch_onboarding_step_index', String(stepIdx));
+      safeLocalStorage.setItem('algebranch_onboarding_active', 'true');
+    }
   }
 );
 
@@ -1155,13 +1166,33 @@ export const setOnboardingStepAtom = atom(
 
     if (nextIndex === null || nextIndex < 0 || nextIndex >= chapter.steps.length) {
       // End the onboarding tour
+      const finishedChapterId = get(onboardingChapterIdAtom);
       set(onboardingChapterIdAtom, null);
       set(onboardingStepIndexAtom, null);
       set(onboardingHighlightPathAtom, null);
       set(onboardingShowDirectoryAtom, false);
       set(sourcePathAtom, null);
       if (typeof window !== 'undefined') {
-        safeLocalStorage.setItem('algebranch_onboarding_completed', 'true');
+        safeLocalStorage.setItem('algebranch_onboarding_active', 'false');
+        if (nextIndex !== null && nextIndex >= chapter.steps.length) {
+          safeLocalStorage.setItem('algebranch_onboarding_completed', 'true');
+          safeLocalStorage.removeItem('algebranch_onboarding_chapter_id');
+          safeLocalStorage.removeItem('algebranch_onboarding_step_index');
+          safeLocalStorage.removeItem('algebranch_onboarding_active');
+          
+          if (finishedChapterId) {
+            try {
+              const completed = safeLocalStorage.getItem('algebranch_completed_chapters');
+              const list: string[] = completed ? JSON.parse(completed) : [];
+              if (!list.includes(finishedChapterId)) {
+                list.push(finishedChapterId);
+                safeLocalStorage.setItem('algebranch_completed_chapters', JSON.stringify(list));
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        }
       }
       return;
     }
@@ -1227,6 +1258,13 @@ export const setOnboardingStepAtom = atom(
     set(onboardingStepIndexAtom, nextIndex);
     set(onboardingHighlightPathAtom, chapter.steps[nextIndex].highlightPath);
 
+    // Save current step to localStorage!
+    if (typeof window !== 'undefined' && chapterId) {
+      safeLocalStorage.setItem('algebranch_onboarding_chapter_id', chapterId);
+      safeLocalStorage.setItem('algebranch_onboarding_step_index', String(nextIndex));
+      safeLocalStorage.setItem('algebranch_onboarding_active', 'true');
+    }
+
     // Update selection based on next step's selectPath
     const nextStep = chapter.steps[nextIndex];
     if (nextStep && nextStep.selectPath) {
@@ -1236,9 +1274,6 @@ export const setOnboardingStepAtom = atom(
     }
   }
 );
-
-
-
 
 /**
  * The target slot the tutorial wants clicked next: the synced target path whose

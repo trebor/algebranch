@@ -929,6 +929,7 @@ export default function Home() {
                 </div>
               )}
             </div>
+            <OnboardingTour />
           </div>
         </main>
 
@@ -969,7 +970,6 @@ export default function Home() {
       <DeleteWorkspaceModal />
       <ResetHistoryModal />
       <EquationInputModal />
-      <OnboardingTour />
 
       {/* Mobile-only Bottom navigation and Sheets */}
       <BottomNav />

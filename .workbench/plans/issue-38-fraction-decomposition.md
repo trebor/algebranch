@@ -44,7 +44,22 @@ We want to allow users to decompose division nodes (like `x / 5`) into coefficie
 * [x] Cleaned up unused variables, hooks, state atoms (`previewEquationAtom`), and components in `page.tsx` and the store.
 * [x] Ran full test suite, verified linting, and verified Next.js production compilation.
 
+### Phase 3: Onboarding Tour Docked Layout (COMPLETE)
+* [x] Design inline bottom-docked panel layout for `<OnboardingTour />`.
+* [x] Relocate `<OnboardingTour />` in [page.tsx](file:///Users/trebor/src/algebranch/ui/src/app/page.tsx) inside the workspace panel block (below the canvas, inside the flex layout).
+* [x] Refactor walkthrough card in [OnboardingTour.tsx](file:///Users/trebor/src/algebranch/ui/src/components/OnboardingTour.tsx):
+  * Remove `fixed bottom-20 left-1/2 -translate-x-1/2 z-40 max-w-sm px-4`.
+  * Style as a bottom-docked pane: `w-full shrink-0 border-t border-white/10 bg-[#110f22]/60 backdrop-blur-md rounded-b-2xl px-4 py-3 sm:px-6 z-40 max-lg:mb-[calc(3.5rem+env(safe-area-inset-bottom))]`.
+  * Add a `mounted` client-side hydration check and portal the overlays (`showPrompt` Welcome modal and Celebration modal) to `document.body` using React Portals to prevent containment errors from parent filters/backdrop-blurs.
+  * Use Framer Motion's `layout` or `height` animation for a smooth slide-in entry.
+  * Wrap walkthrough content in a centered container (`max-w-2xl mx-auto w-full flex flex-col gap-2.5`) to keep it aligned on desktop.
+* [x] Swap position of "Exit Tour" button (upper right of card) and "Step X of Y" label (bottom left of card) to match typical modal layouts.
+* [x] Store onboarding tour state progress (active chapter, step index, completion list) in `localStorage`.
+* [x] Display checklist checkboxes next to completed lessons in the directory and a pulsing play resume badge on in-progress chapters.
+* [x] Provide a navigation path to return to the chapters menu directly by clicking the chapter title (with a Lucide BookOpen icon) in the step card header.
+
 ## Next Steps
-1. **User Validation:** User to verify full-screen canvas layout, tooltips previewing target moves, candidate selection preview tooltips, correct node background styling, tooltip singleton dismissal behaviour (including nested handle hovers), and enlarged tooltip sizing.
+1. **User Validation:** User to verify full-screen canvas layout, tooltips previewing target moves, candidate selection preview tooltips, correct node background styling, tooltip singleton dismissal behaviour (including nested handle hovers), enlarged tooltip sizing, bottom-docked tour layout, progress restoring on page refresh/load, completed lesson checkboxes, in-progress resume badges, and navigation back to the chapters list.
 2. **Commit & Merge:** Commit changes and merge branch `feat/fraction-decomposition` to main.
 3. **Archive Plan:** Set status to `done`, move plan to `archive/`, and update `INDEX.md`.
+

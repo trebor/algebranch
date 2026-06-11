@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import {
   onboardingChapterIdAtom,
@@ -16,7 +17,7 @@ import { equationToString } from 'math-engine-client';
 import { prefetchChapterScans } from '../utils/mathScan';
 import { Play, ArrowRight, ArrowLeft, CheckCircle2, X, Sparkles, BookOpen, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { THEME_GLASS } from '../constants/theme';
+import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 
 // Node-color palette for the completion confetti (indigo, emerald, amber, sky, rose)
 const CONFETTI_COLORS = ['#818cf8', '#34d399', '#fbbf24', '#38bdf8', '#fb7185'];
@@ -69,6 +70,11 @@ const ConfettiBurst: React.FC = () => {
 };
 
 export const OnboardingTour: React.FC = () => {
+  const [mounted, setMounted] = useState(false);
+  const [completedChapters, setCompletedChapters] = useState<string[]>([]);
+  const [savedChapterId, setSavedChapterId] = useState<string | null>(null);
+  const [savedStepIndex, setSavedStepIndex] = useState<number | null>(null);
+
   const chapterId = useAtomValue(onboardingChapterIdAtom);
   const stepIndex = useAtomValue(onboardingStepIndexAtom);
   const [showDirectory, setShowDirectory] = useAtom(onboardingShowDirectoryAtom);
@@ -78,6 +84,58 @@ export const OnboardingTour: React.FC = () => {
   const sourcePath = useAtomValue(sourcePathAtom);
   
   const [showPrompt, setShowPrompt] = useState(false);
+
+  // Load saved states on client-side mount
+  useEffect(() => {
+    setMounted(true);
+
+    if (typeof window !== 'undefined') {
+      // Load completed chapters
+      const completedList = localStorage.getItem('algebranch_completed_chapters');
+      if (completedList) {
+        try {
+          setCompletedChapters(JSON.parse(completedList));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // Check if there is a saved chapter progress
+      const savedChId = localStorage.getItem('algebranch_onboarding_chapter_id');
+      const savedStepIdxStr = localStorage.getItem('algebranch_onboarding_step_index');
+      const isActive = localStorage.getItem('algebranch_onboarding_active') === 'true';
+      
+      if (savedChId && savedStepIdxStr) {
+        const savedStepIdx = parseInt(savedStepIdxStr, 10);
+        setSavedChapterId(savedChId);
+        setSavedStepIndex(savedStepIdx);
+        
+        // Auto-resume if it was active when they left/refreshed
+        if (isActive) {
+          startChapter(savedChId, savedStepIdx);
+        }
+      }
+    }
+  }, []);
+
+  // Update saved progress state in real-time as local storage changes (so the directory dialog updates dynamically)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedChId = localStorage.getItem('algebranch_onboarding_chapter_id');
+      const savedStepIdxStr = localStorage.getItem('algebranch_onboarding_step_index');
+      setSavedChapterId(savedChId);
+      setSavedStepIndex(savedStepIdxStr ? parseInt(savedStepIdxStr, 10) : null);
+
+      const completedList = localStorage.getItem('algebranch_completed_chapters');
+      if (completedList) {
+        try {
+          setCompletedChapters(JSON.parse(completedList));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, [chapterId, stepIndex, showPrompt]);
 
   // Check localStorage and showDirectory atom on mount / change to show prompt
   useEffect(() => {
@@ -180,7 +238,16 @@ export const OnboardingTour: React.FC = () => {
   const handleStartChapter = (id: string) => {
     setShowPrompt(false);
     setShowDirectory(false);
-    startChapter(id);
+    if (savedChapterId === id && savedStepIndex !== null) {
+      startChapter(id, savedStepIndex);
+    } else {
+      startChapter(id, 0);
+    }
+  };
+
+  const handleAllChapters = () => {
+    setStep(null);
+    setShowDirectory(true);
   };
 
   const activeChapter = ONBOARDING_CHAPTERS.find(c => c.id === chapterId);
@@ -202,7 +269,8 @@ export const OnboardingTour: React.FC = () => {
 
   // Render the initial Welcome/Chapter directory prompt
   if (showPrompt) {
-    return (
+    if (!mounted || typeof document === 'undefined') return null;
+    return createPortal(
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
@@ -233,19 +301,54 @@ export const OnboardingTour: React.FC = () => {
             </p>
             
             <div className="flex flex-col gap-2.5 mt-2">
-              {ONBOARDING_CHAPTERS.map((chapter) => (
-                <button
-                  key={chapter.id}
-                  onClick={() => handleStartChapter(chapter.id)}
-                  className={`w-full text-left p-3 rounded-xl border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-white/5 hover:bg-white/10 hover:border-white/10 active:scale-[0.99] transition-all flex items-center justify-between gap-3 cursor-pointer group`}
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors">{chapter.title}</p>
-                    <p className={`text-[10px] ${THEME_GLASS.TEXT_MUTED_LIGHT} truncate mt-0.5`}>{chapter.description}</p>
-                  </div>
-                  <ArrowRight size={14} className={`${THEME_GLASS.TEXT_MUTED_EXTRA} group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all shrink-0`} />
-                </button>
-              ))}
+              {ONBOARDING_CHAPTERS.map((chapter) => {
+                const isCompleted = completedChapters.includes(chapter.id);
+                const hasProgress = savedChapterId === chapter.id && savedStepIndex !== null;
+
+                return (
+                  <button
+                    key={chapter.id}
+                    onClick={() => handleStartChapter(chapter.id)}
+                    className={`w-full text-left p-3 rounded-xl border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-white/5 hover:bg-white/10 hover:border-white/10 active:scale-[0.99] transition-all flex items-center justify-between gap-3 cursor-pointer group`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Checkbox / Status indicator */}
+                      <div className="shrink-0">
+                        {isCompleted ? (
+                          <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <CheckCircle2 size={13} />
+                          </div>
+                        ) : hasProgress ? (
+                          <div className="p-1 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 animate-pulse">
+                            <Play size={13} />
+                          </div>
+                        ) : (
+                          <div className={`p-1 rounded-md bg-white/5 text-white/20 border border-white/10`}>
+                            <div className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors">
+                            {chapter.title}
+                          </p>
+                          {hasProgress && (
+                            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+                              Resume Step {savedStepIndex + 1}
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-[10px] ${THEME_GLASS.TEXT_MUTED_LIGHT} truncate mt-0.5`}>
+                          {chapter.description}
+                        </p>
+                      </div>
+                    </div>
+                    <ArrowRight size={14} className={`${THEME_GLASS.TEXT_MUTED_EXTRA} group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all shrink-0`} />
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -258,7 +361,8 @@ export const OnboardingTour: React.FC = () => {
             </button>
           </div>
         </motion.div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
@@ -268,12 +372,10 @@ export const OnboardingTour: React.FC = () => {
     const nextChapter = chapterIndex >= 0 ? ONBOARDING_CHAPTERS[chapterIndex + 1] : undefined;
 
     const handleFinish = () => setStep(null);
-    const handleAllChapters = () => {
-      setStep(null);
-      setShowDirectory(true);
-    };
 
-    return (
+    if (!mounted || typeof document === 'undefined') return null;
+
+    return createPortal(
       <div className="fixed inset-0 z-50 pointer-events-none">
         {/* Beat 1: confetti over the open workspace — the solved equation stays visible */}
         <ConfettiBurst />
@@ -287,91 +389,102 @@ export const OnboardingTour: React.FC = () => {
             className="absolute inset-0 pointer-events-auto flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           >
             <ConfettiBurst />
-        <motion.div
-          initial={{ scale: 0.9, y: 12, opacity: 0 }}
-          animate={{ scale: 1, y: 0, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-          className={`${THEME_GLASS.PANEL} max-w-sm w-full p-6 flex flex-col items-center gap-4 text-center shadow-[0_0_40px_rgba(52,211,153,0.2)] border border-emerald-500/20`}
-        >
-          <motion.div
-            initial={{ scale: 0, rotate: -12 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 14, delay: 0.15 }}
-            className="p-3.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_25px_rgba(52,211,153,0.35)]"
-          >
-            <Trophy size={26} />
-          </motion.div>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold tracking-wider uppercase text-emerald-400/80">
-              Chapter Complete — {activeChapter.title}
-            </span>
-            <h3 className="font-bold text-white text-base lg:text-lg">{activeStep.title}</h3>
-            <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed`}>{activeStep.description}</p>
-          </div>
-
-          <div className="flex flex-col gap-2.5 w-full pt-2">
-            {nextChapter ? (
-              <button
-                onClick={() => startChapter(nextChapter.id)}
-                className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_PRIMARY}`}
+            <motion.div
+              initial={{ scale: 0.9, y: 12, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+              className={`${THEME_GLASS.PANEL} max-w-sm w-full p-6 flex flex-col items-center gap-4 text-center shadow-[0_0_40px_rgba(52,211,153,0.2)] border border-emerald-500/20`}
+            >
+              <motion.div
+                initial={{ scale: 0, rotate: -12 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 14, delay: 0.15 }}
+                className="p-3.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_25px_rgba(52,211,153,0.35)]"
               >
-                <span>Next: {nextChapter.title.split('. ')[1] || nextChapter.title}</span>
-                <ArrowRight size={13} />
-              </button>
-            ) : (
-              <button
-                onClick={handleFinish}
-                className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_SUCCESS}`}
-              >
-                <CheckCircle2 size={13} />
-                <span>Finish &amp; Explore Freely</span>
-              </button>
-            )}
+                <Trophy size={26} />
+              </motion.div>
 
-            <div className="flex items-center justify-center gap-4">
-              <button
-                onClick={handleAllChapters}
-                className={`text-[11px] font-bold ${THEME_GLASS.TEXT_MUTED_LIGHT} hover:text-white transition-colors cursor-pointer flex items-center gap-1.5`}
-              >
-                <BookOpen size={11} />
-                <span>All Chapters</span>
-              </button>
-              {nextChapter && (
-                <button
-                  onClick={handleFinish}
-                  className={`text-[11px] font-bold ${THEME_GLASS.TEXT_MUTED_LIGHT} hover:text-white transition-colors cursor-pointer`}
-                >
-                  Explore Freely
-                </button>
-              )}
-            </div>
-          </div>
-        </motion.div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-bold tracking-wider uppercase text-emerald-400/80">
+                  Chapter Complete — {activeChapter.title}
+                </span>
+                <h3 className="font-bold text-white text-base lg:text-lg">{activeStep.title}</h3>
+                <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed`}>{activeStep.description}</p>
+              </div>
+
+              <div className="flex flex-col gap-2.5 w-full pt-2">
+                {nextChapter ? (
+                  <button
+                    onClick={() => startChapter(nextChapter.id)}
+                    className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_PRIMARY}`}
+                  >
+                    <span>Next: {nextChapter.title.split('. ')[1] || nextChapter.title}</span>
+                    <ArrowRight size={13} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleFinish}
+                    className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_SUCCESS}`}
+                  >
+                    <CheckCircle2 size={13} />
+                    <span>Finish &amp; Explore Freely</span>
+                  </button>
+                )}
+
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    onClick={handleAllChapters}
+                    className={`text-[11px] font-bold ${THEME_GLASS.TEXT_MUTED_LIGHT} hover:text-white transition-colors cursor-pointer flex items-center gap-1.5`}
+                  >
+                    <BookOpen size={11} />
+                    <span>All Chapters</span>
+                  </button>
+                  {nextChapter && (
+                    <button
+                      onClick={handleFinish}
+                      className={`text-[11px] font-bold ${THEME_GLASS.TEXT_MUTED_LIGHT} hover:text-white transition-colors cursor-pointer`}
+                    >
+                      Explore Freely
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
-      </div>
+      </div>,
+      document.body
     );
   }
 
   // Render the step walkthrough helper card
   if (activeChapter && activeStep !== null && stepIndex !== null) {
     return (
-      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 w-full max-w-sm px-4">
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className={THEME_GLASS.COACH_CARD}
-        >
+      <motion.div
+        initial={{ height: 0, opacity: 0 }}
+        animate={{ height: 'auto', opacity: 1 }}
+        transition={THEME_ANIMATIONS.LAYOUT_TRANSITION}
+        className="w-full shrink-0 border-t border-white/10 bg-[#110f22]/60 backdrop-blur-md rounded-b-2xl px-4 py-3 sm:px-6 z-40 max-lg:mb-[calc(3.5rem+env(safe-area-inset-bottom))] overflow-hidden"
+      >
+        <div className="max-w-2xl mx-auto w-full flex flex-col gap-2.5">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-indigo-400">
-              <BookOpen size={13} />
-              <span className="text-[10px] font-bold tracking-wider uppercase">{activeChapter.title}</span>
-            </div>
-            <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} font-bold`}>
-              Step {stepIndex + 1} of {activeChapter.steps.length}
-            </span>
+            <button
+              onClick={handleAllChapters}
+              className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer group/title"
+              aria-label="Chapters menu"
+            >
+              <BookOpen size={13} className="group-hover/title:scale-110 transition-transform" />
+              <span className="text-[10px] font-bold tracking-wider uppercase hover:underline">{activeChapter.title}</span>
+            </button>
+            <button
+              onClick={() => setStep(null)}
+              className={`text-[10px] font-bold ${THEME_GLASS.TEXT_MUTED} hover:text-white transition-colors cursor-pointer flex items-center gap-1`}
+              aria-label="Exit tour"
+            >
+              <span>Exit Tour</span>
+              <X size={10} className="shrink-0" />
+            </button>
           </div>
 
           {/* Title & Desc */}
@@ -384,7 +497,7 @@ export const OnboardingTour: React.FC = () => {
 
           {/* Node-kind color legend (steps with legend: 'nodeTypes') */}
           {activeStep.legend === 'nodeTypes' && (
-            <div className="grid grid-cols-2 gap-2 mt-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
               <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
                 <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-sky-300 font-serif italic font-medium text-[10px]`}>x</span>
                 <div className="flex flex-col">
@@ -442,12 +555,9 @@ export const OnboardingTour: React.FC = () => {
 
           {/* Controls */}
           <div className={`flex items-center justify-between pt-2 border-t ${THEME_GLASS.PANEL_BORDER} mt-1`}>
-            <button
-              onClick={() => setStep(null)}
-              className={`text-[10px] font-bold ${THEME_GLASS.TEXT_MUTED} hover:text-white transition-colors cursor-pointer`}
-            >
-              Exit Tour
-            </button>
+            <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} font-bold`}>
+              Step {stepIndex + 1} of {activeChapter.steps.length}
+            </span>
             
             <div className="flex items-center gap-2">
               {stepIndex > 0 && (
@@ -469,8 +579,8 @@ export const OnboardingTour: React.FC = () => {
               </button>
             </div>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
     );
   }
 

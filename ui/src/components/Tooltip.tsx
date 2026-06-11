@@ -12,6 +12,7 @@ interface TooltipProps {
   readonly wrapperClassName?: string; // Optional wrapper container class overrides
   readonly style?: React.CSSProperties; // Optional wrapper container styles
   readonly autoAlign?: boolean; // Dynamic horizontal screen alignment
+  readonly visible?: boolean; // Controlled visibility
 }
 
 /**
@@ -21,6 +22,9 @@ interface TooltipProps {
  * Promotes stacking layer automatically with scroll-capture listener to dismiss tooltips on viewport scrolling.
  * Compliant with WCAG 1.4.13 (Dismissible, Hoverable, and Persistent).
  */
+// Module-level global to keep track of the currently active tooltip's dismiss function
+let activeTooltipClose: (() => void) | null = null;
+
 export const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,
@@ -30,13 +34,59 @@ export const Tooltip: React.FC<TooltipProps> = ({
   wrapperClassName = '',
   style,
   autoAlign = true,
+  visible,
 }) => {
   const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
+  const isShown = (visible !== undefined ? visible : isVisible) && !isDismissed;
+
   const [calculatedPosition, setCalculatedPosition] = useState<'top' | 'bottom' | 'left' | 'right'>(position);
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [showTimeoutId, setShowTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [hideTimeoutId, setHideTimeoutId] = useState<NodeJS.Timeout | null>(null);
+
+  const closeSelf = React.useCallback(() => {
+    setIsVisible(false);
+    setIsDismissed(true);
+  }, []);
+
+  // React to visibility changes in controlled mode
+  useEffect(() => {
+    if (visible === true) {
+      setIsDismissed(false);
+      if (activeTooltipClose && activeTooltipClose !== closeSelf) {
+        activeTooltipClose();
+      }
+      activeTooltipClose = closeSelf;
+    } else if (visible === false) {
+      const handle = requestAnimationFrame(() => {
+        setIsVisible(false);
+        setIsDismissed(false);
+        if (activeTooltipClose === closeSelf) {
+          activeTooltipClose = null;
+        }
+        setShowTimeoutId(prev => {
+          if (prev) clearTimeout(prev);
+          return null;
+        });
+        setHideTimeoutId(prev => {
+          if (prev) clearTimeout(prev);
+          return null;
+        });
+      });
+      return () => cancelAnimationFrame(handle);
+    }
+  }, [visible, closeSelf]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (activeTooltipClose === closeSelf) {
+        activeTooltipClose = null;
+      }
+    };
+  }, [closeSelf]);
 
   // Safely mount to prevent SSR hydration mismatches
   useEffect(() => {
@@ -59,6 +109,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   }, [isVisible]);
 
   const showTooltip = (e: React.MouseEvent<any> | React.FocusEvent<any>) => {
+    setIsDismissed(false);
     try {
       const rect = e.currentTarget.getBoundingClientRect();
       const triggerCenterX = rect.left + rect.width / 2;
@@ -116,7 +167,12 @@ export const Tooltip: React.FC<TooltipProps> = ({
     }
     if (showTimeoutId) return;
     const id = setTimeout(() => {
+      // Dismiss any other open tooltip globally before showing this one
+      if (activeTooltipClose && activeTooltipClose !== closeSelf) {
+        activeTooltipClose();
+      }
       setIsVisible(true);
+      activeTooltipClose = closeSelf;
     }, delay);
     setShowTimeoutId(id);
   };
@@ -130,6 +186,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
     // Tiny 150ms hover-bridge gap to cross from trigger into tooltip popover safely
     const id = setTimeout(() => {
       setIsVisible(false);
+      if (activeTooltipClose === closeSelf) {
+        activeTooltipClose = null;
+      }
       setHideTimeoutId(null);
     }, 150);
     setHideTimeoutId(id);
@@ -172,6 +231,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
     },
     onBlur: (e: React.FocusEvent) => {
       setIsVisible(false);
+      if (activeTooltipClose === closeSelf) {
+        activeTooltipClose = null;
+      }
       if (children.props.onBlur) {
         children.props.onBlur(e);
       }
@@ -179,6 +241,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
     onClick: (e: React.MouseEvent) => {
       if (!children.props.onClick || children.props.onClick(e) !== false) {
         setIsVisible(false);
+        if (activeTooltipClose === closeSelf) {
+          activeTooltipClose = null;
+        }
         if (showTimeoutId) clearTimeout(showTimeoutId);
         if (hideTimeoutId) clearTimeout(hideTimeoutId);
         setShowTimeoutId(null);
@@ -194,12 +259,12 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const paddingClass = hasPadding ? '' : 'px-3 py-1.5';
 
   const hasWidth = className.includes('w-') || className.includes('max-w-');
-  const widthClass = hasWidth ? '' : 'max-w-[200px] text-center';
+  const widthClass = hasWidth ? '' : 'max-w-[240px] text-center';
 
   const hasTextSize = className.includes('text-');
-  const textClass = hasTextSize ? '' : 'text-xs';
+  const textClass = hasTextSize ? '' : 'text-sm';
 
-  const tooltipPortal = isVisible && mounted && typeof document !== 'undefined' && createPortal(
+  const tooltipPortal = isShown && mounted && typeof document !== 'undefined' && createPortal(
     <div
       onMouseEnter={cancelHide}
       onMouseLeave={hideTooltip}
@@ -214,7 +279,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           'translate(-50%, 0)',
         zIndex: 9999, // Guarantee absolute topmost visual layer
       }}
-      className={`${pointerClass} ${paddingClass} ${widthClass} ${textClass} select-text rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 shadow-2xl transition-all duration-150 animate-in fade-in zoom-in-95 ${className}`}
+      className={`${pointerClass} ${paddingClass} ${widthClass} ${textClass} select-text rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 shadow-2xl shadow-[0_0_30px_rgba(129,140,248,0.45)] transition-all duration-150 animate-in fade-in zoom-in-95 ${className}`}
       role="tooltip"
     >
       {content}

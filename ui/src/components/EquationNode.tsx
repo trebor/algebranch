@@ -24,6 +24,7 @@ import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import { ArrowLeftRight, Zap, Split, RefreshCw } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
+import { PreviewEquationNode } from './PreviewEquationNode';
 
 const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
   <svg
@@ -292,9 +293,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     : isTarget
     ? THEME_GLASS.TARGET
     : isStatic
-    ? ((isReducible && !sourcePath) 
-        ? THEME_GLASS.CARD_CANDIDATE_SCAN.replace('cursor-pointer', 'cursor-default') + ' select-none' 
-        : THEME_GLASS.STATIC + ' select-none')
+    ? THEME_GLASS.STATIC + ' select-none'
     : isHighlightedCandidate
     ? THEME_GLASS.CARD_CANDIDATE_SCAN
     : canClick
@@ -504,7 +503,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     paddingBottom: `${layout.nodePy}em`,
   };
 
-  return (
+  const element = (
     <div
       data-flip-id={nodeId}
       style={customStyle}
@@ -551,11 +550,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       {/* Compact Inline Operations Toolbar - sits inside the top-padding area to prevent layout overlap */}
       {isReducible && (
         <div 
-          className="absolute flex items-center z-25"
+          className={`absolute flex items-center z-25 ${
+            sourcePath ? 'opacity-25 pointer-events-none grayscale' : 'opacity-100'
+          }`}
           style={{
             top: `${layout.btnTop}em`,
             right: `${layout.btnRight}em`,
             gap: `${layout.btnGap}em`,
+            transition: 'opacity 200ms, filter 200ms',
           }}
         >
           {actions.map((action, index) => {
@@ -564,11 +566,24 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             
             const isActionHovered = hoverReducePath === path && hoverReduceIndex === index;
 
+            const tooltipContent = (
+              <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
+                <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">{label}</span>
+                <div className="w-full border-t border-white/10 my-1" />
+                <div className="flex items-center justify-center gap-1.5 flex-nowrap py-0.5 text-[1.3em]">
+                  <PreviewEquationNode path="lhs" customEquation={action.equation} />
+                  <span className="text-[1.3em] font-mono text-indigo-300 px-0.5 select-none">=</span>
+                  <PreviewEquationNode path="rhs" customEquation={action.equation} />
+                </div>
+              </div>
+            );
+
             return (
               <Tooltip
                 key={index}
-                content={label}
+                content={tooltipContent}
                 position="top"
+                className="max-w-[300px] sm:max-w-[360px]"
               >
                 <button
                   className={`flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group ${
@@ -606,7 +621,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   }}
                 >
                   <span 
-                    className={`absolute inset-0 animate-ping group-hover:opacity-0 pointer-events-none ${
+                    className={`absolute inset-0 group-hover:opacity-0 pointer-events-none ${
+                      !sourcePath ? 'animate-ping' : ''
+                    } ${
                       type === 'distribute' 
                         ? THEME_GLASS.PING_DISTRIBUTE 
                         : type === 'identity'
@@ -635,4 +652,54 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       )}
     </div>
   );
+
+  if (isTarget && targetPaths[path]) {
+    const targetEquation = targetPaths[path];
+    const targetTooltipContent = (
+      <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
+        <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">Preview Move</span>
+        <div className="w-full border-t border-white/10 my-1" />
+        <div className="flex items-center justify-center gap-1.5 flex-nowrap py-0.5 text-[1.3em]">
+          <PreviewEquationNode path="lhs" customEquation={targetEquation} />
+          <span className="text-[1.3em] font-mono text-indigo-300 px-0.5 select-none">=</span>
+          <PreviewEquationNode path="rhs" customEquation={targetEquation} />
+        </div>
+      </div>
+    );
+
+    return (
+      <Tooltip
+        content={targetTooltipContent}
+        position="top"
+        className="max-w-[300px] sm:max-w-[360px]"
+      >
+        {element}
+      </Tooltip>
+    );
+  }
+
+  if (!sourcePath && isCandidate) {
+    const candidateTooltipContent = (
+      <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
+        <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">Select Term</span>
+        <div className="w-full border-t border-white/10 my-1" />
+        <div className="flex items-center justify-center py-0.5 text-[1.3em]">
+          <PreviewEquationNode path={path} />
+        </div>
+      </div>
+    );
+
+    return (
+      <Tooltip
+        content={candidateTooltipContent}
+        position="top"
+        visible={isHovered && hoverReducePath === null}
+        className="max-w-[300px] sm:max-w-[360px]"
+      >
+        {element}
+      </Tooltip>
+    );
+  }
+
+  return element;
 };

@@ -387,31 +387,7 @@ export const treeLayoutAtom = atom<Record<string, VisualTreeNode>>((get) => {
   return result;
 });
 
-/**
- * Computes the preview equation reactively.
- */
-export const previewEquationAtom = atom<Equation>((get) => {
-  const hoverReducePath = get(hoverReducePathAtom);
-  const hoverReduceIndex = get(hoverReduceIndexAtom);
-  const reducible = get(reduciblePathsAtom);
 
-  if (hoverReducePath && hoverReducePath in reducible) {
-    const actions = reducible[hoverReducePath];
-    const index = hoverReduceIndex !== null ? hoverReduceIndex : 0;
-    const action = actions[index];
-    if (action) {
-      return action.equation;
-    }
-  }
-
-  const hoverPath = get(hoverPathAtom);
-  const targetPaths = get(targetPathsAtom);
-
-  if (hoverPath && hoverPath in targetPaths) {
-    return targetPaths[hoverPath];
-  }
-  return get(currentEquationAtom);
-});
 
 const normalizeAST = (node: math.MathNode): math.MathNode => {
   if (!node) return node;

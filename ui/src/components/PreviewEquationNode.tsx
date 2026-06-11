@@ -3,7 +3,7 @@
 import React from 'react';
 import { useAtomValue } from 'jotai';
 import * as math from 'mathjs';
-import { previewEquationAtom } from '../store/equation';
+import { currentEquationAtom } from '../store/equation';
 import { Equation, getNodeByPath, getFunctionName, formatNumber } from 'math-engine-client';
 
 const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
@@ -53,8 +53,8 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
   inExponent = false,
   customEquation,
 }) => {
-  const previewEq = useAtomValue(previewEquationAtom);
-  const eq = customEquation ?? previewEq;
+  const currentEq = useAtomValue(currentEquationAtom);
+  const eq = customEquation ?? currentEq;
 
   const node = React.useMemo(() => {
     try {

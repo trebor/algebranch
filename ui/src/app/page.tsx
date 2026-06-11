@@ -3,7 +3,6 @@
 import React from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
-import { PreviewEquationNode } from '../components/PreviewEquationNode';
 import { Sidebar, SidebarContent, EquationLibraryContent } from '../components/Sidebar';
 import { ControlPanel, TimelineContent } from '../components/ControlPanel';
 import { FeedbackModal } from '../components/FeedbackModal';
@@ -20,7 +19,6 @@ import { useIsMobile } from '../hooks/useBreakpoint';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import {
   currentEquationAtom,
-  previewEquationAtom,
   hoverPathAtom,
   targetPathsAtom,
   reduciblePathsAtom,
@@ -101,7 +99,7 @@ const safeLocalStorage = {
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
-  const targetPaths = useAtomValue(targetPathsAtom);
+  const [targetPaths, setTargetPaths] = useAtom(targetPathsAtom);
   const hoverReducePath = useAtomValue(hoverReducePathAtom);
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
   const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
@@ -139,10 +137,9 @@ export default function Home() {
   const swapSides = useSetAtom(swapSidesAtom);
   const isMobile = useIsMobile();
   const equalsRef = React.useRef<HTMLSpanElement>(null);
+  const lastEqStrRef = React.useRef<string | null>(null);
 
-  const isSpeculative = (hoverPath !== null && hoverPath in targetPaths) || hoverReducePath !== null;
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
-  const previewEq = useAtomValue(previewEquationAtom);
   const activeScale = useMathScale(
     currentEq,
     [targetPaths, reduciblePaths, sourcePath, isHydrated, isMathLoading],
@@ -150,16 +147,8 @@ export default function Home() {
     0.4,
     isMathLoading ? 1.6 : 2.8
   );
-  const previewScale = useMathScale(
-    previewEq,
-    [targetPaths, reduciblePaths, sourcePath, isSpeculative, isHydrated],
-    isMobile ? 8 : 24,
-    0.4,
-    1.8
-  );
 
   useFLIPAnimation(activeScale.containerRef, currentEq);
-  useFLIPAnimation(previewScale.containerRef, previewEq);
 
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
@@ -479,8 +468,17 @@ export default function Home() {
   React.useEffect(() => {
     if (!currentEq) return;
 
-    // Clear old interactive paths/actions immediately during transition to prevent stale highlights/handles
-    clearMathState();
+    const eqStr = equationToString(currentEq);
+    const eqChanged = lastEqStrRef.current !== eqStr;
+    lastEqStrRef.current = eqStr;
+
+    // Clear old interactive paths/actions immediately during transition to prevent stale highlights/handles.
+    // If only sourcePath changed, preserve reduciblePaths to prevent toolbar handles from flickering/shrinking!
+    if (eqChanged) {
+      clearMathState();
+    } else {
+      setTargetPaths({});
+    }
 
     let active = true;
     const syncState = async () => {
@@ -505,7 +503,7 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, [currentEq, sourcePath, syncMathState, clearMathState]);
+  }, [currentEq, sourcePath, syncMathState, clearMathState, setTargetPaths]);
 
   // Keyboard Shortcuts (Issue #17)
   useKeyboardShortcuts([
@@ -834,7 +832,7 @@ export default function Home() {
           )}
           <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
             
-            {/* 1. Active Derivation Workspace (Top 2/3) */}
+            {/* 1. Active Derivation Workspace */}
             <div
               ref={activeScale.containerRef}
               onClick={() => {
@@ -842,7 +840,7 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className="active-workspace-canvas flex-[2] flex flex-col items-center justify-center min-h-0 w-full overflow-auto px-2 py-4 sm:p-4 lg:p-8 text-base font-light cursor-default relative group/canvas"
+              className="active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full overflow-auto px-2 py-4 sm:p-4 lg:p-8 text-base font-light cursor-default relative group/canvas"
             >
               {/* Calculating Math Engine Spinner / Toast Notification */}
               {toast ? (
@@ -926,57 +924,6 @@ export default function Home() {
                     {/* RHS Term Tree */}
                     <div className="flex justify-start min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
                       <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Elegant Dashed Separator */}
-            <div className={`w-11/12 border-t border-dashed ${THEME_GLASS.PANEL_BORDER_SUBTLE} shrink-0 self-center`} />
-
-            {/* 2. Speculative Preview Workspace (Bottom 1/3) */}
-            <div
-              ref={previewScale.containerRef}
-              onClick={() => {
-                if (sourcePath !== null) {
-                  setSourcePath(null);
-                }
-              }}
-              className="flex-[1] flex flex-col items-center justify-center min-h-0 w-full overflow-auto px-2 py-4 sm:p-4 lg:p-8 text-base font-light cursor-default relative group/preview"
-            >
-
-              {isHydrated && (
-                <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 origin-center ${
-                  isSpeculative ? 'opacity-70 scale-100' : 'opacity-30 scale-95'
-                }`}>
-                  <span className={`text-[10px] font-semibold tracking-wider uppercase select-none flex items-center gap-1.5 transition-colors duration-300 ${
-                    isSpeculative ? 'text-emerald-400' : 'text-zinc-500'
-                  }`}>
-                    <span>Preview</span>
-                    {isSpeculative && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                    )}
-                  </span>
-                  
-                  <div ref={previewScale.contentRef} className="flex items-center justify-center gap-[0.4em] sm:gap-[0.6em] lg:gap-[0.8em] flex-nowrap w-max pointer-events-none select-none">
-                    {/* LHS Preview Term Tree */}
-                    <div className="flex justify-end min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
-                      <PreviewEquationNode path="lhs" />
-                    </div>
-
-                    {/* Equals Operator sign */}
-                    <span className={`text-[1.2em] font-light font-mono select-none px-[0.6em] py-[0.2em] border rounded-[0.4em] transition-all duration-300 ${
-                      isSpeculative
-                        ? THEME_GLASS.PREVIEW_EQUALS_ACTIVE
-                        : THEME_GLASS.PREVIEW_EQUALS_INACTIVE
-                    }`}>
-                      =
-                    </span>
-
-                    {/* RHS Preview Term Tree */}
-                    <div className="flex justify-start min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
-                      <PreviewEquationNode path="rhs" />
                     </div>
                   </div>
                 </div>

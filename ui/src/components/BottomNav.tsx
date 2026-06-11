@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { motion } from 'framer-motion';
-import { Undo2, LayoutGrid, Library, GitBranch, Redo2 } from 'lucide-react';
+import { Undo2, LayoutGrid, Library, GitFork, Redo2 } from 'lucide-react';
 import { historyTreeAtom, currentNodeIdAtom, activeBottomSheetAtom } from '../store/equation';
 import { Tooltip } from './Tooltip';
 
@@ -59,7 +59,7 @@ export const BottomNav: React.FC = () => {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-[#110f22]/90 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
+      className="fixed bottom-0 left-0 right-0 z-55 lg:hidden bg-[#110f22]/90 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
     >
       <div className="flex items-end justify-around h-14 px-2">
         {/* Undo */}
@@ -91,7 +91,7 @@ export const BottomNav: React.FC = () => {
 
         {/* History */}
         <NavButton
-          icon={<GitBranch size={24} />}
+          icon={<GitFork size={24} className="rotate-180" />}
           label="History"
           tooltip="History (H)"
           active={activeBottomSheet === 'history'}

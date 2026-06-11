@@ -175,7 +175,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
             {/* Content */}
             <div
-              className="flex-1 overflow-y-auto overscroll-contain px-5 pb-[env(safe-area-inset-bottom)]"
+              className="flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(env(safe-area-inset-bottom)+3.5rem)]"
               onPointerDownCapture={(e) => {
                 // Prevent drag from starting inside scrollable content
                 e.stopPropagation();

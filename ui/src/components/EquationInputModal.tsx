@@ -12,32 +12,33 @@ import { PreviewEquationNode } from './PreviewEquationNode';
 import { parseEquation, Equation } from 'math-engine-client';
 import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
-import { Tooltip } from './Tooltip';
 
 export const EquationInputModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(equationInputModalOpenAtom);
   const resetToEquation = useSetAtom(resetToEquationStringAtom);
 
-  const [inputStr, setInputStr] = React.useState('');
+  const [lhsStr, setLhsStr] = React.useState('');
+  const [rhsStr, setRhsStr] = React.useState('');
   const [parsedEq, setParsedEq] = React.useState<Equation | null>(null);
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
   const [infoStr, setInfoStr] = React.useState<string | null>(null);
 
-  // Auto-focus input on mount
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const lhsRef = React.useRef<HTMLInputElement>(null);
+  const rhsRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       // Reset inputs when opened
-      setInputStr('');
+      setLhsStr('');
+      setRhsStr('');
       setParsedEq(null);
       setErrorStr(null);
       setInfoStr(null);
       
       // Delay focus slightly for framer-motion entry animation
       const timer = setTimeout(() => {
-        inputRef.current?.focus();
+        lhsRef.current?.focus();
       }, 150);
       return () => clearTimeout(timer);
     } else {
@@ -62,42 +63,28 @@ export const EquationInputModal: React.FC = () => {
 
   // Real-time parser validation
   React.useEffect(() => {
-    const trimmed = inputStr.trim();
-    if (!trimmed) {
+    const lhsTrim = lhsStr.trim();
+    const rhsTrim = rhsStr.trim();
+
+    if (!lhsTrim && !rhsTrim) {
       setParsedEq(null);
       setErrorStr(null);
       setInfoStr(null);
       return;
     }
 
-    // 1. Check if the user is in the middle of typing the LHS and hasn't added "=" yet
-    if (!trimmed.includes('=')) {
-      setParsedEq(null);
-      setErrorStr(null);
-      setInfoStr('Add an "=" sign to complete your equation (e.g. 2*x + 4 = 10)');
-      return;
-    }
-
-    const parts = trimmed.split('=');
-    // 2. Check for multiple equal signs
-    if (parts.length > 2) {
-      setParsedEq(null);
-      setInfoStr(null);
-      setErrorStr('An equation must contain exactly one "=" sign');
-      return;
-    }
-
-    // 3. Check if either side is empty (incomplete typing state)
-    if (!parts[0].trim() || !parts[1].trim()) {
+    // If either side is missing, show incomplete typing helper
+    if (!lhsTrim || !rhsTrim) {
       setParsedEq(null);
       setErrorStr(null);
       setInfoStr('Add algebraic terms to both sides of the "=" sign');
       return;
     }
 
-    // 4. Try parsing the equation
+    const combined = `${lhsTrim} = ${rhsTrim}`;
+
     try {
-      const parsed = parseEquation(trimmed);
+      const parsed = parseEquation(combined);
       setParsedEq(parsed);
       setErrorStr(null);
       setInfoStr(null);
@@ -107,13 +94,62 @@ export const EquationInputModal: React.FC = () => {
       
       let rawMsg = err instanceof Error ? err.message : String(err);
       
-      // Helpfully intercept common math.js syntax errors to guide users
       if (rawMsg.toLowerCase().includes('value expected') || rawMsg.toLowerCase().includes('unexpected operator')) {
         rawMsg = `${rawMsg} (Hint: use "*" for multiplication like "3*x" instead of "3x")`;
       }
       setErrorStr(rawMsg);
     }
-  }, [inputStr]);
+  }, [lhsStr, rhsStr]);
+
+  const handleLhsChange = (val: string) => {
+    if (val.includes('=')) return;
+    setLhsStr(val);
+  };
+
+  const handleRhsChange = (val: string) => {
+    if (val.includes('=')) return;
+    setRhsStr(val);
+  };
+
+  const handleLhsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === '=') {
+      e.preventDefault();
+      rhsRef.current?.focus();
+    }
+  };
+
+  const handleRhsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && rhsStr === '') {
+      e.preventDefault();
+      lhsRef.current?.focus();
+      if (lhsRef.current) {
+        const len = lhsStr.length;
+        lhsRef.current.setSelectionRange(len, len);
+      }
+    }
+    if (e.key === '=') {
+      e.preventDefault();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = e.clipboardData.getData('text');
+    if (pastedText.includes('=')) {
+      e.preventDefault();
+      const parts = pastedText.split('=');
+      const lhs = parts[0].trim();
+      const rhs = parts.slice(1).join('=').trim();
+      setLhsStr(lhs);
+      setRhsStr(rhs);
+      setTimeout(() => {
+        rhsRef.current?.focus();
+        if (rhsRef.current) {
+          const len = rhs.length;
+          rhsRef.current.setSelectionRange(len, len);
+        }
+      }, 0);
+    }
+  };
 
   const handleClose = () => {
     setIsOpen(false);
@@ -121,14 +157,15 @@ export const EquationInputModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (errorStr || !inputStr.trim()) return;
+    const combined = `${lhsStr.trim()} = ${rhsStr.trim()}`;
+    if (!lhsStr.trim() || !rhsStr.trim() || errorStr) return;
 
     try {
-      resetToEquation(inputStr.trim());
+      resetToEquation(combined);
       trackEvent({
         action: 'load_custom_equation',
         category: 'presets',
-        label: inputStr.trim(),
+        label: combined,
       });
       setIsOpen(false);
     } catch (err) {
@@ -178,25 +215,43 @@ export const EquationInputModal: React.FC = () => {
             {/* Form & Input Area (Top) */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1 overflow-y-auto">
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="eq-input" className="text-xs text-white/60 font-semibold select-none">
+                <label className="text-xs text-white/60 font-semibold select-none">
                   Equation Input
                 </label>
-                <div className="relative">
+                <div className="flex items-center gap-2 w-full bg-neutral-950/80 border border-white/10 rounded-xl px-4 py-2.5 focus-within:border-indigo-500/80 focus-within:ring-1 focus-within:ring-indigo-500/30 transition-all select-none">
                   <input
-                    ref={inputRef}
-                    id="eq-input"
+                    ref={lhsRef}
                     type="text"
-                    value={inputStr}
-                    onChange={(e) => setInputStr(e.target.value)}
-                    placeholder="Enter equation, e.g. 2*x + 4 = 10"
-                    className="w-full h-11 pl-4 pr-10 text-sm bg-neutral-950/80 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 focus:ring-1 focus:ring-indigo-500/30 transition-all font-mono"
+                    value={lhsStr}
+                    onChange={(e) => handleLhsChange(e.target.value)}
+                    onKeyDown={handleLhsKeyDown}
+                    onPaste={handlePaste}
+                    placeholder="Left side (e.g. 3*x)"
+                    className="flex-1 min-w-0 bg-transparent text-white placeholder-white/20 text-sm focus:outline-none text-right font-mono"
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck="false"
                   />
-                  {inputStr.trim() && !errorStr && (
-                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-400 animate-pulse">
+                  <span className="text-indigo-400 font-mono font-bold text-sm px-1 shrink-0">
+                    =
+                  </span>
+                  <input
+                    ref={rhsRef}
+                    type="text"
+                    value={rhsStr}
+                    onChange={(e) => handleRhsChange(e.target.value)}
+                    onKeyDown={handleRhsKeyDown}
+                    onPaste={handlePaste}
+                    placeholder="Right side (e.g. 12)"
+                    className="flex-1 min-w-0 bg-transparent text-white placeholder-white/20 text-sm focus:outline-none text-left font-mono"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
+                  />
+                  {lhsStr.trim() && rhsStr.trim() && !errorStr && (
+                    <div className="text-emerald-400 animate-pulse shrink-0 ml-1">
                       <Check size={16} />
                     </div>
                   )}
@@ -211,7 +266,7 @@ export const EquationInputModal: React.FC = () => {
                 
                 <div className="flex-1 bg-neutral-950/80 border border-white/5 rounded-xl p-4 flex items-center justify-center relative min-h-[100px]">
                   {/* Empty state */}
-                  {!inputStr.trim() && (
+                  {!lhsStr.trim() && !rhsStr.trim() && (
                     <div className="text-center text-xs text-white/30 flex flex-col items-center gap-2 select-none">
                       <KeyboardIcon className="opacity-40" />
                       <span>Type an algebraic equation above to see its parsed preview.</span>

@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAtom, useAtomValue } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus, X, Layers, Pencil } from 'lucide-react';
 import {
   tabsAtom,
   activeTabIdAtom,
-  addTabAtom,
   closeTabAtom,
   renameTabAtom,
+  equationInputModalOpenAtom,
   WorkspaceTab
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
@@ -25,9 +25,9 @@ const formatTimestamp = (ts: number): string => {
 export const WorkspaceTabs: React.FC = () => {
   const [tabs, setTabs] = useAtom(tabsAtom);
   const [activeTabId, setActiveTabId] = useAtom(activeTabIdAtom);
-  const [, addTab] = useAtom(addTabAtom);
   const [, closeTab] = useAtom(closeTabAtom);
   const [, renameTab] = useAtom(renameTabAtom);
+  const setIsInputModalOpen = useSetAtom(equationInputModalOpenAtom);
 
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editName, setEditName] = useState<string>('');
@@ -145,7 +145,7 @@ export const WorkspaceTabs: React.FC = () => {
                     <Tooltip content="Rename workspace" position="bottom" autoAlign={false}>
                       <button
                         onClick={(e) => handleStartEdit(e, tab)}
-                        className="contextual-actions hover:text-indigo-400 p-0.5 rounded cursor-pointer"
+                      className="hover:text-white p-0.5 rounded cursor-pointer transition-all duration-150 text-white/40"
                       >
                         <Pencil size={9} />
                       </button>
@@ -173,9 +173,9 @@ export const WorkspaceTabs: React.FC = () => {
       </div>
 
       {/* Plus Button to add tab - Pinned to the right */}
-      <Tooltip content="Clone workspace" position="bottom" autoAlign={false}>
+      <Tooltip content="New workspace tab" position="bottom" autoAlign={false}>
         <button
-          onClick={() => addTab()}
+          onClick={() => setIsInputModalOpen(true)}
           className="flex items-center justify-center p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white/40 hover:text-white transition-all cursor-pointer shrink-0"
         >
           <Plus size={13} />

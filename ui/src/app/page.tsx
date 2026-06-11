@@ -52,6 +52,7 @@ import {
   activeBottomSheetAtom,
   radialMenuOpenAtom,
   swapSidesAtom,
+  addTabAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
@@ -126,6 +127,7 @@ export default function Home() {
   const deleteSession = useSetAtom(deleteSessionAtom);
   const setDeleteConfirmationModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
   const currentTabName = useAtomValue(currentTabNameAtom);
+  const addTab = useSetAtom(addTabAtom);
   const [toast, setToast] = useAtom(toastAtom);
   const [isHydrated, setIsHydrated] = React.useState(false);
   const [initError, setInitError] = React.useState<string | null>(null);
@@ -877,6 +879,17 @@ export default function Home() {
               {/* Contextual Action Buttons for Active Workspace */}
               {currentEq && (
                 <div className="absolute top-4 right-4 z-30 contextual-actions flex items-center gap-2">
+                  <Tooltip content="Clone workspace" position="left">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addTab();
+                      }}
+                      className="p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-white/10 text-white/40 hover:text-white transition-all cursor-pointer shadow-md"
+                    >
+                      <GitBranch size={14} />
+                    </button>
+                  </Tooltip>
 
                   <Tooltip content="Delete workspace permanently" position="left">
                     <button

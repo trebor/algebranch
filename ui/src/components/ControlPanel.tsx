@@ -18,7 +18,7 @@ import {
   resetHistoryModalOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitBranch, Infinity } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitFork, Infinity } from 'lucide-react';
 import { useIsMobile } from '../hooks/useBreakpoint';
 
 const COPIED_TIMEOUT = 2000;
@@ -282,7 +282,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
       {/* Sidebar Header with Timeline Actions */}
       <div className="flex items-center justify-between border-b border-white/10 pb-4 shrink-0">
         <h2 className="text-base lg:text-lg font-semibold lg:font-bold text-white flex items-center gap-2 select-none">
-          <GitBranch className="text-indigo-400" size={18} />
+          <GitFork className="text-indigo-400 rotate-180" size={18} />
           <span>History</span>
         </h2>
         <div className="flex items-center gap-1.5">

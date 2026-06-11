@@ -16,7 +16,15 @@ Protocol:
 
 ## Source of truth
 
-- **What to do, priority, status**: GitHub Issues + the GitHub Project. Use `gh issue list` to see current work.
+- **What to do, priority, status**: GitHub Issues + the **Algebranch Project board** (Project 6, https://github.com/users/trebor/projects/6/views/2). The board encodes a `Priority` field (P0 highest → P3) and a `Status` field (`Ready` = actionable now, `Research` = needs scoping, `Done`). **Pick next work by priority, highest first, among `Ready` items.** Read the board with:
+
+  ```sh
+  gh project item-list 6 --owner trebor --format json --limit 50 \
+    | jq -r '.items[] | [(.content.number//"-"), (.status//"-"), (.priority//"-"), (.content.title//.title)] | @tsv' \
+    | sort -k3
+  ```
+
+  `gh issue list` shows the same issues without the priority/status ordering.
 - **How, design rationale, where-I-left-off**: `.workbench/` docs.
 - Do **not** create roadmap/checklist markdown files elsewhere in the repo (the old `TASKS.md` was removed for exactly this reason). Treat any stray checklist file as archival, not live.
 

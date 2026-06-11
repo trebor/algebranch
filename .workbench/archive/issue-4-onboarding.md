@@ -1,9 +1,13 @@
 ---
-status: active
-issue: "#4 — Add a visual guide / interactive onboarding walkthrough for new users"
-branch: feat/interactive-walkthrough
+status: done
+issue: "#4 — Add a visual guide / interactive onboarding walkthrough for new users (closed)"
+branch: feat/interactive-walkthrough (merged to main 2026-06-11)
 updated: 2026-06-11
 ---
+
+> Shipped: merged to main and issue #4 closed on 2026-06-11 after manual chapter
+> walkthroughs. Any residual polish items in "Remaining work" below were judged
+> non-blocking — file fresh GitHub issues if they resurface.
 
 # Issue #4: Interactive Onboarding Walkthrough
 

@@ -758,14 +758,14 @@ export default function Home() {
               }
               setFeedbackModalOpen(true);
             }}
-            className="flex items-center gap-1.5 p-2 sm:px-3.5 sm:py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group"
+            className={THEME_GLASS.HEADER_BUTTON}
           >
             <MessageSquarePlus size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
             <span className="hidden sm:inline">Feedback</span>
           </button>
           <button
             onClick={handleShare}
-            className={`flex items-center gap-1.5 p-2 sm:px-3.5 sm:py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group`}
+            className={THEME_GLASS.HEADER_BUTTON}
           >
             {sharedCopied ? (
               <>
@@ -813,7 +813,7 @@ export default function Home() {
           >
             <button
               onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-              className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
+              className={THEME_GLASS.EDGE_HANDLE}
               aria-label={leftSidebarOpen ? "Close sidebar" : "Open sidebar"}
             >
               {leftSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
@@ -846,13 +846,13 @@ export default function Home() {
             >
               {/* Calculating Math Engine Spinner / Toast Notification */}
               {toast ? (
-                <div key={`toast-${toast.key}`} className="absolute top-4 left-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/25 bg-neutral-900/80 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]">
+                <div key={`toast-${toast.key}`} className={`absolute top-4 left-4 z-30 ${THEME_GLASS.TOAST_ALERT}`}>
                   <Check size={12} className="text-emerald-400 shrink-0" />
                   <span>{toast.message}</span>
                 </div>
               ) : isMathLoading ? (
-                <div className="absolute top-4 left-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/20 bg-neutral-900/60 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]">
-                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-indigo-500/20 border-t-indigo-400 shrink-0" />
+                <div className={`absolute top-4 left-4 z-30 ${THEME_GLASS.TOAST_LOADING}`}>
+                  <div className={`h-3 w-3 border-2 ${THEME_GLASS.SPINNER}`} />
                   <span>Calculating...</span>
                 </div>
               ) : null}
@@ -865,7 +865,7 @@ export default function Home() {
                         e.stopPropagation();
                         addTab();
                       }}
-                      className="p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-white/10 text-white/40 hover:text-white transition-all cursor-pointer shadow-md"
+                      className={THEME_GLASS.ICON_BUTTON}
                     >
                       <GitBranch size={14} />
                     </button>
@@ -878,7 +878,7 @@ export default function Home() {
                         setDeleteConfirmationModalOpen(true);
                       }}
                       disabled={savedSessions.length <= 1}
-                      className="p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-red-500/10 text-white/40 hover:text-red-400 hover:border-red-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-md"
+                      className={THEME_GLASS.ICON_BUTTON_DANGER}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -887,10 +887,10 @@ export default function Home() {
               )}
               {!isHydrated ? (
                 <div className="flex flex-col items-center justify-center gap-3 select-none">
-                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500/20 border-t-indigo-400 shrink-0" />
+                  <div className={`h-8 w-8 border-4 ${THEME_GLASS.SPINNER}`} />
                   <span className="text-sm font-medium text-indigo-300/80 animate-pulse tracking-wide">Initializing workspace...</span>
                   {initError && (
-                    <div className="mt-4 p-3 rounded bg-red-500/10 border border-red-500/25 text-xs text-red-400 max-w-xs text-center break-all shadow-lg">
+                    <div className={THEME_GLASS.BANNER_DANGER}>
                       Error: {initError}
                     </div>
                   )}
@@ -911,7 +911,7 @@ export default function Home() {
                         if (equalsLocked) return;
                         setRadialMenuOpen(!radialMenuOpen);
                       }}
-                      className={`relative text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black transition-all ${
+                      className={`${THEME_GLASS.EQUALS_SIGN} ${
                         equalsLocked
                           ? 'cursor-default'
                           : 'cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95'
@@ -933,7 +933,7 @@ export default function Home() {
             </div>
 
             {/* Elegant Dashed Separator */}
-            <div className="w-11/12 border-t border-dashed border-white/10 shrink-0 self-center" />
+            <div className={`w-11/12 border-t border-dashed ${THEME_GLASS.PANEL_BORDER_SUBTLE} shrink-0 self-center`} />
 
             {/* 2. Speculative Preview Workspace (Bottom 1/3) */}
             <div
@@ -968,8 +968,8 @@ export default function Home() {
                     {/* Equals Operator sign */}
                     <span className={`text-[1.2em] font-light font-mono select-none px-[0.6em] py-[0.2em] border rounded-[0.4em] transition-all duration-300 ${
                       isSpeculative
-                        ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
-                        : 'text-zinc-600 border-zinc-500/10 bg-zinc-500/5'
+                        ? THEME_GLASS.PREVIEW_EQUALS_ACTIVE
+                        : THEME_GLASS.PREVIEW_EQUALS_INACTIVE
                     }`}>
                       =
                     </span>
@@ -996,7 +996,7 @@ export default function Home() {
           >
             <button
               onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-              className="w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
+              className={THEME_GLASS.EDGE_HANDLE}
               aria-label={rightSidebarOpen ? "Close history" : "Open history"}
             >
               {rightSidebarOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}

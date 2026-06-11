@@ -239,7 +239,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
               transition={{ type: 'spring', duration: 0.35, bounce: 0.3 }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-indigo-600/30 border-2 border-indigo-400/50 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)] pointer-events-auto cursor-pointer z-10"
+              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${THEME_GLASS.RADIAL_CENTER}`}
               onClick={handleClose}
             >
               <span className="text-xl font-mono font-bold text-indigo-300">=</span>
@@ -271,10 +271,10 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                       bounce: 0.35,
                       delay: i * 0.03,
                     }}
-                    className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full backdrop-blur-xl bg-neutral-900/80 border border-white/15 shadow-lg shadow-black/40 flex items-center justify-center pointer-events-auto transition-colors ${petal.color} ${
+                    className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${THEME_GLASS.RADIAL_PETAL} ${petal.color} ${
                       isPetalLocked
-                        ? 'cursor-default'
-                        : 'cursor-pointer hover:bg-white/10 hover:border-white/30 hover:scale-110 active:scale-95'
+                        ? THEME_GLASS.RADIAL_PETAL_LOCKED
+                        : THEME_GLASS.RADIAL_PETAL_HOVER
                     }`}
                     onClick={() => handlePetalClick(petal)}
                   >
@@ -298,8 +298,8 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                   onSubmit={handleTermSubmit}
                   className="absolute left-1/2 -translate-x-1/2 top-1/2 pointer-events-auto flex flex-col items-center gap-2"
                 >
-                  <div className="flex items-center gap-2 bg-neutral-950/95 backdrop-blur-xl border border-white/15 rounded-xl px-3 py-2 shadow-2xl shadow-black/60">
-                    <span className="text-sm font-bold text-indigo-400 w-10 text-center flex items-center justify-center">
+                  <div className={THEME_GLASS.RADIAL_INPUT_PANEL}>
+                    <span className={`text-sm font-bold ${THEME_GLASS.MATH_OP_ACTIVE} w-10 text-center flex items-center justify-center`}>
                       {termInputAction.type === 'add' ? (
                         '+'
                       ) : termInputAction.type === 'sub' ? (
@@ -315,7 +315,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                       )}
                     </span>
                     {termInputAction.type === 'power' || termInputAction.type === 'root' ? (
-                      <div className="relative flex items-center gap-3 bg-neutral-900 border border-white/10 rounded-lg px-2 py-1">
+                      <div className={THEME_GLASS.SPINNER_BOX}>
                         {isTourActive && tourGlobalOp && !tourInputSatisfied && (
                           <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
                         )}
@@ -323,7 +323,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                           type="button"
                           disabled={spinnerValue <= 2 || isTourActive}
                           onClick={() => setSpinnerValue((v) => Math.max(2, v - 1))}
-                          className="w-6 h-6 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all cursor-pointer"
+                          className={THEME_GLASS.SPINNER_BTN}
                         >
                           <Minus size={12} className="text-white" />
                         </button>
@@ -334,7 +334,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                           type="button"
                           disabled={isTourActive}
                           onClick={() => setSpinnerValue((v) => v + 1)}
-                          className="w-6 h-6 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all cursor-pointer"
+                          className={THEME_GLASS.SPINNER_BTN}
                         >
                           <Plus size={12} className="text-white" />
                         </button>
@@ -348,7 +348,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                           readOnly={isTourActive}
                           onChange={(e) => setTermValue(e.target.value)}
                           placeholder="e.g. 5x"
-                          className={`w-28 px-2 py-1 text-sm bg-neutral-900 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none transition-all font-mono ${
+                          className={`w-28 px-2 py-1 text-sm text-white ${THEME_GLASS.FIELD_INPUT} ${
                             isTourActive ? 'cursor-default text-white/80' : 'focus:border-indigo-500/80'
                           }`}
                         />
@@ -360,7 +360,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                     <button
                       type="submit"
                       disabled={isTourActive && !tourInputSatisfied}
-                      className="relative px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md cursor-pointer active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none"
+                      className={THEME_GLASS.BUTTON_PRIMARY_SM}
                     >
                       Apply
                       {isTourActive && tourInputSatisfied && (
@@ -369,7 +369,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                     </button>
                   </div>
                   {errorStr && (
-                    <div className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-2 py-1 max-w-xs text-center">
+                    <div className={THEME_GLASS.ALERT_DANGER_SM}>
                       {errorStr}
                     </div>
                   )}
@@ -380,7 +380,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                       setTermValue('');
                       setErrorStr(null);
                     }}
-                    className="text-[10px] text-white/40 hover:text-white/70 transition-colors cursor-pointer"
+                    className={THEME_GLASS.TEXT_BUTTON_MUTED}
                   >
                     Back to menu
                   </button>

@@ -306,7 +306,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     if (node.type === 'ConstantNode') {
       const constNode = node as math.ConstantNode;
       return (
-        <span className={`font-semibold ${isStatic ? 'text-zinc-500' : 'text-yellow-400/90'}`}>
+        <span className={`font-semibold ${isStatic ? THEME_GLASS.MATH_NUMBER_STATIC : THEME_GLASS.MATH_NUMBER_ACTIVE}`}>
           {formatNumber(constNode.value)}
         </span>
       );
@@ -317,7 +317,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       const displayMap: Record<string, string> = { pi: 'π', e: 'e' };
       const val = displayMap[symbolNode.name] || symbolNode.name;
       return (
-        <span className={`italic font-serif ${isStatic ? 'text-zinc-500' : 'text-sky-300'} font-medium`}>
+        <span className={`italic font-serif ${isStatic ? THEME_GLASS.MATH_VAR_STATIC : THEME_GLASS.MATH_VAR_ACTIVE} font-medium`}>
           {val}
         </span>
       );
@@ -326,11 +326,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     if (node.type === 'ParenthesisNode') {
       return (
         <div className="flex items-center px-[0.05em]">
-          <LeftParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()} />
+          <LeftParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`} style={getOpStyle()} />
           <div className="px-[0.05em]">
             <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
           </div>
-          <RightParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()} />
+          <RightParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`} style={getOpStyle()} />
         </div>
       );
     }
@@ -342,7 +342,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         const opSymbol = opNode.op === '-' ? '−' : opNode.op;
         return (
           <div className="flex items-center gap-[0.05em]">
-            <span className={`font-bold select-none ${isStatic ? 'text-zinc-600' : 'text-indigo-300/90'}`} style={getOpStyle()}>{opSymbol}</span>
+            <span className={`font-bold select-none ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_UNARY_ACTIVE}`} style={getOpStyle()}>{opSymbol}</span>
             <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
           </div>
         );
@@ -355,7 +355,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             <div className={`w-full text-center ${inExponent ? 'pb-[0.02em]' : 'pb-[0.1em]'}`}>
               <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
             </div>
-            <div className={`w-full border-t ${isStatic ? 'border-zinc-700/30' : 'border-white/20'} h-0`} style={getOpStyle(true)} />
+            <div className={`w-full border-t ${isStatic ? THEME_GLASS.MATH_BORDER_STATIC : THEME_GLASS.MATH_BORDER_ACTIVE} h-0`} style={getOpStyle(true)} />
             <div className={`w-full text-center ${inExponent ? 'pt-[0.02em]' : 'pt-[0.1em]'}`}>
               <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} />
             </div>
@@ -390,7 +390,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       return (
         <div className="flex items-center gap-[0.2em] flex-nowrap justify-center py-[0.05em]">
           <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
-          <span className={`font-medium select-none text-[0.85em] ${isStatic ? 'text-zinc-600' : 'text-indigo-400'}`} style={getOpStyle()}>{opSymbol}</span>
+          <span className={`font-medium select-none text-[0.85em] ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_ACTIVE}`} style={getOpStyle()}>{opSymbol}</span>
           <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} />
         </div>
       );
@@ -422,7 +422,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className={`w-[0.7em] h-full ${isStatic ? 'text-zinc-600' : 'text-indigo-300'}`}
+                className={`w-[0.7em] h-full ${isStatic ? THEME_GLASS.MATH_FN_ROOT_STATIC : THEME_GLASS.MATH_FN_ROOT_ACTIVE}`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
@@ -436,7 +436,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 />
               </svg>
             </div>
-            <div className={`border-t pt-[0.15em] pb-[0.05em] px-[0.15em] rounded-tr-[0.2em] flex items-center ${isStatic ? 'border-zinc-800' : 'border-white/30'}`} style={getOpStyle(true)}>
+            <div className={`border-t pt-[0.15em] pb-[0.05em] px-[0.15em] rounded-tr-[0.2em] flex items-center ${isStatic ? THEME_GLASS.MATH_BORDER_FN_STATIC : THEME_GLASS.MATH_BORDER_FN_ACTIVE}`} style={getOpStyle(true)}>
               <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
             </div>
           </div>
@@ -450,7 +450,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className={`w-[0.7em] h-full ${isStatic ? 'text-zinc-600' : 'text-indigo-300'}`}
+                className={`w-[0.7em] h-full ${isStatic ? THEME_GLASS.MATH_FN_ROOT_STATIC : THEME_GLASS.MATH_FN_ROOT_ACTIVE}`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
@@ -464,7 +464,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 />
               </svg>
             </div>
-            <div className={`border-t pt-[0.15em] pb-[0.05em] px-[0.15em] rounded-tr-[0.2em] flex items-center ${isStatic ? 'border-zinc-800' : 'border-white/30'}`} style={getOpStyle(true)}>
+            <div className={`border-t pt-[0.15em] pb-[0.05em] px-[0.15em] rounded-tr-[0.2em] flex items-center ${isStatic ? THEME_GLASS.MATH_BORDER_FN_STATIC : THEME_GLASS.MATH_BORDER_FN_ACTIVE}`} style={getOpStyle(true)}>
               <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
             </div>
           </div>
@@ -474,10 +474,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       // Default fallback function renderer
       return (
         <div className="flex items-center gap-[0.05em]">
-          <span className={`font-medium select-none text-[0.9em] ${isStatic ? 'text-zinc-500' : 'text-purple-300'}`} style={getOpStyle()}>{nameStr}</span>
-          <span className={`mr-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>(</span>
+          <span className={`font-medium select-none text-[0.9em] ${isStatic ? THEME_GLASS.MATH_FN_STATIC : THEME_GLASS.MATH_FN_ACTIVE}`} style={getOpStyle()}>{nameStr}</span>
+          <span className={`mr-[0.05em] ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`} style={getOpStyle()}>(</span>
           <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
-          <span className={`ml-[0.05em] ${isStatic ? 'text-zinc-600' : 'text-white/40'}`} style={getOpStyle()}>)</span>
+          <span className={`ml-[0.05em] ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`} style={getOpStyle()}>)</span>
         </div>
       );
     }
@@ -530,11 +530,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
       {/* Hover selection controls toolbar */}
       {isSelected && canToggleRoot(node) && (
-        <div className="absolute -top-[2em] left-1/2 -translate-x-1/2 flex items-center gap-[0.1em] bg-neutral-900 border border-white/10 rounded-[1em] px-[0.6em] py-[0.2em] z-30 shadow-lg text-[0.55em] whitespace-nowrap">
+        <div className={`absolute -top-[2em] left-1/2 -translate-x-1/2 flex items-center gap-[0.1em] z-30 ${THEME_GLASS.MINI_TOOLBAR}`}>
           <Tooltip content="Toggle root sign (±)">
             <button
               onClick={handleToggleRootSign}
-              className="p-[0.1em] hover:bg-white/10 text-indigo-400 hover:text-indigo-300 rounded-[1em] transition-colors flex items-center gap-[0.2em] cursor-pointer"
+              className={THEME_GLASS.MINI_TOOLBAR_BUTTON}
             >
               <RefreshCw size={10} />
               <span>± Sign</span>
@@ -545,7 +545,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
       {/* Receptive target backing card transition layer */}
       {isTarget && (
-        <div className="absolute -inset-0.5 bg-emerald-400/20 blur-md rounded-lg -z-10 animate-pulse" />
+        <div className={THEME_GLASS.TARGET_GLOW} />
       )}
 
       {/* Compact Inline Operations Toolbar - sits inside the top-padding area to prevent layout overlap */}
@@ -573,10 +573,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 <button
                   className={`flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group ${
                     type === 'distribute'
-                      ? 'bg-purple-600 hover:bg-purple-500 text-white animate-pulse'
+                      ? THEME_GLASS.HANDLE_DISTRIBUTE
                       : type === 'identity'
-                      ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                      : 'bg-amber-400 hover:bg-amber-300 text-neutral-950 shadow-inner'
+                      ? THEME_GLASS.HANDLE_IDENTITY
+                      : THEME_GLASS.HANDLE_SIMPLIFY
                   } ${isActionHovered ? 'scale-110 ring-2 ring-white/50' : ''}`}
                   style={{
                     width: `${layout.btnSize}em`,
@@ -608,10 +608,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   <span 
                     className={`absolute inset-0 animate-ping group-hover:opacity-0 pointer-events-none ${
                       type === 'distribute' 
-                        ? 'bg-purple-500/40' 
+                        ? THEME_GLASS.PING_DISTRIBUTE 
                         : type === 'identity'
-                        ? 'bg-indigo-500/40'
-                        : 'bg-amber-400/40'
+                        ? THEME_GLASS.PING_IDENTITY
+                        : THEME_GLASS.PING_SIMPLIFY
                     }`}
                     style={{
                       borderRadius: inExponent ? '0.12em' : '9999px',

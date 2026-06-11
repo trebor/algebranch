@@ -23,3 +23,7 @@ Protocol:
 ## Development guardrails
 
 Branch/merge and commit protocol lives in `rules.md` (symlinked). Key points: run `npm test` and `npm run build` before any merge; never commit, push, or merge without explicit user approval — write changes, verify they compile/pass tests, then halt for user validation.
+
+## Styling guardrails
+
+- **Use semantic styling tokens**: Do not hardcode raw Tailwind color classes (e.g. `bg-indigo-600`, `text-amber-400`, `text-white/40`, etc.) in TSX files. Instead, add/use centralized styling constants inside the `THEME_GLASS` object in [theme.ts](file:///Users/trebor/src/algebranch/ui/src/constants/theme.ts).

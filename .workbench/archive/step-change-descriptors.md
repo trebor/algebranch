@@ -1,9 +1,14 @@
 ---
-status: active
-issue: "math-engine: emit structured per-step change descriptors (precursor to #18)"
-branch: feat/step-change-descriptors (off main 2026-06-11, not pushed)
+status: done
+issue: "#42 — math-engine: emit structured per-step change descriptors (closed)"
+branch: feat/step-change-descriptors + feat/global-op-descriptors (both merged to main 2026-06-11)
 updated: 2026-06-11
 ---
+
+> Shipped: #42 closed, board → Done. Engine describes all three transformation
+> kinds. Consumed by #18 (copy-derivation UI). For #18: the history tree does NOT
+> persist the structured move, so capture the StepChange at move time and store
+> it on the history node (don't re-derive by diffing equations).
 
 # Per-step change descriptors (math-engine)
 

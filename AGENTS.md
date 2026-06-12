@@ -2,21 +2,16 @@
 
 Shared instructions for all coding agents (Claude Code, Antigravity, etc.) working in this repo. `CLAUDE.md` imports this file — keep it tool-agnostic.
 
-## Shared Agent Workbench (`.workbench/`)
-
-Cross-tool planning and handoff state lives in `.workbench/`. All agents read and write it. Do **not** store project plans in tool-private locations (Antigravity brain/conversation dirs, Claude memory) — anything the next session or the other tool needs goes in `.workbench/`.
-
-Protocol:
-
-1. **Before starting work**: read `.workbench/INDEX.md`, then any `status: active` doc relevant to your task.
-2. **Write plans and handoff state** to `.workbench/plans/` (one doc per effort: design, current state, next steps) and small decisions/discussions to `.workbench/notes/`. Update the relevant doc before the session ends so the next agent can resume cold.
-3. **Every doc** starts with a short header: `status: active | done`, related GitHub issue, last-updated date (absolute, e.g. 2026-06-11).
-4. **On completion**: set `status: done`, move the doc to `.workbench/archive/`, and update `INDEX.md`.
-5. **Keep `INDEX.md` current**: one line per doc — link, status, one-line hook. It is the entry point; never let it drift.
-
 ## Source of truth
 
-- **What to do, priority, status**: GitHub Issues + the **Algebranch Project board** (Project 6, https://github.com/users/trebor/projects/6/views/2). The board encodes a `Priority` field (P0 highest → P3) and a `Status` field (`Ready` = actionable now, `Research` = needs scoping, `Done`). **Pick next work by priority, highest first, among `Ready` items.** Read the board with:
+- **What to do, priority, status, and plans**: GitHub Issues + the **Algebranch Project board** (Project 6, https://github.com/users/trebor/projects/6/views/2). 
+- **Board Status Columns**:
+  - `Inbox`: Raw ideas, bugs, and incoming feature requests.
+  - `Planning`: Design phase. Ambiguities, mathematical scoping, or UX choices are being discussed/drafted in the comments or issue description.
+  - `Planned`: The implementation plan and checkboxes are finalized in the issue body. Ready to code.
+  - `In progress`: Active development.
+  - `Done`: Merged and closed.
+- **Picking work**: Pick next work by priority, highest first, among `Planned` items. Read the board status with:
 
   ```sh
   gh project item-list 6 --owner trebor --format json --limit 50 \
@@ -25,8 +20,10 @@ Protocol:
   ```
 
   `gh issue list` shows the same issues without the priority/status ordering.
-- **How, design rationale, where-I-left-off**: `.workbench/` docs.
-- Do **not** create roadmap/checklist markdown files elsewhere in the repo (the old `TASKS.md` was removed for exactly this reason). Treat any stray checklist file as archival, not live.
+- **How, design rationale, where-I-left-off**: Linked/written in the active GitHub issue. 
+  - On startup: Read the plan using `gh issue view <issue_number>`.
+  - On shutdown/handoff: Update the issue description or post a comment with completed steps, details, and next tasks so the next agent can resume cold.
+- Do **not** create roadmap, checklist, or plan files in the codebase.
 
 ## Development guardrails
 

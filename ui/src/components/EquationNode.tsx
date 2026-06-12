@@ -14,6 +14,7 @@ import {
   hoverReducePathAtom,
   hoverReduceIndexAtom,
   reduciblePathsAtom,
+  substitutionPathsAtom,
   toggleRootSignAtom,
   onboardingChapterIdAtom,
   onboardingHighlightPathAtom,
@@ -22,8 +23,8 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
-import { describeTransposition, describeReduction } from 'math-engine';
-import { ArrowLeftRight, Zap, Split, RefreshCw } from 'lucide-react';
+import { describeTransposition, describeReduction, describeSubstitution } from 'math-engine';
+import { ArrowLeftRight, Zap, Split, RefreshCw, Replace } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
 
@@ -125,6 +126,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
   const [hoverReduceIndex, setHoverReduceIndex] = useAtom(hoverReduceIndexAtom);
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
+  const substitutionPaths = useAtomValue(substitutionPathsAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
   const pushEquation = useSetAtom(pushEquationAtom);
   const currentEq = useAtomValue(currentEquationAtom);
@@ -206,6 +208,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       ? [allActions[onboardingReduceHandle.index]]
       : [];
   const isReducible = actions.length > 0;
+
+  // Substitution handles (#3): offered on variable nodes matching a fact from
+  // another workspace. Locked out during the tour (chapter-specific gating
+  // arrives with the substitution tutorial chapter).
+  const allSubstitutions = substitutionPaths[path] || [];
+  const substitutions = !isOnboardingActive ? allSubstitutions : [];
 
   // Toggle Root Sign (+/- branches) via global action
   const handleToggleRootSign = (e: React.MouseEvent) => {
@@ -562,7 +570,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       )}
 
       {/* Compact Inline Operations Toolbar - sits inside the top-padding area to prevent layout overlap */}
-      {isReducible && (
+      {(isReducible || substitutions.length > 0) && (
         <div 
           className={`absolute flex items-center z-25 ${
             sourcePath ? 'opacity-25 pointer-events-none grayscale' : 'opacity-100'
@@ -665,6 +673,64 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   ) : (
                     <Zap className="h-[65%] w-[65%] text-neutral-950 fill-neutral-950 stroke-[2.5]" />
                   )}
+                </button>
+              </Tooltip>
+            );
+          })}
+          {substitutions.map((option, index) => {
+            const subTooltipContent = (
+              <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
+                <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">
+                  Substitute {option.variable} = {option.replacement}
+                </span>
+                {option.fact.sourceName && (
+                  <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} select-none`}>from “{option.fact.sourceName}”</span>
+                )}
+                <div className="w-full border-t border-white/10 my-1" />
+                <div className="flex items-center justify-center gap-1.5 flex-nowrap py-0.5 text-[1.3em]">
+                  <PreviewEquationNode path="lhs" customEquation={option.substituted} />
+                  <span className="text-[1.3em] font-mono text-indigo-300 px-0.5 select-none">=</span>
+                  <PreviewEquationNode path="rhs" customEquation={option.substituted} />
+                </div>
+              </div>
+            );
+            return (
+              <Tooltip
+                key={`sub-${index}`}
+                content={subTooltipContent}
+                position="top"
+                className="max-w-[300px] sm:max-w-[360px]"
+              >
+                <button
+                  className={`flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group hover:scale-110 ${THEME_GLASS.HANDLE_SUBSTITUTE}`}
+                  style={{
+                    width: `${layout.btnSize}em`,
+                    height: `${layout.btnSize}em`,
+                    borderRadius: inExponent ? '0.12em' : '9999px',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    pushEquation(
+                      option.substituted,
+                      'Substitute',
+                      describeSubstitution(option.variable, option.replacement),
+                    );
+                    trackEvent({
+                      action: 'apply_substitution',
+                      category: 'math_interaction',
+                      label: `${option.variable} -> ${option.replacement}`,
+                    });
+                  }}
+                >
+                  <span
+                    className={`absolute inset-0 group-hover:opacity-0 pointer-events-none ${
+                      !sourcePath ? 'animate-ping' : ''
+                    } ${THEME_GLASS.PING_SUBSTITUTE}`}
+                    style={{
+                      borderRadius: inExponent ? '0.12em' : '9999px',
+                    }}
+                  />
+                  <Replace className="h-[65%] w-[65%] text-white stroke-[2.5]" />
                 </button>
               </Tooltip>
             );

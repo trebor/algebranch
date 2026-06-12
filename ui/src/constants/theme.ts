@@ -142,6 +142,13 @@ export const THEME_GLASS = {
   PING_DISTRIBUTE: 'bg-purple-500/40',
   PING_IDENTITY: 'bg-indigo-500/40',
   PING_SIMPLIFY: 'bg-amber-400/40',
+  HANDLE_SUBSTITUTE: 'bg-teal-500 hover:bg-teal-400 text-white',
+  PING_SUBSTITUTE: 'bg-teal-400/40',
+
+  // --- Substitution (#3): facts strip + history-tree badge ---
+  FACT_CHIP: 'flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 text-[10px] font-semibold select-none',
+  FACT_CHIP_SOURCE: 'text-teal-300/50 font-medium',
+  TREE_NODE_BADGE_SUBSTITUTE: 'bg-teal-600 border-teal-400 text-teal-50',
 
   // --- RadialMenu specific ---
   RADIAL_CENTER: 'w-14 h-14 rounded-full bg-indigo-600/30 border-2 border-indigo-400/50 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)] pointer-events-auto cursor-pointer z-10',

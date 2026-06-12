@@ -19,7 +19,7 @@ import {
   formatDerivation,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitFork, Infinity } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitFork, Infinity, Replace } from 'lucide-react';
 import { useIsMobile } from '../hooks/useBreakpoint';
 
 const COPIED_TIMEOUT = 2000;
@@ -497,6 +497,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
                     <TooltipCard
                       eyebrow={`Step Details — ${node.label}`}
                       meta={`Step ${stepNum}`}
+                      description={node.change?.text}
                       equation={node.equation}
                     />
                   }
@@ -522,12 +523,20 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
                     <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
                       isLoopHighlight
                         ? THEME_GLASS.TREE_NODE_BADGE_LOOP
-                        : isCurrent 
+                        : isCurrent
                         ? THEME_GLASS.TREE_NODE_BADGE_ACTIVE
                         : THEME_GLASS.TREE_NODE_BADGE_DEFAULT
                     }`}>
                       {stepNum}
                     </span>
+
+                    {/* Substitution badge (#3): marks steps produced by substituting
+                        a fact from another workspace */}
+                    {node.change?.op === 'substitute' && (
+                      <span className={`absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_SUBSTITUTE}`}>
+                        <Replace size={9} />
+                      </span>
+                    )}
 
                     {/* Truncated Equation Label */}
                     <span className="text-[11px] font-mono truncate max-w-full text-indigo-50 font-semibold pl-2 pr-12 text-center">

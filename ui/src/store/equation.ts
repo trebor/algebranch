@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
-import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp } from 'math-engine';
+import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, getIsolatedDefinition, getSubstitutionOptions, SubstitutionFact, SubstitutionOption } from 'math-engine';
 import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
@@ -395,6 +395,55 @@ export const currentEquationAtom = atom<Equation>((get) => {
   const tree = get(historyTreeAtom);
   const nodeId = get(currentNodeIdAtom);
   return tree[nodeId]?.equation;
+});
+
+// ==========================================
+// Substitution facts (#3)
+// ==========================================
+
+/**
+ * Facts injected by a tutorial chapter (simulating "solved in another
+ * workspace" without multi-workspace tutorial machinery). Empty otherwise.
+ */
+export const tutorialFactsAtom = atom<SubstitutionFact[]>([]);
+
+/**
+ * Substitution facts available to the active workspace: every OTHER tab whose
+ * current equation isolates a variable (y = <expr> with y absent from <expr>)
+ * contributes a fact, with the tab as provenance. Derived live from tabs — no
+ * separate persisted state to drift.
+ */
+export const availableFactsAtom = atom<SubstitutionFact[]>((get) => {
+  const tabs = get(tabsAtom);
+  const activeId = get(activeTabIdAtom);
+  const facts: SubstitutionFact[] = [...get(tutorialFactsAtom)];
+  for (const tab of tabs) {
+    if (tab.id === activeId) continue; // substituting a tab into itself is circular
+    const node = tab.historyTree?.[tab.currentNodeId];
+    if (!node?.equation) continue;
+    try {
+      const def = getIsolatedDefinition(node.equation);
+      if (def) facts.push({ ...def, sourceId: tab.id, sourceName: tab.name });
+    } catch {
+      /* skip malformed tabs */
+    }
+  }
+  return facts;
+});
+
+/**
+ * Substitution options for the current equation, grouped by node path.
+ * Computed client-side via the unified engine (#44) — no API round-trip.
+ */
+export const substitutionPathsAtom = atom<Record<string, SubstitutionOption[]>>((get) => {
+  const eq = get(currentEquationAtom);
+  const facts = get(availableFactsAtom);
+  if (!eq || facts.length === 0) return {};
+  try {
+    return getSubstitutionOptions(eq, facts);
+  } catch {
+    return {};
+  }
 });
 
 /**

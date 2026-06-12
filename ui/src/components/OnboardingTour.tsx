@@ -21,7 +21,8 @@ import {
 } from '../store/equation';
 import { equationToString } from 'math-engine-client';
 import { prefetchChapterScans } from '../utils/mathScan';
-import { Play, ArrowRight, ArrowLeft, CheckCircle2, X, Sparkles, BookOpen, Trophy } from 'lucide-react';
+import Image from 'next/image';
+import { Play, ArrowRight, ArrowLeft, CheckCircle2, X, BookOpen, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 
@@ -310,9 +311,13 @@ export const OnboardingTour: React.FC = () => {
         >
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                <Sparkles size={18} />
-              </div>
+              <Image
+                src="/logo.png"
+                alt="Algebranch"
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain rounded-full shrink-0"
+              />
               <div>
                 <h3 className="font-bold text-white text-base lg:text-lg">Welcome to Algebranch!</h3>
                 <p className="text-[10px] text-indigo-300/60 font-medium">Interactive Algebra Tour</p>

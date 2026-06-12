@@ -1,9 +1,17 @@
 ---
-status: active
-issue: "#18 — feat(ui): Add ability to copy the complete derivation history"
-branch: feat/copy-derivation (off main 2026-06-11)
+status: done
+issue: "#18 — feat(ui): Add ability to copy the complete derivation history (closed)"
+branch: feat/copy-derivation (merged to main 2026-06-11)
 updated: 2026-06-11
 ---
+
+> Shipped: merged to main 2026-06-11; verified in the running app (fresh
+> derivation copies precise descriptors). Simplify descriptors polished to show
+> before → after, parallel to evaluate. The earlier "all labels" scare was a
+> stale build + persisted history, not a bug. Known follow-ups: the ± / negative
+> root is dropped (engine/derivation concern — file separately); pretty/LaTeX
+> notation deferred; semantic simplify naming ("cancel the radical") is a bigger
+> future ask.
 
 # #18: Copy the complete derivation history
 

@@ -88,15 +88,14 @@ shippable unit; reductions/UI (#18) follow.
 
 ## Remaining / follow-ups
 
-- Global ops (√, ×n applied to both sides via the radial menu) — produce
-  `bothSides` descriptors too; currently only transposition does.
-  **#43 DONE (precursor cleared):** `applyGlobalOp(eq, GlobalOpParams)` now lives
-  in `math-engine/src/globalOps.ts` and the store calls it. So add
-  `describeGlobalOp(params: GlobalOpParams): StepChange` to `describe.ts` — a pure
-  mapping of the structured input (no AST inference). Reuse the `bothSides` shape.
-  NOTE: the client now imports the real engine directly (validated: UI tsc +
-  build clean), so descriptors are reachable client-side via `math-engine` — see
-  #44 (retire the `math-engine-client.ts` duplication).
+- ~~Global ops descriptors~~ **DONE** (`describeGlobalOp` in `describe.ts`, branch
+  `feat/global-op-descriptors`): binary ops → add/subtract/multiply/divide;
+  square/power → `power`; sqrt/root → `root`; operand is a parsable symbolic
+  string. The engine now describes ALL THREE transformation kinds (transposition,
+  reduction, global ops) — **#42 engine surface is complete.** Descriptors are
+  reachable client-side via `math-engine` (validated in #43).
+
+### Remaining (optional polish, not blocking #42)
 - Edge cases deferred to generic fallback: binary-minus *minuend* moves,
   numerator-of-`/` moves, nested ParenthesisNode parents, unary minus.
 - Operand/detail text uses mathjs `node.toString()`; consider routing through

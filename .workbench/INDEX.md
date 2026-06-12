@@ -5,10 +5,10 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 ## Active
 
 - [plans/step-change-descriptors.md](plans/step-change-descriptors.md) — `active` — math-engine #42: per-step change descriptors (transposition+reduction merged; global-ops + #18 UI remain).
-- [plans/issue-43-global-ops-engine.md](plans/issue-43-global-ops-engine.md) — `active` — #43: route global ops through the engine (implemented on `feat/global-ops-in-engine`, validates the #44 unification path).
 
 ## Archive
 
+- [archive/issue-43-global-ops-engine.md](archive/issue-43-global-ops-engine.md) — `done` — #43: route global ops through the math engine; merged to main 2026-06-11. Validated the #44 client-side engine-import path.
 - [archive/issue-41-onboarding-tooltips.md](archive/issue-41-onboarding-tooltips.md) — `done` — Issue #41 onboarding fixes + tooltip unification + UI polish; branch `bugfix/tour-source-reclick-deselect` merged to main 2026-06-11.
 - [archive/issue-38-fraction-decomposition.md](archive/issue-38-fraction-decomposition.md) — `done` — Issue #38: Support fraction decomposition transpositions (e.g. x/5 -> x * (1/5)).
 - [archive/issue-39-semantic-styling.md](archive/issue-39-semantic-styling.md) — `done` — Issue #39: Adopt semantic styling tokens and replace raw Tailwind colors with theme constants.

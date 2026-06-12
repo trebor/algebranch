@@ -1,9 +1,11 @@
 ---
-status: active
-issue: "#43 — refactor: route global ops through the math engine"
-branch: feat/global-ops-in-engine (off main 2026-06-11, not pushed)
+status: done
+issue: "#43 — refactor: route global ops through the math engine (closed)"
+branch: feat/global-ops-in-engine (merged to main 2026-06-11)
 updated: 2026-06-11
 ---
+
+> Shipped: merged to main 2026-06-11 (2d985ca), issue closed, board → Done.
 
 # #43: Route global ops through the math engine
 

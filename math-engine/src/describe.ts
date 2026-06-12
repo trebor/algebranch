@@ -134,7 +134,9 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
     kind: 'rewrite',
     op: 'simplify',
     detail: before && after ? `${before} → ${after}` : undefined,
-    text: 'simplify',
+    // Mirror the evaluate form so simplify steps also show what changed
+    // (rewrite arrow `→`, vs `=` for a true numeric equality).
+    text: before && after ? `simplify ${before} → ${after}` : 'simplify',
   };
 };
 

@@ -99,6 +99,14 @@ describe('describeGlobalOp — both-sides radial-menu ops', () => {
 });
 
 describe('describeReduction — in-place rewrites', () => {
+  it('a non-numeric simplify shows the before → after (parallel to evaluate)', () => {
+    const e = eq('2 * x / 2 = 5');
+    const simplified = eq('x = 5');
+    const change = describeReduction(e, { path: 'lhs', simplified, type: 'reduce', label: 'Simplify' });
+    expect(change).toMatchObject({ kind: 'rewrite', op: 'simplify' });
+    expect(change.text).toBe('simplify 2 * x / 2 → x');
+  });
+
   it('numeric evaluation describes the before → after', () => {
     // 11 - 4 on the RHS simplifies to 15
     const e = eq('x = 11 - 4');

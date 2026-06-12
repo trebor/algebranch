@@ -5,6 +5,7 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 ## Active
 
 - [plans/issue-54-library-cleanup.md](plans/issue-54-library-cleanup.md) — `active` — #54 library cleanup & search: plan and design for reorganizing presets into clean, orthogonal categories and adding searchable UI filtering.
+- [plans/retire-workbench.md](plans/retire-workbench.md) — `active` — Plan to delete the .workbench directory and transition status and design tracking directly to the GitHub Project Board and Issues.
 
 ## Archive
 

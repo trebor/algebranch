@@ -1,11 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useAtomValue } from 'jotai';
-import { currentEquationAtom, graphDataAtom } from '../store/equation';
+import { useAtomValue, useAtom } from 'jotai';
+import { currentEquationAtom, graphDataAtom, graphSizeAtom, customViewportAtom } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
 import { evaluatePoint, formatNumber } from 'math-engine';
+
+const GRAPH_BACKGROUND_COLOR = '#050508';
 
 // niceTicks function generates neat division points for plotting
 function niceTicks(min: number, max: number, count = 5): number[] {
@@ -46,30 +48,86 @@ const nodeToString = (node: any): string => {
 export const GraphPanel: React.FC = () => {
   const eq = useAtomValue(currentEquationAtom);
   const graphData = useAtomValue(graphDataAtom);
+  const graphSize = useAtomValue(graphSizeAtom);
+  const [customViewport, setCustomViewport] = useAtom(customViewportAtom);
   
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = React.useState({ width: 360, height: 260 });
   
+  // Ref to track dragging bounds
+  const dragStartRef = React.useRef<{
+    screenX: number;
+    screenY: number;
+    xMin: number;
+    xMax: number;
+    yMin: number;
+    yMax: number;
+  } | null>(null);
+
   // Interactive UI states
+  const [isDragging, setIsDragging] = React.useState(false);
   const [hoveredCurve, setHoveredCurve] = React.useState<'lhs' | 'rhs' | null>(null);
   const [hoveredLegend, setHoveredLegend] = React.useState<'lhs' | 'rhs' | null>(null);
   const [mousePos, setMousePos] = React.useState<{ x: number; y: number } | null>(null);
+  const [isHoveringIntersection, setIsHoveringIntersection] = React.useState(false);
 
   const activeHover = hoveredCurve || hoveredLegend;
 
+  // Reset custom viewport when changing equations to auto-center
   React.useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) {
-          setDimensions({ width, height });
-        }
+    setCustomViewport(null);
+  }, [eq, setCustomViewport]);
+
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const measure = () => {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      if (width > 0 && height > 0) {
+        setDimensions({ width, height });
       }
-    });
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
+    };
+
+    // Run adjustment immediately
+    measure();
+
+    // Set up ResizeObserver
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0) {
+            setDimensions({ width, height });
+          }
+        }
+      });
+      observer.observe(container);
+    }
+
+    // Schedule measurements after animations/transitions complete to resolve layout race conditions.
+    // The panel transitions height via transition-all duration-300 ease-in-out.
+    // Multiple intervals ensure the SVG viewport is updated during and at the end of the transition.
+    const timers = [
+      setTimeout(measure, 100),
+      setTimeout(measure, 200),
+      setTimeout(measure, 350),
+      setTimeout(measure, 500),
+    ];
+
+    const handleResize = () => measure();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      }
+      window.removeEventListener('resize', handleResize);
+      timers.forEach(clearTimeout);
+    };
+  }, [graphSize]);
 
   if (!eq || !graphData) {
     return (
@@ -79,8 +137,8 @@ export const GraphPanel: React.FC = () => {
     );
   }
 
-  const { variable, reason, variables, lhs, rhs, intersections, window } = graphData;
-  const { xMin, xMax, yMin, yMax } = window;
+  const { variable, reason, variables, lhs, rhs, intersections, window: graphWindow } = graphData;
+  const { xMin, xMax, yMin, yMax } = graphWindow;
 
   if (reason === 'multi-variable') {
     return (
@@ -150,6 +208,9 @@ export const GraphPanel: React.FC = () => {
     }
   };
 
+  const lhsVal = mousePos ? evalReal(eq.lhs, mousePos.x) : null;
+  const rhsVal = mousePos ? evalReal(eq.rhs, mousePos.x) : null;
+
   // Group curve samples into contiguous segments where y !== null
   const getSegments = (samples: { x: number; y: number | null }[]) => {
     const segments: { x: number; y: number }[][] = [];
@@ -187,14 +248,30 @@ export const GraphPanel: React.FC = () => {
   const xTicks = niceTicks(xMin, xMax, Math.max(3, Math.min(6, Math.floor(W / 80))));
   const yTicks = niceTicks(yMin, yMax, Math.max(3, Math.min(6, Math.floor(H / 60))));
 
-  // Handle tracking mouse position over SVG to draw crosshairs
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+  // Handle tracking mouse/touch drag coordinate panning & hover crosshairs
+  const handlePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (e.button !== 0) return; // Only left-click / touch contact
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStartRef.current = {
+      screenX: e.clientX,
+      screenY: e.clientY,
+      xMin,
+      xMax,
+      yMin,
+      yMax
+    };
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    const start = dragStartRef.current;
+    
+    // 1. Hover coordinate tracking (if not dragging)
     const svg = e.currentTarget;
     const rect = svg.getBoundingClientRect();
     const mx = ((e.clientX - rect.left) / rect.width) * W;
     const my = ((e.clientY - rect.top) / rect.height) * H;
     
-    // Check if cursor is inside the actual plot boundaries
     if (
       mx >= padding.left &&
       mx <= W - padding.right &&
@@ -203,10 +280,47 @@ export const GraphPanel: React.FC = () => {
     ) {
       const xVal = xMin + ((mx - padding.left) / plotWidth) * (xMax - xMin);
       const yVal = yMin + ((plotHeight - (my - padding.top)) / plotHeight) * (yMax - yMin);
-      setMousePos({ x: xVal, y: yVal });
+      // Freeze crosshairs read-out at drag start location if dragging to avoid jitter
+      if (!start) {
+        setMousePos({ x: xVal, y: yVal });
+      }
     } else {
-      setMousePos(null);
+      if (!start) {
+        setMousePos(null);
+      }
     }
+
+    if (!start) return;
+
+    // 2. Active panning logic
+    const dx = e.clientX - start.screenX;
+    const dy = e.clientY - start.screenY;
+    
+    const deltaX = -dx * (start.xMax - start.xMin) / plotWidth;
+    const deltaY = dy * (start.yMax - start.yMin) / plotHeight;
+    
+    setCustomViewport({
+      xMin: start.xMin + deltaX,
+      xMax: start.xMax + deltaX,
+      yMin: start.yMin + deltaY,
+      yMax: start.yMax + deltaY
+    });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (dragStartRef.current) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+      dragStartRef.current = null;
+    }
+    setIsDragging(false);
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (dragStartRef.current) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+      dragStartRef.current = null;
+    }
+    setIsDragging(false);
   };
 
   return (
@@ -236,14 +350,82 @@ export const GraphPanel: React.FC = () => {
       </div>
 
       {/* SVG Container */}
-      <div ref={containerRef} className="flex-1 min-h-0 w-full relative">
+      <div ref={containerRef} className="flex-1 min-h-0 w-full relative bg-[#050508]">
+        {/* Floating Curve Value Tooltip */}
+        {mousePos && !isHoveringIntersection && !isDragging && (() => {
+          const tooltipWidth = 110;
+          const tooltipHeight = 58;
+          
+          let tooltipLeft = toSvgX(mousePos.x) + 16;
+          let tooltipTop = toSvgY(mousePos.y) - 16;
+          
+          // Collision detection: flip left if going off the right edge of SVG viewport area
+          if (tooltipLeft + tooltipWidth > W) {
+            tooltipLeft = toSvgX(mousePos.x) - tooltipWidth - 16;
+          }
+          if (tooltipLeft < 8) {
+            tooltipLeft = 8;
+          }
+          
+          // Collision detection: flip down if going off the top edge of SVG viewport area
+          if (tooltipTop < 8) {
+            tooltipTop = toSvgY(mousePos.y) + 16;
+          }
+          if (tooltipTop + tooltipHeight > H) {
+            tooltipTop = H - tooltipHeight - 8;
+          }
+
+          const getRowClass = (side: 'lhs' | 'rhs') => {
+            if (!activeHover) return THEME_GLASS.GRAPH_TOOLTIP_ROW_DEFAULT;
+            return activeHover === side 
+              ? THEME_GLASS.GRAPH_TOOLTIP_ROW_ACTIVE 
+              : THEME_GLASS.GRAPH_TOOLTIP_ROW_INACTIVE;
+          };
+
+          return (
+            <div 
+              className={THEME_GLASS.GRAPH_TOOLTIP}
+              style={{
+                left: `${tooltipLeft}px`,
+                top: `${tooltipTop}px`,
+              }}
+            >
+              <div className={THEME_GLASS.GRAPH_TOOLTIP_HEADER}>
+                <span className={`${THEME_GLASS.TEXT_MUTED} font-sans text-[11px] mr-1 select-none`}>↔</span>
+                <span>{formatNumber(mousePos.x)}</span>
+              </div>
+              {lhsVal !== null && (
+                <div className={getRowClass('lhs')}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${THEME_GLASS.GRAPH_SWATCH_LHS}`} />
+                  <span>{formatNumber(lhsVal)}</span>
+                </div>
+              )}
+              {rhsVal !== null && (
+                <div className={getRowClass('rhs')}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${THEME_GLASS.GRAPH_SWATCH_RHS}`} />
+                  <span>{formatNumber(rhsVal)}</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         <svg
           viewBox={`0 0 ${W} ${H}`}
           width="100%"
           height="100%"
-          className="absolute inset-0 overflow-visible cursor-crosshair"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => setMousePos(null)}
+          className={`absolute inset-0 overflow-visible select-none touch-none ${
+            isDragging ? 'cursor-grabbing' : 'cursor-grab'
+          }`}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onPointerLeave={() => {
+            if (!isDragging) {
+              setMousePos(null);
+              setIsHoveringIntersection(false);
+            }
+          }}
         >
           {/* Definitions */}
           <defs>
@@ -268,7 +450,7 @@ export const GraphPanel: React.FC = () => {
                   y1={padding.top}
                   x2={sx}
                   y2={padding.top + plotHeight}
-                  className="stroke-white/[0.03]"
+                  className={THEME_GLASS.GRAPH_GRID_LINE}
                   strokeWidth={1}
                 />
               );
@@ -282,7 +464,7 @@ export const GraphPanel: React.FC = () => {
                   y1={sy}
                   x2={W - padding.right}
                   y2={sy}
-                  className="stroke-white/[0.03]"
+                  className={THEME_GLASS.GRAPH_GRID_LINE}
                   strokeWidth={1}
                 />
               );
@@ -324,7 +506,7 @@ export const GraphPanel: React.FC = () => {
                     y1={H - padding.bottom - 4}
                     x2={sx}
                     y2={H - padding.bottom}
-                    className="stroke-white/10"
+                    className={THEME_GLASS.GRAPH_TICK_LINE}
                     strokeWidth={1}
                   />
                   <text
@@ -332,6 +514,12 @@ export const GraphPanel: React.FC = () => {
                     y={H - padding.bottom - 8}
                     textAnchor="middle"
                     className={`${THEME_GLASS.GRAPH_TICK_TEXT} fill-white/50 text-[9px]`}
+                    style={{
+                      paintOrder: 'stroke fill',
+                      stroke: GRAPH_BACKGROUND_COLOR,
+                      strokeWidth: '4px',
+                      strokeLinejoin: 'round'
+                    }}
                   >
                     {isZero ? '0' : formatNumber(val)}
                   </text>
@@ -354,7 +542,7 @@ export const GraphPanel: React.FC = () => {
                     y1={sy}
                     x2={padding.left + 4}
                     y2={sy}
-                    className="stroke-white/10"
+                    className={THEME_GLASS.GRAPH_TICK_LINE}
                     strokeWidth={1}
                   />
                   <text
@@ -363,6 +551,12 @@ export const GraphPanel: React.FC = () => {
                     textAnchor="start"
                     dominantBaseline="central"
                     className={`${THEME_GLASS.GRAPH_TICK_TEXT} fill-white/50 text-[9px]`}
+                    style={{
+                      paintOrder: 'stroke fill',
+                      stroke: GRAPH_BACKGROUND_COLOR,
+                      strokeWidth: '4px',
+                      strokeLinejoin: 'round'
+                    }}
                   >
                     {formatNumber(val)}
                   </text>
@@ -382,7 +576,7 @@ export const GraphPanel: React.FC = () => {
                 onMouseLeave={() => setHoveredCurve(null)}
                 strokeWidth={activeHover === 'lhs' ? 3.5 : activeHover === 'rhs' ? 1.5 : 2.5}
                 opacity={activeHover === 'rhs' ? 0.35 : 1}
-                className={`${THEME_GLASS.GRAPH_CURVE_LHS} transition-all duration-150 cursor-pointer`}
+                className={`${THEME_GLASS.GRAPH_CURVE_LHS} transition-opacity duration-150 cursor-pointer`}
               />
             ))}
             {rhsSegments.map((seg, i) => (
@@ -394,7 +588,7 @@ export const GraphPanel: React.FC = () => {
                 onMouseLeave={() => setHoveredCurve(null)}
                 strokeWidth={activeHover === 'rhs' ? 3.5 : activeHover === 'lhs' ? 1.5 : 2.5}
                 opacity={activeHover === 'lhs' ? 0.35 : 1}
-                className={`${THEME_GLASS.GRAPH_CURVE_RHS} transition-all duration-150 cursor-pointer`}
+                className={`${THEME_GLASS.GRAPH_CURVE_RHS} transition-opacity duration-150 cursor-pointer`}
               />
             ))}
           </g>
@@ -421,7 +615,11 @@ export const GraphPanel: React.FC = () => {
                   }
                   position="top"
                 >
-                  <g className="cursor-pointer group select-none">
+                  <g 
+                    className="cursor-pointer group select-none"
+                    onMouseEnter={() => setIsHoveringIntersection(true)}
+                    onMouseLeave={() => setIsHoveringIntersection(false)}
+                  >
                     <line
                       x1={sx}
                       y1={padding.top}
@@ -445,7 +643,7 @@ export const GraphPanel: React.FC = () => {
             })}
           </g>
 
-          {/* Dynamic Cursor Coordinate crosshair and glass read-out */}
+          {/* Cursor vertical scanner and curve value indicator dots */}
           {mousePos && (
             <g className="pointer-events-none select-none">
               <line
@@ -453,38 +651,26 @@ export const GraphPanel: React.FC = () => {
                 y1={padding.top}
                 x2={toSvgX(mousePos.x)}
                 y2={padding.top + plotHeight}
-                className="stroke-white/10"
+                className={THEME_GLASS.GRAPH_GUIDE_LINE}
                 strokeDasharray="2 2"
                 strokeWidth={1}
               />
-              <line
-                x1={padding.left}
-                y1={toSvgY(mousePos.y)}
-                x2={W - padding.right}
-                y2={toSvgY(mousePos.y)}
-                className="stroke-white/10"
-                strokeDasharray="2 2"
-                strokeWidth={1}
-              />
-              {/* Glass coordinate badge floating in the top-right corner */}
-              <g transform={`translate(${W - padding.right - 90}, ${padding.top + 6})`}>
-                <rect
-                  width={84}
-                  height={18}
-                  rx={4}
-                  className="fill-neutral-950/80 stroke-white/10"
-                  strokeWidth={1}
+              {lhsVal !== null && (
+                <circle
+                  cx={toSvgX(mousePos.x)}
+                  cy={toSvgY(lhsVal)}
+                  r={4}
+                  className="fill-indigo-400 stroke-[#050508] stroke-1"
                 />
-                <text
-                  x={42}
-                  y={10}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  className="fill-white/70 text-[9px] font-mono font-bold"
-                >
-                  {`${formatNumber(mousePos.x)}, ${formatNumber(mousePos.y)}`}
-                </text>
-              </g>
+              )}
+              {rhsVal !== null && (
+                <circle
+                  cx={toSvgX(mousePos.x)}
+                  cy={toSvgY(rhsVal)}
+                  r={4}
+                  className="fill-amber-400 stroke-[#050508] stroke-1"
+                />
+              )}
             </g>
           )}
 

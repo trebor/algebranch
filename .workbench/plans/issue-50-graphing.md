@@ -288,6 +288,21 @@ feature (curves "jump", intersection stays). Animated morphing is Phase 2 polish
 8. **Close-out**: close #50 with a summary comment, board → Done, file the
    Phase 2 issues (§5) if not already filed.
 
+## 6.5 Phase 1.5 — Curve Value Hover Refinement (Refining hover coordinates/tooltip)
+
+### Design Decisions & Rationale
+1. **Dynamic Glassmorphic Tooltip**: We replace the static top-left HUD with an absolute-positioned floating tooltip that tracks the user's cursor dynamically inside the SVG view area. This avoids eye-travel cognitive load (keeping values near the point of interaction).
+2. **Curve-Specific Highlights**: When hovering near/over a curve (or its legend), that specific curve's row in the tooltip will highlight (fully opaque, bolded, colored) while the other row dims (opacity-30). This connects the curve geometry directly to the evaluation details.
+3. **Smart Position & Collision Detection**: The tooltip is kept within the graph panel bounding box. If the cursor gets too close to the right or top boundary, the tooltip automatically flips positions (left of the cursor / below the cursor) and is clamped within a 8px margin to prevent viewport overflow or scrollbars.
+4. **Collision Avoidance with Solution Tooltips**: When hovering over a solution intersection line or circle, the cursor-following tooltip is hidden to prevent clashing/overlapping with the green solution tooltips.
+5. **Horizontal Coordinate Probing vs. Equation Solutions**: Writing `{variable} = {value}` (e.g. `x = 1.25`) for a temporary probe point can confuse users into thinking the equation is solved. To resolve this, we display the horizontal axis arrow symbol `↔` for probe values (e.g., `↔ 1.25` in the floating tooltip), reserving `{variable} = {solution}` (e.g., `x = 5`) exclusively for the green intersection/solution tooltips where the equation is actually satisfied.
+5. **中央 Theme Tokens**:
+   - `GRAPH_TOOLTIP`: General background/backdrop glass styling.
+   - `GRAPH_TOOLTIP_HEADER`: Independent variable title.
+   - `GRAPH_TOOLTIP_ROW_ACTIVE`: Fully highlighted active curve value.
+   - `GRAPH_TOOLTIP_ROW_INACTIVE`: Dimmed inactive curve value.
+   - `GRAPH_TOOLTIP_ROW_DEFAULT`: Default state when not hovering over a curve.
+
 ## 7. Status checklist
 
 - [x] Design agreed (user + 2 models, 2026-06-12); invariants validated empirically
@@ -300,4 +315,9 @@ feature (curves "jump", intersection stays). Animated morphing is Phase 2 polish
 - [x] Theme tokens added (no raw colors in TSX)
 - [x] Full gates green (compiles & tests pass)
 - [x] User URL-test verification (incl. the ± vanish demo)
-- [ ] Merge per approval; close #50; archive this doc; file Phase 2 issues
+- [x] Implement Phase 1.5 Dynamic cursor tooltip + curve highlighting + collision detection
+- [x] Add theme tokens for graphing tooltips in `theme.ts`
+- [x] Swap FactsStrip and GraphPanel layout placement and adjust mobile bottom padding
+- [x] Verify UI behavior and build correctness
+- [ ] Merge per approval; close #50; archive this doc; file Phase 2 issues (pending approval)
+

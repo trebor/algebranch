@@ -166,7 +166,10 @@ export const THEME_GLASS = {
   TEXT_BUTTON_MUTED: 'text-[10px] text-white/40 hover:text-white/70 transition-colors cursor-pointer',
 
   // --- Graphing specific ---
-  GRAPH_AXIS: 'stroke-white/25',
+  GRAPH_AXIS: 'stroke-white/40',
+  GRAPH_GRID_LINE: 'stroke-white/25',
+  GRAPH_TICK_LINE: 'stroke-white/15',
+  GRAPH_GUIDE_LINE: 'stroke-white/15',
   GRAPH_TICK_TEXT: 'fill-white/40 text-[10px] font-mono select-none',
   GRAPH_CURVE_LHS: 'stroke-indigo-400',
   GRAPH_CURVE_RHS: 'stroke-amber-400',
@@ -177,4 +180,9 @@ export const THEME_GLASS = {
   GRAPH_LEGEND_CHIP: 'text-xs font-mono px-2.5 py-1 rounded-lg border bg-neutral-950/80 border-white/10 select-none',
   PANEL_TAB_ACTIVE: 'text-indigo-300 border-b-2 border-indigo-500 font-semibold text-xs transition-all',
   PANEL_TAB_IDLE: 'text-white/40 hover:text-white/70 text-xs transition-all border-b-2 border-transparent',
+  GRAPH_TOOLTIP: 'absolute z-10 pointer-events-none flex flex-col gap-1 px-2.5 py-1.5 rounded-lg bg-neutral-950/90 border border-white/10 backdrop-blur-md text-[10px] font-mono shadow-xl text-white/95 leading-none',
+  GRAPH_TOOLTIP_HEADER: 'flex items-center gap-1.5 text-white/50 border-b border-white/5 pb-1 mb-1 font-bold',
+  GRAPH_TOOLTIP_ROW_ACTIVE: 'flex items-center gap-1.5 text-white font-bold opacity-100 scale-[1.02] origin-left transition-all duration-150',
+  GRAPH_TOOLTIP_ROW_INACTIVE: 'flex items-center gap-1.5 text-white/40 opacity-35 scale-95 origin-left transition-all duration-150',
+  GRAPH_TOOLTIP_ROW_DEFAULT: 'flex items-center gap-1.5 text-white/90 transition-all duration-150',
 } as const;

@@ -58,6 +58,7 @@ import {
   onboardingChapterIdAtom,
   onboardingGlobalOpAtom,
   graphSizeAtom,
+  previousGraphSizeAtom,
   availableFactsAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
@@ -142,6 +143,7 @@ export default function Home() {
   const equalsLocked = !!onboardingChapterId && !onboardingGlobalOp;
   const swapSides = useSetAtom(swapSidesAtom);
   const [graphSize, setGraphSize] = useAtom(graphSizeAtom);
+  const previousGraphSize = useAtomValue(previousGraphSizeAtom);
   const availableFacts = useAtomValue(availableFactsAtom);
   const isMobile = useIsMobile();
   const equalsRef = React.useRef<HTMLSpanElement>(null);
@@ -659,6 +661,27 @@ export default function Home() {
       },
       description: 'Swap equation sides',
     },
+    {
+      key: 'g',
+      action: () => {
+        if (graphSize === 'hidden') {
+          setGraphSize('split');
+        } else if (graphSize === 'expand') {
+          setGraphSize('split');
+        } else { // split
+          if (previousGraphSize === 'expand') {
+            setGraphSize('hidden');
+          } else {
+            setGraphSize('expand');
+          }
+        }
+        trackEvent({
+          action: 'shortcut_toggle_graph',
+          category: 'keyboard',
+        });
+      },
+      description: 'Toggle variable relationship graph size',
+    },
   ]);
 
   // Mobile swipe gestures logic
@@ -964,10 +987,8 @@ export default function Home() {
 
               {/* Show Graph Floating Handle when hidden */}
               {graphSize === 'hidden' && (
-                <div className={`absolute left-1/2 -translate-x-1/2 z-35 animate-[fadeIn_0.2s_ease-out] ${
-                  availableFacts.length > 0 ? 'bottom-16' : 'bottom-6'
-                }`}>
-                  <Tooltip content="Show variable relationship graph" position="top" autoAlign={false}>
+                <div className="absolute right-4 bottom-4 z-35 animate-[fadeIn_0.2s_ease-out]">
+                  <Tooltip content="Show variable relationship graph (G)" position="left" autoAlign={false}>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -983,28 +1004,48 @@ export default function Home() {
               )}
             </div>
 
+            {/* Substitutions available from other workspaces (#3) — docked at the
+                bottom, clear of the tab bar and the nodes' handle rows */}
+            <FactsStrip />
+
             {/* 2. Collapsible Bottom Graph Panel */}
             {graphSize !== 'hidden' && (
               <div 
-                className={`border-t ${THEME_GLASS.PANEL_BORDER} relative flex flex-col bg-white/[0.01] transition-all duration-300 ease-in-out shrink-0`}
+                className={`border-t ${THEME_GLASS.PANEL_BORDER} relative flex flex-col bg-white/[0.01] transition-all duration-300 ease-in-out shrink-0 max-lg:pb-[calc(3.5rem+env(safe-area-inset-bottom))]`}
                 style={{ height: graphSize === 'expand' ? '66%' : '33%' }}
               >
-                {/* Graph Tab/Cycle Handle sitting directly on the border */}
-                <div className="absolute left-1/2 -translate-x-1/2 -top-3.5 z-35 select-none">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (graphSize === 'split') {
-                        setGraphSize('expand');
-                      } else if (graphSize === 'expand') {
-                        setGraphSize('hidden');
-                      }
-                    }}
-                    className="px-3 py-1 rounded-full border border-white/10 bg-neutral-900 hover:bg-neutral-800 text-white/70 hover:text-white hover:border-indigo-500/50 shadow-md text-[10px] font-bold tracking-wide flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
-                  >
-                    <span>{graphSize === 'split' ? 'Graph: 1/3' : 'Graph: 2/3'}</span>
-                    {graphSize === 'split' ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-                  </button>
+                {/* Graph resize/close controls sitting in the top-right corner of the header */}
+                <div className="absolute right-4 top-1.5 z-35 select-none flex items-center bg-neutral-900 border border-white/10 rounded-full px-1.5 py-0.5 shadow-md">
+                  <Tooltip content="Expand graph (2/3) (G)" position="top" autoAlign={false}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (graphSize === 'split') {
+                          setGraphSize('expand');
+                        }
+                      }}
+                      disabled={graphSize === 'expand'}
+                      className="p-1 hover:bg-white/10 text-white/70 hover:text-white disabled:text-white/20 disabled:hover:bg-transparent rounded-full active:scale-90 transition-all cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                  </Tooltip>
+                  <div className="w-[1px] h-3 bg-white/10 mx-0.5" />
+                  <Tooltip content={graphSize === 'expand' ? "Shrink graph (1/3) (G)" : "Hide graph (G)"} position="top" autoAlign={false}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (graphSize === 'expand') {
+                          setGraphSize('split');
+                        } else if (graphSize === 'split') {
+                          setGraphSize('hidden');
+                        }
+                      }}
+                      className="p-1 hover:bg-white/10 text-white/70 hover:text-white rounded-full active:scale-90 transition-all cursor-pointer"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  </Tooltip>
                 </div>
 
                 <div className="flex-1 min-h-0 w-full overflow-hidden">
@@ -1012,10 +1053,6 @@ export default function Home() {
                 </div>
               </div>
             )}
-
-            {/* Substitutions available from other workspaces (#3) — docked at the
-                bottom, clear of the tab bar and the nodes' handle rows */}
-            <FactsStrip />
 
             <OnboardingTour />
           </div>

@@ -4,7 +4,7 @@ import React from 'react';
 import { useAtomValue } from 'jotai';
 import * as math from 'mathjs';
 import { Replace } from 'lucide-react';
-import { availableFactsAtom, onboardingChapterIdAtom } from '../store/equation';
+import { availableFactsAtom, onboardingChapterIdAtom, graphSizeAtom } from '../store/equation';
 import { equationToString } from 'math-engine-client';
 import { THEME_GLASS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
@@ -18,6 +18,7 @@ import { TooltipCard } from './TooltipCard';
 export const FactsStrip: React.FC = () => {
   const facts = useAtomValue(availableFactsAtom);
   const inTour = !!useAtomValue(onboardingChapterIdAtom);
+  const graphSize = useAtomValue(graphSizeAtom);
   if (facts.length === 0) return null;
 
   const strip = (s: string) => s.replace(/\s+/g, '');
@@ -29,7 +30,7 @@ export const FactsStrip: React.FC = () => {
     // strip clears its height (+ safe area) — except during the tour, when the
     // nav is hidden and the coach card docks directly below.
     <div className={`flex items-center gap-2 px-3 pb-2 pt-1 select-none shrink-0 min-w-0 ${
-      inTour ? '' : 'max-lg:mb-[calc(3.5rem+env(safe-area-inset-bottom))]'
+      inTour ? '' : graphSize === 'hidden' ? 'max-lg:mb-[calc(3.5rem+env(safe-area-inset-bottom))]' : ''
     }`}>
       <span className={`shrink-0 text-[9px] uppercase tracking-wider font-semibold ${THEME_GLASS.TEXT_MUTED}`}>
         Substitutions

@@ -293,10 +293,15 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
     }`}>
       {/* Sidebar Header with Timeline Actions */}
       <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER} pb-4 shrink-0`}>
-        <h2 className="text-base lg:text-lg font-semibold lg:font-bold text-white flex items-center gap-2 select-none">
-          <GitFork className="text-indigo-400 rotate-180" size={18} />
-          <span>History</span>
-        </h2>
+        <Tooltip content="Toggle Sidebar (H)" position="left" autoAlign={false}>
+          <h2 
+            onClick={() => setRightSidebarOpen(false)}
+            className="text-base lg:text-lg font-semibold lg:font-bold text-white flex items-center gap-2 select-none cursor-pointer hover:text-indigo-200 transition-colors"
+          >
+            <GitFork className="text-indigo-400 rotate-180" size={18} />
+            <span>History</span>
+          </h2>
+        </Tooltip>
         <div className="flex items-center gap-1.5">
           <Tooltip content="Copy full derivation">
             <button

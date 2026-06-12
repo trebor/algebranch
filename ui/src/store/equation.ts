@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
-import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, SubstitutionFact, SubstitutionOption, computeGraphData } from 'math-engine';
+import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, SubstitutionFact, SubstitutionOption, computeGraphData, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
 import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
@@ -398,13 +398,49 @@ export const currentEquationAtom = atom<Equation>((get) => {
 });
 
 // Graph layout size state: 'hidden' | 'split' (1/3 height) | 'expand' (2/3 height)
-export const graphSizeAtom = atom<'hidden' | 'split' | 'expand'>('hidden');
+export const rawGraphSizeAtom = atom<'hidden' | 'split' | 'expand'>('hidden');
+export const previousGraphSizeAtom = atom<'hidden' | 'split' | 'expand'>('hidden');
+export const graphSizeAtom = atom(
+  (get) => get(rawGraphSizeAtom),
+  (get, set, newValue: 'hidden' | 'split' | 'expand') => {
+    const current = get(rawGraphSizeAtom);
+    if (current !== newValue) {
+      set(previousGraphSizeAtom, current);
+      set(rawGraphSizeAtom, newValue);
+      safeLocalStorage.setItem('algebranch_graph_size', newValue);
+    }
+  }
+);
+
+// Custom graph viewport overridden by user panning. Reset to null on equation changes.
+export const customViewportAtom = atom<GraphWindow | null>(null);
 
 // Graph of the current equation, computed client-side via the unified engine
 export const graphDataAtom = atom((get) => {
   const eq = get(currentEquationAtom);
   if (!eq) return null;
-  try { return computeGraphData(eq); } catch { return null; }
+  const customViewport = get(customViewportAtom);
+  try {
+    const defaultData = computeGraphData(eq);
+    if (!customViewport || !defaultData.variable) {
+      return defaultData;
+    }
+    const { variable, variables } = defaultData;
+    const count = 241;
+    const lhs = sampleCurve(eq.lhs, variable, customViewport.xMin, customViewport.xMax, count);
+    const rhs = sampleCurve(eq.rhs, variable, customViewport.xMin, customViewport.xMax, count);
+    const intersections = findIntersections(eq, variable, customViewport.xMin, customViewport.xMax);
+    return {
+      variable,
+      variables,
+      lhs,
+      rhs,
+      intersections,
+      window: customViewport
+    };
+  } catch {
+    return null;
+  }
 });
 
 // ==========================================
@@ -1175,6 +1211,11 @@ export const hydrateWorkspaceTabsAtom = atom(
   (get, set) => {
     if (typeof window === 'undefined') return;
     try {
+      const savedGraphSize = safeLocalStorage.getItem('algebranch_graph_size');
+      if (savedGraphSize === 'hidden' || savedGraphSize === 'split' || savedGraphSize === 'expand') {
+        set(rawGraphSizeAtom, savedGraphSize);
+      }
+
       const savedTabs = safeLocalStorage.getItem('algebranch_workspace_tabs');
       const savedActiveId = safeLocalStorage.getItem('algebranch_active_tab_id');
       

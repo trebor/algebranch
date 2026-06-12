@@ -127,10 +127,15 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
     <div className="shrink-0 flex flex-col gap-3">
       {/* Header (Desktop Only) */}
       <div className={`hidden xl:flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
-        <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
-          <LayoutGrid className="text-indigo-400" size={18} />
-          <span>Workspace</span>
-        </h2>
+        <Tooltip content="Toggle Workspace (W)" position="right" autoAlign={false}>
+          <h2 
+            onClick={() => setLeftSidebarOpen(false)}
+            className="text-lg font-bold text-white flex items-center gap-2 select-none cursor-pointer hover:text-indigo-200 transition-colors"
+          >
+            <LayoutGrid className="text-indigo-400" size={18} />
+            <span>Workspace</span>
+          </h2>
+        </Tooltip>
       </div>
 
       {/* Recessed Content Box */}
@@ -425,10 +430,15 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
       {/* Header */}
       {showHeader && (
         <div className={`hidden xl:flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2 select-none">
-            <Library className="text-indigo-400" size={18} />
-            <span>Equation Library</span>
-          </h2>
+          <Tooltip content="Toggle Equation Library (L)" position="right" autoAlign={false}>
+            <h2 
+              onClick={() => setLeftSidebarOpen(false)}
+              className="text-lg font-bold text-white flex items-center gap-2 select-none cursor-pointer hover:text-indigo-200 transition-colors"
+            >
+              <Library className="text-indigo-400" size={18} />
+              <span>Equation Library</span>
+            </h2>
+          </Tooltip>
         </div>
       )}
 

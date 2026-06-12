@@ -4,9 +4,11 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-- [plans/issue-45-sqrt-negative-root.md](plans/issue-45-sqrt-negative-root.md) — `active` — #45: even roots offer a ± branch (Take root +/−) instead of dropping the negative; branch `bugfix/sqrt-negative-root`. Verify in-app before merge.
+*(No active tasks)*
 
 ## Archive
+
+- [archive/issue-45-sqrt-negative-root.md](archive/issue-45-sqrt-negative-root.md) — `done` — #45: even roots offer a ± branch (Take root +/−) instead of dropping the negative root; merged to main 2026-06-12.
 
 - [archive/issue-44-unify-engine.md](archive/issue-44-unify-engine.md) — `done` — #44: retire the math-engine-client duplication (569→35 line re-export); merged to main 2026-06-11. Behavior byte-identical, bundle unchanged.
 - [archive/issue-18-copy-derivation.md](archive/issue-18-copy-derivation.md) — `done` — #18: copy the complete derivation history; merged to main 2026-06-11. Captures StepChange at move time; consumes #42 descriptors. Follow-up: ± negative-root dropped (#45).

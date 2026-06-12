@@ -1,9 +1,11 @@
 ---
-status: active
+status: done
 issue: "#45 — Bug: taking the square root of both sides drops the negative root (± lost)"
-branch: bugfix/sqrt-negative-root (off main 2026-06-11)
+branch: bugfix/sqrt-negative-root (merged to main 2026-06-12)
 updated: 2026-06-11
 ---
+
+> Shipped: merged to main 2026-06-12; verified in the running app (both ± branches reachable).
 
 # #45: sqrt drops the negative root
 

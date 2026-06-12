@@ -4,7 +4,7 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-*(No active tasks)*
+- [plans/issue-50-graphing.md](plans/issue-50-graphing.md) — `active` — #50 graphing Phase 1: full design + execution plan (engine graphing.ts TDD, SVG GraphPanel, History|Graph tabs), rationale inlined for cold execution. Lives on branch `feat/graphing`; implementation not started.
 
 ## Archive
 

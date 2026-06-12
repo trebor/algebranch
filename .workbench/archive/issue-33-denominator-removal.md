@@ -1,9 +1,11 @@
 ---
-status: active
+status: done
 issue: "#33 — Bug: denominator constant 5 offered a Simplify handle in (3*x^2+x-2)/5 = 0"
-branch: bugfix/denominator-simplify-handle (off main 2026-06-12)
+branch: bugfix/denominator-simplify-handle (merged to main 2026-06-12)
 updated: 2026-06-12
 ---
+
+> Shipped: merged to main 2026-06-12; verified in-app (5 inert; x+0 / x*1 still simplify).
 
 # #33: denominator constant offered a bogus Simplify handle
 

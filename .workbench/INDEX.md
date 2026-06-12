@@ -4,9 +4,11 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-- [plans/issue-33-denominator-removal.md](plans/issue-33-denominator-removal.md) — `active` — #33: node removal now requires a local identity (areExpressionsValueEqual), killing the bogus denominator Simplify handle; branch `bugfix/denominator-simplify-handle`. Verify in-app.
+*(No active tasks)*
 
 ## Archive
+
+- [archive/issue-33-denominator-removal.md](archive/issue-33-denominator-removal.md) — `done` — #33: node removal gated on a local identity (areExpressionsValueEqual), killing the bogus denominator Simplify handle; merged to main 2026-06-12.
 
 - [archive/issue-45-sqrt-negative-root.md](archive/issue-45-sqrt-negative-root.md) — `done` — #45: even roots offer a ± branch (Take root +/−) instead of dropping the negative root; merged to main 2026-06-12.
 

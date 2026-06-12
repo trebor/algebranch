@@ -4,7 +4,7 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-*(No active tasks)*
+- [plans/step-change-descriptors.md](plans/step-change-descriptors.md) — `active` — math-engine: emit structured per-step change descriptors (precursor to #18); branch `feat/step-change-descriptors`.
 
 ## Archive
 

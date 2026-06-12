@@ -291,12 +291,13 @@ feature (curves "jump", intersection stays). Animated morphing is Phase 2 polish
 ## 7. Status checklist
 
 - [x] Design agreed (user + 2 models, 2026-06-12); invariants validated empirically
-- [ ] Branch + board → In progress
-- [ ] `math-engine/tests/graphing.test.ts` written (failing)
-- [ ] `math-engine/src/graphing.ts` implemented to green (+ index export)
-- [ ] Store atoms (`rightPanelViewAtom`, `graphDataAtom`)
-- [ ] `GraphPanel.tsx` (SVG, tokens, empty states, intersection tooltips)
-- [ ] Desktop tab (History | Graph) + mobile History-sheet tab (Steps | Graph)
-- [ ] Theme tokens added (no raw colors in TSX)
-- [ ] Full gates green; user URL-test verification (incl. the ± vanish demo)
+- [x] Branch + board → In progress
+- [x] `math-engine/tests/graphing.test.ts` written (failing -> passed)
+- [x] `math-engine/src/graphing.ts` implemented to green (+ index export)
+- [x] Store atoms (`graphSizeAtom`, `graphDataAtom`)
+- [x] `GraphPanel.tsx` (SVG, ResizeObserver, tokens, empty states, intersection tooltips)
+- [x] Main workspace split panel layout (Hidden, 1/3, 2/3) + clickable toggle handle
+- [x] Theme tokens added (no raw colors in TSX)
+- [x] Full gates green (compiles & tests pass)
+- [x] User URL-test verification (incl. the ± vanish demo)
 - [ ] Merge per approval; close #50; archive this doc; file Phase 2 issues

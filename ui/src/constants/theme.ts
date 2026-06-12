@@ -164,4 +164,17 @@ export const THEME_GLASS = {
   BUTTON_PRIMARY_SM: 'relative px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md cursor-pointer active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none',
   ALERT_DANGER_SM: 'text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-2 py-1 max-w-xs text-center',
   TEXT_BUTTON_MUTED: 'text-[10px] text-white/40 hover:text-white/70 transition-colors cursor-pointer',
+
+  // --- Graphing specific ---
+  GRAPH_AXIS: 'stroke-white/25',
+  GRAPH_TICK_TEXT: 'fill-white/40 text-[10px] font-mono select-none',
+  GRAPH_CURVE_LHS: 'stroke-indigo-400',
+  GRAPH_CURVE_RHS: 'stroke-amber-400',
+  GRAPH_SWATCH_LHS: 'bg-indigo-400',
+  GRAPH_SWATCH_RHS: 'bg-amber-400',
+  GRAPH_INTERSECTION_LINE: 'stroke-white/25',
+  GRAPH_INTERSECTION_DOT: 'fill-emerald-400 stroke-emerald-950',
+  GRAPH_LEGEND_CHIP: 'text-xs font-mono px-2.5 py-1 rounded-lg border bg-neutral-950/80 border-white/10 select-none',
+  PANEL_TAB_ACTIVE: 'text-indigo-300 border-b-2 border-indigo-500 font-semibold text-xs transition-all',
+  PANEL_TAB_IDLE: 'text-white/40 hover:text-white/70 text-xs transition-all border-b-2 border-transparent',
 } as const;

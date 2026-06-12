@@ -5,6 +5,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
 import { Sidebar, SidebarContent, EquationLibraryContent } from '../components/Sidebar';
 import { ControlPanel, TimelineContent } from '../components/ControlPanel';
+import { GraphPanel } from '../components/GraphPanel';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
 import { ResetHistoryModal } from '../components/ResetHistoryModal';
@@ -56,10 +57,12 @@ import {
   addTabAtom,
   onboardingChapterIdAtom,
   onboardingGlobalOpAtom,
+  graphSizeAtom,
+  availableFactsAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import Image from 'next/image';
-import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library } from 'lucide-react';
+import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -138,6 +141,8 @@ export default function Home() {
   // During the tour the equals sign is locked except on global-op steps
   const equalsLocked = !!onboardingChapterId && !onboardingGlobalOp;
   const swapSides = useSetAtom(swapSidesAtom);
+  const [graphSize, setGraphSize] = useAtom(graphSizeAtom);
+  const availableFacts = useAtomValue(availableFactsAtom);
   const isMobile = useIsMobile();
   const equalsRef = React.useRef<HTMLSpanElement>(null);
   const lastEqStrRef = React.useRef<string | null>(null);
@@ -856,7 +861,7 @@ export default function Home() {
               </div>
             </div>
           )}
-          <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
+          <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL} overflow-hidden`}>
 
             {/* 1. Active Derivation Workspace */}
             <div
@@ -956,7 +961,57 @@ export default function Home() {
                   </div>
                 </div>
               )}
+
+              {/* Show Graph Floating Handle when hidden */}
+              {graphSize === 'hidden' && (
+                <div className={`absolute left-1/2 -translate-x-1/2 z-35 animate-[fadeIn_0.2s_ease-out] ${
+                  availableFacts.length > 0 ? 'bottom-16' : 'bottom-6'
+                }`}>
+                  <Tooltip content="Show variable relationship graph" position="top" autoAlign={false}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGraphSize('split');
+                      }}
+                      className="px-3.5 py-1.5 rounded-full border border-indigo-500/35 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-500/10 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <TrendingUp size={14} />
+                      <span>Graph</span>
+                    </button>
+                  </Tooltip>
+                </div>
+              )}
             </div>
+
+            {/* 2. Collapsible Bottom Graph Panel */}
+            {graphSize !== 'hidden' && (
+              <div 
+                className={`border-t ${THEME_GLASS.PANEL_BORDER} relative flex flex-col bg-white/[0.01] transition-all duration-300 ease-in-out shrink-0`}
+                style={{ height: graphSize === 'expand' ? '66%' : '33%' }}
+              >
+                {/* Graph Tab/Cycle Handle sitting directly on the border */}
+                <div className="absolute left-1/2 -translate-x-1/2 -top-3.5 z-35 select-none">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (graphSize === 'split') {
+                        setGraphSize('expand');
+                      } else if (graphSize === 'expand') {
+                        setGraphSize('hidden');
+                      }
+                    }}
+                    className="px-3 py-1 rounded-full border border-white/10 bg-neutral-900 hover:bg-neutral-800 text-white/70 hover:text-white hover:border-indigo-500/50 shadow-md text-[10px] font-bold tracking-wide flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <span>{graphSize === 'split' ? 'Graph: 1/3' : 'Graph: 2/3'}</span>
+                    {graphSize === 'split' ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                  </button>
+                </div>
+
+                <div className="flex-1 min-h-0 w-full overflow-hidden">
+                  <GraphPanel />
+                </div>
+              </div>
+            )}
 
             {/* Substitutions available from other workspaces (#3) — docked at the
                 bottom, clear of the tab bar and the nodes' handle rows */}

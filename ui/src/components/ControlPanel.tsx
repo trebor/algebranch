@@ -26,9 +26,10 @@ const COPIED_TIMEOUT = 2000;
 
 interface ControlPanelProps {
   onCloseMobile?: () => void;
+  noBorder?: boolean;
 }
 
-export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => {
+export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBorder }) => {
   const isMobile = useIsMobile();
   const [tree, setTree] = useAtom(historyTreeAtom);
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
@@ -286,7 +287,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
 
   return (
     <div className={`w-full h-full flex flex-col gap-4 ${
-      isMobile 
+      isMobile || noBorder
         ? 'p-0 bg-transparent' 
         : `${THEME_GLASS.PANEL} p-4`
     }`}>

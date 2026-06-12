@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
-import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, SubstitutionFact, SubstitutionOption } from 'math-engine';
+import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, SubstitutionFact, SubstitutionOption, computeGraphData } from 'math-engine';
 import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
@@ -395,6 +395,16 @@ export const currentEquationAtom = atom<Equation>((get) => {
   const tree = get(historyTreeAtom);
   const nodeId = get(currentNodeIdAtom);
   return tree[nodeId]?.equation;
+});
+
+// Graph layout size state: 'hidden' | 'split' (1/3 height) | 'expand' (2/3 height)
+export const graphSizeAtom = atom<'hidden' | 'split' | 'expand'>('hidden');
+
+// Graph of the current equation, computed client-side via the unified engine
+export const graphDataAtom = atom((get) => {
+  const eq = get(currentEquationAtom);
+  if (!eq) return null;
+  try { return computeGraphData(eq); } catch { return null; }
 });
 
 // ==========================================

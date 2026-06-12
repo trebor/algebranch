@@ -4,10 +4,11 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-- [plans/issue-50-graphing.md](plans/issue-50-graphing.md) — `active` — #50 graphing Phase 1: full design + execution plan (engine graphing.ts TDD, SVG GraphPanel, History|Graph tabs), rationale inlined for cold execution. Lives on branch `feat/graphing`; implementation not started.
+- [plans/issue-54-library-cleanup.md](plans/issue-54-library-cleanup.md) — `active` — #54 library cleanup & search: plan and design for reorganizing presets into clean, orthogonal categories and adding searchable UI filtering.
 
 ## Archive
 
+- [archive/issue-50-graphing.md](archive/issue-50-graphing.md) — `done` — #50 graphing: full design + execution plan (SVG GraphPanel, tooltips, resize controls, layout adjustments), branch `feat/graphing` completed 2026-06-12.
 - [archive/issue-3-substitution.md](archive/issue-3-substitution.md) — `done` — #3: cross-workspace equation substitution Phase 1 (facts, teal handles + chooser, strip, tree badge, tutorial Chapter 5); merged to main 2026-06-12. Phase 2 = #51.
 
 - [archive/issue-40-validate-quadratic.md](archive/issue-40-validate-quadratic.md) — `done` — #40: validate the quadratic formula identity; 11-case test suite (substitution-satisfaction, edge cases); merged to main 2026-06-12. No bug found.

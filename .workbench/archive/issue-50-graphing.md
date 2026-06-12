@@ -1,7 +1,7 @@
 ---
-status: active
+status: done
 issue: "#50 — feat: graph expressions/equations to show variable relationships (P1)"
-branch: feat/graphing (created 2026-06-12; this plan lives on it — implementation not started)
+branch: feat/graphing (created 2026-06-12; completed and archived)
 updated: 2026-06-12
 ---
 
@@ -319,5 +319,5 @@ feature (curves "jump", intersection stays). Animated morphing is Phase 2 polish
 - [x] Add theme tokens for graphing tooltips in `theme.ts`
 - [x] Swap FactsStrip and GraphPanel layout placement and adjust mobile bottom padding
 - [x] Verify UI behavior and build correctness
-- [ ] Merge per approval; close #50; archive this doc; file Phase 2 issues (pending approval)
+- [x] Merge per approval; close #50; archive this doc; file Phase 2 issues (pending approval)
 

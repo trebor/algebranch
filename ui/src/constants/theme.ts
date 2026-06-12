@@ -146,7 +146,8 @@ export const THEME_GLASS = {
   PING_SUBSTITUTE: 'bg-teal-400/40',
 
   // --- Substitution (#3): facts strip + history-tree badge ---
-  FACT_CHIP: 'flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 text-[10px] font-semibold select-none',
+  FACT_CHIP: 'flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300/90 text-[10px] font-semibold select-none',
+  FACT_CHIP_ICON: 'flex items-center justify-center h-4 w-4 rounded-full bg-teal-500/80 text-white shrink-0',
   FACT_CHIP_SOURCE: 'text-teal-300/50 font-medium',
   TREE_NODE_BADGE_SUBSTITUTE: 'bg-teal-600 border-teal-400 text-teal-50',
   SUB_COUNT_BADGE: 'bg-neutral-950 border-teal-400 text-teal-300',

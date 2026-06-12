@@ -858,9 +858,6 @@ export default function Home() {
           )}
           <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL}`}>
 
-            {/* Substitution facts available from other workspaces (#3) */}
-            <FactsStrip />
-
             {/* 1. Active Derivation Workspace */}
             <div
               ref={activeScale.containerRef}
@@ -960,6 +957,11 @@ export default function Home() {
                 </div>
               )}
             </div>
+
+            {/* Substitutions available from other workspaces (#3) — docked at the
+                bottom, clear of the tab bar and the nodes' handle rows */}
+            <FactsStrip />
+
             <OnboardingTour />
           </div>
         </main>

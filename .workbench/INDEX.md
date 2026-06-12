@@ -4,7 +4,8 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-- [plans/step-change-descriptors.md](plans/step-change-descriptors.md) — `active` — math-engine: emit structured per-step change descriptors (precursor to #18); branch `feat/step-change-descriptors`.
+- [plans/step-change-descriptors.md](plans/step-change-descriptors.md) — `active` — math-engine #42: per-step change descriptors (transposition+reduction merged; global-ops + #18 UI remain).
+- [plans/issue-43-global-ops-engine.md](plans/issue-43-global-ops-engine.md) — `active` — #43: route global ops through the engine (implemented on `feat/global-ops-in-engine`, validates the #44 unification path).
 
 ## Archive
 

@@ -23,7 +23,7 @@ export type StepChange =
     }
   | {
       readonly kind: 'rewrite';
-      readonly op: 'evaluate' | 'simplify' | 'distribute' | 'identity' | 'quadratic';
+      readonly op: 'evaluate' | 'simplify' | 'distribute' | 'identity' | 'quadratic' | 'substitute';
       readonly detail?: string;
       readonly text: string;
     };
@@ -139,6 +139,20 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
     text: before && after ? `simplify ${before} → ${after}` : 'simplify',
   };
 };
+
+/**
+ * Describe a substitution (#3): one occurrence of `variable` replaced by its
+ * definition from another equation. `replacement` is a strictly parsable
+ * symbolic string (same contract as bothSides operands), so the UI can render
+ * it formally; the history node carrying this change records the dependency on
+ * the source fact.
+ */
+export const describeSubstitution = (variable: string, replacement: string): StepChange => ({
+  kind: 'rewrite',
+  op: 'substitute',
+  detail: `${variable} → ${replacement}`,
+  text: `substitute ${variable} = ${replacement}`,
+});
 
 /**
  * Describe a global op (the both-sides radial-menu operations) as a `bothSides`

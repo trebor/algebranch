@@ -1,0 +1,104 @@
+import {
+  parseEquation,
+  ensureNodeIds,
+  equationToString,
+  getIsolatedDefinition,
+  getSubstitutionOptions,
+  describeSubstitution,
+  SubstitutionFact,
+} from '../src';
+
+const eq = (s: string) => ensureNodeIds(parseEquation(s));
+const norm = (s: string) => s.replace(/\s+/g, '');
+
+const fact = (s: string, sourceName = 'other tab'): SubstitutionFact => {
+  const def = getIsolatedDefinition(eq(s));
+  if (!def) throw new Error(`not an isolated definition: ${s}`);
+  return { ...def, sourceName };
+};
+
+describe('getIsolatedDefinition — what counts as a usable fact', () => {
+  it('detects lhs isolation: y = 2x + 1', () => {
+    const def = getIsolatedDefinition(eq('y = 2 * x + 1'));
+    expect(def?.variable).toBe('y');
+    expect(norm(def!.expression.toString())).toBe(norm('2 * x + 1'));
+  });
+
+  it('detects rhs isolation: 2x + 1 = y', () => {
+    const def = getIsolatedDefinition(eq('2 * x + 1 = y'));
+    expect(def?.variable).toBe('y');
+  });
+
+  it('rejects self-referential "isolation": y = y + 1', () => {
+    expect(getIsolatedDefinition(eq('y = y + 1'))).toBeNull();
+  });
+
+  it('accepts rhs bare variable even with work on the left: 2y = x isolates x', () => {
+    const def = getIsolatedDefinition(eq('2 * y = x'));
+    expect(def?.variable).toBe('x');
+  });
+
+  it('rejects non-isolated equations', () => {
+    expect(getIsolatedDefinition(eq('x + 2 = 5'))).toBeNull();
+    expect(getIsolatedDefinition(eq('2 * y = x + 1'))).toBeNull();
+  });
+
+  it('rejects constants pi/e as "variables"', () => {
+    expect(getIsolatedDefinition(eq('pi = 3'))).toBeNull();
+  });
+});
+
+describe('getSubstitutionOptions — forward substitution', () => {
+  it('offers substitution at every matching variable occurrence, parenthesized', () => {
+    const options = getSubstitutionOptions(eq('3 * y + y = 12'), [fact('y = 2 * x + 1')]);
+    const paths = Object.keys(options);
+    expect(paths).toHaveLength(2); // both y occurrences
+
+    for (const opts of Object.values(options)) {
+      expect(opts).toHaveLength(1);
+      // each option substitutes only ITS occurrence
+    }
+    const results = Object.values(options).flat().map(o => norm(equationToString(o.substituted)));
+    // Precedence-critical parens are kept; redundant ones are normalized away.
+    expect(results).toContain(norm('3 * (2 * x + 1) + y = 12'));
+    expect(results).toContain(norm('3 * y + 2 * x + 1 = 12'));
+  });
+
+  it('does not parenthesize single-node replacements', () => {
+    const options = getSubstitutionOptions(eq('3 * y = 12'), [fact('y = 5')]);
+    const results = Object.values(options).flat().map(o => norm(equationToString(o.substituted)));
+    expect(results).toContain(norm('3 * 5 = 12'));
+  });
+
+  it('returns nothing when the variable does not occur', () => {
+    expect(getSubstitutionOptions(eq('3 * z = 12'), [fact('y = 2 * x')])).toEqual({});
+  });
+
+  it('offers multiple options on one node when two facts define the same variable', () => {
+    const options = getSubstitutionOptions(eq('y + 1 = 4'), [
+      fact('y = 2 * x', 'tab A'),
+      fact('y = z - 3', 'tab B'),
+    ]);
+    const yPath = Object.keys(options)[0];
+    expect(options[yPath]).toHaveLength(2);
+    expect(options[yPath].map(o => o.fact.sourceName).sort()).toEqual(['tab A', 'tab B']);
+  });
+
+  it('carries the fact and a parsable replacement string on each option', () => {
+    const options = getSubstitutionOptions(eq('y + 1 = 4'), [fact('y = 2 * x')]);
+    const opt = Object.values(options).flat()[0];
+    expect(opt.variable).toBe('y');
+    expect(norm(opt.replacement)).toBe(norm('2 * x'));
+    // replacement round-trips through the parser (strictly symbolic, like #42 operands)
+    expect(norm(equationToString(parseEquation(`q = ${opt.replacement}`)))).toBe(norm(`q = ${opt.replacement}`));
+  });
+});
+
+describe('describeSubstitution — StepChange for the transcript / history tree', () => {
+  it('emits a substitute rewrite with symbolic detail', () => {
+    const change = describeSubstitution('y', '2 * x + 1');
+    expect(change).toMatchObject({ kind: 'rewrite', op: 'substitute' });
+    expect(change.text).toBe('substitute y = 2 * x + 1');
+    expect((change as any).detail).toBe('y → 2 * x + 1');
+  });
+});

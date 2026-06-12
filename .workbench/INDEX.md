@@ -4,7 +4,7 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-*(No active tasks)*
+- [plans/issue-3-substitution.md](plans/issue-3-substitution.md) — `active` — #3: equation substitution Phase 1 (cross-workspace facts, Replace handles, tutorial chapter); branch `feat/equation-substitution`.
 
 ## Archive
 

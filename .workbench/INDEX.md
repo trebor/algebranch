@@ -8,7 +8,8 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Archive
 
-- [archive/issue-18-copy-derivation.md](archive/issue-18-copy-derivation.md) — `done` — #18: copy the complete derivation history; merged to main 2026-06-11. Captures StepChange at move time; consumes #42 descriptors. Follow-up: ± negative-root dropped (file separately).
+- [archive/issue-44-unify-engine.md](archive/issue-44-unify-engine.md) — `done` — #44: retire the math-engine-client duplication (569→35 line re-export); merged to main 2026-06-11. Behavior byte-identical, bundle unchanged.
+- [archive/issue-18-copy-derivation.md](archive/issue-18-copy-derivation.md) — `done` — #18: copy the complete derivation history; merged to main 2026-06-11. Captures StepChange at move time; consumes #42 descriptors. Follow-up: ± negative-root dropped (#45).
 - [archive/step-change-descriptors.md](archive/step-change-descriptors.md) — `done` — #42: per-step change descriptors (transposition+reduction+global-ops); merged to main 2026-06-11.
 - [archive/issue-43-global-ops-engine.md](archive/issue-43-global-ops-engine.md) — `done` — #43: route global ops through the math engine; merged to main 2026-06-11. Validated the #44 client-side engine-import path.
 - [archive/issue-41-onboarding-tooltips.md](archive/issue-41-onboarding-tooltips.md) — `done` — Issue #41 onboarding fixes + tooltip unification + UI polish; branch `bugfix/tour-source-reclick-deselect` merged to main 2026-06-11.

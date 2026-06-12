@@ -470,6 +470,19 @@ export default function Home() {
     }
   }, []);
 
+  // Suppress the browser's automatic PWA install promotion. The app meets
+  // installability criteria (manifest + service worker) but offers no real
+  // offline value yet, so the unsolicited prompt is just first-run noise.
+  // Calling preventDefault() silences the auto-offer while leaving manual
+  // "Add to Home Screen" intact. One-line revert when offline becomes useful.
+  React.useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
   React.useEffect(() => {
     if (!currentEq) return;
 

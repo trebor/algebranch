@@ -488,15 +488,6 @@ export const GraphPanel: React.FC = () => {
             </g>
           )}
 
-          {/* Boundary Border */}
-          <rect
-            x={padding.left}
-            y={padding.top}
-            width={plotWidth}
-            height={plotHeight}
-            className="stroke-white/10 fill-none"
-            strokeWidth={1}
-          />
         </svg>
       </div>
     </div>

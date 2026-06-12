@@ -22,6 +22,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
+import { describeTransposition, describeReduction } from 'math-engine';
 import { ArrowLeftRight, Zap, Split, RefreshCw } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
@@ -262,7 +263,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
     const activeTargetPath = getTargetPath();
     if (activeTargetPath && sourcePath) {
-      pushEquation(targetPaths[activeTargetPath]);
+      pushEquation(
+        targetPaths[activeTargetPath],
+        undefined,
+        describeTransposition(currentEq, sourcePath, activeTargetPath) ?? undefined,
+      );
       trackEvent({
         action: 'apply_transposition',
         category: 'math_interaction',
@@ -619,7 +624,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    pushEquation(action.equation, action.label || (action.type === 'distribute' ? 'Distribute' : action.type === 'identity' ? 'Apply Identity' : 'Simplify'));
+                    const reductionLabel = action.label || (action.type === 'distribute' ? 'Distribute' : action.type === 'identity' ? 'Apply Identity' : 'Simplify');
+                    const change = describeReduction(currentEq, {
+                      path,
+                      simplified: action.equation,
+                      type: action.type as 'reduce' | 'distribute' | 'identity',
+                      label: action.label,
+                    });
+                    pushEquation(action.equation, reductionLabel, change);
                     trackEvent({
                       action: 'apply_reduction',
                       category: 'math_interaction',

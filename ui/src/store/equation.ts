@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
-import { applyGlobalOp, GlobalOpParams } from 'math-engine';
+import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp } from 'math-engine';
 import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
@@ -18,6 +18,8 @@ export interface HistoryNode {
   childrenIds: string[];
   label: string;
   timestamp: number;
+  /** Structured description of the move that produced this node (#42). */
+  change?: StepChange;
 }
 
 export interface SerializedHistoryNode {
@@ -27,6 +29,8 @@ export interface SerializedHistoryNode {
   childrenIds: string[];
   label: string;
   timestamp: number;
+  /** Plain serializable data — round-trips via the spread in serializeTree. */
+  change?: StepChange;
 }
 
 export interface SavedSession {
@@ -71,6 +75,36 @@ export const getSessionLatestTimestamp = (tree: Record<string, HistoryNode> | Re
     }
   }
   return maxTs > 0 ? maxTs : Date.now();
+};
+
+/**
+ * Build a human-readable transcript of the active derivation path
+ * (root -> currentNodeId): numbered steps, each line the equation plus a
+ * justification — the structured change description (#42), falling back to the
+ * coarse label for moves that aren't descriptor-wired. The `parentId` chain is a
+ * unique path (loop bubbles are off-chain); the seen-guard is belt-and-suspenders.
+ */
+export const formatDerivation = (
+  tree: Record<string, HistoryNode>,
+  currentNodeId: string,
+): string => {
+  const chain: HistoryNode[] = [];
+  const seen = new Set<string>();
+  let id: string | null = currentNodeId;
+  while (id && tree[id] && !seen.has(id)) {
+    seen.add(id);
+    chain.push(tree[id]);
+    id = tree[id].parentId;
+  }
+  chain.reverse();
+  return chain
+    .map((node, i) => {
+      const eq = equationToString(node.equation);
+      if (i === 0) return `${i + 1}. ${eq}`;
+      const justification = node.change?.text ?? node.label;
+      return justification ? `${i + 1}. ${eq}  (${justification})` : `${i + 1}. ${eq}`;
+    })
+    .join('\n');
 };
 
 export interface VisualTreeNode extends HistoryNode {
@@ -447,7 +481,7 @@ export const getCanonicalKey = (eqVal: Equation): string => {
  */
 export const pushEquationAtom = atom(
   null,
-  (get, set, newEq: Equation, stepLabel?: string) => {
+  (get, set, newEq: Equation, stepLabel?: string, change?: StepChange) => {
     const tree = get(historyTreeAtom);
     const currentNodeId = get(currentNodeIdAtom);
     const activeNode = tree[currentNodeId];
@@ -531,6 +565,7 @@ export const pushEquationAtom = atom(
       childrenIds: [],
       label,
       timestamp: Date.now(),
+      change,
     };
 
     const updatedTree = {
@@ -810,7 +845,7 @@ export const applyGlobalOpAtom = atom(
       label = `Global ${sym} ${term?.trim() ?? ''}`;
     }
 
-    set(pushEquationAtom, nextEq, label);
+    set(pushEquationAtom, nextEq, label, describeGlobalOp(params));
   }
 );
 

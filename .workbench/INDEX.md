@@ -4,7 +4,7 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-*(No active tasks)*
+- [plans/issue-18-copy-derivation.md](plans/issue-18-copy-derivation.md) — `active` — #18: copy the complete derivation history; branch `feat/copy-derivation`. Captures StepChange at move time on the history node; consumes #42 descriptors.
 
 ## Archive
 

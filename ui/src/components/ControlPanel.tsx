@@ -16,6 +16,7 @@ import {
   getCanonicalKey,
   rightSidebarOpenAtom,
   resetHistoryModalOpenAtom,
+  formatDerivation,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitFork, Infinity } from 'lucide-react';
@@ -39,8 +40,18 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
 
 
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
+  const [derivationCopied, setDerivationCopied] = React.useState(false);
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
   const [isMounted, setIsMounted] = React.useState(false);
+
+  const handleCopyDerivation = () => {
+    const text = formatDerivation(tree, currentNodeId);
+    navigator.clipboard.writeText(text).then(() => {
+      setDerivationCopied(true);
+      trackEvent({ action: 'copy_derivation', category: 'history', label: currentNodeId });
+      setTimeout(() => setDerivationCopied(false), COPIED_TIMEOUT);
+    });
+  };
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -286,6 +297,15 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
           <span>History</span>
         </h2>
         <div className="flex items-center gap-1.5">
+          <Tooltip content="Copy full derivation">
+            <button
+              onClick={handleCopyDerivation}
+              disabled={Object.keys(tree).length <= 1}
+              className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer ${derivationCopied ? 'text-emerald-400' : 'text-white'}`}
+            >
+              {derivationCopied ? <Check size={16} /> : <Copy size={16} />}
+            </button>
+          </Tooltip>
           <Tooltip content="Undo step (⌘Z)">
             <button
               onClick={handleUndo}
@@ -554,6 +574,16 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
   const canUndo = activeNode && activeNode.parentId !== null;
   const canRedo = activeNode && activeNode.childrenIds.length > 0;
 
+  const [derivationCopied, setDerivationCopied] = React.useState(false);
+  const handleCopyDerivation = () => {
+    const text = formatDerivation(tree, currentNodeId);
+    navigator.clipboard.writeText(text).then(() => {
+      setDerivationCopied(true);
+      trackEvent({ action: 'copy_derivation', category: 'history', label: currentNodeId });
+      setTimeout(() => setDerivationCopied(false), COPIED_TIMEOUT);
+    });
+  };
+
   const handleUndo = () => {
     if (canUndo && activeNode.parentId) {
       setCurrentNodeId(activeNode.parentId);
@@ -629,6 +659,14 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
       <div className={`flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
         <span className="text-sm font-semibold text-indigo-300">Steps Timeline</span>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleCopyDerivation}
+            disabled={sortedNodes.length <= 1}
+            className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer ${derivationCopied ? 'text-emerald-400' : 'text-white'}`}
+            title="Copy full derivation"
+          >
+            {derivationCopied ? <Check size={16} /> : <Copy size={16} />}
+          </button>
           <button
             onClick={handleUndo}
             disabled={!canUndo}

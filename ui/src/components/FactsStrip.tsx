@@ -22,10 +22,13 @@ export const FactsStrip: React.FC = () => {
   const strip = (s: string) => s.replace(/\s+/g, '');
 
   return (
-    <div className="flex items-center gap-2 px-3 pb-2 pt-1 flex-wrap select-none shrink-0">
-      <span className={`text-[9px] uppercase tracking-wider font-semibold ${THEME_GLASS.TEXT_MUTED}`}>
-        Available substitutions
+    // One row, horizontally scrollable — same overflow treatment as the tab bar
+    // above, so narrow screens swipe sideways instead of clipping or wrapping.
+    <div className="flex items-center gap-2 px-3 pb-2 pt-1 select-none shrink-0 min-w-0">
+      <span className={`shrink-0 text-[9px] uppercase tracking-wider font-semibold ${THEME_GLASS.TEXT_MUTED}`}>
+        Substitutions
       </span>
+      <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none min-w-0 py-0.5">
       {facts.map((fact, i) => {
         const factEq = { lhs: new math.SymbolNode(fact.variable), rhs: fact.expression };
         const eqStr = equationToString(factEq);
@@ -61,6 +64,7 @@ export const FactsStrip: React.FC = () => {
           </Tooltip>
         );
       })}
+      </div>
     </div>
   );
 };

@@ -428,7 +428,22 @@ export const availableFactsAtom = atom<SubstitutionFact[]>((get) => {
       /* skip malformed tabs */
     }
   }
-  return facts;
+
+  // Workspaces asserting the IDENTICAL definition are one fact with several
+  // witnesses — collapse them (merging provenance) so the strip shows one chip
+  // and the handle applies directly instead of opening a chooser. Commutative
+  // variants (2*x vs x*2) stay separate: their substituted results differ.
+  const merged = new Map<string, SubstitutionFact>();
+  for (const fact of facts) {
+    const key = `${fact.variable} = ${fact.expression.toString()}`;
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, fact);
+    } else if (fact.sourceName && existing.sourceName && existing.sourceName !== fact.sourceName) {
+      merged.set(key, { ...existing, sourceName: `${existing.sourceName}, ${fact.sourceName}` });
+    }
+  }
+  return Array.from(merged.values());
 });
 
 /**

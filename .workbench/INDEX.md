@@ -4,7 +4,7 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-*(No active tasks)*
+- [plans/issue-33-denominator-removal.md](plans/issue-33-denominator-removal.md) — `active` — #33: node removal now requires a local identity (areExpressionsValueEqual), killing the bogus denominator Simplify handle; branch `bugfix/denominator-simplify-handle`. Verify in-app.
 
 ## Archive
 

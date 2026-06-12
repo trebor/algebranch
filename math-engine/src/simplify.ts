@@ -1,6 +1,6 @@
 import * as math from 'mathjs';
 import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, ensureNodeIds } from './tree';
-import { areEquationsEquivalent, getFunctionName, getQuadraticFormulaSolutions } from './validator';
+import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions } from './validator';
 import { HIGH_SCHOOL_IDENTITIES } from './rules';
 import { matchPattern, instantiatePattern, tryExpressAsPower } from './matcher';
 
@@ -569,10 +569,18 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
       }
     }
 
-    // 3. Try single removal of this node
+    // 3. Try single removal of this node. A genuine simplification is a LOCAL
+    // identity — the modified side keeps its value for every variable assignment
+    // (e.g. x + 0 -> x) — not merely an equation with the same roots. This
+    // rejects denominator/factor removals that are valid only because of the
+    // equation structure: A/5 = 0 -> A = 0 is a both-sides multiply, not a
+    // simplify of the 5, and is outright lossy for a variable denominator (#33).
     const singleCandidate = trySingleRemoval(eq, p);
-    if (singleCandidate && isDiff(singleCandidate) && areEquationsEquivalent(eq, singleCandidate)) {
-      return singleCandidate;
+    if (singleCandidate && isDiff(singleCandidate)) {
+      const side = p.split('/')[0] as 'lhs' | 'rhs';
+      if (areExpressionsValueEqual(eq[side], singleCandidate[side])) {
+        return singleCandidate;
+      }
     }
 
     // 4. Try double removal involving this node and another node only if compatible (direct inverses)
@@ -694,12 +702,15 @@ export const autoSimplify = (eq: Equation): Equation => {
         }
       }
 
-      // Try removing the single node
+      // Try removing the single node (only when it is a local identity — see #33)
       const candidate = trySingleRemoval(currentEq, paths[i]);
-      if (candidate && areEquationsEquivalent(currentEq, candidate)) {
-        currentEq = candidate;
-        simplified = true;
-        break; // Restart scan on the simplified tree
+      if (candidate) {
+        const side = paths[i].split('/')[0] as 'lhs' | 'rhs';
+        if (areExpressionsValueEqual(currentEq[side], candidate[side])) {
+          currentEq = candidate;
+          simplified = true;
+          break; // Restart scan on the simplified tree
+        }
       }
 
       // Try mathjs built-in simplify for algebraic reductions (e.g. combining like terms)

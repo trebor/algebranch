@@ -318,6 +318,36 @@ export const isEquationSatisfiedAtRoot = (
 };
 
 /**
+ * Tests whether two EXPRESSIONS are value-equal for all variable assignments (a
+ * local identity, e.g. `x + 0` vs `x`), by sampling several points. This is
+ * stronger than equation equivalence (same solution set): `A / 5` and `A` share
+ * roots when the other side is 0 but are NOT value-equal. Used to gate
+ * node-removal "simplifications" so they reflect a genuine local identity rather
+ * than an equation-structure coincidence (#33). Sample points avoid 0 to dodge
+ * spurious division-by-zero; undefined samples are skipped.
+ */
+export const areExpressionsValueEqual = (a: math.MathNode, b: math.MathNode): boolean => {
+  const vars = Array.from(new Set([...getVariables(a), ...getVariables(b)]));
+  let validSamples = 0;
+  for (let i = 0; i < 8; i++) {
+    const scope: Record<string, number> = {};
+    vars.forEach((v, idx) => { scope[v] = 0.7 + i * 1.3 + idx * 0.5; });
+    try {
+      const va = evaluatePoint(a, scope);
+      const vb = evaluatePoint(b, scope);
+      const diff = Number(math.abs(math.subtract(va, vb)));
+      const mag = Number(math.abs(va));
+      if (isValNaN(diff) || !isValFinite(diff) || isValNaN(mag) || !isValFinite(mag)) continue;
+      validSamples++;
+      if (diff > 1e-6 * (1 + mag)) return false;
+    } catch {
+      continue;
+    }
+  }
+  return validSamples >= 2;
+};
+
+/**
  * Tests if two equations are equivalent using point evaluation across multiple random midpoints.
  */
 export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variables: string[]): boolean => {

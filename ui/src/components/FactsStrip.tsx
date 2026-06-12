@@ -4,7 +4,7 @@ import React from 'react';
 import { useAtomValue } from 'jotai';
 import * as math from 'mathjs';
 import { Replace } from 'lucide-react';
-import { availableFactsAtom } from '../store/equation';
+import { availableFactsAtom, onboardingChapterIdAtom } from '../store/equation';
 import { equationToString } from 'math-engine-client';
 import { THEME_GLASS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
@@ -17,6 +17,7 @@ import { TooltipCard } from './TooltipCard';
  */
 export const FactsStrip: React.FC = () => {
   const facts = useAtomValue(availableFactsAtom);
+  const inTour = !!useAtomValue(onboardingChapterIdAtom);
   if (facts.length === 0) return null;
 
   const strip = (s: string) => s.replace(/\s+/g, '');
@@ -24,7 +25,12 @@ export const FactsStrip: React.FC = () => {
   return (
     // One row, horizontally scrollable — same overflow treatment as the tab bar
     // above, so narrow screens swipe sideways instead of clipping or wrapping.
-    <div className="flex items-center gap-2 px-3 pb-2 pt-1 select-none shrink-0 min-w-0">
+    // On mobile the fixed BottomNav overlays the bottom of the panel, so the
+    // strip clears its height (+ safe area) — except during the tour, when the
+    // nav is hidden and the coach card docks directly below.
+    <div className={`flex items-center gap-2 px-3 pb-2 pt-1 select-none shrink-0 min-w-0 ${
+      inTour ? '' : 'max-lg:mb-[calc(3.5rem+env(safe-area-inset-bottom))]'
+    }`}>
       <span className={`shrink-0 text-[9px] uppercase tracking-wider font-semibold ${THEME_GLASS.TEXT_MUTED}`}>
         Substitutions
       </span>

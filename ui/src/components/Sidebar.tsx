@@ -4,6 +4,8 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useAtomValue, useSetAtom, useAtom } from 'jotai';
 import { Tooltip } from './Tooltip';
+import { TooltipCard } from './TooltipCard';
+import { Equation, parseEquation, ensureNodeIds, deserializeEquation } from 'math-engine-client';
 import {
   currentEquationAtom,
   pushEquationAtom,
@@ -199,36 +201,64 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                         .map((session) => {
                           const isActive = session.id === currentSessionId;
                           const stepCount = getStepCount(session.tree);
+                          let sessionEq: Equation | null = null;
+                          try {
+                            const node = session.tree?.[session.currentNodeId] || session.tree?.['0'];
+                            if (node) sessionEq = deserializeEquation(node.equation);
+                          } catch {
+                            sessionEq = null;
+                          }
+                          const itemTooltipContent = (
+                            <TooltipCard
+                              eyebrow={session.chapterId ? 'Tutorial Workspace' : 'Workspace'}
+                              title={session.name}
+                              equation={sessionEq}
+                              footer={
+                                <>
+                                  <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
+                                  <span>{formatTimestamp(session.timestamp)}</span>
+                                </>
+                              }
+                            />
+                          );
                           return (
-                            <button
+                            <Tooltip
                               key={session.id}
-                              type="button"
-                              onClick={() => {
-                                loadSession(session.id);
-                                trackEvent({
-                                  action: 'load_session',
-                                  category: 'presets',
-                                  label: session.id,
-                                });
-                                setIsDropdownOpen(false);
-                                if (window.innerWidth < 1024) {
-                                  setLeftSidebarOpen(false);
-                                }
-                                onCloseMobile?.();
-                              }}
-                              className={`w-full text-left px-3 py-2 text-xs flex justify-between items-center gap-4 ${THEME_GLASS.LIST_ITEM_HOVER} cursor-pointer ${
-                                isActive ? THEME_GLASS.LIST_ITEM_ACTIVE : THEME_GLASS.TEXT_MUTED_BRIGHT
-                              }`}
+                              content={itemTooltipContent}
+                              position="right"
+                              autoAlign={false}
+                              className="max-w-[min(92vw,40rem)]"
+                              wrapperClassName="w-full"
                             >
-                              <span className="truncate font-mono flex-1">
-                                {session.name}
-                              </span>
-                              <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED_EXTRA} whitespace-nowrap font-sans shrink-0 flex items-center gap-1.5`}>
-                                <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
-                                <span>·</span>
-                                <span>{formatTimestamp(session.timestamp)}</span>
-                              </span>
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  loadSession(session.id);
+                                  trackEvent({
+                                    action: 'load_session',
+                                    category: 'presets',
+                                    label: session.id,
+                                  });
+                                  setIsDropdownOpen(false);
+                                  if (window.innerWidth < 1024) {
+                                    setLeftSidebarOpen(false);
+                                  }
+                                  onCloseMobile?.();
+                                }}
+                                className={`w-full text-left px-3 py-2 text-xs flex justify-between items-center gap-4 ${THEME_GLASS.LIST_ITEM_HOVER} cursor-pointer ${
+                                  isActive ? THEME_GLASS.LIST_ITEM_ACTIVE : THEME_GLASS.TEXT_MUTED_BRIGHT
+                                }`}
+                              >
+                                <span className="truncate font-mono flex-1">
+                                  {session.name}
+                                </span>
+                                <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED_EXTRA} whitespace-nowrap font-sans shrink-0 flex items-center gap-1.5`}>
+                                  <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
+                                  <span>·</span>
+                                  <span>{formatTimestamp(session.timestamp)}</span>
+                                </span>
+                              </button>
+                            </Tooltip>
                           );
                         })}
                     </div>
@@ -344,6 +374,23 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
   const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>({});
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
 
+  // Pre-parse each preset's equation once so the hover tooltip can render it in
+  // pretty (typeset) form without re-parsing on every render. Unparseable
+  // presets fall back to their raw string in the tooltip.
+  const parsedPresets = React.useMemo(() => {
+    const map: Record<string, Equation | null> = {};
+    for (const group of presetCategories) {
+      for (const preset of group.presets) {
+        try {
+          map[preset.id] = ensureNodeIds(parseEquation(preset.equation));
+        } catch {
+          map[preset.id] = null;
+        }
+      }
+    }
+    return map;
+  }, [presetCategories]);
+
   const toggleCategory = (categoryName: string) => {
     setExpandedCategories((prev) => {
       const wasExpanded = !!prev[categoryName];
@@ -425,7 +472,16 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
                   {group.presets.map((preset) => (
                     <Tooltip
                       key={preset.id}
-                      content={preset.description}
+                      className="max-w-[min(92vw,40rem)]"
+                      content={(
+                        <TooltipCard
+                          eyebrow={group.category}
+                          title={preset.label}
+                          description={preset.description}
+                          equation={parsedPresets[preset.id]}
+                          rawEquation={preset.equation}
+                        />
+                      )}
                     >
                       <button
                         onClick={() => handlePresetSelect(preset.equation, preset.label)}

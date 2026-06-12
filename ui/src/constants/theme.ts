@@ -81,6 +81,14 @@ export const THEME_GLASS = {
 
   TOOLTIP_DETAILS: 'bg-neutral-950/98 shadow-[0_0_30px_rgba(99,102,241,0.25)] border border-indigo-500/20',
 
+  // --- Unified tooltip card (workspaces, tabs, library, history) ---
+  TOOLTIP_EYEBROW: 'text-[10px] text-indigo-400 font-bold tracking-wider uppercase select-none',
+  TOOLTIP_TITLE: 'text-xs font-bold text-white break-words',
+  TOOLTIP_DESC: 'text-[11px] text-zinc-300 leading-snug',
+  TOOLTIP_EQUATION: 'text-base sm:text-lg font-semibold text-indigo-100',
+  TOOLTIP_EQ_SEP: 'font-mono text-indigo-400 select-none',
+  TOOLTIP_RAW_EQ: 'font-mono text-xs text-indigo-300 break-words',
+
   TIMELINE_BADGE_ACTIVE: 'bg-indigo-600 border-indigo-400 text-white scale-110 shadow-[0_0_10px_rgba(99,102,241,0.5)]',
   TIMELINE_BADGE_DEFAULT: 'bg-neutral-900 border-white/20 text-white/55 group-hover:border-indigo-400/50 group-hover:text-indigo-300',
   TIMELINE_CARD_ACTIVE: 'border-indigo-500/30 bg-indigo-500/10 shadow-[0_0_12px_rgba(99,102,241,0.15)]',

@@ -11,6 +11,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
+import { TooltipCard } from './TooltipCard';
 
 const formatTimestamp = (ts: number): string => {
   const diff = Date.now() - ts;
@@ -92,16 +93,21 @@ export const WorkspaceTabs: React.FC = () => {
             return vals.length > 0 ? Math.max(...vals) : Date.now();
           })();
 
+          const tabEq = tab.historyTree?.[tab.currentNodeId]?.equation
+            ?? tab.historyTree?.['0']?.equation
+            ?? null;
           const tooltipContent = (
-            <div className="flex flex-col gap-1 min-w-[140px] text-left">
-              <div className="font-bold text-white truncate max-w-[180px]">
-                {tab.name}
-              </div>
-              <div className="flex items-center justify-between text-[10px] text-indigo-300/80 font-medium gap-4">
-                <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
-                <span>{formatTimestamp(lastEditTime)}</span>
-              </div>
-            </div>
+            <TooltipCard
+              eyebrow={tab.chapterId ? 'Tutorial Workspace' : 'Workspace'}
+              title={tab.name}
+              equation={tabEq}
+              footer={
+                <>
+                  <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
+                  <span>{formatTimestamp(lastEditTime)}</span>
+                </>
+              }
+            />
           );
 
           return (
@@ -130,7 +136,7 @@ export const WorkspaceTabs: React.FC = () => {
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <Tooltip content={tooltipContent} position="bottom" autoAlign={false}>
+                <Tooltip content={tooltipContent} position="bottom" autoAlign={false} className="max-w-[min(92vw,40rem)]">
                   <span className="truncate max-w-[120px] tracking-wide">
                     {truncateName(tab.name)}
                   </span>

@@ -3,7 +3,7 @@
 import React from 'react';
 import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import { Tooltip } from './Tooltip';
-import { PreviewEquationNode } from './PreviewEquationNode';
+import { TooltipCard } from './TooltipCard';
 import { Equation, equationToString } from 'math-engine-client';
 import { trackEvent } from '../utils/analytics';
 import {
@@ -474,17 +474,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile }) => 
                   }}
                   className={`max-w-[85vw] w-max p-4 z-50 text-left lowercase-none normal-case flex flex-col gap-2 pointer-events-auto font-sans ${THEME_GLASS.TOOLTIP_DETAILS}`}
                   content={
-                    <>
-                      <div className="text-[10px] text-indigo-400 font-bold tracking-wider uppercase select-none border-b border-indigo-500/10 pb-1.5 mb-1 flex items-center justify-between gap-12">
-                        <span>Step Details — {node.label}</span>
-                        <span className={`text-[9px] ${THEME_GLASS.TEXT_MUTED_EXTRA} font-sans normal-case font-medium`}>Step {stepNum}</span>
-                      </div>
-                      <div className="flex items-center justify-center gap-2 py-2 overflow-x-auto select-all text-base sm:text-lg font-semibold text-indigo-100">
-                        <PreviewEquationNode path="lhs" customEquation={node.equation} />
-                        <span className="text-[1.1em] font-mono text-indigo-400 select-none px-2">=</span>
-                        <PreviewEquationNode path="rhs" customEquation={node.equation} />
-                      </div>
-                    </>
+                    <TooltipCard
+                      eyebrow={`Step Details — ${node.label}`}
+                      meta={`Step ${stepNum}`}
+                      equation={node.equation}
+                    />
                   }
                 >
                   <div

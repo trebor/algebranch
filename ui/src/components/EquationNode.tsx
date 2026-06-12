@@ -767,7 +767,19 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   )}
                   <Replace className="h-[65%] w-[65%] text-white stroke-[2.5]" />
                   {!single && (
-                    <span className={`absolute -top-[0.3em] -right-[0.3em] h-[0.55em] w-[0.55em] rounded-full text-[0.32em] flex items-center justify-center font-bold border ${THEME_GLASS.SUB_COUNT_BADGE}`}>
+                    <span
+                      className={`absolute flex items-center justify-center rounded-full font-bold border leading-none ${THEME_GLASS.SUB_COUNT_BADGE}`}
+                      style={{
+                        // Size the circle in DIGIT units (font-size first), so the
+                        // number always fits the badge at any math scale.
+                        fontSize: '0.3em',
+                        height: '1.5em',
+                        minWidth: '1.5em',
+                        padding: '0 0.2em',
+                        top: '-0.55em',
+                        right: '-0.55em',
+                      }}
+                    >
                       {substitutions.length}
                     </span>
                   )}

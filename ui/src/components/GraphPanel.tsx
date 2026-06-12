@@ -49,6 +49,13 @@ export const GraphPanel: React.FC = () => {
   
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = React.useState({ width: 360, height: 260 });
+  
+  // Interactive UI states
+  const [hoveredCurve, setHoveredCurve] = React.useState<'lhs' | 'rhs' | null>(null);
+  const [hoveredLegend, setHoveredLegend] = React.useState<'lhs' | 'rhs' | null>(null);
+  const [mousePos, setMousePos] = React.useState<{ x: number; y: number } | null>(null);
+
+  const activeHover = hoveredCurve || hoveredLegend;
 
   React.useEffect(() => {
     if (!containerRef.current) return;
@@ -180,15 +187,49 @@ export const GraphPanel: React.FC = () => {
   const xTicks = niceTicks(xMin, xMax, Math.max(3, Math.min(6, Math.floor(W / 80))));
   const yTicks = niceTicks(yMin, yMax, Math.max(3, Math.min(6, Math.floor(H / 60))));
 
+  // Handle tracking mouse position over SVG to draw crosshairs
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+    const svg = e.currentTarget;
+    const rect = svg.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * W;
+    const my = ((e.clientY - rect.top) / rect.height) * H;
+    
+    // Check if cursor is inside the actual plot boundaries
+    if (
+      mx >= padding.left &&
+      mx <= W - padding.right &&
+      my >= padding.top &&
+      my <= H - padding.bottom
+    ) {
+      const xVal = xMin + ((mx - padding.left) / plotWidth) * (xMax - xMin);
+      const yVal = yMin + ((plotHeight - (my - padding.top)) / plotHeight) * (yMax - yMin);
+      setMousePos({ x: xVal, y: yVal });
+    } else {
+      setMousePos(null);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full select-none overflow-hidden">
       {/* Legend */}
       <div className="flex flex-wrap justify-center items-center gap-4 py-1.5 border-b border-white/5 bg-white/[0.01] shrink-0">
-        <div className="flex items-center gap-1.5">
+        <div 
+          onMouseEnter={() => setHoveredLegend('lhs')}
+          onMouseLeave={() => setHoveredLegend(null)}
+          className={`flex items-center gap-1.5 cursor-pointer transition-all duration-150 ${
+            activeHover === 'lhs' ? 'scale-[1.03]' : activeHover === 'rhs' ? 'opacity-40' : ''
+          }`}
+        >
           <span className={`w-2 h-2 rounded-full ${THEME_GLASS.GRAPH_SWATCH_LHS}`} />
           <span className={THEME_GLASS.GRAPH_LEGEND_CHIP}>{nodeToString(eq.lhs)}</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div 
+          onMouseEnter={() => setHoveredLegend('rhs')}
+          onMouseLeave={() => setHoveredLegend(null)}
+          className={`flex items-center gap-1.5 cursor-pointer transition-all duration-150 ${
+            activeHover === 'rhs' ? 'scale-[1.03]' : activeHover === 'lhs' ? 'opacity-40' : ''
+          }`}
+        >
           <span className={`w-2 h-2 rounded-full ${THEME_GLASS.GRAPH_SWATCH_RHS}`} />
           <span className={THEME_GLASS.GRAPH_LEGEND_CHIP}>{nodeToString(eq.rhs)}</span>
         </div>
@@ -200,7 +241,9 @@ export const GraphPanel: React.FC = () => {
           viewBox={`0 0 ${W} ${H}`}
           width="100%"
           height="100%"
-          className="absolute inset-0 overflow-visible"
+          className="absolute inset-0 overflow-visible cursor-crosshair"
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setMousePos(null)}
         >
           {/* Definitions */}
           <defs>
@@ -335,8 +378,11 @@ export const GraphPanel: React.FC = () => {
                 key={`lhs-seg-${i}`}
                 d={makePathD(seg)}
                 fill="none"
-                strokeWidth={2.5}
-                className={`${THEME_GLASS.GRAPH_CURVE_LHS} transition-all duration-300 ease-in-out`}
+                onMouseEnter={() => setHoveredCurve('lhs')}
+                onMouseLeave={() => setHoveredCurve(null)}
+                strokeWidth={activeHover === 'lhs' ? 3.5 : activeHover === 'rhs' ? 1.5 : 2.5}
+                opacity={activeHover === 'rhs' ? 0.35 : 1}
+                className={`${THEME_GLASS.GRAPH_CURVE_LHS} transition-all duration-150 cursor-pointer`}
               />
             ))}
             {rhsSegments.map((seg, i) => (
@@ -344,8 +390,11 @@ export const GraphPanel: React.FC = () => {
                 key={`rhs-seg-${i}`}
                 d={makePathD(seg)}
                 fill="none"
-                strokeWidth={2.5}
-                className={`${THEME_GLASS.GRAPH_CURVE_RHS} transition-all duration-300 ease-in-out`}
+                onMouseEnter={() => setHoveredCurve('rhs')}
+                onMouseLeave={() => setHoveredCurve(null)}
+                strokeWidth={activeHover === 'rhs' ? 3.5 : activeHover === 'lhs' ? 1.5 : 2.5}
+                opacity={activeHover === 'lhs' ? 0.35 : 1}
+                className={`${THEME_GLASS.GRAPH_CURVE_RHS} transition-all duration-150 cursor-pointer`}
               />
             ))}
           </g>
@@ -395,6 +444,49 @@ export const GraphPanel: React.FC = () => {
               );
             })}
           </g>
+
+          {/* Dynamic Cursor Coordinate crosshair and glass read-out */}
+          {mousePos && (
+            <g className="pointer-events-none select-none">
+              <line
+                x1={toSvgX(mousePos.x)}
+                y1={padding.top}
+                x2={toSvgX(mousePos.x)}
+                y2={padding.top + plotHeight}
+                className="stroke-white/10"
+                strokeDasharray="2 2"
+                strokeWidth={1}
+              />
+              <line
+                x1={padding.left}
+                y1={toSvgY(mousePos.y)}
+                x2={W - padding.right}
+                y2={toSvgY(mousePos.y)}
+                className="stroke-white/10"
+                strokeDasharray="2 2"
+                strokeWidth={1}
+              />
+              {/* Glass coordinate badge floating in the top-right corner */}
+              <g transform={`translate(${W - padding.right - 90}, ${padding.top + 6})`}>
+                <rect
+                  width={84}
+                  height={18}
+                  rx={4}
+                  className="fill-neutral-950/80 stroke-white/10"
+                  strokeWidth={1}
+                />
+                <text
+                  x={42}
+                  y={10}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  className="fill-white/70 text-[9px] font-mono font-bold"
+                >
+                  {`${formatNumber(mousePos.x)}, ${formatNumber(mousePos.y)}`}
+                </text>
+              </g>
+            </g>
+          )}
 
           {/* Boundary Border */}
           <rect

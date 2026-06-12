@@ -1,5 +1,8 @@
 import { atom } from 'jotai';
 import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
+// AST transforms come from the single source of truth (the real engine),
+// consumed client-side. First step toward retiring the math-engine-client shim.
+import { applyGlobalOp, GlobalOpParams } from 'math-engine';
 import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
@@ -787,56 +790,26 @@ export const toggleRootSignAtom = atom(
  */
 export const applyGlobalOpAtom = atom(
   null,
-  (get, set, { type, term, power }: { type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div' | 'power' | 'root'; term?: string; power?: number }) => {
+  (get, set, params: GlobalOpParams) => {
     const currentEq = get(currentEquationAtom);
     if (!currentEq) return;
 
-    let nextLhs: math.MathNode;
-    let nextRhs: math.MathNode;
-    let label = '';
+    // AST mutation lives in the (single) math engine; the store only orchestrates
+    // history + the display label. Throws on a binary op with no term.
+    const nextEq = applyGlobalOp(currentEq, params);
 
+    const { type, term, power } = params;
     const effectivePower = power ?? 2;
-
+    let label: string;
     if (type === 'square' || type === 'power') {
-      const exponentNode = new math.ConstantNode(effectivePower);
-      nextLhs = new math.OperatorNode('^', 'pow', [currentEq.lhs, exponentNode]);
-      nextRhs = new math.OperatorNode('^', 'pow', [currentEq.rhs, exponentNode]);
       label = effectivePower === 2 ? 'Global Sq' : `Global Power ${effectivePower}`;
     } else if (type === 'sqrt' || type === 'root') {
-      if (effectivePower === 2) {
-        nextLhs = new math.FunctionNode('sqrt', [currentEq.lhs]);
-        nextRhs = new math.FunctionNode('sqrt', [currentEq.rhs]);
-        label = 'Global Sqrt';
-      } else {
-        const rootIndexNode = new math.ConstantNode(effectivePower);
-        nextLhs = new math.FunctionNode('nthRoot', [currentEq.lhs, rootIndexNode]);
-        nextRhs = new math.FunctionNode('nthRoot', [currentEq.rhs, rootIndexNode]);
-        label = `Global ${effectivePower}-Root`;
-      }
+      label = effectivePower === 2 ? 'Global Sqrt' : `Global ${effectivePower}-Root`;
     } else {
-      if (!term || !term.trim()) {
-        throw new Error('Please specify a term to apply to both sides (e.g. 5x).');
-      }
-
-      const parsedTerm = math.parse(term.trim());
-      label = `Global ${type === 'add' ? '+' : type === 'sub' ? '-' : type === 'mul' ? '×' : '÷'} ${term.trim()}`;
-
-      if (type === 'add') {
-        nextLhs = new math.OperatorNode('+', 'add', [currentEq.lhs, parsedTerm]);
-        nextRhs = new math.OperatorNode('+', 'add', [currentEq.rhs, parsedTerm]);
-      } else if (type === 'sub') {
-        nextLhs = new math.OperatorNode('-', 'subtract', [currentEq.lhs, parsedTerm]);
-        nextRhs = new math.OperatorNode('-', 'subtract', [currentEq.rhs, parsedTerm]);
-      } else if (type === 'mul') {
-        nextLhs = new math.OperatorNode('*', 'multiply', [currentEq.lhs, parsedTerm]);
-        nextRhs = new math.OperatorNode('*', 'multiply', [currentEq.rhs, parsedTerm]);
-      } else {
-        nextLhs = new math.OperatorNode('/', 'divide', [currentEq.lhs, parsedTerm]);
-        nextRhs = new math.OperatorNode('/', 'divide', [currentEq.rhs, parsedTerm]);
-      }
+      const sym = type === 'add' ? '+' : type === 'sub' ? '-' : type === 'mul' ? '×' : '÷';
+      label = `Global ${sym} ${term?.trim() ?? ''}`;
     }
 
-    const nextEq: Equation = { lhs: nextLhs, rhs: nextRhs };
     set(pushEquationAtom, nextEq, label);
   }
 );

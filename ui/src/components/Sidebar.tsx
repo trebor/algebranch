@@ -18,6 +18,7 @@ import {
   deleteConfirmationModalOpenAtom,
   equationInputModalOpenAtom,
   onboardingShowDirectoryAtom,
+  SavedSession,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
@@ -98,17 +99,29 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
 
 
 
-  const triggerTooltipContent = currentSession ? (
-    <div className="flex flex-col gap-1 text-left max-w-xs select-none">
-      <span className={`text-[9px] ${THEME_GLASS.TEXT_MUTED_EXTRA} uppercase tracking-wider font-semibold`}>Full Expression</span>
-      <span className="font-mono text-xs text-indigo-300 break-all">{currentSession.name}</span>
-      <div className={`border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} my-0.5`} />
-      <div className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} flex items-center gap-1.5`}>
-        <span>Last used:</span>
-        <span className="text-indigo-300 font-medium">{formatTimestamp(currentSession.timestamp)}</span>
-      </div>
-    </div>
-  ) : null;
+  // Single source of truth for a workspace's tooltip so the dropdown trigger and
+  // its list items render identically.
+  const sessionTooltipCard = (session: SavedSession) => {
+    let eq: Equation | null = null;
+    try {
+      const node = session.tree?.[session.currentNodeId] || session.tree?.['0'];
+      if (node) eq = deserializeEquation(node.equation);
+    } catch {
+      eq = null;
+    }
+    const steps = getStepCount(session.tree);
+    return (
+      <TooltipCard
+        eyebrow={session.chapterId ? 'Tutorial Workspace' : 'Workspace'}
+        meta={`${steps} ${steps === 1 ? 'step' : 'steps'}`}
+        title={session.name}
+        equation={eq}
+        footer={<span>{formatTimestamp(session.timestamp)}</span>}
+      />
+    );
+  };
+
+  const triggerTooltipContent = currentSession ? sessionTooltipCard(currentSession) : null;
 
   return (
     <div className="shrink-0 flex flex-col gap-3">
@@ -161,8 +174,9 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
             {savedSessions.length > 0 ? (
               <>
                 {!isDropdownOpen && currentSession ? (
-                  <Tooltip 
-                    content={triggerTooltipContent} 
+                  <Tooltip
+                    content={triggerTooltipContent}
+                    className="max-w-[min(92vw,40rem)]"
                     wrapperClassName="w-full min-w-0"
                   >
                     <button
@@ -201,30 +215,10 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                         .map((session) => {
                           const isActive = session.id === currentSessionId;
                           const stepCount = getStepCount(session.tree);
-                          let sessionEq: Equation | null = null;
-                          try {
-                            const node = session.tree?.[session.currentNodeId] || session.tree?.['0'];
-                            if (node) sessionEq = deserializeEquation(node.equation);
-                          } catch {
-                            sessionEq = null;
-                          }
-                          const itemTooltipContent = (
-                            <TooltipCard
-                              eyebrow={session.chapterId ? 'Tutorial Workspace' : 'Workspace'}
-                              title={session.name}
-                              equation={sessionEq}
-                              footer={
-                                <>
-                                  <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
-                                  <span>{formatTimestamp(session.timestamp)}</span>
-                                </>
-                              }
-                            />
-                          );
                           return (
                             <Tooltip
                               key={session.id}
-                              content={itemTooltipContent}
+                              content={sessionTooltipCard(session)}
                               position="right"
                               autoAlign={false}
                               className="max-w-[min(92vw,40rem)]"

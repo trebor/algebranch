@@ -99,14 +99,10 @@ export const WorkspaceTabs: React.FC = () => {
           const tooltipContent = (
             <TooltipCard
               eyebrow={tab.chapterId ? 'Tutorial Workspace' : 'Workspace'}
+              meta={`${stepCount} ${stepCount === 1 ? 'step' : 'steps'}`}
               title={tab.name}
               equation={tabEq}
-              footer={
-                <>
-                  <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
-                  <span>{formatTimestamp(lastEditTime)}</span>
-                </>
-              }
+              footer={<span>{formatTimestamp(lastEditTime)}</span>}
             />
           );
 

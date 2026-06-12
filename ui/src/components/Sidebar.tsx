@@ -140,28 +140,32 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
             Define Equation
           </span>
           <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setIsInputModalOpen(true);
-                onCloseMobile?.();
-              }}
-              className={`h-9 px-3 text-[11px] font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_PRIMARY}`}
-            >
-              <PenTool size={12} />
-              <span>Write</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setOnboardingShowDirectory(true);
-                onCloseMobile?.();
-              }}
-              className={`h-9 px-3 text-[11px] font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_SECONDARY}`}
-            >
-              <BookOpen size={12} className="text-indigo-400" />
-              <span>Tutorial</span>
-            </button>
+            <Tooltip content="Enter your own equation in a new workspace" position="bottom" autoAlign={false} wrapperClassName="w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsInputModalOpen(true);
+                  onCloseMobile?.();
+                }}
+                className={`w-full h-9 px-3 text-[11px] font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_PRIMARY}`}
+              >
+                <PenTool size={12} />
+                <span>New</span>
+              </button>
+            </Tooltip>
+            <Tooltip content="Learn the app with an interactive, guided tutorial" position="bottom" autoAlign={false} wrapperClassName="w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  setOnboardingShowDirectory(true);
+                  onCloseMobile?.();
+                }}
+                className={`w-full h-9 px-3 text-[11px] font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_SECONDARY}`}
+              >
+                <BookOpen size={12} className="text-indigo-400" />
+                <span>Tutorial</span>
+              </button>
+            </Tooltip>
           </div>
         </div>
 

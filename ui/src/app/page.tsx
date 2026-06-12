@@ -840,11 +840,14 @@ export default function Home() {
         {/* Main workspace section */}
         <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden gap-3">
           {isHydrated ? (
-            <div className={onboardingChapterId ? "max-lg:hidden shrink-0" : "shrink-0"}>
+            // Keep the tab bar visible during the tutorial (incl. mobile) so a
+            // user is never stranded in a tutorial workspace with no way to
+            // reach other (non-tutorial) workspaces — a permanent escape hatch.
+            <div className="shrink-0">
               <WorkspaceTabs />
             </div>
           ) : (
-            <div className={onboardingChapterId ? "max-lg:hidden shrink-0" : "shrink-0"}>
+            <div className="shrink-0">
               <div className="w-full flex items-center justify-between bg-transparent px-0 pt-2 pb-0 gap-4 shrink-0 select-none">
                 <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
                   <div className="h-[30px] w-32 bg-white/5 border border-white/5 animate-pulse rounded-xl" />

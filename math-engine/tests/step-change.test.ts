@@ -6,6 +6,7 @@ import {
   getReducibleOptions,
   describeTransposition,
   describeReduction,
+  describeGlobalOp,
   StepChange,
 } from '../src';
 
@@ -65,6 +66,35 @@ describe('describeTransposition — both-sides operations', () => {
     expect(Object.keys(moves)).toContain('rhs');
     const change = describeTransposition(e, 'lhs/1', 'rhs');
     expect(change!.op).toBe('subtract');
+  });
+});
+
+describe('describeGlobalOp — both-sides radial-menu ops', () => {
+  it('binary ops map to add/subtract/multiply/divide with the term as operand', () => {
+    expect(describeGlobalOp({ type: 'add', term: '5' })).toMatchObject({ kind: 'bothSides', op: 'add', operand: '5', text: 'add 5 to both sides' });
+    expect(describeGlobalOp({ type: 'sub', term: '1' })).toMatchObject({ op: 'subtract', text: 'subtract 1 from both sides' });
+    expect(describeGlobalOp({ type: 'mul', term: '3' })).toMatchObject({ op: 'multiply', text: 'multiply both sides by 3' });
+    expect(describeGlobalOp({ type: 'div', term: '2' })).toMatchObject({ op: 'divide', text: 'divide both sides by 2' });
+  });
+
+  it('square / power map to op "power" with the exponent as operand', () => {
+    expect(describeGlobalOp({ type: 'square' })).toMatchObject({ op: 'power', operand: '2', text: 'square both sides' });
+    expect(describeGlobalOp({ type: 'power', power: 3 })).toMatchObject({ op: 'power', operand: '3', text: 'cube both sides' });
+    expect(describeGlobalOp({ type: 'power', power: 4 })).toMatchObject({ op: 'power', operand: '4', text: 'raise both sides to the power of 4' });
+  });
+
+  it('sqrt / root map to op "root" with the index as operand', () => {
+    expect(describeGlobalOp({ type: 'sqrt' })).toMatchObject({ op: 'root', operand: '2', text: 'take the square root of both sides' });
+    expect(describeGlobalOp({ type: 'root', power: 3 })).toMatchObject({ op: 'root', operand: '3', text: 'take the cube root of both sides' });
+  });
+
+  it('operand is strictly parsable (round-trips through the parser)', () => {
+    const operand = (describeGlobalOp({ type: 'mul', term: '3' }) as Extract<StepChange, { kind: 'bothSides' }>).operand;
+    expect(equationToString(parseEquation(`y = ${operand}`))).toBe(`y = ${operand}`);
+  });
+
+  it('throws when a binary op is described without a term', () => {
+    expect(() => describeGlobalOp({ type: 'mul' })).toThrow();
   });
 });
 

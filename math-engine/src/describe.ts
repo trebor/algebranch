@@ -1,6 +1,7 @@
 import * as math from 'mathjs';
 import { Equation, getNodeByPath } from './tree';
 import { ReductionOption } from './simplify';
+import { GlobalOpParams } from './globalOps';
 
 /**
  * A structured, human-readable description of the operation that transforms one
@@ -13,7 +14,10 @@ import { ReductionOption } from './simplify';
 export type StepChange =
   | {
       readonly kind: 'bothSides';
-      readonly op: 'add' | 'subtract' | 'multiply' | 'divide';
+      readonly op: 'add' | 'subtract' | 'multiply' | 'divide' | 'power' | 'root';
+      // For add/subtract/multiply/divide: the term. For power/root: the
+      // exponent / root index (e.g. '2' = square / square-root). Always a
+      // strictly parsable symbolic string.
       readonly operand: string;
       readonly text: string;
     }
@@ -132,4 +136,43 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
     detail: before && after ? `${before} → ${after}` : undefined,
     text: 'simplify',
   };
+};
+
+/**
+ * Describe a global op (the both-sides radial-menu operations) as a `bothSides`
+ * StepChange. The structured `GlobalOpParams` already carry everything, so this
+ * is a pure mapping — no AST inference (unlike transposition). Throws if a
+ * binary op arrives without a term (mirrors `applyGlobalOp`).
+ */
+export const describeGlobalOp = (params: GlobalOpParams): StepChange => {
+  const { type, term, power } = params;
+  const p = power ?? 2;
+
+  if (type === 'square' || type === 'power') {
+    const text = p === 2 ? 'square both sides' : p === 3 ? 'cube both sides' : `raise both sides to the power of ${p}`;
+    return { kind: 'bothSides', op: 'power', operand: String(p), text };
+  }
+
+  if (type === 'sqrt' || type === 'root') {
+    const text =
+      p === 2 ? 'take the square root of both sides'
+        : p === 3 ? 'take the cube root of both sides'
+          : `take the ${p}th root of both sides`;
+    return { kind: 'bothSides', op: 'root', operand: String(p), text };
+  }
+
+  if (!term || !term.trim()) {
+    throw new Error('A term is required to describe this global op.');
+  }
+  const operand = term.trim();
+  switch (type) {
+    case 'add':
+      return { kind: 'bothSides', op: 'add', operand, text: `add ${operand} to both sides` };
+    case 'sub':
+      return { kind: 'bothSides', op: 'subtract', operand, text: `subtract ${operand} from both sides` };
+    case 'mul':
+      return { kind: 'bothSides', op: 'multiply', operand, text: `multiply both sides by ${operand}` };
+    default: // 'div'
+      return { kind: 'bothSides', op: 'divide', operand, text: `divide both sides by ${operand}` };
+  }
 };

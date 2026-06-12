@@ -8,6 +8,8 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Archive
 
+- [archive/issue-40-validate-quadratic.md](archive/issue-40-validate-quadratic.md) — `done` — #40: validate the quadratic formula identity; 11-case test suite (substitution-satisfaction, edge cases); merged to main 2026-06-12. No bug found.
+
 - [archive/issue-33-denominator-removal.md](archive/issue-33-denominator-removal.md) — `done` — #33: node removal gated on a local identity (areExpressionsValueEqual), killing the bogus denominator Simplify handle; merged to main 2026-06-12.
 
 - [archive/issue-45-sqrt-negative-root.md](archive/issue-45-sqrt-negative-root.md) — `done` — #45: even roots offer a ± branch (Take root +/−) instead of dropping the negative root; merged to main 2026-06-12.

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Tooltip } from './Tooltip';
 import * as math from 'mathjs';
@@ -138,6 +139,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const onboardingTargetPath = useAtomValue(onboardingTargetPathAtom);
   const onboardingReduceHandle = useAtomValue(onboardingReduceHandleAtom);
   const onboardingSubstitution = useAtomValue(onboardingSubstitutionAtom);
+  // Chooser popover for nodes with multiple applicable substitution facts (#3)
+  const [subChooserOpen, setSubChooserOpen] = React.useState(false);
+  const [subChooserPos, setSubChooserPos] = React.useState<{ top: number; left: number }>({ top: 0, left: 0 });
   // The circle marks the reduce/substitution handle itself when one produces the
   // step's expected equation; otherwise it marks the node box (selection/
   // transposition steps).
@@ -516,12 +520,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
   const layout = inExponent ? MATH_LAYOUT.exponent : MATH_LAYOUT.normal;
 
-  const minWidth = isReducible 
-    ? `${actions.length * layout.btnSize + (actions.length - 1) * layout.btnGap + layout.nodePx * 2}em`
+  // The node box reserves space for ALL its handles: top padding for the row,
+  // and minWidth so the row never overhangs. Substitution contributes exactly
+  // one handle regardless of how many facts apply (the chooser disambiguates).
+  const handleCount = actions.length + (substitutions.length > 0 ? 1 : 0);
+  const minWidth = handleCount > 0
+    ? `${handleCount * layout.btnSize + (handleCount - 1) * layout.btnGap + layout.nodePx * 2}em`
     : undefined;
 
-  const paddingTop = isReducible 
-    ? layout.btnTop + layout.btnSize + layout.textGap 
+  const paddingTop = handleCount > 0
+    ? layout.btnTop + layout.btnSize + layout.textGap
     : layout.nodePy;
 
   const customStyle: React.CSSProperties = {
@@ -685,26 +693,45 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               </Tooltip>
             );
           })}
-          {substitutions.map((option, index) => {
-            const subTooltipContent = (
+          {substitutions.length > 0 && (() => {
+            // ONE teal handle per node regardless of how many facts apply:
+            // substitution alternatives are homogeneous (same operation,
+            // different sources), so they disambiguate via a chooser popover
+            // rather than a row of handles (which would distort the node box).
+            const single = substitutions.length === 1 ? substitutions[0] : null;
+            const applySubstitution = (option: (typeof substitutions)[number]) => {
+              pushEquation(
+                option.substituted,
+                'Substitute',
+                describeSubstitution(option.variable, option.replacement),
+              );
+              trackEvent({
+                action: 'apply_substitution',
+                category: 'math_interaction',
+                label: `${option.variable} -> ${option.replacement}`,
+              });
+              setSubChooserOpen(false);
+            };
+            const subTooltipContent = single ? (
               <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
                 <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">
-                  Substitute {option.variable} = {option.replacement}
+                  Substitute {single.variable} = {single.replacement}
                 </span>
-                {option.fact.sourceName && (
-                  <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} select-none`}>from “{option.fact.sourceName}”</span>
+                {single.fact.sourceName && (
+                  <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} select-none`}>from “{single.fact.sourceName}”</span>
                 )}
                 <div className="w-full border-t border-white/10 my-1" />
                 <div className="flex items-center justify-center gap-1.5 flex-nowrap py-0.5 text-[1.3em]">
-                  <PreviewEquationNode path="lhs" customEquation={option.substituted} />
+                  <PreviewEquationNode path="lhs" customEquation={single.substituted} />
                   <span className="text-[1.3em] font-mono text-indigo-300 px-0.5 select-none">=</span>
-                  <PreviewEquationNode path="rhs" customEquation={option.substituted} />
+                  <PreviewEquationNode path="rhs" customEquation={single.substituted} />
                 </div>
               </div>
+            ) : (
+              <span>{substitutions.length} known substitutions — click to choose</span>
             );
             return (
               <Tooltip
-                key={`sub-${index}`}
                 content={subTooltipContent}
                 position="top"
                 className="max-w-[300px] sm:max-w-[360px]"
@@ -718,16 +745,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    pushEquation(
-                      option.substituted,
-                      'Substitute',
-                      describeSubstitution(option.variable, option.replacement),
-                    );
-                    trackEvent({
-                      action: 'apply_substitution',
-                      category: 'math_interaction',
-                      label: `${option.variable} -> ${option.replacement}`,
-                    });
+                    if (single) {
+                      applySubstitution(single);
+                    } else {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setSubChooserPos({ top: rect.bottom + 6, left: rect.left + rect.width / 2 });
+                      setSubChooserOpen((open) => !open);
+                    }
                   }}
                 >
                   <span
@@ -742,10 +766,51 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                     <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
                   )}
                   <Replace className="h-[65%] w-[65%] text-white stroke-[2.5]" />
+                  {!single && (
+                    <span className={`absolute -top-[0.3em] -right-[0.3em] h-[0.55em] w-[0.55em] rounded-full text-[0.32em] flex items-center justify-center font-bold border ${THEME_GLASS.SUB_COUNT_BADGE}`}>
+                      {substitutions.length}
+                    </span>
+                  )}
                 </button>
               </Tooltip>
             );
-          })}
+          })()}
+          {subChooserOpen && substitutions.length > 1 && typeof document !== 'undefined' && createPortal(
+            <>
+              <div className="fixed inset-0 z-[9998] cursor-default" onClick={(e) => { e.stopPropagation(); setSubChooserOpen(false); }} />
+              <div
+                style={{ position: 'fixed', top: `${subChooserPos.top}px`, left: `${subChooserPos.left}px`, transform: 'translateX(-50%)', zIndex: 9999 }}
+                className={`${THEME_GLASS.OVERLAY_BG} py-1 min-w-[200px] max-w-[min(92vw,24rem)] text-sm font-sans normal-case`}
+              >
+                {substitutions.map((option, i) => (
+                  <button
+                    key={`sub-choice-${i}`}
+                    className={`w-full text-left px-3 py-2 flex flex-col gap-0.5 cursor-pointer ${THEME_GLASS.LIST_ITEM_HOVER}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      pushEquation(
+                        option.substituted,
+                        'Substitute',
+                        describeSubstitution(option.variable, option.replacement),
+                      );
+                      trackEvent({
+                        action: 'apply_substitution',
+                        category: 'math_interaction',
+                        label: `${option.variable} -> ${option.replacement}`,
+                      });
+                      setSubChooserOpen(false);
+                    }}
+                  >
+                    <span className="font-mono text-xs text-teal-300">{option.variable} = {option.replacement}</span>
+                    {option.fact.sourceName && (
+                      <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED}`}>from “{option.fact.sourceName}”</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </>,
+            document.body,
+          )}
         </div>
       )}
     </div>

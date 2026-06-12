@@ -149,6 +149,7 @@ export const THEME_GLASS = {
   FACT_CHIP: 'flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 text-[10px] font-semibold select-none',
   FACT_CHIP_SOURCE: 'text-teal-300/50 font-medium',
   TREE_NODE_BADGE_SUBSTITUTE: 'bg-teal-600 border-teal-400 text-teal-50',
+  SUB_COUNT_BADGE: 'bg-neutral-950 border-teal-400 text-teal-300',
 
   // --- RadialMenu specific ---
   RADIAL_CENTER: 'w-14 h-14 rounded-full bg-indigo-600/30 border-2 border-indigo-400/50 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)] pointer-events-auto cursor-pointer z-10',

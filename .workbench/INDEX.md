@@ -4,7 +4,7 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-*(No active tasks)*
+- [plans/issue-45-sqrt-negative-root.md](plans/issue-45-sqrt-negative-root.md) — `active` — #45: even roots offer a ± branch (Take root +/−) instead of dropping the negative; branch `bugfix/sqrt-negative-root`. Verify in-app before merge.
 
 ## Archive
 

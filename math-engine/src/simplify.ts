@@ -150,80 +150,72 @@ export const evaluateConstantSubtree = (node: math.MathNode): math.MathNode | nu
   return null;
 };
 
-/**
- * Helper to identify and simplify roots of matching powers (e.g. sqrt(x^2) -> x, nthRoot(x^3, 3) -> x).
- */
-export const trySimplifyRootOfPower = (node: math.MathNode): math.MathNode | null => {
-  if (node.type !== 'FunctionNode') {
-    return null;
+const unwrapParens = (n: math.MathNode): math.MathNode => {
+  while (n.type === 'ParenthesisNode') {
+    n = (n as math.ParenthesisNode).content;
   }
+  return n;
+};
+
+/**
+ * Identifies a root of a matching power and reports its base and parity.
+ *  - sqrt(e^2) / nthRoot(e^2) -> { base: e, even: true }   (= |e|, needs ±)
+ *  - nthRoot(e^n, n)          -> { base: e, even: n % 2 === 0 }
+ * Odd roots are sign-safe (cube root etc.); even roots lose the sign and so are
+ * surfaced as a ± branch by getReducibleOptions rather than collapsed silently.
+ */
+export const analyzeRootOfPower = (
+  node: math.MathNode,
+): { base: math.MathNode; even: boolean } | null => {
+  if (node.type !== 'FunctionNode') return null;
   const funcNode = node as math.FunctionNode;
   const nameStr = getFunctionName(funcNode);
 
-  if (nameStr === 'sqrt') {
-    if (funcNode.args.length === 1) {
-      let inner = funcNode.args[0];
-      while (inner.type === 'ParenthesisNode') {
-        inner = (inner as math.ParenthesisNode).content;
-      }
-      if (inner.type === 'OperatorNode') {
-        const opNode = inner as math.OperatorNode;
-        if (opNode.op === '^' && opNode.args.length === 2) {
-          let exponent = opNode.args[1];
-          while (exponent.type === 'ParenthesisNode') {
-            exponent = (exponent as math.ParenthesisNode).content;
-          }
-          if (exponent.type === 'ConstantNode' && Number((exponent as math.ConstantNode).value) === 2) {
-            return opNode.args[0];
-          }
-        }
-      }
+  const matchPow = (arg: math.MathNode, expectedDegree?: math.MathNode): math.MathNode | null => {
+    const inner = unwrapParens(arg);
+    if (inner.type !== 'OperatorNode') return null;
+    const opNode = inner as math.OperatorNode;
+    if (opNode.op !== '^' || opNode.args.length !== 2) return null;
+    const exponent = unwrapParens(opNode.args[1]);
+    if (expectedDegree === undefined) {
+      return exponent.type === 'ConstantNode' && Number((exponent as math.ConstantNode).value) === 2
+        ? opNode.args[0]
+        : null;
     }
+    return exponent.toString() === expectedDegree.toString() ? opNode.args[0] : null;
+  };
+
+  if (nameStr === 'sqrt' && funcNode.args.length === 1) {
+    const base = matchPow(funcNode.args[0]);
+    return base ? { base, even: true } : null;
   }
 
   if (nameStr === 'nthRoot') {
     if (funcNode.args.length === 1) {
-      let inner = funcNode.args[0];
-      while (inner.type === 'ParenthesisNode') {
-        inner = (inner as math.ParenthesisNode).content;
-      }
-      if (inner.type === 'OperatorNode') {
-        const opNode = inner as math.OperatorNode;
-        if (opNode.op === '^' && opNode.args.length === 2) {
-          let exponent = opNode.args[1];
-          while (exponent.type === 'ParenthesisNode') {
-            exponent = (exponent as math.ParenthesisNode).content;
-          }
-          if (exponent.type === 'ConstantNode' && Number((exponent as math.ConstantNode).value) === 2) {
-            return opNode.args[0];
-          }
-        }
-      }
-    } else if (funcNode.args.length === 2) {
-      let inner = funcNode.args[0];
-      let degree = funcNode.args[1];
-      while (inner.type === 'ParenthesisNode') {
-        inner = (inner as math.ParenthesisNode).content;
-      }
-      while (degree.type === 'ParenthesisNode') {
-        degree = (degree as math.ParenthesisNode).content;
-      }
-      if (inner.type === 'OperatorNode') {
-        const opNode = inner as math.OperatorNode;
-        if (opNode.op === '^' && opNode.args.length === 2) {
-          let exponent = opNode.args[1];
-          while (exponent.type === 'ParenthesisNode') {
-            exponent = (exponent as math.ParenthesisNode).content;
-          }
-          if (exponent.toString() === degree.toString()) {
-            return opNode.args[0];
-          }
-        }
-      }
+      const base = matchPow(funcNode.args[0]);
+      return base ? { base, even: true } : null; // implicit degree 2
+    }
+    if (funcNode.args.length === 2) {
+      const degree = unwrapParens(funcNode.args[1]);
+      const base = matchPow(funcNode.args[0], degree);
+      if (!base) return null;
+      const even = degree.type === 'ConstantNode' && Number((degree as math.ConstantNode).value) % 2 === 0;
+      return { base, even };
     }
   }
 
   return null;
+};
+
+/**
+ * Simplify a root of a matching power (e.g. nthRoot(x^3, 3) -> x). Only ODD roots
+ * are collapsed here, since they are sign-safe. EVEN roots (sqrt(x^2) = |x|) are
+ * intentionally NOT collapsed — they are offered as a ± branch instead so the
+ * negative solution is never silently dropped (#45).
+ */
+export const trySimplifyRootOfPower = (node: math.MathNode): math.MathNode | null => {
+  const analysis = analyzeRootOfPower(node);
+  return analysis && !analysis.even ? analysis.base : null;
 };
 
 /**
@@ -961,6 +953,27 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
   } catch (err) {
     console.error('Error adding quadratic formula reductions:', err);
   }
+
+  // An even root of a matching power loses the sign (sqrt(x^2) = |x|), so offer
+  // it as a ± branch — two options the user can branch the history on — rather
+  // than silently collapsing to the positive root (#45). Odd roots are sign-safe
+  // and handled by the normal simplify path.
+  allNodePaths.forEach((path) => {
+    try {
+      const analysis = analyzeRootOfPower(getNodeByPath(eq, path));
+      if (!analysis || !analysis.even) return;
+      const posEq = replaceNodeAtPath(eq, path, analysis.base.clone());
+      const negEq = replaceNodeAtPath(
+        eq,
+        path,
+        new math.OperatorNode('-', 'unaryMinus', [analysis.base.clone()]),
+      );
+      rawReductions.push({ path, simplified: posEq, type: 'reduce', label: 'Take root (+)' });
+      rawReductions.push({ path, simplified: negEq, type: 'reduce', label: 'Take root (-)' });
+    } catch {
+      /* skip paths that fail to resolve */
+    }
+  });
 
   // Deduplicate and group
   const reduciblePaths: Record<string, ReductionOption[]> = {};

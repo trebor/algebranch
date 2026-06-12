@@ -292,23 +292,20 @@ describe('Math Engine Validator & Simplifier', () => {
   });
 
   test('getSimplificationForPath simplifies roots of matching powers correctly', () => {
-    // 1. sqrt(x ^ 2) -> x
+    // 1. sqrt(x ^ 2) = |x| — even roots are NOT collapsed here (sign would be
+    //    lost); they are offered as a ± branch via getReducibleOptions (#45).
     const eq1 = parseEquation('y = sqrt(x ^ 2)');
-    const simplified1 = getSimplificationForPath(eq1, 'rhs');
-    expect(simplified1).not.toBeNull();
-    expect(equationToString(simplified1!)).toBe('y = x');
+    expect(getSimplificationForPath(eq1, 'rhs')).toBeNull();
 
-    // 2. nthRoot(x ^ 3, 3) -> x
+    // 2. nthRoot(x ^ 3, 3) -> x  (odd root is sign-safe, still collapses)
     const eq2 = parseEquation('y = nthRoot(x ^ 3, 3)');
     const simplified2 = getSimplificationForPath(eq2, 'rhs');
     expect(simplified2).not.toBeNull();
     expect(equationToString(simplified2!)).toBe('y = x');
 
-    // 3. nthRoot(x ^ 2) -> x
+    // 3. nthRoot(x ^ 2) (implicit degree 2) is even -> not collapsed (#45).
     const eq3 = parseEquation('y = nthRoot(x ^ 2)');
-    const simplified3 = getSimplificationForPath(eq3, 'rhs');
-    expect(simplified3).not.toBeNull();
-    expect(equationToString(simplified3!)).toBe('y = x');
+    expect(getSimplificationForPath(eq3, 'rhs')).toBeNull();
 
     // 4. nthRoot(x ^ n, n) -> x
     const eq4 = parseEquation('y = nthRoot(x ^ n, n)');
@@ -353,14 +350,15 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(simplified5).toBeNull();
   });
 
-  test('autoSimplify recursively simplifies roots of powers and powers of roots', () => {
+  test('autoSimplify simplifies powers of roots but preserves even roots of powers (#45)', () => {
+    // Even root of a power keeps the sign — autoSimplify no longer collapses
+    // sqrt((x+2)^2) to (x+2), which would silently drop the negative root (#45).
     const eq = parseEquation('y = sqrt((x + 2) ^ 2) - 2');
-    const simplified = autoSimplify(eq);
-    expect(equationToString(simplified)).toBe('y = x');
+    expect(equationToString(autoSimplify(eq))).toBe('y = sqrt((x + 2) ^ 2) - 2');
 
+    // Power of a root is sign-safe and still collapses: (sqrt(x+2))^2 -> x+2 -> x.
     const eq2 = parseEquation('y = sqrt(x + 2) ^ 2 - 2');
-    const simplified2 = autoSimplify(eq2);
-    expect(equationToString(simplified2)).toBe('y = x');
+    expect(equationToString(autoSimplify(eq2))).toBe('y = x');
   });
 
   test('getSimplificationForPath ignores non-simplifying commutative rearrangements', () => {

@@ -27,7 +27,10 @@ Shared instructions for all coding agents (Claude Code, Antigravity, etc.) worki
 
 ## Development guardrails
 
-Branch/merge and commit protocol lives in `rules.md` (symlinked). Key points: run `npm test` and `npm run build` before any merge; never commit, push, or merge without explicit user approval — write changes, verify they compile/pass tests, then halt for user validation.
+Branch/merge and commit protocol:
+- **Squash and Merge**: Always use the **Squash and Merge** strategy when merging feature branches into `main` to maintain a clean, linear commit history.
+- **Pre-Merge Validation**: Run `npm test` and `npm run build` before merging any branch.
+- **Explicit Approval**: Never commit, push, or merge without explicit user approval — write changes, verify they compile/pass tests, then halt for user validation.
 
 ## Styling guardrails
 

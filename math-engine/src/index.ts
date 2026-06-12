@@ -7,6 +7,7 @@ export * from './validator';
 export * from './simplify';
 export * from './matcher';
 export * from './rules';
+export * from './describe';
 
 /**
  * Parses an equation string of the form "LHS = RHS" into an Equation tree.

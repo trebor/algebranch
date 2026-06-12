@@ -2,11 +2,15 @@ import * as math from 'mathjs';
 import { ONBOARDING_CHAPTERS, OnboardingChapter, OnboardingStep } from '../../ui/src/constants/onboarding';
 import {
   parseEquation,
+  ensureNodeIds,
   generateValidMoves,
   getReducibleOptions,
+  getIsolatedDefinition,
+  getSubstitutionOptions,
   getNodeByPath,
   equationToString,
-  Equation
+  Equation,
+  SubstitutionFact
 } from '../src';
 
 const strip = (s: string) => s.replace(/\s+/g, '');
@@ -21,6 +25,7 @@ const deriveStep = (
   eq: Equation,
   step: OnboardingStep,
   pendingTargets: Record<string, Equation> | null,
+  facts: SubstitutionFact[],
   diagnostics: string[]
 ): Equation | null => {
   const nextStr = strip(step.nextEquation);
@@ -30,6 +35,15 @@ const deriveStep = (
   for (const actions of Object.values(reductions)) {
     const hit = actions.find(a => strip(equationToString(a.simplified)) === nextStr);
     if (hit) return hit.simplified;
+  }
+
+  // 1.5 A substitution handle fed by the chapter's facts (#3)
+  if (facts.length > 0) {
+    const substitutions = getSubstitutionOptions(eq, facts);
+    for (const options of Object.values(substitutions)) {
+      const hit = options.find(o => strip(equationToString(o.substituted)) === nextStr);
+      if (hit) return hit.substituted;
+    }
   }
 
   // 2. A transposition target from the prior selection (or this step's own selection)
@@ -96,6 +110,13 @@ describe('Onboarding chapter derivation chains', () => {
         let eq = parseEquation(chapter.initialEquation);
         let pendingTargets: Record<string, Equation> | null = null;
 
+        // Chapter facts must each parse to a valid isolated definition (#3)
+        const facts: SubstitutionFact[] = (chapter.facts ?? []).map((f) => {
+          const def = getIsolatedDefinition(ensureNodeIds(parseEquation(f)));
+          expect(def ? true : `chapter fact '${f}' is not an isolated definition`).toBe(true);
+          return { ...def! };
+        });
+
         chapter.steps.forEach((step, i) => {
           const label = `step ${i} ('${step.title}')`;
 
@@ -126,7 +147,7 @@ describe('Onboarding chapter derivation chains', () => {
           }
 
           const diagnostics: string[] = [];
-          const next = deriveStep(eq, step, pendingTargets, diagnostics);
+          const next = deriveStep(eq, step, pendingTargets, facts, diagnostics);
           expect(
             next
               ? true

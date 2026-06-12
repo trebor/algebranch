@@ -20,6 +20,7 @@ import {
   onboardingHighlightPathAtom,
   onboardingTargetPathAtom,
   onboardingReduceHandleAtom,
+  onboardingSubstitutionAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
@@ -136,13 +137,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const onboardingHighlightPath = useAtomValue(onboardingHighlightPathAtom);
   const onboardingTargetPath = useAtomValue(onboardingTargetPathAtom);
   const onboardingReduceHandle = useAtomValue(onboardingReduceHandleAtom);
-  // The circle marks the reduce handle itself when one produces the step's expected
-  // equation; otherwise it marks the node box (selection/transposition steps).
+  const onboardingSubstitution = useAtomValue(onboardingSubstitutionAtom);
+  // The circle marks the reduce/substitution handle itself when one produces the
+  // step's expected equation; otherwise it marks the node box (selection/
+  // transposition steps).
   const isHandleMarked = isOnboardingActive && onboardingReduceHandle?.path === path;
+  const isSubHandleMarked = isOnboardingActive && onboardingSubstitution?.path === path;
   // The "click here" circle yields once its node is selected as Source — from
   // there the Source styling acknowledges the click and the target circle
   // takes over guiding the next one.
-  const isOnboardingMarked = !isHandleMarked &&
+  const isOnboardingMarked = !isHandleMarked && !isSubHandleMarked &&
     ((path === onboardingHighlightPath && sourcePath !== path) ||
       (isOnboardingActive && path === onboardingTargetPath));
 
@@ -210,10 +214,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const isReducible = actions.length > 0;
 
   // Substitution handles (#3): offered on variable nodes matching a fact from
-  // another workspace. Locked out during the tour (chapter-specific gating
-  // arrives with the substitution tutorial chapter).
+  // another workspace. During the tour, only the option the step expects is live
+  // (mirrors the reduce-handle lockdown).
   const allSubstitutions = substitutionPaths[path] || [];
-  const substitutions = !isOnboardingActive ? allSubstitutions : [];
+  const substitutions = !isOnboardingActive
+    ? allSubstitutions
+    : isSubHandleMarked && onboardingSubstitution && allSubstitutions[onboardingSubstitution.index]
+      ? [allSubstitutions[onboardingSubstitution.index]]
+      : [];
 
   // Toggle Root Sign (+/- branches) via global action
   const handleToggleRootSign = (e: React.MouseEvent) => {
@@ -260,9 +268,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         const activeTargetPath = getTargetPath();
         if (!activeTargetPath) return;
       } else {
-        // Steps that expect a handle click lock out node selection entirely —
-        // only the handle button (which stops propagation itself) is live.
-        if (onboardingReduceHandle) return;
+        // Steps that expect a handle click (reduce or substitution) lock out
+        // node selection entirely — only the handle button is live.
+        if (onboardingReduceHandle || onboardingSubstitution) return;
         if (path !== onboardingHighlightPath) return;
       }
     }
@@ -730,6 +738,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       borderRadius: inExponent ? '0.12em' : '9999px',
                     }}
                   />
+                  {isSubHandleMarked && (
+                    <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                  )}
                   <Replace className="h-[65%] w-[65%] text-white stroke-[2.5]" />
                 </button>
               </Tooltip>

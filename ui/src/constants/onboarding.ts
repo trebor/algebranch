@@ -20,6 +20,13 @@ export interface OnboardingChapter {
   title: string;
   description: string;
   initialEquation: string;
+  /**
+   * Substitution facts injected for this chapter (#3): isolated equations
+   * presented as "already solved in another workspace", so the substitution
+   * interaction is taught in a single workspace. Each entry must parse to an
+   * isolated definition (e.g. 'y = 2 * x').
+   */
+  facts?: string[];
   steps: OnboardingStep[];
 }
 
@@ -222,6 +229,79 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       {
         title: 'Completed!',
         description: 'Outstanding! Applying operations globally to both sides is a very powerful way to solve complex algebraic equations.',
+        highlightPath: null,
+        nextEquation: ''
+      }
+    ]
+  },
+  {
+    id: 'substitution',
+    title: '5. Substitution',
+    description: 'Use a result from another workspace: replace a variable with what it is known to equal, then solve.',
+    initialEquation: 'y + 4 = 10',
+    facts: ['y = 2 * x'],
+    steps: [
+      {
+        title: 'Two Equations, One Goal',
+        description: 'This equation contains y — but in another workspace we already discovered that y = 2 * x (see the Known equations strip above). Substitution lets us connect the two equations so we can solve for x.',
+        highlightPath: null,
+        nextEquation: 'y + 4 = 10',
+        stepLabel: 'Start'
+      },
+      {
+        title: 'Substitute the Known Value',
+        description: 'The y carries a teal substitution handle: it can be replaced by what it equals. Click the teal handle on y to swap it for 2 * x.',
+        highlightPath: 'lhs/0', // the y
+        nextEquation: '2 * x + 4 = 10',
+        stepLabel: 'Substitute'
+      },
+      {
+        title: 'Isolate the Variable',
+        description: 'Now the equation only involves x — solve it like Chapter 1. Click on the highlighted 4 to select it.',
+        highlightPath: 'lhs/1',
+        nextEquation: '2 * x + 4 = 10',
+        stepLabel: 'Select'
+      },
+      {
+        title: 'Transpose the Constant',
+        description: 'Click the glowing target on the right to move the 4 across the equals sign (its sign flips to -4).',
+        highlightPath: null,
+        nextEquation: '2 * x = 10 - 4',
+        stepLabel: 'Transpose',
+        selectPath: 'lhs/1'
+      },
+      {
+        title: 'Simplify Constants',
+        description: 'Simplify the subtraction 10 - 4 on the right side.',
+        highlightPath: 'rhs',
+        nextEquation: '2 * x = 6',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Divide by Coefficient',
+        description: 'To get x alone, move the multiplier 2 to the other side. Click on the highlighted 2 to select it.',
+        highlightPath: 'lhs/0',
+        nextEquation: '2 * x = 6',
+        stepLabel: 'Select'
+      },
+      {
+        title: 'Transpose the Multiplier',
+        description: 'Click the glowing division target on the right to transpose the 2.',
+        highlightPath: null,
+        nextEquation: 'x = 6 / 2',
+        stepLabel: 'Transpose',
+        selectPath: 'lhs/0'
+      },
+      {
+        title: 'Calculate Solution',
+        description: 'Simplify the division 6 / 2 to find x.',
+        highlightPath: 'rhs',
+        nextEquation: 'x = 3',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Completed!',
+        description: 'Brilliant! You combined two equations by substitution — the key technique for solving systems of equations and working with formulas.',
         highlightPath: null,
         nextEquation: ''
       }

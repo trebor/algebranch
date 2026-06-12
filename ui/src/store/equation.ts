@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
-import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, getIsolatedDefinition, getSubstitutionOptions, SubstitutionFact, SubstitutionOption } from 'math-engine';
+import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, SubstitutionFact, SubstitutionOption } from 'math-engine';
 import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
@@ -1231,6 +1231,23 @@ export const clearOnboardingStep = (chapterId: string) => {
 // chapter at its saved step, or hide it. Never resets the tab tree or touches
 // per-chapter progress — it only reflects existing state, so switching tabs is
 // non-destructive and reversible.
+/**
+ * Parse a chapter's `facts` declarations (#3) into SubstitutionFacts presented
+ * as "solved in another workspace" (provenance label: Tutorial).
+ */
+const chapterFacts = (chapter: { facts?: string[] } | undefined): SubstitutionFact[] => {
+  const facts: SubstitutionFact[] = [];
+  for (const f of chapter?.facts ?? []) {
+    try {
+      const def = getIsolatedDefinition(ensureNodeIds(parseEquation(f)));
+      if (def) facts.push({ ...def, sourceName: 'Tutorial' });
+    } catch {
+      /* skip malformed chapter facts */
+    }
+  }
+  return facts;
+};
+
 export const syncTourToActiveTabAtom = atom(
   null,
   (get, set, chapterId: string | null) => {
@@ -1243,6 +1260,7 @@ export const syncTourToActiveTabAtom = atom(
       set(onboardingChapterIdAtom, null);
       set(onboardingStepIndexAtom, null);
       set(onboardingHighlightPathAtom, null);
+      set(tutorialFactsAtom, []);
       set(sourcePathAtom, null);
       if (typeof window !== 'undefined') {
         safeLocalStorage.setItem('algebranch_onboarding_active', 'false');
@@ -1254,6 +1272,7 @@ export const syncTourToActiveTabAtom = atom(
     set(onboardingStepIndexAtom, stepIdx);
     set(onboardingHighlightPathAtom, chapter.steps[stepIdx]?.highlightPath || null);
     set(onboardingShowDirectoryAtom, false);
+    set(tutorialFactsAtom, chapterFacts(chapter));
     set(sourcePathAtom, chapter.steps[stepIdx]?.selectPath || null);
     if (typeof window !== 'undefined') {
       safeLocalStorage.setItem('algebranch_onboarding_chapter_id', chapter.id);
@@ -1273,6 +1292,7 @@ export const startOnboardingChapterAtom = atom(
     set(onboardingStepIndexAtom, stepIdx);
     set(onboardingHighlightPathAtom, chapter.steps[stepIdx]?.highlightPath || null);
     set(onboardingShowDirectoryAtom, false);
+    set(tutorialFactsAtom, chapterFacts(chapter));
 
     const stepStartEq = stepIdx > 0
       ? chapter.steps[stepIdx - 1].nextEquation
@@ -1396,6 +1416,7 @@ export const setOnboardingStepAtom = atom(
       set(onboardingStepIndexAtom, null);
       set(onboardingHighlightPathAtom, null);
       set(onboardingShowDirectoryAtom, false);
+      set(tutorialFactsAtom, []);
       set(sourcePathAtom, null);
       if (typeof window !== 'undefined') {
         safeLocalStorage.setItem('algebranch_onboarding_active', 'false');
@@ -1444,11 +1465,17 @@ export const setOnboardingStepAtom = atom(
           const reduceAction = !targetResult
             ? Object.values(get(reduciblePathsAtom)).flat().find(a => stripEq(a.equation) === targetStr)
             : undefined;
+          // 2.5 Live substitution: a fact-based option yields the expected equation (#3)
+          const subOption = !targetResult && !reduceAction
+            ? Object.values(get(substitutionPathsAtom)).flat().find(o => stripEq(o.substituted) === targetStr)
+            : undefined;
 
           if (targetResult) {
             set(pushEquationAtom, targetResult, prevStep.stepLabel || 'Move');
           } else if (reduceAction) {
             set(pushEquationAtom, reduceAction.equation, reduceAction.label || prevStep.stepLabel || 'Simplify');
+          } else if (subOption) {
+            set(pushEquationAtom, subOption.substituted, 'Substitute', describeSubstitution(subOption.variable, subOption.replacement));
           } else if (prevStep.globalOp) {
             // 3. Global operation applied to both sides
             set(applyGlobalOpAtom, prevStep.globalOp);
@@ -1538,6 +1565,29 @@ export const onboardingReduceHandleAtom = atom<{ path: string; index: number } |
   const targetStr = step.nextEquation.replace(/\s+/g, '');
   for (const [path, actions] of Object.entries(get(reduciblePathsAtom))) {
     const index = actions.findIndex(a => equationToString(a.equation).replace(/\s+/g, '') === targetStr);
+    if (index !== -1) return { path, index };
+  }
+  return null;
+});
+
+/**
+ * The substitution handle the tutorial wants clicked next (#3): the fact-based
+ * option whose resulting equation matches the active step's expected
+ * nextEquation. Mirrors onboardingReduceHandleAtom; when set, the annotation
+ * circle marks the teal handle and all other interactions stay locked.
+ */
+export const onboardingSubstitutionAtom = atom<{ path: string; index: number } | null>((get) => {
+  const chapterId = get(onboardingChapterIdAtom);
+  const stepIndex = get(onboardingStepIndexAtom);
+  if (!chapterId || stepIndex === null) return null;
+
+  const chapter = ONBOARDING_CHAPTERS.find(c => c.id === chapterId);
+  const step = chapter?.steps[stepIndex];
+  if (!step || !step.nextEquation) return null;
+
+  const targetStr = step.nextEquation.replace(/\s+/g, '');
+  for (const [path, options] of Object.entries(get(substitutionPathsAtom))) {
+    const index = options.findIndex(o => equationToString(o.substituted).replace(/\s+/g, '') === targetStr);
     if (index !== -1) return { path, index };
   }
   return null;

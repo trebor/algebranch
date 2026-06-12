@@ -90,6 +90,13 @@ shippable unit; reductions/UI (#18) follow.
 
 - Global ops (√, ×n applied to both sides via the radial menu) — produce
   `bothSides` descriptors too; currently only transposition does.
+  **Blocked on #43 (precursor):** global ops are NOT engine-mediated today.
+  `applyGlobalOpAtom` (`ui/src/store/equation.ts:788`) builds the AST directly in
+  the store from a structured input `{ type: 'square'|'sqrt'|'add'|'sub'|'mul'|
+  'div'|'power'|'root', term?, power? }`. #43 extracts a pure
+  `applyGlobalOp(eq, params): Equation` into the engine; then `describeGlobalOp`
+  sits beside it as a pure mapping (no AST inference, unlike transposition).
+  Order: do #43 first, then add the global-ops descriptors here.
 - Edge cases deferred to generic fallback: binary-minus *minuend* moves,
   numerator-of-`/` moves, nested ParenthesisNode parents, unary minus.
 - Operand/detail text uses mathjs `node.toString()`; consider routing through

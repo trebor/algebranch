@@ -46,6 +46,7 @@ export const FactsStrip: React.FC = () => {
               />
             }
             position="top"
+            autoAlign={false}
             className="max-w-[min(92vw,40rem)]"
           >
             <span className={THEME_GLASS.FACT_CHIP}>

@@ -4,9 +4,11 @@ Entry point for shared agent state. One line per doc — keep current. Protocol:
 
 ## Active
 
-- [plans/issue-3-substitution.md](plans/issue-3-substitution.md) — `active` — #3: equation substitution Phase 1 (cross-workspace facts, Replace handles, tutorial chapter); branch `feat/equation-substitution`.
+*(No active tasks)*
 
 ## Archive
+
+- [archive/issue-3-substitution.md](archive/issue-3-substitution.md) — `done` — #3: cross-workspace equation substitution Phase 1 (facts, teal handles + chooser, strip, tree badge, tutorial Chapter 5); merged to main 2026-06-12. Phase 2 = #51.
 
 - [archive/issue-40-validate-quadratic.md](archive/issue-40-validate-quadratic.md) — `done` — #40: validate the quadratic formula identity; 11-case test suite (substitution-satisfaction, edge cases); merged to main 2026-06-12. No bug found.
 

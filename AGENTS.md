@@ -39,6 +39,10 @@ This section is the **canonical commit/merge protocol** for every agent in this 
 3. Commit only after the user explicitly approves.
 4. Never `git push`, `gh pr merge`, or merge directly without approval. Once commits are approved, offer to finalize: open/merge the PR, delete the feature branch, and clean up.
 
+## Two-agent coordination
+
+When alternating between **Claude Code and Antigravity** on this repo, follow [orchestration.md](orchestration.md) — the coordination doctrine (routing, quota policy, restart triggers, hand-off schema, resync-on-return). Keep the live hand-off in `BATON.md` (git-ignored, status/transport only). Task state still lives in GitHub Issues; the baton never holds plans or checklists.
+
 ## Styling guardrails
 
 - **Use semantic styling tokens**: Do not hardcode raw Tailwind color classes (e.g. `bg-indigo-600`, `text-amber-400`, `text-white/40`, etc.) in TSX files. Instead, add/use centralized styling constants inside the `THEME_GLASS` object in [theme.ts](ui/src/constants/theme.ts).

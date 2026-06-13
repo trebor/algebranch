@@ -23,6 +23,7 @@ import {
   onboardingReduceHandleAtom,
   onboardingSubstitutionAtom,
 } from '../store/equation';
+import { OPERATOR_DISPLAY } from '../constants/mathSymbols';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import { describeTransposition, describeReduction, describeSubstitution } from 'math-engine';
@@ -496,13 +497,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         );
       }
 
-      // Normal binary operators (+, -, *)
-      const opDisplayMap: Record<string, string> = {
-        '+': '+',
-        '-': '−',
-        '*': '×',
-      };
-      const opSymbol = opDisplayMap[opNode.op] || opNode.op;
+      // Normal binary operators (+, -, *) — centralized display glyphs (#28).
+      const opSymbol = OPERATOR_DISPLAY[opNode.op] || opNode.op;
 
       return (
         <div className="flex items-center gap-[0.2em] flex-nowrap justify-center py-[0.05em]">

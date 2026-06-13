@@ -5,6 +5,7 @@ import { useAtomValue } from 'jotai';
 import * as math from 'mathjs';
 import { currentEquationAtom } from '../store/equation';
 import { Equation, getNodeByPath, getFunctionName, formatNumber } from 'math-engine-client';
+import { OPERATOR_DISPLAY } from '../constants/mathSymbols';
 
 const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
   <svg
@@ -138,13 +139,8 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
         );
       }
 
-      // Normal binary operators (+, -, *)
-      const opDisplayMap: Record<string, string> = {
-        '+': '+',
-        '-': '−',
-        '*': '×',
-      };
-      const opSymbol = opDisplayMap[opNode.op] || opNode.op;
+      // Normal binary operators (+, -, *) — centralized display glyphs (#28).
+      const opSymbol = OPERATOR_DISPLAY[opNode.op] || opNode.op;
 
       return (
         <div className="flex items-center gap-[0.2em] flex-nowrap justify-center py-[0.05em]">

@@ -45,6 +45,39 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
   const [calculatedPosition, setCalculatedPosition] = useState<'top' | 'bottom' | 'left' | 'right'>(position);
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const tooltipRef = React.useRef<HTMLDivElement>(null);
+  const [adjustedLeft, setAdjustedLeft] = useState<number | null>(null);
+
+  // Isomorphic layout effect to run synchronously client-side
+  const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
+
+  useIsomorphicLayoutEffect(() => {
+    if (!isShown) {
+      setAdjustedLeft(null);
+      return;
+    }
+
+    const tooltipEl = tooltipRef.current;
+    if (!tooltipEl) return;
+
+    const rect = tooltipEl.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+
+    // Determine horizontal shift if tooltip overflows viewport edges
+    let shift = 0;
+    if (rect.left < 8) {
+      shift = 8 - rect.left;
+    } else if (rect.right > viewportWidth - 8) {
+      shift = viewportWidth - 8 - rect.right;
+    }
+
+    if (shift !== 0) {
+      setAdjustedLeft(coords.left + shift);
+    } else {
+      setAdjustedLeft(coords.left);
+    }
+  }, [isShown, coords.left, calculatedPosition]);
+
   const [showTimeoutId, setShowTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [hideTimeoutId, setHideTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
@@ -268,11 +301,12 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
   const tooltipPortal = isShown && mounted && typeof document !== 'undefined' && createPortal(
     <div
+      ref={tooltipRef}
       onMouseEnter={cancelHide}
       onMouseLeave={hideTooltip}
       style={{
         position: 'fixed',
-        left: `${coords.left}px`,
+        left: `${adjustedLeft !== null ? adjustedLeft : coords.left}px`,
         top: `${coords.top}px`,
         transform: 
           calculatedPosition === 'left' ? 'translate(-100%, -50%)' :
@@ -285,7 +319,14 @@ export const Tooltip: React.FC<TooltipProps> = ({
       role="tooltip"
     >
       {content}
-      <div className={`border-4 ${arrowClasses[calculatedPosition]}`} />
+      <div 
+        className={`border-4 ${arrowClasses[calculatedPosition]}`} 
+        style={
+          (calculatedPosition === 'top' || calculatedPosition === 'bottom') && adjustedLeft !== null
+            ? { transform: `translate(calc(-50% + ${coords.left - adjustedLeft}px), 0)` }
+            : undefined
+        }
+      />
     </div>,
     document.body
   );

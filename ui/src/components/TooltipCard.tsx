@@ -45,10 +45,12 @@ export const TooltipCard: React.FC<TooltipCardProps> = ({
     {title && <span className={THEME_GLASS.TOOLTIP_TITLE}>{title}</span>}
     {description && <span className={THEME_GLASS.TOOLTIP_DESC}>{description}</span>}
     {equation ? (
-      <div className={`flex items-center justify-center gap-2 py-1 overflow-x-auto ${THEME_GLASS.TOOLTIP_EQUATION}`}>
-        <PreviewEquationNode path="lhs" customEquation={equation} />
-        <span className={`px-2 ${THEME_GLASS.TOOLTIP_EQ_SEP}`}>=</span>
-        <PreviewEquationNode path="rhs" customEquation={equation} />
+      <div className="w-full max-w-full overflow-x-auto scrollbar-thin flex justify-start">
+        <div className={`flex items-center gap-2 py-1 mx-auto min-w-max ${THEME_GLASS.TOOLTIP_EQUATION}`}>
+          <PreviewEquationNode path="lhs" customEquation={equation} />
+          <span className={`px-2 ${THEME_GLASS.TOOLTIP_EQ_SEP}`}>=</span>
+          <PreviewEquationNode path="rhs" customEquation={equation} />
+        </div>
       </div>
     ) : rawEquation ? (
       <span className={THEME_GLASS.TOOLTIP_RAW_EQ}>{rawEquation}</span>

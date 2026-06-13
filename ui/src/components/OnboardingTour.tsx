@@ -250,6 +250,20 @@ export const OnboardingTour: React.FC = () => {
     }
   };
 
+  // Escape on the opening prompt/directory skips straight into the app, so a
+  // user who just wants to start solving isn't trapped by the tutorial.
+  useEffect(() => {
+    if (!showPrompt) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleSkipPrompt();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPrompt]);
+
   const handleStartChapter = (id: string) => {
     setShowPrompt(false);
     setShowDirectory(false);

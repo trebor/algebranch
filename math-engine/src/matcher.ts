@@ -200,34 +200,39 @@ export function instantiatePattern(
 }
 
 /**
+ * Checks if a ConstantNode represents a perfect power (e.g. 9, 8, 16, 64)
+ * and returns all valid OperatorNodes representing its power forms (e.g. [8^2, 4^3, 2^6] for 64).
+ */
+export function tryExpressAsPowerOptions(node: math.MathNode): math.MathNode[] {
+  if (node.type !== 'ConstantNode') return [];
+  const val = (node as math.ConstantNode).value;
+  if (typeof val !== 'number' || !Number.isInteger(val) || val <= 1) return [];
+
+  const options: math.MathNode[] = [];
+  
+  // Since base >= 2 and exponent >= 2, max exponent is floor(log2(val))
+  const maxExponent = Math.floor(Math.log2(val));
+
+  for (let p = 2; p <= maxExponent; p++) {
+    const b = Math.pow(val, 1 / p);
+    const roundedB = Math.round(b);
+    if (Math.abs(Math.pow(roundedB, p) - val) < 1e-9) {
+      options.push(new math.OperatorNode('^', 'pow', [
+        new math.ConstantNode(roundedB),
+        new math.ConstantNode(p)
+      ]));
+    }
+  }
+
+  return options;
+}
+
+/**
  * If a node is a ConstantNode representing a perfect square or cube (e.g. 9 or 8),
  * returns an OperatorNode representing the power form (e.g. 3^2 or 2^3).
- * Otherwise returns null.
+ * Otherwise returns null. If multiple forms exist, returns the first one (square).
  */
 export function tryExpressAsPower(node: math.MathNode): math.MathNode | null {
-  if (node.type !== 'ConstantNode') return null;
-  const val = (node as math.ConstantNode).value;
-  if (typeof val !== 'number' || !Number.isInteger(val) || val <= 1) return null;
-
-  // Check squares first (most common)
-  const root2 = Math.sqrt(val);
-  const rounded2 = Math.round(root2);
-  if (Math.abs(root2 - rounded2) < 1e-9) {
-    return new math.OperatorNode('^', 'pow', [
-      new math.ConstantNode(rounded2),
-      new math.ConstantNode(2)
-    ]);
-  }
-
-  // Check cubes next
-  const root3 = Math.cbrt(val);
-  const rounded3 = Math.round(root3);
-  if (Math.abs(root3 - rounded3) < 1e-9) {
-    return new math.OperatorNode('^', 'pow', [
-      new math.ConstantNode(rounded3),
-      new math.ConstantNode(3)
-    ]);
-  }
-
-  return null;
+  const options = tryExpressAsPowerOptions(node);
+  return options.length > 0 ? options[0] : null;
 }

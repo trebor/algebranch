@@ -1,5 +1,5 @@
 import * as math from 'mathjs';
-import { matchPattern, instantiatePattern, tryExpressAsPower, WildcardBindings } from '../src/matcher';
+import { matchPattern, instantiatePattern, tryExpressAsPower, tryExpressAsPowerOptions, WildcardBindings } from '../src/matcher';
 
 const parse = (str: string) => math.parse(str);
 const cleanString = (node: math.MathNode) => node.toString().replace(/\s+/g, '');
@@ -160,6 +160,29 @@ describe('Algebraic Pattern Matcher', () => {
       const target = parse('x');
       const result = tryExpressAsPower(target);
       expect(result).toBeNull();
+    });
+
+    test('tryExpressAsPowerOptions should express 64 as 8^2, 4^3, and 2^6', () => {
+      const target = parse('64');
+      const options = tryExpressAsPowerOptions(target);
+      expect(options).toHaveLength(3);
+      expect(options[0].toString()).toBe('8 ^ 2');
+      expect(options[1].toString()).toBe('4 ^ 3');
+      expect(options[2].toString()).toBe('2 ^ 6');
+    });
+
+    test('tryExpressAsPowerOptions should express 9 as 3^2', () => {
+      const target = parse('9');
+      const options = tryExpressAsPowerOptions(target);
+      expect(options).toHaveLength(1);
+      expect(options[0].toString()).toBe('3 ^ 2');
+    });
+
+    test('tryExpressAsPowerOptions should express 8 as 2^3', () => {
+      const target = parse('8');
+      const options = tryExpressAsPowerOptions(target);
+      expect(options).toHaveLength(1);
+      expect(options[0].toString()).toBe('2 ^ 3');
     });
   });
 });

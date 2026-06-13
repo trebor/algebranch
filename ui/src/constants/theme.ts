@@ -152,6 +152,17 @@ export const THEME_GLASS = {
   TREE_NODE_BADGE_SUBSTITUTE: 'bg-teal-600 border-teal-400 text-teal-50',
   SUB_COUNT_BADGE: 'bg-neutral-950 border-teal-400 text-teal-300',
 
+  // --- Unified Stacks & Chooser Design Tokens ---
+  STACK_BADGE_SIMPLIFY: 'bg-neutral-950 border-amber-400 text-amber-400',
+  STACK_BADGE_DISTRIBUTE: 'bg-neutral-950 border-purple-400 text-purple-400',
+  STACK_BADGE_IDENTITY: 'bg-neutral-950 border-indigo-400 text-indigo-400',
+  STACK_BADGE_SUBSTITUTE: 'bg-neutral-950 border-teal-400 text-teal-300',
+
+  CHOOSER_OPTION_SIMPLIFY: 'font-mono text-xs text-amber-300',
+  CHOOSER_OPTION_DISTRIBUTE: 'font-mono text-xs text-purple-300',
+  CHOOSER_OPTION_IDENTITY: 'font-mono text-xs text-indigo-300',
+  CHOOSER_OPTION_SUBSTITUTE: 'font-mono text-xs text-teal-300',
+
   // --- RadialMenu specific ---
   RADIAL_CENTER: 'w-14 h-14 rounded-full bg-indigo-600/30 border-2 border-indigo-400/50 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)] pointer-events-auto cursor-pointer z-10',
   RADIAL_PETAL: 'w-12 h-12 rounded-full backdrop-blur-xl bg-neutral-900/80 border border-white/15 shadow-lg shadow-black/40 flex items-center justify-center pointer-events-auto transition-colors',

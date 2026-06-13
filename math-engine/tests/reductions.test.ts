@@ -78,6 +78,20 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
     const cubeOption = reductionsCube['rhs'].find(r => r.label === 'Express as Cube');
     expect(cubeOption).toBeDefined();
     expect(equationToString(cubeOption!.simplified)).toBe('x = 2 ^ 3');
+
+    // 64 -> 8^2, 4^3, and 2^6
+    const eqBoth = parseEquation('x = 64');
+    const reductionsBoth = getReducibleOptions(eqBoth);
+    expect(reductionsBoth['rhs']).toBeDefined();
+    const squareOptionBoth = reductionsBoth['rhs'].find(r => r.label === 'Express as Square');
+    const cubeOptionBoth = reductionsBoth['rhs'].find(r => r.label === 'Express as Cube');
+    const sixthOptionBoth = reductionsBoth['rhs'].find(r => r.label === 'Express as 6th Power');
+    expect(squareOptionBoth).toBeDefined();
+    expect(cubeOptionBoth).toBeDefined();
+    expect(sixthOptionBoth).toBeDefined();
+    expect(equationToString(squareOptionBoth!.simplified)).toBe('x = 8 ^ 2');
+    expect(equationToString(cubeOptionBoth!.simplified)).toBe('x = 4 ^ 3');
+    expect(equationToString(sixthOptionBoth!.simplified)).toBe('x = 2 ^ 6');
   });
 
   test('should correctly label power expansions as Expand Power', () => {

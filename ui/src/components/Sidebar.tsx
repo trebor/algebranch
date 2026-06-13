@@ -14,6 +14,7 @@ import {
   currentSessionIdAtom,
   loadSessionAtom,
   presetCategoriesAtom,
+  presetSearchQueryAtom,
   leftSidebarOpenAtom,
   deleteConfirmationModalOpenAtom,
   equationInputModalOpenAtom,
@@ -22,26 +23,20 @@ import {
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
-import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Layers, Triangle, Activity, Flame, BookOpen, Library, LayoutGrid, PenTool } from 'lucide-react';
+import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Triangle, Activity, BookOpen, Library, LayoutGrid, PenTool, Search } from 'lucide-react';
 
 const getCategoryIcon = (category: string) => {
   switch (category) {
-    case 'Linear Equations':
+    case 'Linear & Basic Algebra':
       return <Hash size={11} className="text-blue-400 shrink-0" />;
-    case 'Fractions & Ratios':
-      return <Percent size={11} className="text-teal-400 shrink-0" />;
-    case 'Quadratics & Roots':
+    case 'Quadratics & Polynomials':
       return <Zap size={11} className="text-amber-400 shrink-0" />;
-    case 'Literal Equations':
-      return <Layers size={11} className="text-purple-400 shrink-0" />;
-    case 'Geometry':
+    case 'Fractions, Radicals & Rationals':
+      return <Percent size={11} className="text-teal-400 shrink-0" />;
+    case 'Transcendental (Logs & Trig)':
+      return <Activity size={11} className="text-pink-400 shrink-0" />;
+    case 'Formulas (Physics, Geometry & Science)':
       return <Triangle size={11} className="text-emerald-400 shrink-0" />;
-    case 'Classical Physics':
-      return <Activity size={11} className="text-rose-400 shrink-0" />;
-    case 'Thermodynamics & Chemistry':
-      return <Flame size={11} className="text-orange-400 shrink-0" />;
-    case 'Algebraic Identities':
-      return <BookOpen size={11} className="text-pink-400 shrink-0" />;
     default:
       return <FolderGit2 size={11} className="text-indigo-400 shrink-0" />;
   }
@@ -374,6 +369,8 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
   const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
   const resetToEquation = useSetAtom(resetToEquationStringAtom);
   const presetCategories = useAtomValue(presetCategoriesAtom);
+  const [searchQuery, setSearchQuery] = useAtom(presetSearchQueryAtom);
+  const isSearching = searchQuery.trim().length > 0;
   const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>({});
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
 
@@ -449,10 +446,46 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
         </div>
       )}
 
+      {/* Search */}
+      <div className="relative shrink-0">
+        <Search size={13} className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${THEME_GLASS.TEXT_MUTED}`} />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              setSearchQuery('');
+            }
+          }}
+          placeholder="Search the library…"
+          aria-label="Search equation library"
+          className={`w-full text-xs py-2 pl-8 pr-8 ${THEME_GLASS.FIELD_INPUT}`}
+        />
+        {isSearching && (
+          <button
+            onClick={() => setSearchQuery('')}
+            aria-label="Clear search"
+            className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors ${THEME_GLASS.TEXT_MUTED} hover:text-white`}
+          >
+            <X size={13} />
+          </button>
+        )}
+      </div>
+
       {/* Recessed Content Box */}
       <div className={`flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 ${THEME_GLASS.TREE_BG}`}>
+        {presetCategories.length === 0 && (
+          <div className={`flex flex-col items-center justify-center gap-1 py-10 text-center select-none ${THEME_GLASS.TEXT_MUTED}`}>
+            <Search size={20} className="opacity-50" />
+            <span className="text-xs">No equations match “{searchQuery.trim()}”.</span>
+          </div>
+        )}
         {presetCategories.map((group) => {
-          const isExpanded = !!expandedCategories[group.category];
+          // While searching, every matching category is open so results are
+          // visible without manual expansion.
+          const isExpanded = isSearching || !!expandedCategories[group.category];
           return (
             <div key={group.category} className="flex flex-col gap-1.5 mb-1.5 shrink-0">
               {/* Category Header */}

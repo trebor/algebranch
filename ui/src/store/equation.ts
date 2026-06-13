@@ -334,15 +334,42 @@ export const currentSessionIdAtom = atom(
 // Presets state atoms
 export const presetsAtom = atom<Preset[]>(PRESET_LIST);
 
+// Library search query (#54). Trimmed/lowercased matching happens in the
+// filtered atom; the raw string is kept here so the input stays controlled.
+export const presetSearchQueryAtom = atom<string>('');
+
+/**
+ * Presets matching the current search query, filtered across label, category,
+ * equation string, and the variable/function symbols in the equation. An empty
+ * query returns the full list. Multiple whitespace-separated terms must all
+ * match (AND), so "quad fraction" narrows progressively.
+ */
+export const filteredPresetsAtom = atom<Preset[]>((get) => {
+  const presets = get(presetsAtom);
+  const query = get(presetSearchQueryAtom).trim().toLowerCase();
+  if (!query) return presets;
+
+  const terms = query.split(/\s+/);
+  return presets.filter((p) => {
+    // Text fields keep their spacing for ordinary word matching. The equation is
+    // also matched with all whitespace removed, so "x+4" finds the stored
+    // "x + 4" and "x^2" finds "x ^ 2". (Matching is already case-insensitive.)
+    const text = `${p.label} ${p.category} ${p.equation} ${p.description}`.toLowerCase();
+    const eqCompact = p.equation.replace(/\s+/g, '').toLowerCase();
+    return terms.every((term) => text.includes(term) || eqCompact.includes(term));
+  });
+});
+
 export interface PresetCategoryGroup {
   category: string;
   presets: Preset[];
 }
 
+// Groups the *filtered* presets (#54) so search narrows the accordion live.
 export const presetCategoriesAtom = atom<PresetCategoryGroup[]>((get) => {
-  const presets = get(presetsAtom);
+  const presets = get(filteredPresetsAtom);
   const groups: Record<string, Preset[]> = {};
-  
+
   presets.forEach((p) => {
     if (!groups[p.category]) {
       groups[p.category] = [];

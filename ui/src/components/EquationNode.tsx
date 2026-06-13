@@ -30,6 +30,61 @@ import { ArrowLeftRight, Zap, Split, RefreshCw, Replace } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
 
+interface UnifiedStackOption {
+  id: string;
+  label: string;
+  subLabel?: string;
+  equation: any;
+  originalOption: any;
+  onApply: () => void;
+}
+
+const STACK_CONFIG = {
+  reduce: {
+    singularLabel: 'Simplify',
+    pluralLabel: 'simplifications',
+    icon: Zap,
+    handleClass: THEME_GLASS.HANDLE_SIMPLIFY,
+    pingClass: THEME_GLASS.PING_SIMPLIFY,
+    badgeClass: THEME_GLASS.STACK_BADGE_SIMPLIFY,
+    iconClass: 'text-neutral-950 fill-neutral-950 stroke-[2.5]',
+  },
+  distribute: {
+    singularLabel: 'Distribute',
+    pluralLabel: 'distributions',
+    icon: Split,
+    handleClass: THEME_GLASS.HANDLE_DISTRIBUTE,
+    pingClass: THEME_GLASS.PING_DISTRIBUTE,
+    badgeClass: THEME_GLASS.STACK_BADGE_DISTRIBUTE,
+    iconClass: 'text-white stroke-[2.5]',
+  },
+  identity: {
+    singularLabel: 'Apply Identity',
+    pluralLabel: 'identities',
+    icon: ArrowLeftRight,
+    handleClass: THEME_GLASS.HANDLE_IDENTITY,
+    pingClass: THEME_GLASS.PING_IDENTITY,
+    badgeClass: THEME_GLASS.STACK_BADGE_IDENTITY,
+    iconClass: 'text-white stroke-[2.5]',
+  },
+  substitute: {
+    singularLabel: 'Substitute',
+    pluralLabel: 'substitutions',
+    icon: Replace,
+    handleClass: THEME_GLASS.HANDLE_SUBSTITUTE,
+    pingClass: THEME_GLASS.PING_SUBSTITUTE,
+    badgeClass: THEME_GLASS.STACK_BADGE_SUBSTITUTE,
+    iconClass: 'text-white stroke-[2.5]',
+  },
+} as const;
+
+// Hover behavior for the multi-option interaction menu (a self-contained popover,
+// deliberately NOT a Tooltip, so the global single-active-tooltip mechanism can't
+// steal it closed while the cursor traverses from the handle to the menu).
+const MENU_HOVER_CLOSE_GRACE_MS = 280; // grace period bridging handle <-> menu hover
+const MENU_ANCHOR_GAP_PX = 8;          // gap between the handle and the menu card
+const MENU_HALF_WIDTH_PX = 180;        // approx half-width, for horizontal edge clamping
+
 const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
   <svg
     viewBox="0 0 8 100"
@@ -139,9 +194,38 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const onboardingTargetPath = useAtomValue(onboardingTargetPathAtom);
   const onboardingReduceHandle = useAtomValue(onboardingReduceHandleAtom);
   const onboardingSubstitution = useAtomValue(onboardingSubstitutionAtom);
-  // Chooser popover for nodes with multiple applicable substitution facts (#3)
-  const [subChooserOpen, setSubChooserOpen] = React.useState(false);
-  const [subChooserPos, setSubChooserPos] = React.useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  // Which option's equation preview the open menu is showing, keyed by stack type
+  // so a stale hover from one stack never leaks into another.
+  const [hoveredOption, setHoveredOption] = React.useState<{ type: 'reduce' | 'distribute' | 'identity' | 'substitute'; index: number } | null>(null);
+  // The multi-option menu is a hover popover, not a Tooltip: openMenuType is the
+  // stack whose menu is open, menuAnchor is its on-screen anchor, and a grace timer
+  // bridges the hover gap between the handle and the menu.
+  const [openMenuType, setOpenMenuType] = React.useState<'reduce' | 'distribute' | 'identity' | 'substitute' | null>(null);
+  const [menuAnchor, setMenuAnchor] = React.useState<{ top: number; left: number; placement: 'above' | 'below' } | null>(null);
+  const menuCloseTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelMenuClose = React.useCallback(() => {
+    if (menuCloseTimer.current) {
+      clearTimeout(menuCloseTimer.current);
+      menuCloseTimer.current = null;
+    }
+  }, []);
+  const closeMenu = React.useCallback(() => {
+    cancelMenuClose();
+    setOpenMenuType(null);
+    setHoveredOption(null);
+    setHoverReducePath(null);
+    setHoverReduceIndex(null);
+  }, [cancelMenuClose, setHoverReducePath, setHoverReduceIndex]);
+  // Leaving the handle or the menu schedules a close after a grace period; moving
+  // onto the other one cancels it. This is the entire open/close model — no global
+  // tooltip state involved, so nothing external can dismiss the menu mid-traversal.
+  const scheduleMenuClose = React.useCallback(() => {
+    cancelMenuClose();
+    menuCloseTimer.current = setTimeout(closeMenu, MENU_HOVER_CLOSE_GRACE_MS);
+  }, [cancelMenuClose, closeMenu]);
+  React.useEffect(() => cancelMenuClose, [cancelMenuClose]);
+
   // The circle marks the reduce/substitution handle itself when one produces the
   // step's expected equation; otherwise it marks the node box (selection/
   // transposition steps).
@@ -520,10 +604,87 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
   const layout = inExponent ? MATH_LAYOUT.exponent : MATH_LAYOUT.normal;
 
-  // The node box reserves space for ALL its handles: top padding for the row,
-  // and minWidth so the row never overhangs. Substitution contributes exactly
-  // one handle regardless of how many facts apply (the chooser disambiguates).
-  const handleCount = actions.length + (substitutions.length > 0 ? 1 : 0);
+  const interactionStacks = React.useMemo(() => {
+    const stacks: {
+      type: 'reduce' | 'distribute' | 'identity' | 'substitute';
+      options: UnifiedStackOption[];
+    }[] = [];
+
+    const reduceOptions: UnifiedStackOption[] = [];
+    const distributeOptions: UnifiedStackOption[] = [];
+    const identityOptions: UnifiedStackOption[] = [];
+
+    actions.forEach((action, idx) => {
+      const opt: UnifiedStackOption = {
+        id: `action-${action.type}-${idx}`,
+        label: action.label || (action.type === 'distribute' ? "Distribute" : action.type === 'identity' ? "Apply Identity" : "Simplify"),
+        equation: action.equation,
+        originalOption: action,
+        onApply: () => {
+          const reductionLabel = action.label || (action.type === 'distribute' ? 'Distribute' : action.type === 'identity' ? 'Apply Identity' : 'Simplify');
+          const change = describeReduction(currentEq, {
+            path,
+            simplified: action.equation,
+            type: action.type as 'reduce' | 'distribute' | 'identity',
+            label: action.label,
+          });
+          pushEquation(action.equation, reductionLabel, change);
+          trackEvent({
+            action: 'apply_reduction',
+            category: 'math_interaction',
+            label: `${action.type}: ${action.label || (action.type === 'distribute' ? 'Distribute' : 'Simplify')}`,
+          });
+        }
+      };
+
+      if (action.type === 'reduce') {
+        reduceOptions.push(opt);
+      } else if (action.type === 'distribute') {
+        distributeOptions.push(opt);
+      } else if (action.type === 'identity') {
+        identityOptions.push(opt);
+      }
+    });
+
+    const substituteOptions: UnifiedStackOption[] = substitutions.map((sub, idx) => ({
+      id: `substitute-${idx}`,
+      label: `Substitute ${sub.variable} = ${sub.replacement}`,
+      subLabel: sub.fact.sourceName ? `from “${sub.fact.sourceName}”` : undefined,
+      equation: sub.substituted,
+      originalOption: sub,
+      onApply: () => {
+        pushEquation(
+          sub.substituted,
+          'Substitute',
+          describeSubstitution(sub.variable, sub.replacement),
+        );
+        trackEvent({
+          action: 'apply_substitution',
+          category: 'math_interaction',
+          label: `${sub.variable} -> ${sub.replacement}`,
+        });
+      }
+    }));
+
+    if (reduceOptions.length > 0) {
+      stacks.push({ type: 'reduce', options: reduceOptions });
+    }
+    if (distributeOptions.length > 0) {
+      stacks.push({ type: 'distribute', options: distributeOptions });
+    }
+    if (identityOptions.length > 0) {
+      stacks.push({ type: 'identity', options: identityOptions });
+    }
+    if (substituteOptions.length > 0) {
+      stacks.push({ type: 'substitute', options: substituteOptions });
+    }
+
+    return stacks;
+  }, [actions, substitutions, currentEq, path, pushEquation]);
+
+  // The node box reserves space for ALL its active stacks: top padding for the row,
+  // and minWidth so the row never overhangs.
+  const handleCount = interactionStacks.length;
   const minWidth = handleCount > 0
     ? `${handleCount * layout.btnSize + (handleCount - 1) * layout.btnGap + layout.nodePx * 2}em`
     : undefined;
@@ -586,7 +747,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       )}
 
       {/* Compact Inline Operations Toolbar - sits inside the top-padding area to prevent layout overlap */}
-      {(isReducible || substitutions.length > 0) && (
+      {interactionStacks.length > 0 && (
         <div 
           className={`absolute flex items-center z-25 ${
             sourcePath ? 'opacity-25 pointer-events-none grayscale' : 'opacity-100'
@@ -598,231 +759,253 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             transition: 'opacity 200ms, filter 200ms',
           }}
         >
-          {actions.map((action, index) => {
-            const type = action.type;
-            const label = action.label || (type === 'distribute' ? "Distribute" : type === 'identity' ? "Apply Identity" : "Simplify");
-            
-            const isActionHovered = hoverReducePath === path && hoverReduceIndex === index;
+          {interactionStacks.map((stack) => {
+            const config = STACK_CONFIG[stack.type];
+            const IconComponent = config.icon;
+            const single = stack.options.length === 1 ? stack.options[0] : null;
 
-            const tooltipContent = (
-              <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
-                <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">{label}</span>
-                <div className="w-full border-t border-white/10 my-1" />
-                <div className="flex items-center justify-center gap-1.5 flex-nowrap py-0.5 text-[1.3em]">
-                  <PreviewEquationNode path="lhs" customEquation={action.equation} />
-                  <span className="text-[1.3em] font-mono text-indigo-300 px-0.5 select-none">=</span>
-                  <PreviewEquationNode path="rhs" customEquation={action.equation} />
-                </div>
-              </div>
+            const isStackMarked = isOnboardingActive && (
+              (stack.type === 'substitute' && isSubHandleMarked) ||
+              (stack.type !== 'substitute' && isHandleMarked && actions.length > 0 && actions[0].type === stack.type)
             );
 
-            return (
-              <Tooltip
-                key={index}
-                content={tooltipContent}
-                position="top"
-                className="max-w-[300px] sm:max-w-[360px]"
-              >
-                <button
-                  className={`flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group ${
-                    type === 'distribute'
-                      ? THEME_GLASS.HANDLE_DISTRIBUTE
-                      : type === 'identity'
-                      ? THEME_GLASS.HANDLE_IDENTITY
-                      : THEME_GLASS.HANDLE_SIMPLIFY
-                  } ${isActionHovered ? 'scale-110 ring-2 ring-white/50' : ''}`}
-                  style={{
-                    width: `${layout.btnSize}em`,
-                    height: `${layout.btnSize}em`,
-                    borderRadius: inExponent ? '0.12em' : '9999px',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.stopPropagation();
-                    setHoverReducePath(path);
-                    setHoverReduceIndex(index);
-                  }}
-                  onMouseLeave={(e) => {
-                    e.stopPropagation();
-                    setHoverReducePath(null);
-                    setHoverReduceIndex(null);
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const reductionLabel = action.label || (action.type === 'distribute' ? 'Distribute' : action.type === 'identity' ? 'Apply Identity' : 'Simplify');
-                    const change = describeReduction(currentEq, {
-                      path,
-                      simplified: action.equation,
-                      type: action.type as 'reduce' | 'distribute' | 'identity',
-                      label: action.label,
-                    });
-                    pushEquation(action.equation, reductionLabel, change);
-                    trackEvent({
-                      action: 'apply_reduction',
-                      category: 'math_interaction',
-                      label: `${action.type}: ${action.label || (action.type === 'distribute' ? 'Distribute' : 'Simplify')}`,
-                    });
-                    setHoverReducePath(null);
-                    setHoverReduceIndex(null);
-                  }}
-                >
-                  <span 
-                    className={`absolute inset-0 group-hover:opacity-0 pointer-events-none ${
-                      !sourcePath ? 'animate-ping' : ''
-                    } ${
-                      type === 'distribute' 
-                        ? THEME_GLASS.PING_DISTRIBUTE 
-                        : type === 'identity'
-                        ? THEME_GLASS.PING_IDENTITY
-                        : THEME_GLASS.PING_SIMPLIFY
-                    }`}
-                    style={{
-                      borderRadius: inExponent ? '0.12em' : '9999px',
-                    }}
-                  />
-                  {isHandleMarked && (
-                    <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
-                  )}
-                  {type === 'distribute' ? (
-                    <Split className="h-[65%] w-[65%] text-white stroke-[2.5]" />
-                  ) : type === 'identity' ? (
-                    <ArrowLeftRight className="h-[65%] w-[65%] text-white stroke-[2.5]" />
-                  ) : (
-                    <Zap className="h-[65%] w-[65%] text-neutral-950 fill-neutral-950 stroke-[2.5]" />
-                  )}
-                </button>
-              </Tooltip>
-            );
-          })}
-          {substitutions.length > 0 && (() => {
-            // ONE teal handle per node regardless of how many facts apply:
-            // substitution alternatives are homogeneous (same operation,
-            // different sources), so they disambiguate via a chooser popover
-            // rather than a row of handles (which would distort the node box).
-            const single = substitutions.length === 1 ? substitutions[0] : null;
-            const applySubstitution = (option: (typeof substitutions)[number]) => {
-              pushEquation(
-                option.substituted,
-                'Substitute',
-                describeSubstitution(option.variable, option.replacement),
-              );
-              trackEvent({
-                action: 'apply_substitution',
-                category: 'math_interaction',
-                label: `${option.variable} -> ${option.replacement}`,
-              });
-              setSubChooserOpen(false);
+            const buttonClass = `flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group hover:scale-110 ${config.handleClass}`;
+            const buttonStyle: React.CSSProperties = {
+              width: `${layout.btnSize}em`,
+              height: `${layout.btnSize}em`,
+              borderRadius: inExponent ? '0.12em' : '9999px',
             };
-            const subTooltipContent = single ? (
-              <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
-                <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">
-                  Substitute {single.variable} = {single.replacement}
-                </span>
-                {single.fact.sourceName && (
-                  <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} select-none`}>from “{single.fact.sourceName}”</span>
+            const buttonInner = (
+              <>
+                <span
+                  className={`absolute inset-0 group-hover:opacity-0 pointer-events-none ${
+                    !sourcePath ? 'animate-ping' : ''
+                  } ${config.pingClass}`}
+                  style={{ borderRadius: inExponent ? '0.12em' : '9999px' }}
+                />
+                {isStackMarked && (
+                  <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
                 )}
-                <div className="w-full border-t border-white/10 my-1" />
-                <div className="flex items-center justify-center gap-1.5 flex-nowrap py-0.5 text-[1.3em]">
-                  <PreviewEquationNode path="lhs" customEquation={single.substituted} />
-                  <span className="text-[1.3em] font-mono text-indigo-300 px-0.5 select-none">=</span>
-                  <PreviewEquationNode path="rhs" customEquation={single.substituted} />
-                </div>
-              </div>
-            ) : (
-              <span>{substitutions.length} known substitutions — click to choose</span>
-            );
-            return (
-              <Tooltip
-                content={subTooltipContent}
-                position="top"
-                className="max-w-[300px] sm:max-w-[360px]"
-              >
-                <button
-                  className={`flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group hover:scale-110 ${THEME_GLASS.HANDLE_SUBSTITUTE}`}
-                  style={{
-                    width: `${layout.btnSize}em`,
-                    height: `${layout.btnSize}em`,
-                    borderRadius: inExponent ? '0.12em' : '9999px',
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (single) {
-                      applySubstitution(single);
-                    } else {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setSubChooserPos({ top: rect.bottom + 6, left: rect.left + rect.width / 2 });
-                      setSubChooserOpen((open) => !open);
-                    }
-                  }}
-                >
+                <IconComponent className={`h-[65%] w-[65%] ${config.iconClass}`} />
+                {!single && (
                   <span
-                    className={`absolute inset-0 group-hover:opacity-0 pointer-events-none ${
-                      !sourcePath ? 'animate-ping' : ''
-                    } ${THEME_GLASS.PING_SUBSTITUTE}`}
+                    className={`absolute flex items-center justify-center rounded-full font-bold border leading-none ${config.badgeClass}`}
                     style={{
-                      borderRadius: inExponent ? '0.12em' : '9999px',
-                    }}
-                  />
-                  {isSubHandleMarked && (
-                    <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
-                  )}
-                  <Replace className="h-[65%] w-[65%] text-white stroke-[2.5]" />
-                  {!single && (
-                    <span
-                      className={`absolute flex items-center justify-center rounded-full font-bold border leading-none ${THEME_GLASS.SUB_COUNT_BADGE}`}
-                      style={{
-                        // Size the circle in DIGIT units (font-size first), so the
-                        // number always fits the badge at any math scale.
-                        fontSize: '0.3em',
-                        height: '1.5em',
-                        minWidth: '1.5em',
-                        padding: '0 0.2em',
-                        top: '-0.55em',
-                        right: '-0.55em',
-                      }}
-                    >
-                      {substitutions.length}
-                    </span>
-                  )}
-                </button>
-              </Tooltip>
-            );
-          })()}
-          {subChooserOpen && substitutions.length > 1 && typeof document !== 'undefined' && createPortal(
-            <>
-              <div className="fixed inset-0 z-[9998] cursor-default" onClick={(e) => { e.stopPropagation(); setSubChooserOpen(false); }} />
-              <div
-                style={{ position: 'fixed', top: `${subChooserPos.top}px`, left: `${subChooserPos.left}px`, transform: 'translateX(-50%)', zIndex: 9999 }}
-                className={`${THEME_GLASS.OVERLAY_BG} py-1 min-w-[200px] max-w-[min(92vw,24rem)] text-sm font-sans normal-case`}
-              >
-                {substitutions.map((option, i) => (
-                  <button
-                    key={`sub-choice-${i}`}
-                    className={`w-full text-left px-3 py-2 flex flex-col gap-0.5 cursor-pointer ${THEME_GLASS.LIST_ITEM_HOVER}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      pushEquation(
-                        option.substituted,
-                        'Substitute',
-                        describeSubstitution(option.variable, option.replacement),
-                      );
-                      trackEvent({
-                        action: 'apply_substitution',
-                        category: 'math_interaction',
-                        label: `${option.variable} -> ${option.replacement}`,
-                      });
-                      setSubChooserOpen(false);
+                      fontSize: '0.3em',
+                      height: '1.5em',
+                      minWidth: '1.5em',
+                      padding: '0 0.2em',
+                      top: '-0.55em',
+                      right: '-0.55em',
                     }}
                   >
-                    <span className="font-mono text-xs text-teal-300">{option.variable} = {option.replacement}</span>
-                    {option.fact.sourceName && (
-                      <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED}`}>from “{option.fact.sourceName}”</span>
-                    )}
+                    {stack.options.length}
+                  </span>
+                )}
+              </>
+            );
+
+            // Single-option handle: a plain hover preview tooltip; click applies.
+            if (single) {
+              const singleTooltip = (
+                <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
+                  <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">{single.label}</span>
+                  {single.subLabel && (
+                    <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} select-none`}>{single.subLabel}</span>
+                  )}
+                  <div className="w-full border-t border-white/10 my-1" />
+                  <div className="flex items-center justify-center gap-1.5 flex-nowrap py-0.5 text-[1.3em]">
+                    <PreviewEquationNode path="lhs" customEquation={single.equation} />
+                    <span className="text-[1.3em] font-mono text-indigo-300 px-0.5 select-none">=</span>
+                    <PreviewEquationNode path="rhs" customEquation={single.equation} />
+                  </div>
+                </div>
+              );
+              return (
+                <Tooltip key={stack.type} content={singleTooltip} position="top" className="max-w-[300px] sm:max-w-[360px]">
+                  <button
+                    className={buttonClass}
+                    style={buttonStyle}
+                    onMouseEnter={(e) => {
+                      e.stopPropagation();
+                      if (stack.type !== 'substitute') {
+                        setHoverReducePath(path);
+                        setHoverReduceIndex(actions.indexOf(single.originalOption));
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.stopPropagation();
+                      if (stack.type !== 'substitute') {
+                        setHoverReducePath(null);
+                        setHoverReduceIndex(null);
+                      }
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      single.onApply();
+                    }}
+                  >
+                    {buttonInner}
+                  </button>
+                </Tooltip>
+              );
+            }
+
+            // Multi-option handle: opens a self-contained hover popover (rendered
+            // once, below). Deliberately not a Tooltip, so it's immune to the global
+            // single-active-tooltip churn that was dismissing it mid-traversal.
+            return (
+              <button
+                key={stack.type}
+                className={buttonClass}
+                style={buttonStyle}
+                onMouseEnter={(e) => {
+                  e.stopPropagation();
+                  cancelMenuClose();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const left = Math.max(
+                    MENU_HALF_WIDTH_PX + 8,
+                    Math.min(rect.left + rect.width / 2, window.innerWidth - MENU_HALF_WIDTH_PX - 8),
+                  );
+                  // Handle in the top half of the viewport => open the menu downward
+                  // (and vice-versa) so it always grows into the roomier half.
+                  const placement = rect.top + rect.height / 2 < window.innerHeight / 2 ? 'below' : 'above';
+                  setMenuAnchor({
+                    top: placement === 'below' ? rect.bottom + MENU_ANCHOR_GAP_PX : rect.top - MENU_ANCHOR_GAP_PX,
+                    left,
+                    placement,
+                  });
+                  setOpenMenuType(stack.type);
+                  setHoveredOption(null);
+                  if (stack.type !== 'substitute') {
+                    setHoverReducePath(path);
+                    setHoverReduceIndex(null);
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.stopPropagation();
+                  scheduleMenuClose();
+                }}
+                onClick={(e) => {
+                  // Selection happens in the menu; clicking the handle does nothing.
+                  e.stopPropagation();
+                }}
+              >
+                {buttonInner}
+              </button>
+            );
+          })}
+          {openMenuType && menuAnchor && typeof document !== 'undefined' && (() => {
+            const stack = interactionStacks.find((s) => s.type === openMenuType);
+            if (!stack || stack.options.length < 2) return null;
+            const config = STACK_CONFIG[stack.type];
+            const optionLabelClass = stack.type === 'substitute' ? THEME_GLASS.CHOOSER_OPTION_SUBSTITUTE :
+              stack.type === 'reduce' ? THEME_GLASS.CHOOSER_OPTION_SIMPLIFY :
+              stack.type === 'distribute' ? THEME_GLASS.CHOOSER_OPTION_DISTRIBUTE :
+              THEME_GLASS.CHOOSER_OPTION_IDENTITY;
+            // The preview tracks the hovered row; before any hover it stays empty
+            // (with a hint) so it never implies a one-click default.
+            const previewOption = hoveredOption && hoveredOption.type === stack.type
+              ? stack.options[hoveredOption.index]
+              : null;
+            // One preview row, reused by the invisible sizers (which reserve exact
+            // space) and the visible layer.
+            const renderPreviewRow = (eq: any, muted: boolean) => (
+              <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
+                <PreviewEquationNode path="lhs" customEquation={eq} />
+                <span className={`text-[1.3em] font-mono px-0.5 select-none ${muted ? 'text-transparent' : 'text-indigo-300'}`}>=</span>
+                <PreviewEquationNode path="rhs" customEquation={eq} />
+              </div>
+            );
+            const headerEl = (
+              <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-85 px-1.5">
+                {stack.options.length} {config.pluralLabel} Available
+              </span>
+            );
+            const listEl = (
+              <div
+                className="flex flex-col w-full divide-y divide-white/5"
+                onMouseLeave={() => setHoveredOption(null)}
+              >
+                {stack.options.map((opt, i) => (
+                  <button
+                    key={i}
+                    className={`w-full text-left px-1.5 py-1.5 flex flex-col gap-0.5 cursor-pointer ${THEME_GLASS.LIST_ITEM_HOVER}`}
+                    onMouseEnter={() => {
+                      setHoveredOption({ type: stack.type, index: i });
+                      if (stack.type !== 'substitute') {
+                        setHoverReducePath(path);
+                        setHoverReduceIndex(actions.indexOf(opt.originalOption));
+                      }
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      opt.onApply();
+                      closeMenu();
+                    }}
+                  >
+                    <span className={`whitespace-nowrap leading-snug ${optionLabelClass}`}>{opt.label}</span>
+                    {opt.subLabel && <span className={`text-[10px] leading-snug ${THEME_GLASS.TEXT_MUTED}`}>{opt.subLabel}</span>}
                   </button>
                 ))}
               </div>
-            </>,
-            document.body,
-          )}
+            );
+            const previewEl = (
+              <div className="grid place-items-center w-full py-0.5">
+                {/* Invisible sizers: every option stacked in the same grid cell so
+                    the cell reserves the exact rendered size of the LARGEST one,
+                    eliminating any layout jump regardless of which row is hovered. */}
+                {stack.options.map((opt, i) => (
+                  <div key={i} aria-hidden="true" className="invisible col-start-1 row-start-1">
+                    {renderPreviewRow(opt.equation, true)}
+                  </div>
+                ))}
+                {/* Visible layer: the hovered option's preview, or the neutral hint. */}
+                <div className="col-start-1 row-start-1 flex items-center justify-center">
+                  {previewOption ? (
+                    renderPreviewRow(previewOption.equation, false)
+                  ) : (
+                    <span className={`text-[10px] italic select-none ${THEME_GLASS.TEXT_MUTED}`}>Hover an option to preview</span>
+                  )}
+                </div>
+              </div>
+            );
+
+            // Keep the interactive rows nearest the handle so the cursor lands on
+            // them, not the preview: menu-above => preview on top; menu-below =>
+            // preview on the bottom. The header always hugs the list.
+            const placeAbove = menuAnchor.placement === 'above';
+            const sections = placeAbove
+              ? [previewEl, headerEl, listEl]
+              : [headerEl, listEl, previewEl];
+
+            return createPortal(
+              <div
+                style={{
+                  position: 'fixed',
+                  top: `${menuAnchor.top}px`,
+                  left: `${menuAnchor.left}px`,
+                  transform: placeAbove ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+                  zIndex: 9999,
+                }}
+                className="relative flex flex-col items-stretch gap-1 py-1.5 px-1 min-w-[210px] max-w-[300px] sm:max-w-[360px] text-left rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md shadow-2xl shadow-[0_0_30px_rgba(129,140,248,0.45)] pointer-events-auto font-sans normal-case"
+                onMouseEnter={cancelMenuClose}
+                onMouseLeave={scheduleMenuClose}
+              >
+                {/* Invisible hover bridge: extends the hit area to overlap the handle
+                    (above or below) so the cursor never crosses a dead gap. Behind the
+                    rows (-z-10) so it never intercepts their hovers/clicks. */}
+                <div aria-hidden="true" className="absolute -inset-4 -z-10" />
+                {sections.map((section, idx) => (
+                  <React.Fragment key={idx}>
+                    {idx > 0 && <div className="w-full border-t border-white/10 my-1" />}
+                    {section}
+                  </React.Fragment>
+                ))}
+              </div>,
+              document.body,
+            );
+          })()}
         </div>
       )}
     </div>
@@ -868,7 +1051,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       <Tooltip
         content={candidateTooltipContent}
         position="top"
-        visible={isHovered && hoverReducePath === null}
+        visible={isHovered && hoverReducePath === null && openMenuType === null}
         className="max-w-[300px] sm:max-w-[360px]"
       >
         {element}

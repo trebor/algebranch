@@ -2,7 +2,7 @@ import * as math from 'mathjs';
 import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, ensureNodeIds } from './tree';
 import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions } from './validator';
 import { HIGH_SCHOOL_IDENTITIES } from './rules';
-import { matchPattern, instantiatePattern, tryExpressAsPower } from './matcher';
+import { matchPattern, instantiatePattern, tryExpressAsPower, tryExpressAsPowerOptions } from './matcher';
 
 /**
  * Counts the total number of nodes in a mathematical syntax tree.
@@ -897,15 +897,19 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
       }
     } catch {}
 
-    // Try expressing perfect power constants (e.g. 9 -> 3^2, 8 -> 2^3)
+    // Try expressing perfect power constants (e.g. 9 -> 3^2, 8 -> 2^3, 64 -> 8^2, 4^3, 2^6)
     try {
       const node = getNodeByPath(eq, path);
-      const powerForm = tryExpressAsPower(node);
-      if (powerForm) {
+      const powerForms = tryExpressAsPowerOptions(node);
+      for (const powerForm of powerForms) {
         const newEq = replaceNodeAtPath(eq, path, powerForm);
         if (areEquationsEquivalent(eq, newEq)) {
           const exponent = ((powerForm as math.OperatorNode).args[1] as math.ConstantNode).value;
-          const label = exponent === 2 ? 'Express as Square' : 'Express as Cube';
+          const label = exponent === 2
+            ? 'Express as Square'
+            : exponent === 3
+              ? 'Express as Cube'
+              : `Express as ${exponent}th Power`;
           rawReductions.push({
             path,
             simplified: newEq,

@@ -8,6 +8,7 @@ interface TooltipProps {
   readonly children: React.ReactElement<any>;
   readonly position?: 'top' | 'bottom' | 'left' | 'right';
   readonly delay?: number; // Delay in milliseconds before showing
+  readonly hideDelay?: number; // Grace period (ms) before hiding, to bridge the trigger->popover gap
   readonly className?: string; // Optional popover class overrides
   readonly wrapperClassName?: string; // Optional wrapper container class overrides
   readonly style?: React.CSSProperties; // Optional wrapper container styles
@@ -30,6 +31,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   children,
   position = 'top',
   delay = 150, // Snappy 150ms default delay
+  hideDelay = 150, // Default hover-bridge grace before hiding
   className = '',
   wrapperClassName = '',
   style,
@@ -183,14 +185,14 @@ export const Tooltip: React.FC<TooltipProps> = ({
       setShowTimeoutId(null);
     }
     if (hideTimeoutId) return;
-    // Tiny 150ms hover-bridge gap to cross from trigger into tooltip popover safely
+    // Hover-bridge grace period to cross from trigger into tooltip popover safely
     const id = setTimeout(() => {
       setIsVisible(false);
       if (activeTooltipClose === closeSelf) {
         activeTooltipClose = null;
       }
       setHideTimeoutId(null);
-    }, 150);
+    }, hideDelay);
     setHideTimeoutId(id);
   };
 

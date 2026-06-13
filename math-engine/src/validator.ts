@@ -447,7 +447,11 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
 /**
  * Tests if two equations are equivalent using rigorous Interval Arithmetic.
  */
-export const areEquationsEquivalentInterval = (eq1: Equation, eq2: Equation, variables: string[]): boolean => {
+export const areEquationsEquivalentInterval = (
+  eq1: Equation,
+  eq2: Equation,
+  variables: string[]
+): 'equivalent' | 'different' | 'inconclusive' => {
   try {
     for (let run = 0; run < NUM_TEST_RUNS; run++) {
       const scope: Record<string, Interval> = {};
@@ -468,7 +472,7 @@ export const areEquationsEquivalentInterval = (eq1: Equation, eq2: Equation, var
         !isFinite(lhs2.min) || !isFinite(lhs2.max) ||
         !isFinite(rhs2.min) || !isFinite(rhs2.max)
       ) {
-        return false;
+        return 'inconclusive';
       }
 
       const d1 = subInterval(lhs1, rhs1);
@@ -476,12 +480,12 @@ export const areEquationsEquivalentInterval = (eq1: Equation, eq2: Equation, var
 
       const diff = subInterval(d1, d2);
       if (diff.min > INTERVAL_TOLERANCE || diff.max < -INTERVAL_TOLERANCE) {
-        return false;
+        return 'different';
       }
     }
-    return true;
+    return 'equivalent';
   } catch {
-    return false;
+    return 'inconclusive';
   }
 };
 
@@ -495,6 +499,18 @@ export const areEquationsEquivalent = (eq1: Equation, eq2: Equation): boolean =>
 
   if (variables.length === 0) {
     variables.push('x');
+  }
+
+  const isWithinFormula = (
+    eq1.lhs.toString() === eq2.lhs.toString() ||
+    eq1.rhs.toString() === eq2.rhs.toString()
+  );
+
+  if (isWithinFormula) {
+    const intervalResult = areEquationsEquivalentInterval(eq1, eq2, variables);
+    if (intervalResult === 'different') {
+      return false;
+    }
   }
 
   return areEquationsEquivalentPoint(eq1, eq2, variables);

@@ -12,7 +12,7 @@ import { HIGH_SCHOOL_IDENTITIES } from '../src/rules';
 import { matchPattern, instantiatePattern, tryExpressAsPower } from '../src/matcher';
 
 describe('Algebraic Identity Presets Integration Tests', () => {
-  const identityPresets = PRESET_LIST.filter(p => p.category === 'Algebraic Identities');
+  const identityPresets = PRESET_LIST.filter(p => p.tags?.includes('identity'));
 
   test('should verify at least one identity is offered for every identity preset equation', () => {
     expect(identityPresets.length).toBeGreaterThan(0);

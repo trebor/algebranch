@@ -152,10 +152,10 @@ export default function Home() {
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
   const activeScale = useMathScale(
     currentEq,
-    [targetPaths, reduciblePaths, sourcePath, isHydrated, isMathLoading],
+    [targetPaths, reduciblePaths, sourcePath, isHydrated],
     isMobile ? 8 : 24,
     0.4,
-    isMathLoading ? 1.6 : 2.8
+    2.8
   );
 
   useFLIPAnimation(activeScale.containerRef, currentEq);
@@ -951,7 +951,14 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2 origin-center">
-                  <div ref={activeScale.contentRef} className="flex items-center justify-center gap-[0.4em] sm:gap-[0.6em] lg:gap-[0.8em] flex-nowrap w-max">
+                  <div
+                    ref={activeScale.contentRef}
+                    style={{
+                      fontSize: `${activeScale.scale}em`,
+                      opacity: activeScale.isScaled ? 1 : 0,
+                    }}
+                    className="flex items-center justify-center gap-[0.4em] sm:gap-[0.6em] lg:gap-[0.8em] flex-nowrap w-max"
+                  >
                     {/* LHS Term Tree */}
                     <div className="flex justify-end min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
                       <EquationNode path="lhs" key={(currentEq?.lhs as unknown as { id?: string })?.id || 'lhs'} />

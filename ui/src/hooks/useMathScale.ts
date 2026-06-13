@@ -24,6 +24,7 @@ export function useMathScale(
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [isScaled, setIsScaled] = useState(false);
   
   // Track container dimensions to prevent ResizeObserver loops from sub-pixel child layout shifts
   const lastWidthRef = useRef(0);
@@ -35,16 +36,36 @@ export function useMathScale(
     if (!container || !content) return;
 
     const adjustScale = () => {
-      // 1. Reset scale temporarily to measure natural boundaries accurately
-      content.style.fontSize = '1em';
-
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
 
       if (containerWidth <= 0 || containerHeight <= 0) return;
 
-      const naturalWidth = content.scrollWidth;
-      const naturalHeight = content.scrollHeight;
+      // 1. Create a temporary off-screen clone to measure natural bounds at 1em
+      const clone = content.cloneNode(true) as HTMLDivElement;
+      
+      // Reset layout-affecting properties on the clone to guarantee a pure 1em natural measurement
+      clone.removeAttribute('id');
+      clone.style.position = 'absolute';
+      clone.style.visibility = 'hidden';
+      clone.style.pointerEvents = 'none';
+      clone.style.fontSize = '1em';
+      clone.style.width = 'max-content';
+      clone.style.height = 'max-content';
+      clone.style.transform = 'none';
+      clone.style.transition = 'none';
+
+      // Recursively strip transform and transition from descendants to avoid measurement pollution
+      const descendants = clone.querySelectorAll('*') as NodeListOf<HTMLElement>;
+      descendants.forEach((child) => {
+        child.style.transition = 'none';
+        child.style.transform = 'none';
+      });
+
+      container.appendChild(clone);
+      const naturalWidth = clone.scrollWidth;
+      const naturalHeight = clone.scrollHeight;
+      container.removeChild(clone);
 
       if (naturalWidth <= 0 || naturalHeight <= 0) return;
 
@@ -67,14 +88,12 @@ export function useMathScale(
       
       // 4. Apply scale to the DOM and react state
       setScale(clampedScale);
+      setIsScaled(true);
       content.style.fontSize = `${clampedScale}em`;
     };
 
     // Run adjustment immediately
     adjustScale();
-
-    // Schedule a settled measurement after animations/transitions complete to resolve race conditions
-    const settleTimer = setTimeout(adjustScale, 380);
 
     let observer: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined') {
@@ -95,17 +114,15 @@ export function useMathScale(
       window.addEventListener('resize', handleResize);
       return () => {
         window.removeEventListener('resize', handleResize);
-        clearTimeout(settleTimer);
       };
     }
 
     return () => {
-      clearTimeout(settleTimer);
       if (observer) {
         observer.disconnect();
       }
     };
   }, [currentEq, extraBuffer, minScale, maxScale, ...dependencies]);
 
-  return { containerRef, contentRef, scale };
+  return { containerRef, contentRef, scale, isScaled };
 }

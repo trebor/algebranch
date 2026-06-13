@@ -78,6 +78,13 @@ const STACK_CONFIG = {
   },
 } as const;
 
+// Hover behavior for the multi-option interaction menu (a self-contained popover,
+// deliberately NOT a Tooltip, so the global single-active-tooltip mechanism can't
+// steal it closed while the cursor traverses from the handle to the menu).
+const MENU_HOVER_CLOSE_GRACE_MS = 280; // grace period bridging handle <-> menu hover
+const MENU_ANCHOR_GAP_PX = 8;          // gap between the handle and the menu card
+const MENU_HALF_WIDTH_PX = 180;        // approx half-width, for horizontal edge clamping
+
 const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
   <svg
     viewBox="0 0 8 100"
@@ -187,16 +194,38 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const onboardingTargetPath = useAtomValue(onboardingTargetPathAtom);
   const onboardingReduceHandle = useAtomValue(onboardingReduceHandleAtom);
   const onboardingSubstitution = useAtomValue(onboardingSubstitutionAtom);
-  // A multi-option stack's hover tooltip doubles as an interactive menu. Clicking
-  // the handle pins it open; pinnedStackType is the stack currently pinned (or null).
-  const [pinnedStackType, setPinnedStackType] = React.useState<'reduce' | 'distribute' | 'identity' | 'substitute' | null>(null);
   // Which option's equation preview the open menu is showing, keyed by stack type
   // so a stale hover from one stack never leaks into another.
   const [hoveredOption, setHoveredOption] = React.useState<{ type: 'reduce' | 'distribute' | 'identity' | 'substitute'; index: number } | null>(null);
-  // After applying an option we force the handle's tooltip closed (its internal
-  // hover state can still be "open"), then re-enable on a deliberate re-hover so
-  // it doesn't immediately re-pop over the freshly-changed node.
-  const [suppressHandleTooltip, setSuppressHandleTooltip] = React.useState(false);
+  // The multi-option menu is a hover popover, not a Tooltip: openMenuType is the
+  // stack whose menu is open, menuAnchor is its on-screen anchor, and a grace timer
+  // bridges the hover gap between the handle and the menu.
+  const [openMenuType, setOpenMenuType] = React.useState<'reduce' | 'distribute' | 'identity' | 'substitute' | null>(null);
+  const [menuAnchor, setMenuAnchor] = React.useState<{ top: number; left: number; placement: 'above' | 'below' } | null>(null);
+  const menuCloseTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelMenuClose = React.useCallback(() => {
+    if (menuCloseTimer.current) {
+      clearTimeout(menuCloseTimer.current);
+      menuCloseTimer.current = null;
+    }
+  }, []);
+  const closeMenu = React.useCallback(() => {
+    cancelMenuClose();
+    setOpenMenuType(null);
+    setHoveredOption(null);
+    setHoverReducePath(null);
+    setHoverReduceIndex(null);
+  }, [cancelMenuClose, setHoverReducePath, setHoverReduceIndex]);
+  // Leaving the handle or the menu schedules a close after a grace period; moving
+  // onto the other one cancels it. This is the entire open/close model — no global
+  // tooltip state involved, so nothing external can dismiss the menu mid-traversal.
+  const scheduleMenuClose = React.useCallback(() => {
+    cancelMenuClose();
+    menuCloseTimer.current = setTimeout(closeMenu, MENU_HOVER_CLOSE_GRACE_MS);
+  }, [cancelMenuClose, closeMenu]);
+  React.useEffect(() => cancelMenuClose, [cancelMenuClose]);
+
   // The circle marks the reduce/substitution handle itself when one produces the
   // step's expected equation; otherwise it marks the node box (selection/
   // transposition steps).
@@ -734,27 +763,153 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             const config = STACK_CONFIG[stack.type];
             const IconComponent = config.icon;
             const single = stack.options.length === 1 ? stack.options[0] : null;
-            const isPinned = pinnedStackType === stack.type;
 
             const isStackMarked = isOnboardingActive && (
               (stack.type === 'substitute' && isSubHandleMarked) ||
               (stack.type !== 'substitute' && isHandleMarked && actions.length > 0 && actions[0].type === stack.type)
             );
 
-            // Row label colour matches the stack's accent.
+            const buttonClass = `flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group hover:scale-110 ${config.handleClass}`;
+            const buttonStyle: React.CSSProperties = {
+              width: `${layout.btnSize}em`,
+              height: `${layout.btnSize}em`,
+              borderRadius: inExponent ? '0.12em' : '9999px',
+            };
+            const buttonInner = (
+              <>
+                <span
+                  className={`absolute inset-0 group-hover:opacity-0 pointer-events-none ${
+                    !sourcePath ? 'animate-ping' : ''
+                  } ${config.pingClass}`}
+                  style={{ borderRadius: inExponent ? '0.12em' : '9999px' }}
+                />
+                {isStackMarked && (
+                  <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                )}
+                <IconComponent className={`h-[65%] w-[65%] ${config.iconClass}`} />
+                {!single && (
+                  <span
+                    className={`absolute flex items-center justify-center rounded-full font-bold border leading-none ${config.badgeClass}`}
+                    style={{
+                      fontSize: '0.3em',
+                      height: '1.5em',
+                      minWidth: '1.5em',
+                      padding: '0 0.2em',
+                      top: '-0.55em',
+                      right: '-0.55em',
+                    }}
+                  >
+                    {stack.options.length}
+                  </span>
+                )}
+              </>
+            );
+
+            // Single-option handle: a plain hover preview tooltip; click applies.
+            if (single) {
+              const singleTooltip = (
+                <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
+                  <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">{single.label}</span>
+                  {single.subLabel && (
+                    <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} select-none`}>{single.subLabel}</span>
+                  )}
+                  <div className="w-full border-t border-white/10 my-1" />
+                  <div className="flex items-center justify-center gap-1.5 flex-nowrap py-0.5 text-[1.3em]">
+                    <PreviewEquationNode path="lhs" customEquation={single.equation} />
+                    <span className="text-[1.3em] font-mono text-indigo-300 px-0.5 select-none">=</span>
+                    <PreviewEquationNode path="rhs" customEquation={single.equation} />
+                  </div>
+                </div>
+              );
+              return (
+                <Tooltip key={stack.type} content={singleTooltip} position="top" className="max-w-[300px] sm:max-w-[360px]">
+                  <button
+                    className={buttonClass}
+                    style={buttonStyle}
+                    onMouseEnter={(e) => {
+                      e.stopPropagation();
+                      if (stack.type !== 'substitute') {
+                        setHoverReducePath(path);
+                        setHoverReduceIndex(actions.indexOf(single.originalOption));
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.stopPropagation();
+                      if (stack.type !== 'substitute') {
+                        setHoverReducePath(null);
+                        setHoverReduceIndex(null);
+                      }
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      single.onApply();
+                    }}
+                  >
+                    {buttonInner}
+                  </button>
+                </Tooltip>
+              );
+            }
+
+            // Multi-option handle: opens a self-contained hover popover (rendered
+            // once, below). Deliberately not a Tooltip, so it's immune to the global
+            // single-active-tooltip churn that was dismissing it mid-traversal.
+            return (
+              <button
+                key={stack.type}
+                className={buttonClass}
+                style={buttonStyle}
+                onMouseEnter={(e) => {
+                  e.stopPropagation();
+                  cancelMenuClose();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const left = Math.max(
+                    MENU_HALF_WIDTH_PX + 8,
+                    Math.min(rect.left + rect.width / 2, window.innerWidth - MENU_HALF_WIDTH_PX - 8),
+                  );
+                  // Handle in the top half of the viewport => open the menu downward
+                  // (and vice-versa) so it always grows into the roomier half.
+                  const placement = rect.top + rect.height / 2 < window.innerHeight / 2 ? 'below' : 'above';
+                  setMenuAnchor({
+                    top: placement === 'below' ? rect.bottom + MENU_ANCHOR_GAP_PX : rect.top - MENU_ANCHOR_GAP_PX,
+                    left,
+                    placement,
+                  });
+                  setOpenMenuType(stack.type);
+                  setHoveredOption(null);
+                  if (stack.type !== 'substitute') {
+                    setHoverReducePath(path);
+                    setHoverReduceIndex(null);
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.stopPropagation();
+                  scheduleMenuClose();
+                }}
+                onClick={(e) => {
+                  // Selection happens in the menu; clicking the handle does nothing.
+                  e.stopPropagation();
+                }}
+              >
+                {buttonInner}
+              </button>
+            );
+          })}
+          {openMenuType && menuAnchor && typeof document !== 'undefined' && (() => {
+            const stack = interactionStacks.find((s) => s.type === openMenuType);
+            if (!stack || stack.options.length < 2) return null;
+            const config = STACK_CONFIG[stack.type];
             const optionLabelClass = stack.type === 'substitute' ? THEME_GLASS.CHOOSER_OPTION_SUBSTITUTE :
               stack.type === 'reduce' ? THEME_GLASS.CHOOSER_OPTION_SIMPLIFY :
               stack.type === 'distribute' ? THEME_GLASS.CHOOSER_OPTION_DISTRIBUTE :
               THEME_GLASS.CHOOSER_OPTION_IDENTITY;
-
-            // The preview below the list tracks the hovered row; before any hover
-            // it stays empty (with a hint) so it never implies a one-click default.
+            // The preview tracks the hovered row; before any hover it stays empty
+            // (with a hint) so it never implies a one-click default.
             const previewOption = hoveredOption && hoveredOption.type === stack.type
               ? stack.options[hoveredOption.index]
               : null;
-
-            // Render one preview row, reused by both the invisible sizers (which
-            // reserve exact space) and the visible layer.
+            // One preview row, reused by the invisible sizers (which reserve exact
+            // space) and the visible layer.
             const renderPreviewRow = (eq: any, muted: boolean) => (
               <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
                 <PreviewEquationNode path="lhs" customEquation={eq} />
@@ -762,187 +917,95 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 <PreviewEquationNode path="rhs" customEquation={eq} />
               </div>
             );
-
-            const tooltipContent = single ? (
-              <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
-                <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">{single.label}</span>
-                {single.subLabel && (
-                  <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} select-none`}>{single.subLabel}</span>
-                )}
-                <div className="w-full border-t border-white/10 my-1" />
-                <div className="flex items-center justify-center gap-1.5 flex-nowrap py-0.5 text-[1.3em]">
-                  <PreviewEquationNode path="lhs" customEquation={single.equation} />
-                  <span className="text-[1.3em] font-mono text-indigo-300 px-0.5 select-none">=</span>
-                  <PreviewEquationNode path="rhs" customEquation={single.equation} />
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-stretch gap-1 py-1.5 px-1 min-w-[210px] max-w-[280px] sm:max-w-[340px] text-left">
-                <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-85 px-1.5">
-                  {stack.options.length} {config.pluralLabel} Available
-                </span>
-                <div className="w-full border-t border-white/10 my-1" />
-                <div
-                  className="flex flex-col w-full divide-y divide-white/5"
-                  onMouseLeave={() => {
-                    setHoveredOption(null);
-                    if (stack.type !== 'substitute') {
-                      setHoverReducePath(null);
-                      setHoverReduceIndex(null);
-                    }
-                  }}
-                >
-                  {stack.options.map((opt, i) => (
-                    <button
-                      key={i}
-                      className={`w-full text-left px-1.5 py-1.5 flex flex-col gap-0.5 cursor-pointer ${THEME_GLASS.LIST_ITEM_HOVER}`}
-                      onMouseEnter={() => {
-                        setHoveredOption({ type: stack.type, index: i });
-                        if (stack.type !== 'substitute') {
-                          setHoverReducePath(path);
-                          setHoverReduceIndex(actions.indexOf(opt.originalOption));
-                        }
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        opt.onApply();
-                        setHoverReducePath(null);
-                        setHoverReduceIndex(null);
-                        setHoveredOption(null);
-                        setPinnedStackType(null);
-                        setSuppressHandleTooltip(true);
-                      }}
-                    >
-                      <span className={`whitespace-nowrap leading-snug ${optionLabelClass}`}>{opt.label}</span>
-                      {opt.subLabel && <span className={`text-[10px] leading-snug ${THEME_GLASS.TEXT_MUTED}`}>{opt.subLabel}</span>}
-                    </button>
-                  ))}
-                </div>
-                <div className="w-full border-t border-white/10 my-1" />
-                <div className="grid place-items-center w-full py-0.5">
-                  {/* Invisible sizers: every option stacked in the same grid cell so
-                      the cell reserves the exact rendered size of the LARGEST one,
-                      eliminating any layout jump regardless of which row is hovered. */}
-                  {stack.options.map((opt, i) => (
-                    <div key={i} aria-hidden="true" className="invisible col-start-1 row-start-1">
-                      {renderPreviewRow(opt.equation, true)}
-                    </div>
-                  ))}
-                  {/* Visible layer: the hovered option's preview, or the neutral hint. */}
-                  <div className="col-start-1 row-start-1 flex items-center justify-center">
-                    {previewOption ? (
-                      renderPreviewRow(previewOption.equation, false)
-                    ) : (
-                      <span className={`text-[10px] italic select-none ${THEME_GLASS.TEXT_MUTED}`}>
-                        {isPinned ? 'Hover an option to preview' : 'Click to choose an option'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
+            const headerEl = (
+              <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-85 px-1.5">
+                {stack.options.length} {config.pluralLabel} Available
+              </span>
             );
-
-            return (
-              <Tooltip
-                key={stack.type}
-                content={tooltipContent}
-                position="top"
-                visible={single ? undefined : isPinned ? true : suppressHandleTooltip ? false : undefined}
-                className={`max-w-[300px] sm:max-w-[360px]${single ? '' : ' pointer-events-auto'}`}
+            const listEl = (
+              <div
+                className="flex flex-col w-full divide-y divide-white/5"
+                onMouseLeave={() => setHoveredOption(null)}
               >
-                <button
-                  className={`flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group hover:scale-110 ${config.handleClass}`}
-                  style={{
-                    width: `${layout.btnSize}em`,
-                    height: `${layout.btnSize}em`,
-                    borderRadius: inExponent ? '0.12em' : '9999px',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.stopPropagation();
-                    if (single) {
+                {stack.options.map((opt, i) => (
+                  <button
+                    key={i}
+                    className={`w-full text-left px-1.5 py-1.5 flex flex-col gap-0.5 cursor-pointer ${THEME_GLASS.LIST_ITEM_HOVER}`}
+                    onMouseEnter={() => {
+                      setHoveredOption({ type: stack.type, index: i });
                       if (stack.type !== 'substitute') {
                         setHoverReducePath(path);
-                        setHoverReduceIndex(actions.indexOf(single.originalOption));
+                        setHoverReduceIndex(actions.indexOf(opt.originalOption));
                       }
-                    } else {
-                      // Re-entering a multi-option handle re-enables the tooltip and
-                      // resets any stale preview so the menu reopens on the neutral
-                      // hint. Mark this node's path (not null) so the node's own
-                      // "Select Term" candidate tooltip stays suppressed while the
-                      // handle/menu is being used.
-                      setSuppressHandleTooltip(false);
-                      setHoveredOption(null);
-                      if (stack.type !== 'substitute') {
-                        setHoverReducePath(path);
-                        setHoverReduceIndex(null);
-                      }
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.stopPropagation();
-                    if (stack.type !== 'substitute') {
-                      setHoverReducePath(null);
-                      setHoverReduceIndex(null);
-                    }
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (single) {
-                      single.onApply();
-                      return;
-                    }
-                    // Pin (or unpin) this stack's interactive menu. Returning false
-                    // tells the Tooltip not to auto-hide on click so it stays open.
-                    setPinnedStackType((prev) => (prev === stack.type ? null : stack.type));
-                    return false;
-                  }}
-                >
-                  <span 
-                    className={`absolute inset-0 group-hover:opacity-0 pointer-events-none ${
-                      !sourcePath ? 'animate-ping' : ''
-                    } ${config.pingClass}`}
-                    style={{
-                      borderRadius: inExponent ? '0.12em' : '9999px',
                     }}
-                  />
-                  {isStackMarked && (
-                    <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
-                  )}
-                  <IconComponent className={`h-[65%] w-[65%] ${config.iconClass}`} />
-                  {!single && (
-                    <span
-                      className={`absolute flex items-center justify-center rounded-full font-bold border leading-none ${config.badgeClass}`}
-                      style={{
-                        fontSize: '0.3em',
-                        height: '1.5em',
-                        minWidth: '1.5em',
-                        padding: '0 0.2em',
-                        top: '-0.55em',
-                        right: '-0.55em',
-                      }}
-                    >
-                      {stack.options.length}
-                    </span>
-                  )}
-                </button>
-              </Tooltip>
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      opt.onApply();
+                      closeMenu();
+                    }}
+                  >
+                    <span className={`whitespace-nowrap leading-snug ${optionLabelClass}`}>{opt.label}</span>
+                    {opt.subLabel && <span className={`text-[10px] leading-snug ${THEME_GLASS.TEXT_MUTED}`}>{opt.subLabel}</span>}
+                  </button>
+                ))}
+              </div>
             );
-          })}
-          {pinnedStackType && typeof document !== 'undefined' && createPortal(
-            // Outside-click catcher: dismisses the pinned menu. Sits below the
-            // tooltip's own portal (z-9999) so menu rows stay clickable.
-            <div
-              className="fixed inset-0 z-[9998] cursor-default"
-              onClick={(e) => {
-                e.stopPropagation();
-                setPinnedStackType(null);
-                setHoveredOption(null);
-                setHoverReducePath(null);
-                setHoverReduceIndex(null);
-              }}
-            />,
-            document.body,
-          )}
+            const previewEl = (
+              <div className="grid place-items-center w-full py-0.5">
+                {/* Invisible sizers: every option stacked in the same grid cell so
+                    the cell reserves the exact rendered size of the LARGEST one,
+                    eliminating any layout jump regardless of which row is hovered. */}
+                {stack.options.map((opt, i) => (
+                  <div key={i} aria-hidden="true" className="invisible col-start-1 row-start-1">
+                    {renderPreviewRow(opt.equation, true)}
+                  </div>
+                ))}
+                {/* Visible layer: the hovered option's preview, or the neutral hint. */}
+                <div className="col-start-1 row-start-1 flex items-center justify-center">
+                  {previewOption ? (
+                    renderPreviewRow(previewOption.equation, false)
+                  ) : (
+                    <span className={`text-[10px] italic select-none ${THEME_GLASS.TEXT_MUTED}`}>Hover an option to preview</span>
+                  )}
+                </div>
+              </div>
+            );
+
+            // Keep the interactive rows nearest the handle so the cursor lands on
+            // them, not the preview: menu-above => preview on top; menu-below =>
+            // preview on the bottom. The header always hugs the list.
+            const placeAbove = menuAnchor.placement === 'above';
+            const sections = placeAbove
+              ? [previewEl, headerEl, listEl]
+              : [headerEl, listEl, previewEl];
+
+            return createPortal(
+              <div
+                style={{
+                  position: 'fixed',
+                  top: `${menuAnchor.top}px`,
+                  left: `${menuAnchor.left}px`,
+                  transform: placeAbove ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+                  zIndex: 9999,
+                }}
+                className="relative flex flex-col items-stretch gap-1 py-1.5 px-1 min-w-[210px] max-w-[300px] sm:max-w-[360px] text-left rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md shadow-2xl shadow-[0_0_30px_rgba(129,140,248,0.45)] pointer-events-auto font-sans normal-case"
+                onMouseEnter={cancelMenuClose}
+                onMouseLeave={scheduleMenuClose}
+              >
+                {/* Invisible hover bridge: extends the hit area to overlap the handle
+                    (above or below) so the cursor never crosses a dead gap. Behind the
+                    rows (-z-10) so it never intercepts their hovers/clicks. */}
+                <div aria-hidden="true" className="absolute -inset-4 -z-10" />
+                {sections.map((section, idx) => (
+                  <React.Fragment key={idx}>
+                    {idx > 0 && <div className="w-full border-t border-white/10 my-1" />}
+                    {section}
+                  </React.Fragment>
+                ))}
+              </div>,
+              document.body,
+            );
+          })()}
         </div>
       )}
     </div>
@@ -988,7 +1051,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       <Tooltip
         content={candidateTooltipContent}
         position="top"
-        visible={isHovered && hoverReducePath === null && pinnedStackType === null}
+        visible={isHovered && hoverReducePath === null && openMenuType === null}
         className="max-w-[300px] sm:max-w-[360px]"
       >
         {element}

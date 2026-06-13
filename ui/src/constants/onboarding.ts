@@ -209,7 +209,7 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
         description: 'Since x is divided by 3, we can cancel it out by multiplying both sides of the equation by 3. We call this a Global Operation.',
         highlightPath: null, // no term highlighted
         nextEquation: 'x / 3 * 3 = 4 * 3',
-        stepLabel: 'Global × 3',
+        stepLabel: 'Global ⋅ 3',
         globalOp: { type: 'mul', term: '3' }
       },
       {

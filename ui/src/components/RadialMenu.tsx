@@ -11,9 +11,10 @@ import {
   onboardingGlobalOpAtom,
 } from '../store/equation';
 import { trackEvent } from '../utils/analytics';
-import { ArrowLeftRight, Plus, Minus, X, Divide } from 'lucide-react';
+import { ArrowLeftRight, Plus, Minus, Divide } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { THEME_GLASS } from '../constants/theme';
+import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
 
 /**
  * Global operation types available in the radial menu.
@@ -43,7 +44,7 @@ const PETALS: RadialPetal[] = [
   { icon: <span className="text-sm font-bold">xⁿ</span>, label: 'xⁿ', tooltip: 'Raise both sides to nth power', action: { type: 'power', power: 2 }, color: 'text-teal-400' },
   { icon: <Plus size={18} />, label: '+', tooltip: 'Add term to both sides', action: { type: 'add' }, color: 'text-indigo-400' },
   { icon: <Minus size={18} />, label: '−', tooltip: 'Subtract term from both sides', action: { type: 'sub' }, color: 'text-violet-400' },
-  { icon: <X size={16} />, label: '×', tooltip: 'Multiply both sides by term', action: { type: 'mul' }, color: 'text-rose-400' },
+  { icon: <span className="text-xl font-bold leading-none">{MULTIPLY_SYMBOL}</span>, label: MULTIPLY_SYMBOL, tooltip: 'Multiply both sides by term', action: { type: 'mul' }, color: 'text-rose-400' },
   { icon: <Divide size={18} />, label: '÷', tooltip: 'Divide both sides by term', action: { type: 'div' }, color: 'text-pink-400' },
   { icon: <span className="text-sm font-bold">ⁿ√</span>, label: 'ⁿ√', tooltip: 'Take nth root of both sides', action: { type: 'root', power: 2 }, color: 'text-emerald-400' },
 ];
@@ -287,7 +288,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
               );
             })}
 
-            {/* Term Input (appears when +, −, ×, ÷ is tapped) */}
+            {/* Term Input (appears when +, −, ⋅, ÷ is tapped) */}
             <AnimatePresence>
               {termInputAction && (
                 <motion.form
@@ -305,7 +306,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                       ) : termInputAction.type === 'sub' ? (
                         '−'
                       ) : termInputAction.type === 'mul' ? (
-                        '×'
+                        MULTIPLY_SYMBOL
                       ) : termInputAction.type === 'div' ? (
                         '÷'
                       ) : termInputAction.type === 'power' ? (

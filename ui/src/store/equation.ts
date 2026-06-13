@@ -5,6 +5,7 @@ import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPat
 import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, SubstitutionFact, SubstitutionOption, computeGraphData, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
 import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
+import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
 
 // Global Initial Value Constants
@@ -978,7 +979,7 @@ export const applyGlobalOpAtom = atom(
     } else if (type === 'sqrt' || type === 'root') {
       label = effectivePower === 2 ? 'Global Sqrt' : `Global ${effectivePower}-Root`;
     } else {
-      const sym = type === 'add' ? '+' : type === 'sub' ? '-' : type === 'mul' ? '×' : '÷';
+      const sym = type === 'add' ? '+' : type === 'sub' ? '-' : type === 'mul' ? MULTIPLY_SYMBOL : '÷';
       label = `Global ${sym} ${term?.trim() ?? ''}`;
     }
 

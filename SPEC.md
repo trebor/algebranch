@@ -6,7 +6,7 @@ Algebranch is an interactive algebraic manipulation system designed to allow use
 ## 2. Directory Structure & Modularity
 To ensure high testability and future portability, the project will be strictly divided into two distinct subdirectories:
 *   `/math-engine`: A pure, portable TypeScript/JavaScript library containing the mathematical logic, parsing, and validation routines. It must have zero dependencies on the DOM, React, or Next.js.
-*   `/ui`: The Next.js frontend application that imports the math engine. It handles all user interactions, visual rendering, bounding box layouts, and application state.
+*   `/ui`: The Next.js frontend application. It handles all user interactions, visual rendering, bounding box layouts, and application state. It imports only the engine's lightweight client surface for local rendering and delegates the proprietary solving/validation to a serverless API route (see §4.3).
 
 ## 3. Technology Stack
 **UI Layer (`/ui`)**
@@ -29,6 +29,13 @@ Instead of relying on computationally heavy symbolic implication testing, the en
 *   **Evaluator:** This testing will be implemented using a custom interval arithmetic engine. While interval evaluation can only prove that an equation is false, it offers massive benefits in flexibility and generality.
 *   **Performance Target:** The validation engine must be capable of checking dozens of locations at once in real time (taking around 10 ms per location check) to ensure no UI lag during user interactions. 
 
+### 4.3 Deployment & Execution Boundary
+The math engine is a pure, portable library, but the deployed application does **not** run the proprietary solving/validation in the browser. To protect the algorithms, the heavy engine entry points (`generateValidMoves`, `getReducibleOptions`, `areEquationsEquivalent`, `autoSimplify`) execute **server-side** inside a Next.js serverless route at `ui/src/app/api/math/route.ts` (`POST /api/math`). At runtime the client:
+*   imports only the lightweight engine surface (parsing, formatting, serialization, AST traversal) via the `math-engine-client` path alias for local rendering, and
+*   posts the serialized AST (`SerializedEquation`) to `/api/math`, receiving back the active/candidate, reducible, and target paths with stable node IDs.
+
+The ~10 ms-per-location target in §4.2 is the engine's compute budget for each identity check on the server. Client-side node IDs are preserved across the JSON boundary so the UI's FLIP reflow animations stay stable.
+
 ## 5. Core Architecture: The UI Layer (`/ui`)
 
 ### 5.1 Rendering Strategy
@@ -45,7 +52,7 @@ To ensure equations fit perfectly inside their container and are highly readable
 ### 5.3 The "Two-Click" Interaction Model
 The primary method of manipulating the equation relies on the recursive structure to avoid standard drag-based selection, which can be time-consuming:
 1.  **Click to Select:** The user clicks or hovers over a node in the rendered expression tree. To select larger parent terms, the user may click a symbol and drag up or down to indicate how large a term to select.
-2.  **System Hinting:** Upon selection, the UI queries the math engine to run interval-based identity testing to check in real time which places the term can be correctly inserted. 
+2.  **System Hinting:** Upon selection, the UI posts the equation's serialized AST to the `/api/math` route (see §4.3), which runs interval-based identity testing server-side to determine which places the term can be correctly inserted. 
 3.  **Visual Feedback:** The UI provides dragging hints by making only locations which produce a correct result available for selection. 
 4.  **Click to Place:** The user clicks one of the highlighted destination nodes, triggering a state update that modifies the expression tree and re-renders the DOM.
 

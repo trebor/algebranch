@@ -3,6 +3,7 @@ import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPa
 import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions } from './validator';
 import { HIGH_SCHOOL_IDENTITIES } from './rules';
 import { matchPattern, instantiatePattern, tryExpressAsPower, tryExpressAsPowerOptions } from './matcher';
+import { tryFactor } from './factor';
 
 /**
  * Counts the total number of nodes in a mathematical syntax tree.
@@ -893,6 +894,20 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
               label: rule.name
             });
           }
+        }
+      }
+    } catch {}
+
+    // Try factoring univariate integer polynomials (GCF extraction, quadratics).
+    // Each candidate is validated against the source before being offered.
+    try {
+      const node = getNodeByPath(eq, path);
+      const clean = (s: string) => s.replace(/[\s()]/g, '');
+      for (const factored of tryFactor(node)) {
+        const newEq = replaceNodeAtPath(eq, path, factored.node);
+        if (clean(factored.node.toString()) === clean(node.toString())) continue; // no-op
+        if (areEquationsEquivalent(eq, newEq)) {
+          rawReductions.push({ path, simplified: newEq, type: 'identity', label: factored.label });
         }
       }
     } catch {}

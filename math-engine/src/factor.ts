@@ -98,6 +98,48 @@ const monicQuadratic = (coeffs: number[], v: string): FactorOption | null => {
 };
 
 /**
+ * Leading-coefficient quadratic factoring via the discriminant:
+ * `a*v^2 + b*v + c -> (m*v + p)(n*v + q)` when the roots are rational.
+ * Each root r = num/den becomes a factor `(den*v - num)`. Forms with a common
+ * integer content (e.g. `2v^2 + 4v + 2`) are intentionally rejected here by the
+ * downstream equivalence check — GCF extraction is the right move for those.
+ */
+const generalQuadratic = (coeffs: number[], v: string): FactorOption | null => {
+  if (coeffs.length !== 3) return null;
+  const c = coeffs[0];
+  const b = coeffs[1];
+  const a = coeffs[2];
+  if (a === 1 || a === 0) return null; // monic handled separately
+  if (c === 0) return null; // a*v^2 + b*v = v(a*v + b) is handled by GCF
+  if (Math.abs(a) > MAX_CONST || Math.abs(c) > MAX_CONST) return null;
+
+  const disc = b * b - 4 * a * c;
+  if (disc < 0) return null;
+  const root = Math.sqrt(disc);
+  if (!Number.isInteger(root)) return null; // irrational roots -> no clean factoring
+
+  // r = num/den, reduced with a positive denominator -> factor (den*v - num)
+  const factorFor = (num: number, den: number): { d: number; n: number } => {
+    let g = gcd2(num, den) || 1;
+    let n = num / g;
+    let d = den / g;
+    if (d < 0) {
+      d = -d;
+      n = -n;
+    }
+    return { d, n };
+  };
+  const f1 = factorFor(-b + root, 2 * a);
+  const f2 = factorFor(-b - root, 2 * a);
+
+  const term = ({ d, n }: { d: number; n: number }): string => {
+    const xPart = d === 1 ? v : `${d}*${v}`;
+    return n < 0 ? `(${xPart} + ${-n})` : `(${xPart} - ${n})`;
+  };
+  return { node: math.parse(`${term(f1)} * ${term(f2)}`), label: 'Factor' };
+};
+
+/**
  * Returns candidate factored forms of a node. Empty unless the node is a
  * univariate polynomial with integer coefficients. Candidates are not yet
  * equivalence-checked — callers must validate before offering them.
@@ -120,7 +162,9 @@ export const tryFactor = (node: math.MathNode): FactorOption[] => {
   const options: FactorOption[] = [];
   const gcf = gcfFactor(coeffs, v);
   if (gcf) options.push(gcf);
-  const quad = monicQuadratic(coeffs, v);
-  if (quad) options.push(quad);
+  const monic = monicQuadratic(coeffs, v);
+  if (monic) options.push(monic);
+  const general = generalQuadratic(coeffs, v);
+  if (general) options.push(general);
   return options;
 };

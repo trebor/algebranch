@@ -55,6 +55,22 @@ const RAW_RULES: RawRule[] = [
     description: 'Factors a trinomial of the form a^2 - 2ab + b^2 into a squared difference.',
   },
   {
+    id: 'diff_cubes_factor',
+    name: 'Factor Difference of Cubes',
+    category: 'Polynomials & Factoring',
+    sourcePatternStr: '_A^3 - _B^3',
+    targetPatternStr: '(_A - _B) * (_A^2 + _A * _B + _B^2)',
+    description: 'Factors a^3 - b^3 into (a - b)(a^2 + ab + b^2).',
+  },
+  {
+    id: 'sum_cubes_factor',
+    name: 'Factor Sum of Cubes',
+    category: 'Polynomials & Factoring',
+    sourcePatternStr: '_A^3 + _B^3',
+    targetPatternStr: '(_A + _B) * (_A^2 - _A * _B + _B^2)',
+    description: 'Factors a^3 + b^3 into (a + b)(a^2 - ab + b^2).',
+  },
+  {
     id: 'perfect_square_expand_plus',
     name: 'Expand Binomial Square (Sum)',
     category: 'Polynomials & Factoring',

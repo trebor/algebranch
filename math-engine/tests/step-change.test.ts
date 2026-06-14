@@ -117,4 +117,30 @@ describe('describeReduction — in-place rewrites', () => {
     expect(change.kind).toBe('rewrite');
     expect(['evaluate', 'simplify']).toContain((change as any).op);
   });
+  it('describes algebraic identities with natural texts', () => {
+    const e = eq('x^2 + 5 * x + 6 = 0');
+    const options = getReducibleOptions(e);
+    const factorOption = Object.values(options).flat().find(o => o.label === 'Factor');
+    expect(factorOption).toBeDefined();
+    const change = describeReduction(e, factorOption!);
+    expect(change).toMatchObject({
+      kind: 'rewrite',
+      op: 'identity',
+      text: 'factor x ^ 2 + 5 * x + 6 → (x + 2) * (x + 3)'
+    });
+  });
+
+  it('describes factor out GCF identity naturally', () => {
+    const e = eq('6 * x^2 + 9 * x = 0');
+    const options = getReducibleOptions(e);
+    const gcfOption = Object.values(options).flat().find(o => o.label && o.label.startsWith('Factor out'));
+    expect(gcfOption).toBeDefined();
+    const change = describeReduction(e, gcfOption!);
+    expect(change).toMatchObject({
+      kind: 'rewrite',
+      op: 'identity',
+      text: 'factor out 3x from 6 * x ^ 2 + 9 * x → 3 * x * (2 * x + 3)'
+    });
+  });
 });
+

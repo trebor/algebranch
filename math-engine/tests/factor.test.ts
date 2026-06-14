@@ -112,6 +112,23 @@ describe('tryFactor — guards', () => {
   });
 });
 
+describe('partial-GCF suppression inside a larger sum', () => {
+  const labelsFor = (lhs: string): string[] =>
+    Object.values(getReducibleOptions(parseEquation(`${lhs} = 0`)))
+      .flat()
+      .map((o) => o.label ?? '');
+
+  it('does not offer a partial "Factor out" on x^2 + 5x + 6 (would be x(x+5)+6)', () => {
+    const labels = labelsFor('x^2 + 5*x + 6');
+    expect(labels.some((l) => l.startsWith('Factor out'))).toBe(false);
+    expect(labels).toContain('Factor'); // the full (x+2)(x+3) still offered
+  });
+
+  it('still offers whole-expression GCF for 6x^2 + 9x', () => {
+    expect(labelsFor('6*x^2 + 9*x').some((l) => l.startsWith('Factor out'))).toBe(true);
+  });
+});
+
 describe('getReducibleOptions integration', () => {
   it('offers a validated factoring of x^2 + 5x + 6 = 0', () => {
     const forms = factoredForms('x^2 + 5*x + 6');

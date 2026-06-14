@@ -113,6 +113,69 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
   }
   if (option.type === 'identity') {
     const label = option.label ?? 'apply identity';
+    let before = '';
+    let afterNode: math.MathNode | null = null;
+    try {
+      before = nodeToString(getNodeByPath(eq, option.path));
+      afterNode = getNodeByPath(option.simplified, option.path);
+    } catch {
+      /* ignore and fall back to generic */
+    }
+    const after = nodeToString(afterNode);
+
+    if (before && after) {
+      const lowerLabel = label.toLowerCase();
+      if (lowerLabel.startsWith('factor out ')) {
+        const term = label.slice(11);
+        return {
+          kind: 'rewrite',
+          op: 'identity',
+          detail: label,
+          text: `factor out ${term} from ${before} → ${after}`,
+        };
+      }
+      if (lowerLabel === 'factor') {
+        return {
+          kind: 'rewrite',
+          op: 'identity',
+          detail: label,
+          text: `factor ${before} → ${after}`,
+        };
+      }
+      if (lowerLabel.startsWith('factor ')) {
+        const factorType = label.slice(7).toLowerCase();
+        return {
+          kind: 'rewrite',
+          op: 'identity',
+          detail: label,
+          text: `factor ${factorType}: ${before} → ${after}`,
+        };
+      }
+      if (lowerLabel.startsWith('express as ')) {
+        const powerType = label.slice(11).toLowerCase();
+        return {
+          kind: 'rewrite',
+          op: 'identity',
+          detail: label,
+          text: `express ${before} as ${powerType}: ${after}`,
+        };
+      }
+      if (lowerLabel === 'expand power') {
+        return {
+          kind: 'rewrite',
+          op: 'identity',
+          detail: label,
+          text: `expand power ${before} → ${after}`,
+        };
+      }
+      return {
+        kind: 'rewrite',
+        op: 'identity',
+        detail: label,
+        text: `apply ${lowerLabel}: ${before} → ${after}`,
+      };
+    }
+
     return { kind: 'rewrite', op: 'identity', detail: option.label, text: label.toLowerCase() };
   }
 

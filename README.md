@@ -28,27 +28,29 @@ graph TD
 *   **`/math-engine`**: A pure, portable, and zero-dependency TypeScript mathematical reasoning library. It contains the interval arithmetic evaluator, point-evaluation identity tester, algebraic simplification/distribution rules, and AST serializers.
 *   **`/ui`**: A premium Next.js frontend application powered by Jotai atomic state management, custom curved SVG branching timeline canvases, and a JS-based nested FLIP layout transition reflow engine.
 
+> For the authoritative architecture — data representation, validation mechanism, and the execution boundary — see **[SPEC.md §2–§5](SPEC.md)**.
+
 ---
 
-## 🔒 Vercel Serverless Security: IP Protection
+## 🔒 Serverless IP Protection
 
-To protect the secret, proprietary algebraic reasoning algorithms of the Algebranch engine, the application is deployed under a **full-stack client/server decoupling**:
+To keep the proprietary algebraic reasoning algorithms off the browser, all solving and validation run server-side: the client posts the serialized AST (`SerializedEquation`) to a Next.js serverless route (`POST /api/math`) and renders the candidate/target/reducible paths it returns. Node IDs are preserved across the boundary so the 350ms FLIP reflows stay stable.
 
-1.  **Client-Safe Code Isolation**: The frontend uses standard compiler path mappings (`tsconfig.json`) to bind imports strictly to `ui/src/math-engine/client.ts`. This lightweight presentation module contains absolutely no proprietary algorithms, preventing static builders (Vercel/Webpack) from packing your intellectual property into client-side browser bundles.
-2.  **API Gateway Routing**: All proprietary interval arithmetic evaluations, equivalence check points, and simplification matches run securely on the Vercel backend inside a secure Next.js Serverless Function API route (`/ui/src/app/api/math/route.ts`).
-3.  **AST JSON Serialization**: The client and server exchange full AST structures as structured JSON objects (`SerializedEquation`). By passing the AST with client-side node IDs intact, the backend performs validations on the matching structure and returns target paths with stable IDs, preserving the premium **350ms FLIP transition reflows** across network boundaries!
+> **[SPEC.md §4.3 (Deployment & Execution Boundary)](SPEC.md) is the canonical description** of the client/server split, the `math-engine-client` path alias, and which engine functions run where. This section is a summary.
 
 ---
 
 ## 🎓 The Nomenclature Framework
 
-To ensure complete semantic consistency between the UI elements, Jotai state, and the core math engine, Algebranch defines a strict **Five-State Nomenclature**:
+Algebranch defines a strict **five-state nomenclature** for every node in the expression tree, kept consistent across UI elements, Jotai state, and the core math engine. **[SPEC.md §8 (Nomenclature Framework)](SPEC.md) is the canonical definition**; the state names, semantics, and `THEME_GLASS` token names below are a summary that must match it exactly:
 
-1.  **Active**: Clickable mathematical terms possessing valid algebraic moves in the current equation context.
-2.  **Source**: The selected term undergoing transposition. (Maximum of one active source at a time).
-3.  **Target**: Glowing emerald drop slots representing mathematically sound destination locations for the active **Source**.
-4.  **Static**: Inert, non-interactive terms styled in opaque slate/gray to form the visual landscape of the equation.
-5.  **Simplify**: Interactive amber dots representing constant folding (`13 - 5` $\rightarrow$ `8`), fraction simplification (`6 / 2` $\rightarrow$ `3`), redundant terms (`+ 0`, `* 1`, `(x) -> x`), or distribution matches (`2*(x + 3)` $\rightarrow$ `2*x + 6`).
+1.  **Candidate (Movable)** (`THEME_GLASS.CARD_CANDIDATE_SCAN`): Interactive terms that can be repositioned to another node in the AST (tracked client-side by `candidatePathsAtom`).
+2.  **Source** (`THEME_GLASS.SOURCE`): The single selected Candidate currently undergoing transposition (at most one at a time).
+3.  **Target (Destination)** (`THEME_GLASS.TARGET`): Emerald drop slots representing mathematically sound destinations for the active **Source**.
+4.  **Static (Inert)** (`THEME_GLASS.STATIC`): Inert, non-interactive terms forming the stable visual landscape of the equation.
+5.  **Simplify / Reducible (Transformable)** (`THEME_GLASS.CARD_CANDIDATE_SCAN`): Nodes offering constant folding (`13 - 5` $\rightarrow$ `8`), fraction simplification (`6 / 2` $\rightarrow$ `3`), redundant-term removal (`+ 0`, `* 1`, `(x) -> x`), or distribution (`2*(x + 3)` $\rightarrow$ `2*x + 6`), surfaced via amber handles.
+
+> See **[SPEC.md §8](SPEC.md)** for the full semantics and visual specification of each state.
 
 ---
 
@@ -73,7 +75,7 @@ npm run dev
 The application will run locally at [http://localhost:3000](http://localhost:3000).
 
 ### 3. Run the Math-Engine Test Suite
-Algebranch is strictly validated via automated unit testing. Run the 27 math-engine Jest tests:
+Algebranch is strictly validated via automated unit testing. Run the math-engine Jest suite:
 ```bash
 npm run test
 ```

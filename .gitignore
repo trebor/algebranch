@@ -20,3 +20,8 @@ Thumbs.db
 # Screenshots and temporary layout captures
 /*.png
 /screenshots/
+
+# Agent coordination — live hand-off note + message relay (machine-local)
+/BATON.md
+/.relay/
+/relay.sh

@@ -96,6 +96,27 @@ export const PRESET_LIST: Preset[] = [
     category: 'Quadratics & Polynomials',
   },
   {
+    id: 'quadratic_factor_monic',
+    label: 'Factor Monic Quadratic',
+    equation: 'x^2 + 5 * x + 6 = 0',
+    description: 'Factor a trinomial quadratic expression into two binomials.',
+    category: 'Quadratics & Polynomials',
+  },
+  {
+    id: 'quadratic_factor_gcf',
+    label: 'Factor out GCF',
+    equation: '6 * x^2 + 9 * x = 0',
+    description: 'Extract the greatest common factor (GCF) from the terms.',
+    category: 'Quadratics & Polynomials',
+  },
+  {
+    id: 'quadratic_factor_general',
+    label: 'Factor General Quadratic',
+    equation: '2 * x^2 + 7 * x + 3 = 0',
+    description: 'Factor a quadratic expression with a leading coefficient greater than 1.',
+    category: 'Quadratics & Polynomials',
+  },
+  {
     id: 'quadratic_diff_of_squares',
     label: 'Difference of Squares',
     equation: 'x^2 - y^2 = (x - y) * (x + y)',

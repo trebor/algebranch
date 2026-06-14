@@ -27,11 +27,22 @@ Shared instructions for all coding agents (Claude Code, Antigravity, etc.) worki
 
 ## Development guardrails
 
-Branch/merge and commit protocol:
+This section is the **canonical commit/merge protocol** for every agent in this repo. Tool entry files (e.g. `CLAUDE.md`) reference it — they must not restate or override it.
+
+**Branch & merge**
 - **Squash and Merge**: Always use the **Squash and Merge** strategy when merging feature branches into `main` to maintain a clean, linear commit history.
-- **Pre-Merge Validation**: Run `npm test` and `npm run build` before merging any branch.
-- **Explicit Approval**: Never commit, push, or merge without explicit user approval — write changes, verify they compile/pass tests, then halt for user validation.
+- **Pre-Merge Validation**: Before merging any branch, run the full validation gate — **lint → type-check → test → build**. The lint, type-check, and test commands are defined in [rules.md](rules.md) under **Validation Commands** (the single source of truth — do not restate them here); the build step is `npm run build` (compiles `math-engine`, then `ui`).
+
+**Commit & approval lifecycle** — never skip a step without explicit user authorization:
+1. Write the changes, run the validation gate, and confirm it passes.
+2. **Halt.** Summarize the changes and point the user to the modified files for review/verification — do **not** commit speculatively.
+3. Commit only after the user explicitly approves.
+4. Never `git push`, `gh pr merge`, or merge directly without approval. Once commits are approved, offer to finalize: open/merge the PR, delete the feature branch, and clean up.
+
+## Two-agent coordination
+
+When alternating between **Claude Code and Antigravity** on this repo, follow [orchestration.md](orchestration.md) — the coordination doctrine (routing, quota policy, restart triggers, hand-off schema, resync-on-return). Keep the live hand-off in `BATON.md` (git-ignored, status/transport only). Task state still lives in GitHub Issues; the baton never holds plans or checklists.
 
 ## Styling guardrails
 
-- **Use semantic styling tokens**: Do not hardcode raw Tailwind color classes (e.g. `bg-indigo-600`, `text-amber-400`, `text-white/40`, etc.) in TSX files. Instead, add/use centralized styling constants inside the `THEME_GLASS` object in [theme.ts](file:///Users/trebor/src/algebranch/ui/src/constants/theme.ts).
+- **Use semantic styling tokens**: Do not hardcode raw Tailwind color classes (e.g. `bg-indigo-600`, `text-amber-400`, `text-white/40`, etc.) in TSX files. Instead, add/use centralized styling constants inside the `THEME_GLASS` object in [theme.ts](ui/src/constants/theme.ts).

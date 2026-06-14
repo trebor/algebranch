@@ -25,11 +25,12 @@ import {
 } from '../store/equation';
 import { OPERATOR_DISPLAY } from '../constants/mathSymbols';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
+import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import { describeTransposition, describeReduction, describeSubstitution } from 'math-engine';
 import { ArrowLeftRight, Zap, Split, RefreshCw, Replace } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
+import { useMathScale } from '../hooks/useMathScale';
 
 interface UnifiedStackOption {
   id: string;
@@ -39,6 +40,44 @@ interface UnifiedStackOption {
   originalOption: any;
   onApply: () => void;
 }
+
+// Floor below which an equation preview stops shrinking and scrolls instead, so a
+// pathologically wide equation never becomes unreadably small.
+const PREVIEW_MIN_SCALE = 0.6;
+
+const renderEquationPreviewRow = (eq: Equation, muted: boolean) => (
+  <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
+    <PreviewEquationNode path="lhs" customEquation={eq} />
+    <span className={`text-[1.3em] font-mono px-0.5 select-none ${muted ? 'text-transparent' : 'text-indigo-300'}`}>=</span>
+    <PreviewEquationNode path="rhs" customEquation={eq} />
+  </div>
+);
+
+/**
+ * Shared container for every equation preview popup (single/stacked handle menu,
+ * move target, candidate term). Scales its content to fit the container width
+ * with one uniform factor (via the workspace auto-scaler `useMathScale`); once it
+ * would shrink past PREVIEW_MIN_SCALE it clamps and scrolls horizontally instead
+ * of spilling out of the popup body. Optional `sizers` reserve the widest of
+ * several stacked options so a hover-swapped preview never reflows. extraBuffer=0
+ * keeps the auto-height container from ratcheting the scale down on resize.
+ */
+const ScaledEquationFit: React.FC<{
+  measureEq?: Equation | null;
+  className?: string;
+  sizers?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ measureEq = null, className = 'w-full max-w-full', sizers, children }) => {
+  const { containerRef, contentRef } = useMathScale(measureEq, [], 0, PREVIEW_MIN_SCALE, 1);
+  return (
+    <div ref={containerRef} className={`${className} overflow-x-auto scrollbar-thin py-0.5`}>
+      <div ref={contentRef} className="grid place-items-center min-w-max mx-auto">
+        {sizers}
+        <div className="col-start-1 row-start-1 flex items-center justify-center">{children}</div>
+      </div>
+    </div>
+  );
+};
 
 const STACK_CONFIG = {
   reduce: {
@@ -810,11 +849,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                     <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} select-none`}>{single.subLabel}</span>
                   )}
                   <div className="w-full border-t border-white/10 my-1" />
-                  <div className="flex items-center justify-center gap-1.5 flex-nowrap py-0.5 text-[1.3em]">
-                    <PreviewEquationNode path="lhs" customEquation={single.equation} />
-                    <span className="text-[1.3em] font-mono text-indigo-300 px-0.5 select-none">=</span>
-                    <PreviewEquationNode path="rhs" customEquation={single.equation} />
-                  </div>
+                  <ScaledEquationFit measureEq={single.equation} className="max-w-[280px] sm:max-w-[340px]">
+                    {renderEquationPreviewRow(single.equation, false)}
+                  </ScaledEquationFit>
                 </div>
               );
               return (
@@ -904,15 +941,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             const previewOption = hoveredOption && hoveredOption.type === stack.type
               ? stack.options[hoveredOption.index]
               : null;
-            // One preview row, reused by the invisible sizers (which reserve exact
-            // space) and the visible layer.
-            const renderPreviewRow = (eq: any, muted: boolean) => (
-              <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
-                <PreviewEquationNode path="lhs" customEquation={eq} />
-                <span className={`text-[1.3em] font-mono px-0.5 select-none ${muted ? 'text-transparent' : 'text-indigo-300'}`}>=</span>
-                <PreviewEquationNode path="rhs" customEquation={eq} />
-              </div>
-            );
             const headerEl = (
               <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-85 px-1.5">
                 {stack.options.length} {config.pluralLabel} Available
@@ -947,24 +975,23 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               </div>
             );
             const previewEl = (
-              <div className="grid place-items-center w-full py-0.5">
-                {/* Invisible sizers: every option stacked in the same grid cell so
-                    the cell reserves the exact rendered size of the LARGEST one,
-                    eliminating any layout jump regardless of which row is hovered. */}
-                {stack.options.map((opt, i) => (
+              <ScaledEquationFit
+                key={`${path}:${openMenuType}`}
+                measureEq={stack.options[0]?.equation ?? null}
+                sizers={stack.options.map((opt, i) => (
+                  // Invisible sizers reserve the LARGEST option's size (no hover
+                  // reflow) and set the single scale factor.
                   <div key={i} aria-hidden="true" className="invisible col-start-1 row-start-1">
-                    {renderPreviewRow(opt.equation, true)}
+                    {renderEquationPreviewRow(opt.equation, true)}
                   </div>
                 ))}
-                {/* Visible layer: the hovered option's preview, or the neutral hint. */}
-                <div className="col-start-1 row-start-1 flex items-center justify-center">
-                  {previewOption ? (
-                    renderPreviewRow(previewOption.equation, false)
-                  ) : (
-                    <span className={`text-[10px] italic select-none ${THEME_GLASS.TEXT_MUTED}`}>Hover an option to preview</span>
-                  )}
-                </div>
-              </div>
+              >
+                {previewOption ? (
+                  renderEquationPreviewRow(previewOption.equation, false)
+                ) : (
+                  <span className={`text-[10px] italic select-none ${THEME_GLASS.TEXT_MUTED}`}>Hover an option to preview</span>
+                )}
+              </ScaledEquationFit>
             );
 
             // Keep the interactive rows nearest the handle so the cursor lands on
@@ -1013,11 +1040,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
         <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">Preview Move</span>
         <div className="w-full border-t border-white/10 my-1" />
-        <div className="flex items-center justify-center gap-1.5 flex-nowrap py-0.5 text-[1.3em]">
-          <PreviewEquationNode path="lhs" customEquation={targetEquation} />
-          <span className="text-[1.3em] font-mono text-indigo-300 px-0.5 select-none">=</span>
-          <PreviewEquationNode path="rhs" customEquation={targetEquation} />
-        </div>
+        <ScaledEquationFit measureEq={targetEquation} className="max-w-[280px] sm:max-w-[340px]">
+          {renderEquationPreviewRow(targetEquation, false)}
+        </ScaledEquationFit>
       </div>
     );
 
@@ -1037,9 +1062,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
         <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">Select Term</span>
         <div className="w-full border-t border-white/10 my-1" />
-        <div className="flex items-center justify-center py-0.5 text-[1.3em]">
-          <PreviewEquationNode path={path} />
-        </div>
+        <ScaledEquationFit className="max-w-[280px] sm:max-w-[340px]">
+          <div className="text-[1.3em]"><PreviewEquationNode path={path} /></div>
+        </ScaledEquationFit>
       </div>
     );
 

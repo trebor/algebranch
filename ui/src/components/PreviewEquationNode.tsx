@@ -168,7 +168,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
         }
         return (
           <div className="flex items-stretch mx-[0.1em] relative">
-            <div className="flex items-stretch select-none shrink-0 relative mr-[-1px]">
+            <div className="relative w-[0.7em] select-none shrink-0 mr-[-1px]">
               {showIndex && (
                 <div className="absolute right-full top-0 -mt-[0.2em] -mr-[0.3em] text-[0.55em] scale-90 z-10">
                   <PreviewEquationNode path={`${path}/1`} inExponent={inExponent} customEquation={customEquation} />
@@ -177,7 +177,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className="w-[0.7em] h-full text-indigo-400/60"
+                className="absolute inset-0 w-full h-full text-indigo-400/60"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
@@ -200,11 +200,11 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
       if (nameStr === 'sqrt') {
         return (
           <div className="flex items-stretch mx-[0.1em] relative">
-            <div className="flex items-stretch select-none shrink-0 relative mr-[-1px]">
+            <div className="relative w-[0.7em] select-none shrink-0 mr-[-1px]">
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className="w-[0.7em] h-full text-indigo-400/60"
+                className="absolute inset-0 w-full h-full text-indigo-400/60"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"

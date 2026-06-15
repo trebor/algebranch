@@ -26,24 +26,31 @@ export const EquationInputModal: React.FC = () => {
   const [lhsStr, setLhsStr] = React.useState('');
   const [rhsStr, setRhsStr] = React.useState('');
   const [relation, setRelation] = React.useState<RelationOperator>('=');
-  const [parsedEq, setParsedEq] = React.useState<Equation | null>(null);
-  const [errorStr, setErrorStr] = React.useState<string | null>(null);
-  const [infoStr, setInfoStr] = React.useState<string | null>(null);
+  // Submit-time failures from resetToEquation (the live validation below is
+  // derived from the inputs, so it doesn't live in state).
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const lhsRef = React.useRef<HTMLInputElement>(null);
   const rhsRef = React.useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
+  // Reset inputs when the modal opens — render-phase previous-prop pattern
+  // (not an effect) so the cleared state is in place before paint.
+  const [prevIsOpen, setPrevIsOpen] = React.useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      // Reset inputs when opened
       setLhsStr('');
       setRhsStr('');
       setRelation('=');
-      setParsedEq(null);
-      setErrorStr(null);
-      setInfoStr(null);
-      
+      setSubmitError(null);
+    }
+  }
+
+  // Body scroll-lock + autofocus are genuine DOM side-effects, so they stay in
+  // an effect.
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
       // Delay focus slightly for framer-motion entry animation
       const timer = setTimeout(() => {
         lhsRef.current?.focus();
@@ -69,45 +76,45 @@ export const EquationInputModal: React.FC = () => {
     };
   }, [isOpen, setIsOpen]);
 
-  // Real-time parser validation
-  React.useEffect(() => {
+  // Real-time parser validation — derived from the inputs during render
+  // (via useMemo) rather than synchronized into state through an effect.
+  const { parsedEq, errorStr: validationError, infoStr } = React.useMemo<{
+    parsedEq: Equation | null;
+    errorStr: string | null;
+    infoStr: string | null;
+  }>(() => {
     const lhsTrim = lhsStr.trim();
     const rhsTrim = rhsStr.trim();
 
     if (!lhsTrim && !rhsTrim) {
-      setParsedEq(null);
-      setErrorStr(null);
-      setInfoStr(null);
-      return;
+      return { parsedEq: null, errorStr: null, infoStr: null };
     }
 
     // If either side is missing, show incomplete typing helper
     if (!lhsTrim || !rhsTrim) {
-      setParsedEq(null);
-      setErrorStr(null);
-      setInfoStr('Add algebraic terms to both sides of the relation sign');
-      return;
+      return {
+        parsedEq: null,
+        errorStr: null,
+        infoStr: 'Add algebraic terms to both sides of the relation sign',
+      };
     }
 
     const combined = `${lhsTrim} ${relation} ${rhsTrim}`;
 
     try {
-      const parsed = parseEquation(combined);
-      setParsedEq(parsed);
-      setErrorStr(null);
-      setInfoStr(null);
+      return { parsedEq: parseEquation(combined), errorStr: null, infoStr: null };
     } catch (err) {
-      setParsedEq(null);
-      setInfoStr(null);
-      
       let rawMsg = err instanceof Error ? err.message : String(err);
-      
+
       if (rawMsg.toLowerCase().includes('value expected') || rawMsg.toLowerCase().includes('unexpected operator')) {
         rawMsg = `${rawMsg} (Hint: use "*" for multiplication like "3*x" instead of "3x")`;
       }
-      setErrorStr(rawMsg);
+      return { parsedEq: null, errorStr: rawMsg, infoStr: null };
     }
   }, [lhsStr, rhsStr, relation]);
+
+  // Show a live validation error, falling back to any submit-time failure.
+  const errorStr = validationError ?? submitError;
 
   // Relation operators are owned by the dedicated selector, never the side
   // inputs — strip any the user types/pastes into a side (#34).
@@ -115,10 +122,12 @@ export const EquationInputModal: React.FC = () => {
 
   const handleLhsChange = (val: string) => {
     setLhsStr(stripRelationChars(val));
+    setSubmitError(null);
   };
 
   const handleRhsChange = (val: string) => {
     setRhsStr(stripRelationChars(val));
+    setSubmitError(null);
   };
 
   // Typing a single-character relation in a side input sets the relation and
@@ -179,7 +188,7 @@ export const EquationInputModal: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const combined = `${lhsStr.trim()} ${relation} ${rhsStr.trim()}`;
-    if (!lhsStr.trim() || !rhsStr.trim() || errorStr) return;
+    if (!lhsStr.trim() || !rhsStr.trim() || validationError) return;
 
     try {
       resetToEquation(combined);
@@ -190,7 +199,7 @@ export const EquationInputModal: React.FC = () => {
       });
       setIsOpen(false);
     } catch (err) {
-      setErrorStr(err instanceof Error ? err.message : String(err));
+      setSubmitError(err instanceof Error ? err.message : String(err));
     }
   };
 

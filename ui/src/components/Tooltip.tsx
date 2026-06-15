@@ -1,7 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+
+// Module-scope so it's a stable, recognizable hook (not a per-render
+// conditional alias): layout effect on the client, plain effect on the server
+// to avoid the SSR useLayoutEffect warning.
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 /** Event handlers Tooltip reads off / re-injects into its trigger child. */
 interface TriggerProps {
@@ -57,9 +62,6 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const tooltipRef = React.useRef<HTMLDivElement>(null);
   const [adjustedLeft, setAdjustedLeft] = useState<number | null>(null);
 
-  // Isomorphic layout effect to run synchronously client-side
-  const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
-
   useIsomorphicLayoutEffect(() => {
     if (!isShown) {
       setAdjustedLeft(null);
@@ -95,10 +97,18 @@ export const Tooltip: React.FC<TooltipProps> = ({
     setIsDismissed(true);
   }, []);
 
+  // Clear the dismissed flag when controlled visibility turns on — done during
+  // render (previous-prop pattern) so it isn't a synchronous setState in the
+  // coordination effect below.
+  const [prevControlledVisible, setPrevControlledVisible] = useState(visible);
+  if (visible !== prevControlledVisible) {
+    setPrevControlledVisible(visible);
+    if (visible === true) setIsDismissed(false);
+  }
+
   // React to visibility changes in controlled mode
   useEffect(() => {
     if (visible === true) {
-      setIsDismissed(false);
       if (activeTooltipClose && activeTooltipClose !== closeSelf) {
         activeTooltipClose();
       }

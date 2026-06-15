@@ -21,6 +21,7 @@ import {
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitFork, Infinity, Replace, TriangleAlert } from 'lucide-react';
 import { useIsMobile } from '../hooks/useBreakpoint';
+import { useIsHydrated } from '../hooks/useIsHydrated';
 
 const COPIED_TIMEOUT = 2000;
 
@@ -43,7 +44,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [derivationCopied, setDerivationCopied] = React.useState(false);
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
-  const [isMounted, setIsMounted] = React.useState(false);
+  const isMounted = useIsHydrated();
 
   const handleCopyDerivation = () => {
     const text = formatDerivation(tree, currentNodeId);
@@ -53,10 +54,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
       setTimeout(() => setDerivationCopied(false), COPIED_TIMEOUT);
     });
   };
-
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const activeCardRef = React.useRef<HTMLDivElement | null>(null);
 

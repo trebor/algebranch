@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useIsHydrated } from '../hooks/useIsHydrated';
 import {
   onboardingChapterIdAtom,
   onboardingStepIndexAtom,
@@ -39,20 +40,24 @@ const SWATCH_LOCKED = THEME_GLASS.STATIC.replace('cursor-default', '');
 const SWATCH_SOURCE = THEME_GLASS.SOURCE.replace('cursor-pointer', '');
 const SWATCH_TARGET = THEME_GLASS.TARGET.replace('cursor-pointer', '');
 
+// Confetti geometry is intentionally randomized once per burst. Generated at
+// module scope (not in the component body) so the Math.random() calls are not
+// flagged as impure render-phase work; the component memoizes one batch for its
+// lifetime.
+function makeConfettiPieces() {
+  return Array.from({ length: 28 }, (_, i) => ({
+    left: Math.random() * 100,
+    delay: Math.random() * 0.5,
+    duration: 1.8 + Math.random() * 1.4,
+    size: 5 + Math.random() * 5,
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    drift: (Math.random() - 0.5) * 120,
+    rotate: 360 + Math.random() * 540,
+  }));
+}
+
 const ConfettiBurst: React.FC = () => {
-  const pieces = React.useMemo(
-    () =>
-      Array.from({ length: 28 }, (_, i) => ({
-        left: Math.random() * 100,
-        delay: Math.random() * 0.5,
-        duration: 1.8 + Math.random() * 1.4,
-        size: 5 + Math.random() * 5,
-        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-        drift: (Math.random() - 0.5) * 120,
-        rotate: 360 + Math.random() * 540,
-      })),
-    []
-  );
+  const pieces = React.useMemo(() => makeConfettiPieces(), []);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
@@ -77,7 +82,7 @@ const ConfettiBurst: React.FC = () => {
 };
 
 export const OnboardingTour: React.FC = () => {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsHydrated();
   const [completedChapters, setCompletedChapters] = useState<string[]>([]);
   // Per-chapter saved step (chapterId -> stepIndex) for the directory's resume UI.
   const [chapterProgress, setChapterProgress] = useState<Record<string, number>>({});
@@ -92,15 +97,16 @@ export const OnboardingTour: React.FC = () => {
   
   const [showPrompt, setShowPrompt] = useState(false);
 
-  // Load saved states on client-side mount
+  // Load saved states (from localStorage, an external store) on client mount.
   useEffect(() => {
-    setMounted(true);
-
     if (typeof window !== 'undefined') {
       // Load completed chapters
       const completedList = localStorage.getItem('algebranch_completed_chapters');
       if (completedList) {
         try {
+          // Hydrating React state from localStorage (an external store) on mount
+          // legitimately requires a synchronous setState in this effect.
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setCompletedChapters(JSON.parse(completedList));
         } catch (e) {
           console.error(e);
@@ -136,6 +142,9 @@ export const OnboardingTour: React.FC = () => {
   // Update saved progress state in real-time as local storage changes (so the directory dialog updates dynamically)
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Re-sync React state from localStorage (external store) when progress
+      // changes elsewhere; reflecting an external store requires setState here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setChapterProgress(readOnboardingSteps());
 
       const completedList = localStorage.getItem('algebranch_completed_chapters');
@@ -156,7 +165,10 @@ export const OnboardingTour: React.FC = () => {
     if (typeof window !== 'undefined') {
       const completed = localStorage.getItem('algebranch_onboarding_completed');
       const neverStarted = Object.keys(readOnboardingSteps()).length === 0;
+      // Derived from localStorage (external store) reads, so it can't be a
+      // render-time computation; the setState belongs in this effect.
       if (showDirectory || (!completed && !chapterId && neverStarted)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setShowPrompt(true);
       } else {
         setShowPrompt(false);
@@ -285,11 +297,13 @@ export const OnboardingTour: React.FC = () => {
   // the solved equation stays visible; the chapter-complete modal arrives as a
   // second beat once the first wave has mostly fallen.
   const [celebrationReady, setCelebrationReady] = useState(false);
+  // Celebration can only be live on a chapter's last step — force it off
+  // otherwise during render (rather than a synchronous setState in the effect).
+  if (celebrationReady && (!isLastStep || !chapterId)) {
+    setCelebrationReady(false);
+  }
   useEffect(() => {
-    if (!isLastStep || !chapterId) {
-      setCelebrationReady(false);
-      return;
-    }
+    if (!isLastStep || !chapterId) return;
     const timer = setTimeout(() => setCelebrationReady(true), 2000);
     return () => clearTimeout(timer);
   }, [isLastStep, chapterId]);
@@ -299,6 +313,9 @@ export const OnboardingTour: React.FC = () => {
   // action the user takes (next chapter / finish / all chapters / explore).
   useEffect(() => {
     if (!isLastStep || !chapterId) return;
+    // Milestone persistence: records completion and writes it through to
+    // localStorage (external store) — an inherently effect-bound side effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompletedChapters((prev) => {
       if (prev.includes(chapterId)) return prev;
       const next = [...prev, chapterId];

@@ -183,7 +183,16 @@ export default function Home() {
   }, [setSettings]);
 
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
-  const activeScale = useMathScale(
+  // Destructure so the ref-typed members (containerRef/contentRef) are kept
+  // distinct from the state-typed ones (scale/isScaled); accessing them off a
+  // single object trips react-hooks/refs, which treats any property of a
+  // ref-bearing object as a potential ref read during render.
+  const {
+    containerRef: activeContainerRef,
+    contentRef: activeContentRef,
+    scale: activeScaleValue,
+    isScaled: activeIsScaled,
+  } = useMathScale(
     currentEq,
     [targetPaths, reduciblePaths, sourcePath, isHydrated],
     isMobile ? 8 : 24,
@@ -191,7 +200,7 @@ export default function Home() {
     2.8
   );
 
-  useFLIPAnimation(activeScale.containerRef, currentEq);
+  useFLIPAnimation(activeContainerRef, currentEq);
 
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
@@ -393,13 +402,15 @@ export default function Home() {
         console.error('Initialization failed:', err);
         setInitError(err instanceof Error ? err.message : String(err));
       }
+
+      // Mark hydration complete once the mount-once localStorage load has run.
+      setIsHydrated(true);
+      // Signal global hydration so mount-time consumers (onboarding auto-resume)
+      // can safely mutate persisted workspace state without clobbering it.
+      setAppHydrated(true);
     };
 
     initialize();
-    setIsHydrated(true);
-    // Signal global hydration so mount-time consumers (onboarding auto-resume)
-    // can safely mutate persisted workspace state without clobbering it.
-    setAppHydrated(true);
   }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession, setAppHydrated]);
 
   // Save derivation steps to local storage and update address bar URL reactively
@@ -929,7 +940,7 @@ export default function Home() {
 
             {/* 1. Active Derivation Workspace */}
             <div
-              ref={activeScale.containerRef}
+              ref={activeContainerRef}
               onClick={() => {
                 if (sourcePath !== null) {
                   setSourcePath(null);
@@ -993,10 +1004,10 @@ export default function Home() {
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2 origin-center">
                   <div
-                    ref={activeScale.contentRef}
+                    ref={activeContentRef}
                     style={{
-                      fontSize: `${activeScale.scale}em`,
-                      opacity: activeScale.isScaled ? 1 : 0,
+                      fontSize: `${activeScaleValue}em`,
+                      opacity: activeIsScaled ? 1 : 0,
                     }}
                     className="flex items-center justify-center gap-[0.4em] sm:gap-[0.6em] lg:gap-[0.8em] flex-nowrap w-max"
                   >

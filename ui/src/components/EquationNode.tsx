@@ -27,7 +27,7 @@ import { OPERATOR_DISPLAY } from '../constants/mathSymbols';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import { describeTransposition, describeReduction, describeSubstitution } from 'math-engine';
-import { ArrowLeftRight, Zap, Split, RefreshCw, Replace } from 'lucide-react';
+import { ArrowLeftRight, Zap, Split, RefreshCw, Replace, TriangleAlert } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
 import { useMathScale } from '../hooks/useMathScale';
@@ -38,6 +38,9 @@ interface UnifiedStackOption {
   subLabel?: string;
   equation: any;
   originalOption: any;
+  /** Domain restrictions the option assumes (#63), e.g. ['x ≠ 0'], shown as a
+   *  ⚠ caveat on the handle/menu so the student sees it before applying (#59). */
+  assumptions?: readonly string[];
   onApply: () => void;
 }
 
@@ -650,19 +653,23 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     const identityOptions: UnifiedStackOption[] = [];
 
     actions.forEach((action, idx) => {
+      // Describe the move up front so its domain restrictions (#63) can be shown
+      // on the handle/menu *before* the student applies it (#59) — the same
+      // `change` is reused on apply so we don't describe twice.
+      const change = describeReduction(currentEq, {
+        path,
+        simplified: action.equation,
+        type: action.type as 'reduce' | 'distribute' | 'identity',
+        label: action.label,
+      });
       const opt: UnifiedStackOption = {
         id: `action-${action.type}-${idx}`,
         label: action.label || (action.type === 'distribute' ? "Distribute" : action.type === 'identity' ? "Apply Identity" : "Simplify"),
         equation: action.equation,
         originalOption: action,
+        assumptions: change.assumptions,
         onApply: () => {
           const reductionLabel = action.label || (action.type === 'distribute' ? 'Distribute' : action.type === 'identity' ? 'Apply Identity' : 'Simplify');
-          const change = describeReduction(currentEq, {
-            path,
-            simplified: action.equation,
-            type: action.type as 'reduce' | 'distribute' | 'identity',
-            label: action.label,
-          });
           pushEquation(action.equation, reductionLabel, change);
           trackEvent({
             action: 'apply_reduction',
@@ -848,6 +855,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   {single.subLabel && (
                     <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} select-none`}>{single.subLabel}</span>
                   )}
+                  {single.assumptions && single.assumptions.length > 0 && (
+                    <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} select-none`}>
+                      <TriangleAlert size={11} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
+                      <span>assuming {single.assumptions.join(', ')}</span>
+                    </span>
+                  )}
                   <div className="w-full border-t border-white/10 my-1" />
                   <ScaledEquationFit measureEq={single.equation} className="max-w-[280px] sm:max-w-[340px]">
                     {renderEquationPreviewRow(single.equation, false)}
@@ -970,6 +983,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   >
                     <span className={`whitespace-nowrap leading-snug ${optionLabelClass}`}>{opt.label}</span>
                     {opt.subLabel && <span className={`text-[10px] leading-snug ${THEME_GLASS.TEXT_MUTED}`}>{opt.subLabel}</span>}
+                    {opt.assumptions && opt.assumptions.length > 0 && (
+                      <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} mt-0.5`}>
+                        <TriangleAlert size={11} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
+                        <span>assuming {opt.assumptions.join(', ')}</span>
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>

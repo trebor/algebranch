@@ -335,6 +335,18 @@ export const describeSubstitution = (variable: string, replacement: string): Ste
 });
 
 /**
+ * Describe a reverse substitution (collapse, #51): a sub-expression collapsed
+ * to its defined variable. `expression` is the sub-expression being replaced,
+ * and `variable` is the variable replacing it.
+ */
+export const describeCollapse = (expression: string, variable: string): StepChange => ({
+  kind: 'rewrite',
+  op: 'substitute',
+  detail: `${expression} → ${variable}`,
+  text: `collapse ${expression} to ${variable}`,
+});
+
+/**
  * Describe a global op (the both-sides radial-menu operations) as a `bothSides`
  * StepChange. The structured `GlobalOpParams` already carry everything, so this
  * is a pure mapping — no AST inference (unlike transposition). Throws if a

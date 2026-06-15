@@ -1,6 +1,6 @@
 import * as math from 'mathjs';
-import { Equation, getChildren, ensureNodeIds, cloneWithChildren } from './tree';
-import { getVariables } from './validator';
+import { Equation, getChildren, ensureNodeIds, cloneWithChildren, replaceNodeAtPath } from './tree';
+import { getVariables, getFunctionName } from './validator';
 
 /**
  * A usable definition of a variable, typically harvested from another
@@ -21,6 +21,7 @@ export interface SubstitutionOption {
   /** The replacement expression as a strictly parsable symbolic string. */
   readonly replacement: string;
   readonly fact: SubstitutionFact;
+  readonly type?: 'forward' | 'reverse';
 }
 
 const unwrapParens = (n: math.MathNode): math.MathNode => {
@@ -114,6 +115,7 @@ export const getSubstitutionOptions = (
           variable: fact.variable,
           replacement: fact.expression.toString(),
           fact,
+          type: 'forward',
         });
       }
     } catch {
@@ -121,6 +123,82 @@ export const getSubstitutionOptions = (
       continue;
     }
   }
+
+  return result;
+};
+
+const normalizeAST = (node: math.MathNode): math.MathNode => {
+  const unwrapped = unwrapParens(node);
+
+  if (unwrapped.type === 'OperatorNode') {
+    const opNode = unwrapped as math.OperatorNode;
+    const normalizedArgs = opNode.args.map(arg => normalizeAST(arg));
+    if (opNode.op === '+' || opNode.op === '*') {
+      normalizedArgs.sort((a, b) => a.toString().localeCompare(b.toString()));
+    }
+    return new math.OperatorNode(opNode.op, opNode.fn, normalizedArgs);
+  }
+
+  if (unwrapped.type === 'FunctionNode') {
+    const fnNode = unwrapped as math.FunctionNode;
+    const normalizedArgs = fnNode.args.map(arg => normalizeAST(arg));
+    return new math.FunctionNode(getFunctionName(fnNode), normalizedArgs);
+  }
+
+  return unwrapped;
+};
+
+export const areNodesCanonicallyEqual = (a: math.MathNode, b: math.MathNode): boolean => {
+  try {
+    const normA = normalizeAST(a);
+    const normB = normalizeAST(b);
+    return normA.toString().replace(/\s+/g, '') === normB.toString().replace(/\s+/g, '');
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Reverse substitution (#51, Phase 2): for each fact `y = expr`, if a subtree of the
+ * equation matches `expr` (canonically, including commutative reorderings), yields an option
+ * collapsing that subtree to `y`.
+ */
+export const getCombineOptions = (
+  eq: Equation,
+  facts: readonly SubstitutionFact[],
+): Record<string, SubstitutionOption[]> => {
+  const result: Record<string, SubstitutionOption[]> = {};
+
+  const traverse = (node: math.MathNode, path: string) => {
+    for (const fact of facts) {
+      if (!fact?.variable || !fact.expression) continue;
+
+      if (areNodesCanonicallyEqual(node, fact.expression)) {
+        try {
+          const substituted = ensureNodeIds(
+            replaceNodeAtPath(eq, path, new math.SymbolNode(fact.variable))
+          );
+          (result[path] ||= []).push({
+            path,
+            substituted,
+            variable: fact.variable,
+            replacement: fact.expression.toString(),
+            fact,
+            type: 'reverse',
+          });
+        } catch {
+          // Skip if combine fails
+        }
+      }
+    }
+
+    getChildren(node).forEach((child, i) => {
+      traverse(child, `${path}/${i}`);
+    });
+  };
+
+  traverse(eq.lhs, 'lhs');
+  traverse(eq.rhs, 'rhs');
 
   return result;
 };

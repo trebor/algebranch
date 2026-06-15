@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
-import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, SubstitutionFact, SubstitutionOption, computeGraphData, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
+import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, describeSubstitution, describeCollapse, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
 import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
@@ -534,7 +534,18 @@ export const substitutionPathsAtom = atom<Record<string, SubstitutionOption[]>>(
   const facts = get(availableFactsAtom);
   if (!eq || facts.length === 0) return {};
   try {
-    return getSubstitutionOptions(eq, facts);
+    const forwards = getSubstitutionOptions(eq, facts);
+    const reverses = getCombineOptions(eq, facts);
+
+    const merged: Record<string, SubstitutionOption[]> = { ...forwards };
+    for (const [path, options] of Object.entries(reverses)) {
+      if (merged[path]) {
+        merged[path] = [...merged[path], ...options];
+      } else {
+        merged[path] = options;
+      }
+    }
+    return merged;
   } catch {
     return {};
   }

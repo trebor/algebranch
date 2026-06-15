@@ -214,6 +214,26 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
   if (option.type === 'distribute') {
     return { kind: 'rewrite', op: 'distribute', text: 'distribute' };
   }
+  // Combining fractions over a common denominator (#61) is a 'reduce' option, but
+  // gets its own phrasing and carries the b·d ≠ 0 domain assumption (#63).
+  if (option.label === 'Combine Fractions') {
+    let before = '';
+    let after = '';
+    try {
+      before = nodeToString(getNodeByPath(eq, option.path));
+      after = nodeToString(getNodeByPath(option.simplified, option.path));
+    } catch {
+      /* fall back to a bare label */
+    }
+    const assumptions = domainRestrictionsForReduction(eq, option);
+    return {
+      kind: 'rewrite',
+      op: 'simplify',
+      detail: before && after ? `${before} → ${after}` : undefined,
+      text: before && after ? `combine fractions ${before} → ${after}` : 'combine fractions',
+      ...(assumptions.length ? { assumptions } : {}),
+    };
+  }
   if (option.type === 'identity') {
     const label = option.label ?? 'apply identity';
     let before = '';

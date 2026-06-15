@@ -37,7 +37,7 @@ This section is the **canonical commit/merge protocol** for every agent in this 
 
 **Commit & approval lifecycle** — never skip a step without explicit user authorization:
 1. Write the changes, run the validation gate, and confirm it passes.
-2. **Halt.** Summarize the changes and point the user to the modified files for review/verification — do **not** commit speculatively.
+2. **Halt.** Summarize the changes, point the user to the modified files for review/verification, and provide **specific local test URLs** (e.g., `http://localhost:3000/?eq=<test-expression>`) with detailed guidance on what to interact with, what test inputs/operators to click, and what exact visual or logical behavior to verify. Do **not** commit speculatively.
 3. Commit only after the user explicitly approves.
 4. Never `git push`, `gh pr merge`, or merge directly without approval. Once commits are approved, offer to finalize: open/merge the PR, delete the feature branch, and clean up.
 

@@ -85,12 +85,32 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
 
     if (node.type === 'ParenthesisNode') {
       return (
-        <div className="flex items-center px-[0.05em] self-stretch">
-          <LeftParenSVG className="w-[0.32em] shrink-0 self-stretch text-white/20" />
+        <div className="flex items-stretch px-[0.05em] relative">
+          <div className="relative w-[0.32em] select-none shrink-0">
+            <div
+              className="absolute inset-x-0"
+              style={{
+                top: '0.2em',
+                bottom: '0.2em'
+              }}
+            >
+              <LeftParenSVG className="w-full h-full text-white/20" />
+            </div>
+          </div>
           <div className="px-[0.05em]">
             <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} customEquation={customEquation} />
           </div>
-          <RightParenSVG className="w-[0.32em] shrink-0 self-stretch text-white/20" />
+          <div className="relative w-[0.32em] select-none shrink-0">
+            <div
+              className="absolute inset-x-0"
+              style={{
+                top: '0.2em',
+                bottom: '0.2em'
+              }}
+            >
+              <RightParenSVG className="w-full h-full text-white/20" />
+            </div>
+          </div>
         </div>
       );
     }
@@ -112,12 +132,32 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
           <div className="flex items-center gap-[0.05em]">
             <span className="text-indigo-400/60 font-bold select-none">{opSymbol}</span>
             {childNeedsParens ? (
-              <div className="flex items-center px-[0.05em] self-stretch">
-                <LeftParenSVG className="w-[0.32em] shrink-0 self-stretch text-white/20" />
+              <div className="flex items-stretch px-[0.05em] relative">
+                <div className="relative w-[0.32em] select-none shrink-0">
+                  <div
+                    className="absolute inset-x-0"
+                    style={{
+                      top: '0.2em',
+                      bottom: '0.2em'
+                    }}
+                  >
+                    <LeftParenSVG className="w-full h-full text-white/20" />
+                  </div>
+                </div>
                 <div className="px-[0.05em]">
                   <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} customEquation={customEquation} />
                 </div>
-                <RightParenSVG className="w-[0.32em] shrink-0 self-stretch text-white/20" />
+                <div className="relative w-[0.32em] select-none shrink-0">
+                  <div
+                    className="absolute inset-x-0"
+                    style={{
+                      top: '0.2em',
+                      bottom: '0.2em'
+                    }}
+                  >
+                    <RightParenSVG className="w-full h-full text-white/20" />
+                  </div>
+                </div>
               </div>
             ) : (
               <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} customEquation={customEquation} />

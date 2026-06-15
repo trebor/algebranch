@@ -312,6 +312,43 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     };
   };
 
+  const getNodePadding = (p: string) => {
+    const pLayout = inExponent ? MATH_LAYOUT.exponent : MATH_LAYOUT.normal;
+    const pAllActions = reduciblePaths[p] || [];
+    const pActions = !isOnboardingActive
+      ? pAllActions
+      : (isOnboardingActive && onboardingReduceHandle && onboardingReduceHandle.path === p && pAllActions[onboardingReduceHandle.index])
+        ? [pAllActions[onboardingReduceHandle.index]]
+        : [];
+    
+    const pAllSubstitutions = substitutionPaths[p] || [];
+    const pSubstitutions = !isOnboardingActive
+      ? pAllSubstitutions
+      : (isOnboardingActive && onboardingSubstitution && onboardingSubstitution.path === p && pAllSubstitutions[onboardingSubstitution.index])
+        ? [pAllSubstitutions[onboardingSubstitution.index]]
+        : [];
+
+    const hasReduce = pActions.some(a => a.type === 'reduce');
+    const hasDistribute = pActions.some(a => a.type === 'distribute');
+    const hasIdentity = pActions.some(a => a.type === 'identity');
+    const hasSubstitute = pSubstitutions.length > 0;
+
+    let handleCount = 0;
+    if (hasReduce) handleCount++;
+    if (hasDistribute) handleCount++;
+    if (hasIdentity) handleCount++;
+    if (hasSubstitute) handleCount++;
+
+    const pPaddingTop = handleCount > 0
+      ? pLayout.btnTop + pLayout.btnSize + pLayout.textGap
+      : pLayout.nodePy;
+
+    return {
+      paddingTop: pPaddingTop,
+      paddingBottom: pLayout.nodePy,
+    };
+  };
+
   const isSelected = sourcePath === path;
   const isHovered = hoverPath === path;
   const isTarget = !!sourcePath && path in targetPaths;
@@ -486,13 +523,41 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     }
 
     if (node.type === 'ParenthesisNode') {
+      const childPath = `${path}/0`;
+      const childPadding = getNodePadding(childPath);
       return (
-        <div className="flex items-center px-[0.05em]">
-          <LeftParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`} style={getOpStyle()} />
-          <div className="px-[0.05em]">
-            <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
+        <div className="flex items-stretch px-[0.05em] relative">
+          <div className="relative w-[0.32em] select-none shrink-0">
+            <div
+              className="absolute inset-x-0"
+              style={{
+                top: `${childPadding.paddingTop}em`,
+                bottom: `${childPadding.paddingBottom}em`
+              }}
+            >
+              <LeftParenSVG
+                className={`w-full h-full ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`}
+                style={getOpStyle()}
+              />
+            </div>
           </div>
-          <RightParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`} style={getOpStyle()} />
+          <div className="px-[0.05em]">
+            <EquationNode path={childPath} key={getChildId(0)} inExponent={inExponent} />
+          </div>
+          <div className="relative w-[0.32em] select-none shrink-0">
+            <div
+              className="absolute inset-x-0"
+              style={{
+                top: `${childPadding.paddingTop}em`,
+                bottom: `${childPadding.paddingBottom}em`
+              }}
+            >
+              <RightParenSVG
+                className={`w-full h-full ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`}
+                style={getOpStyle()}
+              />
+            </div>
+          </div>
         </div>
       );
     }
@@ -515,13 +580,45 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
           <div className="flex items-center gap-[0.05em]">
             <span className={`font-bold select-none ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_UNARY_ACTIVE}`} style={getOpStyle()}>{opSymbol}</span>
             {childNeedsParens ? (
-              <div className="flex items-center px-[0.05em]">
-                <LeftParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`} style={getOpStyle()} />
-                <div className="px-[0.05em]">
-                  <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
-                </div>
-                <RightParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`} style={getOpStyle()} />
-              </div>
+              (() => {
+                const childPath = `${path}/0`;
+                const childPadding = getNodePadding(childPath);
+                return (
+                  <div className="flex items-stretch px-[0.05em] relative">
+                    <div className="relative w-[0.32em] select-none shrink-0">
+                      <div
+                        className="absolute inset-x-0"
+                        style={{
+                          top: `${childPadding.paddingTop}em`,
+                          bottom: `${childPadding.paddingBottom}em`
+                        }}
+                      >
+                        <LeftParenSVG
+                          className={`w-full h-full ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`}
+                          style={getOpStyle()}
+                        />
+                      </div>
+                    </div>
+                    <div className="px-[0.05em]">
+                      <EquationNode path={childPath} key={getChildId(0)} inExponent={inExponent} />
+                    </div>
+                    <div className="relative w-[0.32em] select-none shrink-0">
+                      <div
+                        className="absolute inset-x-0"
+                        style={{
+                          top: `${childPadding.paddingTop}em`,
+                          bottom: `${childPadding.paddingBottom}em`
+                        }}
+                      >
+                        <RightParenSVG
+                          className={`w-full h-full ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`}
+                          style={getOpStyle()}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
             ) : (
               <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
             )}

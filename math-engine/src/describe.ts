@@ -1,6 +1,6 @@
 import * as math from 'mathjs';
 import { Equation, getNodeByPath } from './tree';
-import { ReductionOption } from './simplify';
+import { ReductionOption, isConstantSubtree } from './simplify';
 import { GlobalOpParams } from './globalOps';
 
 /**
@@ -20,15 +20,73 @@ export type StepChange =
       // strictly parsable symbolic string.
       readonly operand: string;
       readonly text: string;
+      // Domain restrictions the step relies on, e.g. ['x ≠ 0'] when dividing
+      // both sides by a variable expression (#63). Omitted when there are none.
+      readonly assumptions?: readonly string[];
     }
   | {
       readonly kind: 'rewrite';
       readonly op: 'evaluate' | 'simplify' | 'distribute' | 'identity' | 'quadratic' | 'substitute';
       readonly detail?: string;
       readonly text: string;
+      // Domain restrictions the step relies on, e.g. ['x ≠ 0'] when a variable
+      // factor is cancelled out of a fraction (#63). Omitted when there are none.
+      readonly assumptions?: readonly string[];
     };
 
 const nodeToString = (node: math.MathNode | null): string => (node ? node.toString() : '');
+
+/** Strip whitespace and parentheses for structural string comparison. */
+const cleanStr = (s: string): string => s.replace(/[\s()]/g, '');
+
+/**
+ * Collects every non-constant divisor (the denominator of a `/` node whose
+ * value depends on a variable) within a subtree, keyed by its cleaned string
+ * form so duplicates collapse. These are the expressions a cancellation or
+ * division silently assumes to be non-zero.
+ */
+const collectVariableDivisors = (node: math.MathNode): Map<string, math.MathNode> => {
+  const out = new Map<string, math.MathNode>();
+  node.traverse((n) => {
+    if (n.type === 'OperatorNode' && (n as math.OperatorNode).op === '/') {
+      const denom = (n as math.OperatorNode).args[1];
+      if (denom && !isConstantSubtree(denom)) {
+        out.set(cleanStr(denom.toString()), denom);
+      }
+    }
+  });
+  return out;
+};
+
+/** Render a list of non-zero restriction operands as `x ≠ 0` strings. */
+const toRestrictionStrings = (denoms: Iterable<math.MathNode>): string[] =>
+  Array.from(denoms, (d) => `${d.toString()} ≠ 0`);
+
+/**
+ * Domain restrictions introduced by an in-place reduction (#63): a variable
+ * denominator present in the affected sub-expression *before* the move but gone
+ * *after* it was cancelled away. Such a cancellation is only valid when that
+ * expression is non-zero, so we surface the assumption rather than hiding it.
+ * Returns an empty array when the move adds no restriction (e.g. distributing a
+ * fraction keeps the denominator, so no new assumption arises).
+ */
+export const domainRestrictionsForReduction = (eq: Equation, option: ReductionOption): string[] => {
+  let before: math.MathNode;
+  let after: math.MathNode;
+  try {
+    before = getNodeByPath(eq, option.path);
+    after = getNodeByPath(option.simplified, option.path);
+  } catch {
+    return [];
+  }
+  const beforeDivisors = collectVariableDivisors(before);
+  const afterDivisors = collectVariableDivisors(after);
+  const cancelled: math.MathNode[] = [];
+  for (const [key, denom] of beforeDivisors) {
+    if (!afterDivisors.has(key)) cancelled.push(denom);
+  }
+  return toRestrictionStrings(cancelled);
+};
 
 /**
  * Describe a transposition (a term moving across `=`) as the inverse operation
@@ -87,7 +145,7 @@ export const describeTransposition = (
   }
   if (!op) return null;
 
-  const text =
+  const baseText =
     op === 'subtract'
       ? `subtract ${operand} from both sides`
       : op === 'add'
@@ -96,7 +154,17 @@ export const describeTransposition = (
           ? `multiply both sides by ${operand}`
           : `divide both sides by ${operand}`;
 
-  return { kind: 'bothSides', op, operand, text };
+  // Dividing both sides by a variable expression assumes it is non-zero (#63).
+  const assumptions =
+    op === 'divide' && !isConstantSubtree(moved) ? [`${operand} ≠ 0`] : [];
+
+  return {
+    kind: 'bothSides',
+    op,
+    operand,
+    text: baseText,
+    ...(assumptions.length ? { assumptions } : {}),
+  };
 };
 
 /**
@@ -180,26 +248,36 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
   }
 
   // type === 'reduce'
-  let before = '';
+  let beforeNode: math.MathNode | null = null;
   let afterNode: math.MathNode | null = null;
   try {
-    before = nodeToString(getNodeByPath(eq, option.path));
+    beforeNode = getNodeByPath(eq, option.path);
     afterNode = getNodeByPath(option.simplified, option.path);
   } catch {
     /* fall through to generic simplify */
   }
+  const before = nodeToString(beforeNode);
   const after = nodeToString(afterNode);
-  const isEvaluate = !!afterNode && afterNode.type === 'ConstantNode' && !!before;
+  const assumptions = domainRestrictionsForReduction(eq, option);
+  // A genuine "evaluate" folds a *constant* subtree to its value. A variable
+  // collapsing to a constant (e.g. x cancelling to 1) is NOT an evaluation —
+  // it's a cancellation — so require the source to be constant before labelling
+  // it evaluate, otherwise we'd assert a falsehood like "evaluate x = 1" (#63).
+  const isEvaluate =
+    !!afterNode && afterNode.type === 'ConstantNode' && !!beforeNode && isConstantSubtree(beforeNode);
   if (isEvaluate) {
     return { kind: 'rewrite', op: 'evaluate', detail: `${before} = ${after}`, text: `evaluate ${before} = ${after}` };
   }
+  // Mirror the evaluate form so simplify steps also show what changed (rewrite
+  // arrow `→`, vs `=` for a true numeric equality). Any ≠0 assumption (#63) is
+  // carried structurally in `assumptions` so the UI can flag it prominently
+  // rather than letting it hide in prose.
   return {
     kind: 'rewrite',
     op: 'simplify',
     detail: before && after ? `${before} → ${after}` : undefined,
-    // Mirror the evaluate form so simplify steps also show what changed
-    // (rewrite arrow `→`, vs `=` for a true numeric equality).
     text: before && after ? `simplify ${before} → ${after}` : 'simplify',
+    ...(assumptions.length ? { assumptions } : {}),
   };
 };
 
@@ -251,7 +329,22 @@ export const describeGlobalOp = (params: GlobalOpParams): StepChange => {
       return { kind: 'bothSides', op: 'subtract', operand, text: `subtract ${operand} from both sides` };
     case 'mul':
       return { kind: 'bothSides', op: 'multiply', operand, text: `multiply both sides by ${operand}` };
-    default: // 'div'
-      return { kind: 'bothSides', op: 'divide', operand, text: `divide both sides by ${operand}` };
+    default: {
+      // 'div' — dividing both sides by a variable expression assumes it ≠ 0 (#63).
+      let isVariableDivisor = false;
+      try {
+        isVariableDivisor = !isConstantSubtree(math.parse(operand));
+      } catch {
+        /* unparseable operand → no assumption */
+      }
+      const assumptions = isVariableDivisor ? [`${operand} ≠ 0`] : [];
+      return {
+        kind: 'bothSides',
+        op: 'divide',
+        operand,
+        text: `divide both sides by ${operand}`,
+        ...(assumptions.length ? { assumptions } : {}),
+      };
+    }
   }
 };

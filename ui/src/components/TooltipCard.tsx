@@ -1,4 +1,5 @@
 import React from 'react';
+import { TriangleAlert } from 'lucide-react';
 import { Equation } from 'math-engine-client';
 import { PreviewEquationNode } from './PreviewEquationNode';
 import { THEME_GLASS } from '../constants/theme';
@@ -12,6 +13,9 @@ export interface TooltipCardProps {
   readonly title?: React.ReactNode;
   /** Optional supporting description line. */
   readonly description?: React.ReactNode;
+  /** Domain restrictions the step assumes (#63), e.g. ['x ≠ 0']. Surfaced as a
+   *  prominent caveat row so an assumed non-zero condition can't slip by unseen. */
+  readonly assumptions?: readonly string[];
   /** Equation rendered in pretty (typeset) form. */
   readonly equation?: Equation | null;
   /** Raw equation string shown if `equation` is absent (parse fallback). */
@@ -31,6 +35,7 @@ export const TooltipCard: React.FC<TooltipCardProps> = ({
   meta,
   title,
   description,
+  assumptions,
   equation,
   rawEquation,
   footer,
@@ -44,6 +49,12 @@ export const TooltipCard: React.FC<TooltipCardProps> = ({
     )}
     {title && <span className={THEME_GLASS.TOOLTIP_TITLE}>{title}</span>}
     {description && <span className={THEME_GLASS.TOOLTIP_DESC}>{description}</span>}
+    {assumptions && assumptions.length > 0 && (
+      <span className={THEME_GLASS.TOOLTIP_ASSUMPTION}>
+        <TriangleAlert size={12} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
+        <span>assuming {assumptions.join(', ')}</span>
+      </span>
+    )}
     {equation ? (
       <div className="w-full max-w-full overflow-x-auto scrollbar-thin flex justify-start">
         <div className={`flex items-center gap-2 py-1 mx-auto min-w-max ${THEME_GLASS.TOOLTIP_EQUATION}`}>

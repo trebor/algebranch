@@ -7,6 +7,7 @@ import {
   describeTransposition,
   describeReduction,
   describeGlobalOp,
+  findMinimalChangedPath,
   StepChange,
 } from '../src';
 
@@ -149,15 +150,15 @@ describe('describeReduction — in-place rewrites', () => {
 
 describe('domain restrictions when cancelling or dividing (#63)', () => {
   it('cancelling a variable factor records "assuming x ≠ 0"', () => {
-    // m * x * 1 / x → m silently assumes x ≠ 0
-    const e = eq('m * x * 1 / x + b / x = 4');
-    const option = findOption('m * x * 1 / x + b / x = 4', 'Simplify Fraction');
+    // m * x / x → m silently assumes x ≠ 0
+    const e = eq('m * x / x = c');
+    const option = findOption('m * x / x = c', 'Simplify Fraction');
     expect(option).toBeDefined();
     const change = describeReduction(e, option!);
     // The restriction is carried structurally (not buried in the text prose) so
     // the UI can flag it prominently.
     expect(change.assumptions).toEqual(['x ≠ 0']);
-    expect(change.text).toBe('simplify m * x * 1 / x → m');
+    expect(change.text).toBe('simplify m * x / x → m');
   });
 
   it('a variable collapsing to a constant is a cancellation, never "evaluate x = 1"', () => {
@@ -211,6 +212,42 @@ describe('domain restrictions when cancelling or dividing (#63)', () => {
     const byConst = describeGlobalOp({ type: 'div', term: '2' });
     expect(byConst.text).toBe('divide both sides by 2');
     expect(byConst.assumptions).toBeUndefined();
+  });
+});
+
+describe('decomposed simplify steps read cleanly (#59)', () => {
+  // Once the opaque collapse is gated, the remaining granular steps are tagged
+  // at a removed leaf; the descriptor must still describe the affected
+  // sub-expression, not the leaf alias ("simplify 1 → x").
+  const optionByResult = (s: string, lhsResult: string) =>
+    Object.values(getReducibleOptions(eq(s)))
+      .flat()
+      .find((o) => o.simplified.lhs.toString() === lhsResult);
+
+  it('drop ×1 describes the affected product, not the removed leaf', () => {
+    const e = eq('m * x * 1 / x + b / x = 4');
+    const option = optionByResult('m * x * 1 / x + b / x = 4', 'm * x / x + b / x');
+    expect(option).toBeDefined();
+    const change = describeReduction(e, option!);
+    expect(change.text).toBe('simplify m * x * 1 → m * x');
+    expect(change.assumptions).toBeUndefined();
+  });
+
+  it('cancel x/x describes the affected fraction and carries the ≠0 assumption', () => {
+    const e = eq('m * x * 1 / x + b / x = 4');
+    const option = optionByResult('m * x * 1 / x + b / x = 4', 'm * 1 + b / x');
+    expect(option).toBeDefined();
+    const change = describeReduction(e, option!);
+    expect(change.text).toBe('simplify m * x * 1 / x → m * 1');
+    expect(change.assumptions).toEqual(['x ≠ 0']);
+  });
+
+  it('findMinimalChangedPath walks up from a removed leaf to the affected subtree', () => {
+    const e = eq('m * x * 1 / x + b / x = 4');
+    // Dropping the ×1 is tagged at the leaf `1` (lhs/0/0/1) but the change is
+    // contained in the product lhs/0/0.
+    const dropOne = optionByResult('m * x * 1 / x + b / x = 4', 'm * x / x + b / x')!;
+    expect(findMinimalChangedPath(e, dropOne.simplified, dropOne.path)).toBe('lhs/0/0');
   });
 });
 

@@ -505,6 +505,54 @@ export const tryExpandPowerTerm = (node: math.MathNode): math.MathNode | null =>
 };
 
 /**
+ * True when some strict descendant of `p` has its own atomic simplification —
+ * an identity element to drop (× 1, + 0), a constant subtree to fold, powers to
+ * combine, or a root/power to reduce.
+ *
+ * Used to stop the whole-subtree `math.simplify` fallback (step 5 below) from
+ * collapsing several elementary moves into one opaque click (#59): if a finer
+ * move is available deeper in the subtree, offer that instead and let the
+ * student take it stepwise — the collapse re-emerges, smaller, on the next pass.
+ * Deliberately cheap (never recurses into `math.simplify`) so it stays close to
+ * O(subtree size). A lone cancellation like `m * x / x -> m` has no finer
+ * descendant move and is therefore still offered as a single step.
+ */
+const subtreeHasFinerSimplification = (eq: Equation, p: string): boolean => {
+  const descendants = getAllPaths(eq).filter((dp) => dp.startsWith(`${p}/`));
+  for (const dp of descendants) {
+    let node: math.MathNode;
+    try {
+      node = getNodeByPath(eq, dp);
+    } catch {
+      continue;
+    }
+    if (!node) continue;
+
+    // A constant subtree that folds to a different form (e.g. 2 * 3 -> 6).
+    if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
+      const folded = evaluateConstantSubtree(node);
+      if (folded) {
+        const clean = (s: string) => s.replace(/[\s()]/g, '');
+        if (clean(folded.toString()) !== clean(node.toString())) return true;
+      }
+    }
+
+    // An identity element to drop in place (× 1, + 0): a single removal that
+    // leaves the containing side's value unchanged for every assignment.
+    const removed = trySingleRemoval(eq, dp);
+    if (removed) {
+      const side = dp.split('/')[0] as 'lhs' | 'rhs';
+      if (areExpressionsValueEqual(eq[side], removed[side])) return true;
+    }
+
+    // Powers to combine (x * x -> x^2) or a root/power to reduce (sqrt(x^2)).
+    if (tryCombinePowerTerms(node)) return true;
+    if (trySimplifyRootOfPower(node) || trySimplifyPowerOfRoot(node)) return true;
+  }
+  return false;
+};
+
+/**
  * Checks if a given path has a simplification opportunity.
  * Returns the simplified Equation if found, otherwise null.
  */
@@ -596,20 +644,27 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
       }
     }
 
-    // 5. Try mathjs built-in simplify for algebraic reductions (e.g. combining like terms: 3 * x - x -> 2 * x)
-    try {
-      const simplifiedNode = math.simplify(node.toString());
-      if (simplifiedNode.toString() !== node.toString()) {
-        // Enforce complexity reduction to filter out non-simplifying reorderings (e.g. (y - 1) * 2 -> 2 * (y - 1))
-        if (countNodes(simplifiedNode) < countNodes(node)) {
-          const candidate = replaceNodeAtPath(eq, p, simplifiedNode);
-          if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
-            return candidate;
+    // 5. Try mathjs built-in simplify for algebraic reductions (e.g. combining
+    // like terms: 3 * x - x -> 2 * x). This is the black-box fallback, so only
+    // offer it as an ATOMIC move: if a finer elementary simplification exists
+    // deeper in this subtree, don't collapse the whole thing in one opaque click
+    // (#59) — the granular step is offered instead and the collapse re-emerges,
+    // smaller, after the student takes it.
+    if (!subtreeHasFinerSimplification(eq, p)) {
+      try {
+        const simplifiedNode = math.simplify(node.toString());
+        if (simplifiedNode.toString() !== node.toString()) {
+          // Enforce complexity reduction to filter out non-simplifying reorderings (e.g. (y - 1) * 2 -> 2 * (y - 1))
+          if (countNodes(simplifiedNode) < countNodes(node)) {
+            const candidate = replaceNodeAtPath(eq, p, simplifiedNode);
+            if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
+              return candidate;
+            }
           }
         }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
   } catch {
     // Graceful fallback
@@ -786,13 +841,21 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
       if (simplified) {
         const node = getNodeByPath(eq, path);
         const distNode = tryDistribution(node);
-        
+
         const clean = (s: string) => s.replace(/[\s()]/g, '');
-        const targetNodeInSimplified = getNodeByPath(simplified, path);
-        const isActualDistribution = !!(
-          distNode &&
-          clean(targetNodeInSimplified.toString()) === clean(distNode.toString())
-        );
+        // A simplification can collapse the parent so `path` no longer resolves
+        // in `simplified` (e.g. m * 1 -> m drops the node at the `1`'s path).
+        // That just means it wasn't a distribution — it must not throw out the
+        // whole (valid) reduction, which previously hid obvious × 1 / + 0 drops.
+        let isActualDistribution = false;
+        if (distNode) {
+          try {
+            const targetNodeInSimplified = getNodeByPath(simplified, path);
+            isActualDistribution = clean(targetNodeInSimplified.toString()) === clean(distNode.toString());
+          } catch {
+            isActualDistribution = false;
+          }
+        }
 
         let label: string | undefined = undefined;
         if (isActualDistribution) {

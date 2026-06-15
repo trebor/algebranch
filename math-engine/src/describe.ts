@@ -1,5 +1,5 @@
 import * as math from 'mathjs';
-import { Equation, getNodeByPath } from './tree';
+import { Equation, getNodeByPath, replaceNodeAtPath } from './tree';
 import { ReductionOption, isConstantSubtree } from './simplify';
 import { GlobalOpParams } from './globalOps';
 
@@ -63,19 +63,54 @@ const toRestrictionStrings = (denoms: Iterable<math.MathNode>): string[] =>
   Array.from(denoms, (d) => `${d.toString()} ≠ 0`);
 
 /**
+ * The smallest sub-expression that fully contains the change from `eq` to
+ * `simplified`, as a path. Reductions are tagged by the *removed* node's path
+ * (e.g. the leaf `1` dropped from `m * x * 1`), which makes a naive before/after
+ * at that path read nonsensically ("1 → x") once the tree reshapes — and hides
+ * a cancelled divisor from the ≠0 detection. Walking up from `startPath` to the
+ * deepest ancestor whose subtree, spliced from `simplified` back into `eq`,
+ * reproduces `simplified`, recovers the real affected sub-expression
+ * (`m * x * 1 → m * x`, or `m * x * 1 / x → m * 1`). The whole changed side
+ * always satisfies this, so a real containing path is always found.
+ */
+export const findMinimalChangedPath = (
+  eq: Equation,
+  simplified: Equation,
+  startPath: string,
+): string => {
+  const target = `${simplified.lhs.toString()} = ${simplified.rhs.toString()}`;
+  let parts = startPath.split('/');
+  while (parts.length >= 1) {
+    const a = parts.join('/');
+    try {
+      const spliced = replaceNodeAtPath(eq, a, getNodeByPath(simplified, a));
+      if (`${spliced.lhs.toString()} = ${spliced.rhs.toString()}` === target) return a;
+    } catch {
+      /* path may not exist in `simplified` after a reshape; keep walking up */
+    }
+    if (parts.length === 1) break;
+    parts = parts.slice(0, -1);
+  }
+  return startPath;
+};
+
+/**
  * Domain restrictions introduced by an in-place reduction (#63): a variable
  * denominator present in the affected sub-expression *before* the move but gone
  * *after* it was cancelled away. Such a cancellation is only valid when that
  * expression is non-zero, so we surface the assumption rather than hiding it.
- * Returns an empty array when the move adds no restriction (e.g. distributing a
- * fraction keeps the denominator, so no new assumption arises).
+ * Compares over the *minimal changed sub-expression* (not the raw, possibly
+ * leaf-aliased option path) so a cancellation like `m * x * 1 / x → m * 1` is
+ * detected even though it was tagged at a leaf. Returns an empty array when the
+ * move adds no restriction (e.g. distributing a fraction keeps the denominator).
  */
 export const domainRestrictionsForReduction = (eq: Equation, option: ReductionOption): string[] => {
+  const path = findMinimalChangedPath(eq, option.simplified, option.path);
   let before: math.MathNode;
   let after: math.MathNode;
   try {
-    before = getNodeByPath(eq, option.path);
-    after = getNodeByPath(option.simplified, option.path);
+    before = getNodeByPath(eq, path);
+    after = getNodeByPath(option.simplified, path);
   } catch {
     return [];
   }
@@ -248,11 +283,15 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
   }
 
   // type === 'reduce'
+  // Describe from the minimal changed sub-expression, not the raw option path:
+  // single removals / cancellations are tagged at the removed leaf, so a naive
+  // before→after there reads nonsensically once the tree reshapes (#59).
+  const effPath = findMinimalChangedPath(eq, option.simplified, option.path);
   let beforeNode: math.MathNode | null = null;
   let afterNode: math.MathNode | null = null;
   try {
-    beforeNode = getNodeByPath(eq, option.path);
-    afterNode = getNodeByPath(option.simplified, option.path);
+    beforeNode = getNodeByPath(eq, effPath);
+    afterNode = getNodeByPath(option.simplified, effPath);
   } catch {
     /* fall through to generic simplify */
   }

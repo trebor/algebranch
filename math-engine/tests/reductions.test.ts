@@ -130,4 +130,51 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
     );
     expect(allQuadOpts.length).toBe(0);
   });
+
+  // #59: a single Simplify must not collapse several elementary moves at once.
+  describe('decomposed simplify — no opaque multi-op collapse (#59)', () => {
+    const lhsResults = (s: string) =>
+      Object.values(getReducibleOptions(parseEquation(s)))
+        .flat()
+        .filter(r => r.type === 'reduce')
+        .map(r => r.simplified.lhs.toString());
+
+    test('does NOT offer the all-at-once collapse m * x * 1 / x -> m', () => {
+      const results = lhsResults('m * x * 1 / x + b / x = 4');
+      // The opaque one-click result (… -> m + b/x) is gone …
+      expect(results).not.toContain('m + b / x');
+      // … replaced by the inspectable sub-steps: drop ×1, then cancel x/x.
+      expect(results).toContain('m * x / x + b / x'); // dropped the ×1
+      expect(results).toContain('m * 1 + b / x');     // cancelled x/x
+    });
+
+    test('does NOT offer the whole-side recombination (strange placement)', () => {
+      const results = lhsResults('m * x * 1 / x + b / x = 4');
+      expect(results).not.toContain('(b + x * m) / x');
+    });
+
+    test('still offers a lone cancellation as a single step (not over-suppressed)', () => {
+      const results = lhsResults('m * x / x = c');
+      expect(results).toContain('m'); // m * x / x -> m in one step is fine
+    });
+
+    test('still offers combining like terms as a single step', () => {
+      const results = lhsResults('3 * x - x = 5');
+      expect(results).toContain('2 * x');
+    });
+
+    // A simplification that collapses the parent (m * 1 -> m) leaves the tagged
+    // path unresolvable in the result; that must not silently drop the option.
+    test('offers an identity drop that collapses its parent (m * 1 -> m)', () => {
+      expect(lhsResults('m * 1 = 4')).toContain('m');
+      expect(lhsResults('m * 1 + b / x = 4')).toContain('m + b / x');
+      expect(lhsResults('x + 0 = 5')).toContain('x');
+    });
+
+    test('offers each identity drop independently (a * 1 + b * 1)', () => {
+      const results = lhsResults('a * 1 + b * 1 = 4');
+      expect(results).toContain('a + b * 1');
+      expect(results).toContain('a * 1 + b');
+    });
+  });
 });

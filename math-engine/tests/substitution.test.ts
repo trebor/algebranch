@@ -6,6 +6,8 @@ import {
   getSubstitutionOptions,
   describeSubstitution,
   SubstitutionFact,
+  getCombineOptions,
+  describeCollapse,
 } from '../src';
 
 const eq = (s: string) => ensureNodeIds(parseEquation(s));
@@ -30,7 +32,8 @@ describe('getIsolatedDefinition — what counts as a usable fact', () => {
   });
 
   it('rejects self-referential "isolation": y = y + 1', () => {
-    expect(getIsolatedDefinition(eq('y = y + 1'))).toBeNull();
+    const getIsolated = getIsolatedDefinition(eq('y = y + 1'));
+    expect(getIsolated).toBeNull();
   });
 
   it('accepts rhs bare variable even with work on the left: 2y = x isolates x', () => {
@@ -93,11 +96,57 @@ describe('getSubstitutionOptions — forward substitution', () => {
   });
 });
 
+describe('getCombineOptions — reverse substitution (collapse)', () => {
+  it('offers collapse at a matching sub-expression path', () => {
+    const options = getCombineOptions(eq('y = m * c ^ 2'), [fact('E = m * c ^ 2')]);
+    const paths = Object.keys(options);
+    expect(paths).toContain('rhs');
+
+    const opt = options['rhs'][0];
+    expect(opt.variable).toBe('E');
+    expect(norm(equationToString(opt.substituted))).toBe(norm('y = E'));
+    expect(opt.type).toBe('reverse');
+  });
+
+  it('supports commutative matching for addition and multiplication', () => {
+    const options = getCombineOptions(eq('y = c ^ 2 * m'), [fact('E = m * c ^ 2')]);
+    const paths = Object.keys(options);
+    expect(paths).toContain('rhs');
+
+    const opt = options['rhs'][0];
+    expect(opt.variable).toBe('E');
+    expect(norm(equationToString(opt.substituted))).toBe(norm('y = E'));
+  });
+
+  it('supports parenthesized expression matching', () => {
+    const options = getCombineOptions(eq('y = (m * c ^ 2)'), [fact('E = m * c ^ 2')]);
+    const paths = Object.keys(options);
+    expect(paths).toContain('rhs');
+
+    const opt = options['rhs'][0];
+    expect(opt.variable).toBe('E');
+    expect(norm(equationToString(opt.substituted))).toBe(norm('y = E'));
+  });
+
+  it('returns nothing when there are no matches', () => {
+    expect(getCombineOptions(eq('y = m * c'), [fact('E = m * c ^ 2')])).toEqual({});
+  });
+});
+
 describe('describeSubstitution — StepChange for the transcript / history tree', () => {
   it('emits a substitute rewrite with symbolic detail', () => {
     const change = describeSubstitution('y', '2 * x + 1');
     expect(change).toMatchObject({ kind: 'rewrite', op: 'substitute' });
     expect(change.text).toBe('substitute y = 2 * x + 1');
     expect((change as any).detail).toBe('y → 2 * x + 1');
+  });
+});
+
+describe('describeCollapse — StepChange for reverse substitution', () => {
+  it('emits a collapse rewrite with symbolic detail', () => {
+    const change = describeCollapse('m * c ^ 2', 'E');
+    expect(change).toMatchObject({ kind: 'rewrite', op: 'substitute' });
+    expect(change.text).toBe('collapse m * c ^ 2 to E');
+    expect((change as any).detail).toBe('m * c ^ 2 → E');
   });
 });

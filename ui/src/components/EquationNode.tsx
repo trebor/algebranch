@@ -26,7 +26,7 @@ import {
 import { OPERATOR_DISPLAY } from '../constants/mathSymbols';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
-import { describeTransposition, describeReduction, describeSubstitution } from 'math-engine';
+import { describeTransposition, describeReduction, describeSubstitution, describeCollapse } from 'math-engine';
 import { ArrowLeftRight, Zap, Split, RefreshCw, Replace, TriangleAlert } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
@@ -690,20 +690,26 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
     const substituteOptions: UnifiedStackOption[] = substitutions.map((sub, idx) => ({
       id: `substitute-${idx}`,
-      label: `Substitute ${sub.variable} = ${sub.replacement}`,
+      label: sub.type === 'reverse'
+        ? `Collapse ${sub.replacement} → ${sub.variable}`
+        : `Substitute ${sub.variable} = ${sub.replacement}`,
       subLabel: sub.fact.sourceName ? `from “${sub.fact.sourceName}”` : undefined,
       equation: sub.substituted,
       originalOption: sub,
       onApply: () => {
         pushEquation(
           sub.substituted,
-          'Substitute',
-          describeSubstitution(sub.variable, sub.replacement),
+          sub.type === 'reverse' ? 'Collapse' : 'Substitute',
+          sub.type === 'reverse'
+            ? describeCollapse(sub.replacement, sub.variable)
+            : describeSubstitution(sub.variable, sub.replacement),
         );
         trackEvent({
-          action: 'apply_substitution',
+          action: sub.type === 'reverse' ? 'apply_collapse' : 'apply_substitution',
           category: 'math_interaction',
-          label: `${sub.variable} -> ${sub.replacement}`,
+          label: sub.type === 'reverse'
+            ? `${sub.replacement} -> ${sub.variable}`
+            : `${sub.variable} -> ${sub.replacement}`,
         });
       }
     }));

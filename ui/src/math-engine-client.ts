@@ -12,7 +12,7 @@
 // …) stay engine/backend-only and are imported directly from 'math-engine' where
 // genuinely needed.
 
-export type { Equation, SerializedEquation, SerializedNode, RelationOperator } from 'math-engine';
+export type { Equation, SerializedEquation, SerializedNode, RelationOperator, EquationStatus } from 'math-engine';
 
 export {
   parseEquation,
@@ -33,4 +33,5 @@ export {
   serializeNode,
   deserializeEquation,
   deserializeNode,
+  getEquationStatus,
 } from 'math-engine';

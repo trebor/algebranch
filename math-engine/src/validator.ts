@@ -93,11 +93,22 @@ export const getFunctionName = (node: math.FunctionNode): string => {
  */
 export const getVariables = (node: math.MathNode): string[] => {
   const vars = new Set<string>();
-  node.traverse((n) => {
-    if (n.type === 'SymbolNode' && (n as math.SymbolNode).name !== 'pi' && (n as math.SymbolNode).name !== 'e') {
-      vars.add((n as math.SymbolNode).name);
+  const visit = (n: math.MathNode) => {
+    if (!n) return;
+    if (n.type === 'SymbolNode') {
+      const name = (n as math.SymbolNode).name;
+      if (name !== 'pi' && name !== 'e') {
+        vars.add(name);
+      }
+      return;
     }
-  });
+    if (n.type === 'FunctionNode') {
+      (n as math.FunctionNode).args.forEach(visit);
+      return;
+    }
+    getChildren(n).forEach(visit);
+  };
+  visit(node);
   return Array.from(vars);
 };
 
@@ -1164,3 +1175,43 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
 
   return moves;
 };
+
+/**
+ * Represents the truth status of an equation.
+ * - 'contradiction': the equation contains no variables and simplifies to a false statement (e.g. 3 = -3 or 5 < 2).
+ * - 'identity': the equation contains no variables and simplifies to a true statement (e.g. 0 = 0 or 1 < 3).
+ * - 'conditional': the equation contains variables and its truth value depends on them (e.g. x = 3).
+ */
+export type EquationStatus = 'contradiction' | 'identity' | 'conditional';
+
+/**
+ * Evaluates a variable-free equation to determine if it is a contradiction, identity, or conditional.
+ */
+export const getEquationStatus = (eq: Equation): EquationStatus => {
+  const vars = new Set<string>([
+    ...getVariables(eq.lhs),
+    ...getVariables(eq.rhs),
+  ]);
+
+  if (vars.size > 0) {
+    return 'conditional';
+  }
+
+  try {
+    const lhsVal = eq.lhs.compile().evaluate();
+    const rhsVal = eq.rhs.compile().evaluate();
+    const relation = eq.relation || '=';
+
+    const cmp = math.compare(lhsVal, rhsVal) as number;
+    if (relation === '=') return cmp === 0 ? 'identity' : 'contradiction';
+    if (relation === '<') return cmp < 0 ? 'identity' : 'contradiction';
+    if (relation === '>') return cmp > 0 ? 'identity' : 'contradiction';
+    if (relation === '<=') return cmp <= 0 ? 'identity' : 'contradiction';
+    if (relation === '>=') return cmp >= 0 ? 'identity' : 'contradiction';
+  } catch (err) {
+    console.error('Failed to evaluate constant equation:', err);
+  }
+
+  return 'conditional';
+};
+

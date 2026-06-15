@@ -14,7 +14,7 @@ import {
   candidatePathsAtom,
   hoverReducePathAtom,
   hoverReduceIndexAtom,
-  reduciblePathsAtom,
+  filteredReduciblePathsAtom,
   substitutionPathsAtom,
   toggleRootSignAtom,
   onboardingChapterIdAtom,
@@ -225,7 +225,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
   const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
   const [hoverReduceIndex, setHoverReduceIndex] = useAtom(hoverReduceIndexAtom);
-  const reduciblePaths = useAtomValue(reduciblePathsAtom);
+  const reduciblePaths = useAtomValue(filteredReduciblePathsAtom);
   const substitutionPaths = useAtomValue(substitutionPathsAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
   const pushEquation = useSetAtom(pushEquationAtom);

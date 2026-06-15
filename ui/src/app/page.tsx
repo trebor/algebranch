@@ -10,6 +10,7 @@ import { FeedbackModal } from '../components/FeedbackModal';
 import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
 import { ResetHistoryModal } from '../components/ResetHistoryModal';
 import { EquationInputModal } from '../components/EquationInputModal';
+import { SettingsModal } from '../components/SettingsModal';
 import { OnboardingTour } from '../components/OnboardingTour';
 import { Tooltip } from '../components/Tooltip';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
@@ -41,6 +42,7 @@ import {
   rightSidebarOpenAtom,
   feedbackModalOpenAtom,
   feedbackContextAtom,
+  settingsModalOpenAtom,
   mathLoadingAtom,
   hydrateWorkspaceTabsAtom,
   appHydratedAtom,
@@ -64,7 +66,7 @@ import {
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
-import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
+import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -124,6 +126,7 @@ export default function Home() {
   const clearMathState = useSetAtom(clearMathStateAtom);
   const setFeedbackModalOpen = useSetAtom(feedbackModalOpenAtom);
   const setFeedbackContext = useSetAtom(feedbackContextAtom);
+  const setSettingsModalOpen = useSetAtom(settingsModalOpenAtom);
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
   const setAppHydrated = useSetAtom(appHydratedAtom);
@@ -796,6 +799,14 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setSettingsModalOpen(true)}
+            className={THEME_GLASS.HEADER_BUTTON}
+            aria-label="Settings"
+          >
+            <SettingsIcon size={14} className="text-indigo-400 group-hover:rotate-45 transition-transform" />
+            <span className="hidden sm:inline">Settings</span>
+          </button>
+          <button
             onClick={() => {
               if (currentEq) {
                 setFeedbackContext(`Active Equation: ${equationToString(currentEq)}`);
@@ -1103,6 +1114,7 @@ export default function Home() {
       <DeleteWorkspaceModal />
       <ResetHistoryModal />
       <EquationInputModal />
+      <SettingsModal />
 
       {/* Mobile-only Bottom navigation and Sheets */}
       {!onboardingChapterId && <BottomNav />}

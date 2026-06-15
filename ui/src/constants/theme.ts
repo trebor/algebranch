@@ -50,7 +50,15 @@ export const THEME_GLASS = {
   BUTTON_SECONDARY: 'bg-neutral-900 border border-white/10 hover:bg-neutral-800 hover:border-white/20 text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer',
   BUTTON_SECONDARY_MUTED: 'bg-neutral-950 border border-white/5 rounded-xl text-white/30 transition-all duration-150 cursor-not-allowed',
   BUTTON_DANGER: 'bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 transition-all duration-150 cursor-pointer',
-  
+
+  // --- Settings modal: setting row + toggle switch (#67) ---
+  SETTING_ROW: 'flex items-start justify-between gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5',
+  TOGGLE_TRACK: 'w-11 h-6 rounded-full transition-colors relative cursor-pointer outline-none border border-white/5 focus-visible:ring-2 focus-visible:ring-indigo-500 shrink-0',
+  TOGGLE_TRACK_ON: 'bg-indigo-600 border-indigo-400/20',
+  TOGGLE_TRACK_OFF: 'bg-white/10',
+  TOGGLE_KNOB: 'w-4 h-4 bg-white rounded-full transition-transform absolute left-1 top-1',
+
+
   // Controls & Popovers
   FIELD_SELECT: 'bg-neutral-950/80 border border-white/5 hover:border-white/10 text-indigo-100 hover:text-white focus:outline-none focus:border-indigo-500/80 transition-all duration-150 font-mono cursor-pointer rounded-xl',
   OVERLAY_BG: 'bg-[#16142a] border border-white/10 rounded-xl shadow-2xl',

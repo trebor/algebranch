@@ -178,9 +178,9 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
         if (showIndex) {
           let unwrapped = funcNode.args[1];
           while (unwrapped && unwrapped.type === 'ParenthesisNode') {
-            unwrapped = (unwrapped as any).content;
+            unwrapped = (unwrapped as math.ParenthesisNode).content;
           }
-          if (unwrapped && unwrapped.type === 'ConstantNode' && ((unwrapped as any).value === 2 || (unwrapped as any).value === '2')) {
+          if (unwrapped && unwrapped.type === 'ConstantNode' && (((unwrapped as math.ConstantNode).value as unknown) === 2 || ((unwrapped as math.ConstantNode).value as unknown) === '2')) {
             showIndex = false;
           }
         }

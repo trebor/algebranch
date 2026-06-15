@@ -3,9 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
+/** Event handlers Tooltip reads off / re-injects into its trigger child. */
+interface TriggerProps {
+  onMouseEnter?: (e: React.MouseEvent) => void;
+  onMouseLeave?: (e: React.MouseEvent) => void;
+  onFocus?: (e: React.FocusEvent) => void;
+  onBlur?: (e: React.FocusEvent) => void;
+  onClick?: (e: React.MouseEvent) => boolean | void;
+}
+
 interface TooltipProps {
   readonly content: React.ReactNode;
-  readonly children: React.ReactElement<any>;
+  readonly children: React.ReactElement<TriggerProps>;
   readonly position?: 'top' | 'bottom' | 'left' | 'right';
   readonly delay?: number; // Delay in milliseconds before showing
   readonly hideDelay?: number; // Grace period (ms) before hiding, to bridge the trigger->popover gap
@@ -143,7 +152,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     };
   }, [isVisible]);
 
-  const showTooltip = (e: React.MouseEvent<any> | React.FocusEvent<any>) => {
+  const showTooltip = (e: React.MouseEvent<Element> | React.FocusEvent<Element>) => {
     setIsDismissed(false);
     try {
       const rect = e.currentTarget.getBoundingClientRect();

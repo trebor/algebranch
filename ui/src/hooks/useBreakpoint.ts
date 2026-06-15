@@ -34,7 +34,7 @@ function resolveBreakpoint(queries: MediaQueryList[]): Breakpoint {
 // ---------------------------------------------------------------------------
 
 let queries: MediaQueryList[] | null = null;
-let listeners: Set<() => void> = new Set();
+const listeners: Set<() => void> = new Set();
 let currentSnapshot: Breakpoint = 'xl'; // SSR default
 
 /** Lazily initialise matchMedia queries and wire up change listeners. */
@@ -65,10 +65,13 @@ function ensureInitialised(): void {
 
   queries.forEach((mql) => {
     // Standard event listener with safe fallback for older browsers/WebViews
+    const legacy = mql as MediaQueryList & {
+      addListener?: (listener: (this: MediaQueryList, ev: MediaQueryListEvent) => void) => void;
+    };
     if (mql.addEventListener) {
       mql.addEventListener('change', onChange);
-    } else if ((mql as any).addListener) {
-      (mql as any).addListener(onChange);
+    } else if (legacy.addListener) {
+      legacy.addListener(onChange);
     }
   });
 }

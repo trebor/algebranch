@@ -1323,8 +1323,8 @@ export const hydrateWorkspaceTabsAtom = atom(
       const savedActiveId = safeLocalStorage.getItem('algebranch_active_tab_id');
       
       if (savedTabs) {
-        const parsed = JSON.parse(savedTabs);
-        const deserialized = parsed.map((tab: any) => {
+        const parsed = JSON.parse(savedTabs) as Array<Omit<WorkspaceTab, 'historyTree'> & { historyTree: Record<string, SerializedHistoryNode> }>;
+        const deserialized = parsed.map((tab) => {
           const tree = deserializeTree(tab.historyTree);
           return {
             ...tab,
@@ -1336,7 +1336,7 @@ export const hydrateWorkspaceTabsAtom = atom(
         set(rawTabsAtom, deserialized);
 
         const activeId = savedActiveId || 'tab_initial';
-        const activeTab = deserialized.find((t: any) => t.id === activeId) || deserialized[0];
+        const activeTab = deserialized.find((t) => t.id === activeId) || deserialized[0];
         if (activeTab?.sessionId) {
           set(rawCurrentSessionIdAtom, activeTab.sessionId);
         }

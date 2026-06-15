@@ -204,7 +204,7 @@ ${formattedTree}
                   </motion.div>
                   <h3 className="text-xl font-bold text-white">{successTypeLabel} Drafted!</h3>
                   <p className="text-sm text-zinc-400 mt-2 max-w-sm">
-                    We've opened your mail client with your feedback pre-written. Please press <strong>Send</strong> in your mail application to complete the submission.
+                    We&apos;ve opened your mail client with your feedback pre-written. Please press <strong>Send</strong> in your mail application to complete the submission.
                   </p>
                   <button
                     onClick={handleClose}

@@ -15,7 +15,14 @@ import * as math from 'mathjs';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as any;
+    const body = (await req.json()) as {
+      action?: string;
+      eqStr?: string;
+      eqStr1?: string;
+      eqStr2?: string;
+      serializedEq?: SerializedEquation;
+      sourcePath?: string;
+    };
     const { action } = body;
 
     if (action === 'sync-state') {
@@ -25,7 +32,7 @@ export async function POST(req: NextRequest) {
       if (serializedEq) {
         eq = deserializeEquation(serializedEq);
       } else {
-        eq = parseEquation(eqStr);
+        eq = parseEquation(eqStr!);
       }
       
       // 1. Traverse the AST to get all node paths
@@ -33,7 +40,9 @@ export async function POST(req: NextRequest) {
       const traversePaths = (node: math.MathNode, prefix: string) => {
         if (!node) return;
         allNodePaths.push(prefix);
-        const children = 'args' in node ? (node as any).args : ('content' in node ? [(node as any).content] : []);
+        const children = 'args' in node
+          ? (node as math.MathNode & { args: math.MathNode[] }).args
+          : ('content' in node ? [(node as math.MathNode & { content: math.MathNode }).content] : []);
         children.forEach((child: math.MathNode, index: number) => {
           if (child) traversePaths(child, `${prefix}/${index}`);
         });
@@ -92,15 +101,15 @@ export async function POST(req: NextRequest) {
 
     if (action === 'validate-equivalent') {
       const { eqStr1, eqStr2 } = body;
-      const eq1 = parseEquation(eqStr1);
-      const eq2 = parseEquation(eqStr2);
+      const eq1 = parseEquation(eqStr1!);
+      const eq2 = parseEquation(eqStr2!);
       const equivalent = areEquationsEquivalent(eq1, eq2);
       return NextResponse.json({ equivalent });
     }
 
     if (action === 'auto-simplify') {
       const { eqStr } = body;
-      const eq = parseEquation(eqStr);
+      const eq = parseEquation(eqStr!);
       const simplified = autoSimplify(eq);
       return NextResponse.json({ simplifiedEqStr: equationToString(simplified) });
     }

@@ -52,7 +52,7 @@ const formatTimestamp = (ts: number): string => {
   return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-const getStepCount = (tree: Record<string, any> | undefined | null): number => {
+const getStepCount = (tree: Record<string, unknown> | undefined | null): number => {
   if (!tree) return 0;
   return Math.max(0, Object.keys(tree).length - 1);
 };

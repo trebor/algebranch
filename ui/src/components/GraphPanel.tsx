@@ -6,6 +6,7 @@ import { currentEquationAtom, graphDataAtom, graphSizeAtom, customViewportAtom }
 import { THEME_GLASS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
 import { evaluatePoint, formatNumber } from 'math-engine';
+import * as math from 'mathjs';
 
 const GRAPH_BACKGROUND_COLOR = '#050508';
 
@@ -33,11 +34,11 @@ function niceTicks(min: number, max: number, count = 5): number[] {
   return ticks.filter(t => t >= min && t <= max);
 }
 
-const nodeToString = (node: any): string => {
+const nodeToString = (node: math.MathNode): string => {
   const options = {
-    handler: (n: any): string | undefined => {
+    handler: (n: math.MathNode): string | undefined => {
       if (n.type === 'ConstantNode') {
-        return formatNumber(n.value);
+        return formatNumber((n as math.ConstantNode).value);
       }
       return undefined;
     }
@@ -192,12 +193,12 @@ export const GraphPanel: React.FC = () => {
     return padding.top + plotHeight - ((y - yMin) / (yMax - yMin)) * plotHeight;
   };
 
-  const evalReal = (node: any, x: number): number | null => {
+  const evalReal = (node: math.MathNode, x: number): number | null => {
     try {
       const v = evaluatePoint(node, { [variable]: x });
       if (typeof v === 'number') return Number.isFinite(v) ? v : null;
       if (v && typeof v === 'object') {
-        if ('im' in v) return Math.abs((v as any).im) < 1e-9 && Number.isFinite((v as any).re) ? (v as any).re : null;
+        if ('im' in v) return Math.abs(v.im) < 1e-9 && Number.isFinite(v.re) ? v.re : null;
         const n = Number(v);
         return Number.isFinite(n) ? n : null;
       }

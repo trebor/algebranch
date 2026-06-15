@@ -22,10 +22,12 @@ import {
   onboardingTargetPathAtom,
   onboardingReduceHandleAtom,
   onboardingSubstitutionAtom,
+  ReducibleActionInfo,
 } from '../store/equation';
 import { OPERATOR_DISPLAY, RELATION_DISPLAY } from '../constants/mathSymbols';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
+import type { SubstitutionOption } from 'math-engine';
 import { describeTransposition, describeReduction, describeSubstitution, describeCollapse } from 'math-engine';
 import { ArrowLeftRight, Zap, Split, RefreshCw, Replace, TriangleAlert } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
@@ -36,8 +38,8 @@ interface UnifiedStackOption {
   id: string;
   label: string;
   subLabel?: string;
-  equation: any;
-  originalOption: any;
+  equation: Equation;
+  originalOption: ReducibleActionInfo | SubstitutionOption;
   /** Domain restrictions the option assumes (#63), e.g. ['x ≠ 0'], shown as a
    *  ⚠ caveat on the handle/menu so the student sees it before applying (#59). */
   assumptions?: readonly string[];
@@ -449,7 +451,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   // Otherwise, if they hover static parts of the expression, keep all candidates bright (scan mode).
   const isHighlightedCandidate = isCandidate && !sourcePath && (!isHoveringAnyCandidate || isHovered);
 
-  let semanticStyle = isSelected
+  const semanticStyle = isSelected
     ? THEME_GLASS.SOURCE
     : isTarget
     ? THEME_GLASS.TARGET
@@ -579,9 +581,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         if (showIndex) {
           let unwrapped = funcNode.args[1];
           while (unwrapped && unwrapped.type === 'ParenthesisNode') {
-            unwrapped = (unwrapped as any).content;
+            unwrapped = (unwrapped as math.ParenthesisNode).content;
           }
-          if (unwrapped && unwrapped.type === 'ConstantNode' && ((unwrapped as any).value === 2 || (unwrapped as any).value === '2')) {
+          if (unwrapped && unwrapped.type === 'ConstantNode' && (((unwrapped as math.ConstantNode).value as unknown) === 2 || ((unwrapped as math.ConstantNode).value as unknown) === '2')) {
             showIndex = false;
           }
         }
@@ -901,7 +903,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       e.stopPropagation();
                       if (stack.type !== 'substitute') {
                         setHoverReducePath(path);
-                        setHoverReduceIndex(actions.indexOf(single.originalOption));
+                        setHoverReduceIndex(actions.indexOf(single.originalOption as ReducibleActionInfo));
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -997,7 +999,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       setHoveredOption({ type: stack.type, index: i });
                       if (stack.type !== 'substitute') {
                         setHoverReducePath(path);
-                        setHoverReduceIndex(actions.indexOf(opt.originalOption));
+                        setHoverReduceIndex(actions.indexOf(opt.originalOption as ReducibleActionInfo));
                       }
                     }}
                     onClick={(e) => {

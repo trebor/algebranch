@@ -66,6 +66,7 @@ import {
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
@@ -780,7 +781,7 @@ export default function Home() {
       {/* Top Header */}
       <header className="h-16 px-4 flex items-center justify-between select-none shrink-0 w-full z-30">
         <div className="flex items-center gap-2">
-          <a href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-90 active:scale-98 transition-all">
+          <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-90 active:scale-98 transition-all">
             <Image
               src="/logo.png"
               alt="Algebranch Logo"
@@ -795,7 +796,7 @@ export default function Home() {
                 Interactive Algebra
               </p>
             </div>
-          </a>
+          </Link>
         </div>
         <div className="flex items-center gap-3">
           <button

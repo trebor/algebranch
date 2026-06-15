@@ -565,7 +565,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         }
         return (
           <div className="flex items-stretch mx-[0.1em] relative">
-            <div className="flex items-stretch select-none shrink-0 relative mr-[-1px]">
+            <div className="relative w-[0.7em] select-none shrink-0 mr-[-1px]">
               {showIndex && (
                 <div className="absolute right-full top-0 -mt-[0.2em] -mr-[0.3em] text-[0.55em] scale-90 z-10" style={getOpStyle()}>
                   <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} />
@@ -574,7 +574,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className={`w-[0.7em] h-full ${isStatic ? THEME_GLASS.MATH_FN_ROOT_STATIC : THEME_GLASS.MATH_FN_ROOT_ACTIVE}`}
+                className={`absolute inset-0 w-full h-full ${isStatic ? THEME_GLASS.MATH_FN_ROOT_STATIC : THEME_GLASS.MATH_FN_ROOT_ACTIVE}`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
@@ -598,11 +598,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       if (nameStr === 'sqrt') {
         return (
           <div className="flex items-stretch mx-[0.1em] relative">
-            <div className="flex items-stretch select-none shrink-0 relative mr-[-1px]">
+            <div className="relative w-[0.7em] select-none shrink-0 mr-[-1px]">
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className={`w-[0.7em] h-full ${isStatic ? THEME_GLASS.MATH_FN_ROOT_STATIC : THEME_GLASS.MATH_FN_ROOT_ACTIVE}`}
+                className={`absolute inset-0 w-full h-full ${isStatic ? THEME_GLASS.MATH_FN_ROOT_STATIC : THEME_GLASS.MATH_FN_ROOT_ACTIVE}`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"

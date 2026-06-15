@@ -44,12 +44,10 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(() => parseEquation('x = A[1]')).toThrow();
     expect(() => parseEquation('x = 1:5')).toThrow();
     
-    // Inequalities
-    expect(() => parseEquation('x < y')).toThrow();
-    expect(() => parseEquation('x > y')).toThrow();
-    expect(() => parseEquation('x <= y')).toThrow();
-    expect(() => parseEquation('x >= y')).toThrow();
-    
+    // Multiple relation operators are rejected (single inequalities are allowed — see #34)
+    expect(() => parseEquation('x < y = 5')).toThrow();
+    expect(() => parseEquation('x = y < 5')).toThrow();
+
     // Function Assignment
     expect(() => parseEquation('f(x) = x^2')).toThrow();
     
@@ -410,6 +408,25 @@ describe('Math Engine Validator & Simplifier', () => {
     const simplified3 = getSimplificationForPath(eq3, 'rhs');
     expect(simplified3).not.toBeNull();
     expect(equationToString(simplified3!)).toBe('y = x / 2 + 6 / 2');
+  });
+
+  test('distribution guards against unary minus factors (regression)', () => {
+    // `-x * -1` / `3 * -1` have a unary-minus factor whose op is also '-'. It must
+    // not be mistaken for a binary `(b - c)` — that previously threw inside
+    // tryDistribution, swallowing the fold handle for `3 * -1` and crashing
+    // autoSimplify on `-x * -1`.
+    expect(equationToString(autoSimplify(parseEquation('y = -x * -1')))).toBe('y = x');
+    expect(equationToString(autoSimplify(parseEquation('-x * -1 = 3 * -1')))).toBe('x = -3');
+
+    // The negated-literal product is still offered as a per-node simplification.
+    const folded = getSimplificationForPath(parseEquation('y = 3 * -1'), 'rhs');
+    expect(folded).not.toBeNull();
+    expect(equationToString(folded!)).toBe('y = -3');
+
+    // Genuine distributions are unaffected.
+    const dist = getSimplificationForPath(parseEquation('y = 2 * (x + 3)'), 'rhs');
+    expect(dist).not.toBeNull();
+    expect(equationToString(dist!)).toBe('y = 2 * x + 2 * 3');
   });
 
   test('autoSimplify recursively simplifies and distributes terms', () => {

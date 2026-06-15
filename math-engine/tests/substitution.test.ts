@@ -94,6 +94,14 @@ describe('getSubstitutionOptions — forward substitution', () => {
     // replacement round-trips through the parser (strictly symbolic, like #42 operands)
     expect(norm(equationToString(parseEquation(`q = ${opt.replacement}`)))).toBe(norm(`q = ${opt.replacement}`));
   });
+
+  it('preserves the relation when substituting into an inequality (#34)', () => {
+    const options = getSubstitutionOptions(eq('-x * -1 > 3 * -1'), [fact('x = -3')]);
+    const opt = Object.values(options).flat()[0];
+    expect(opt).toBeDefined();
+    expect(opt.substituted.relation).toBe('>');
+    expect(norm(equationToString(opt.substituted))).toBe(norm('-(-3) * -1 > 3 * -1'));
+  });
 });
 
 describe('getCombineOptions — reverse substitution (collapse)', () => {

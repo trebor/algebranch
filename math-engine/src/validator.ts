@@ -12,6 +12,8 @@ import {
 } from './interval';
 import {
   Equation,
+  RelationOperator,
+  flipRelation,
   getNodeByPath,
   replaceNodeAtPath,
   removeNodeAtPath,
@@ -31,6 +33,32 @@ const NUM_TEST_RUNS = 5;
 const RANGE_MID_MIN = 1.0;
 const RANGE_MID_MAX = 5.0;
 const HALF_WIDTH = 0.05;
+
+// Inequality region sampling: points are drawn symmetrically about zero so both
+// sides of a solution boundary are exercised. Samples within REGION_BOUNDARY_SKIP
+// of a boundary are ignored (their truth value is dominated by float error), and
+// equivalence requires at least REGION_MIN_VALID_SAMPLES agreeing samples.
+const REGION_SAMPLE_RANGE = 8.0;
+const REGION_SAMPLE_COUNT = 48;
+const REGION_BOUNDARY_SKIP = 1e-6;
+const REGION_MIN_VALID_SAMPLES = 6;
+// Relative tolerance for deciding two signed gaps (lhs - rhs) coincide, used only
+// for the degenerate constant-inequality fallback below.
+const REGION_GAP_TOLERANCE = 1e-6;
+
+// Relation strictness classes — equivalent inequalities must share a class (a
+// strict `<` is never equivalent to a non-strict `<=`, regardless of region).
+const RELATION_CLASS: Record<RelationOperator, 'eq' | 'strict' | 'nonstrict'> = {
+  '=': 'eq',
+  '<': 'strict',
+  '>': 'strict',
+  '<=': 'nonstrict',
+  '>=': 'nonstrict',
+};
+
+// Whether a relation points "less-than"; away from the boundary this fully
+// determines satisfaction, so strict/non-strict need not be distinguished here.
+const RELATION_IS_LESS: Record<string, boolean> = { '<': true, '<=': true };
 
 // Operator function mapping for math.OperatorNode constructors
 const OP_TO_FN = {
@@ -490,9 +518,79 @@ export const areEquationsEquivalentInterval = (
 };
 
 /**
- * Fast two-stage validation check for equation equivalence.
+ * Tests whether two inequalities carve out the same solution region, by sampling
+ * random points and comparing the truth value of each (away from boundaries,
+ * where float error dominates). Assumes both relations are inequalities of the
+ * same strictness class.
+ */
+const areInequalityRegionsEquivalent = (
+  eq1: Equation,
+  eq2: Equation,
+  variables: string[],
+  rel1: RelationOperator,
+  rel2: RelationOperator
+): boolean => {
+  const satisfies = (diff: number, relation: RelationOperator): boolean =>
+    RELATION_IS_LESS[relation] ? diff < 0 : diff > 0;
+
+  let validSamples = 0;
+  let finiteSamples = 0;
+  let gapsCoincide = true; // whether the signed gaps (lhs - rhs) match at every point
+  for (let i = 0; i < REGION_SAMPLE_COUNT; i++) {
+    const scope: Record<string, number> = {};
+    variables.forEach((v) => {
+      scope[v] = (Math.random() * 2 - 1) * REGION_SAMPLE_RANGE;
+    });
+
+    let d1: number;
+    let d2: number;
+    try {
+      d1 = Number(math.subtract(evaluatePoint(eq1.lhs, scope), evaluatePoint(eq1.rhs, scope)));
+      d2 = Number(math.subtract(evaluatePoint(eq2.lhs, scope), evaluatePoint(eq2.rhs, scope)));
+    } catch {
+      continue;
+    }
+
+    if (!Number.isFinite(d1) || !Number.isFinite(d2)) continue;
+
+    finiteSamples++;
+    if (Math.abs(d1 - d2) > REGION_GAP_TOLERANCE * (1 + Math.abs(d1))) {
+      gapsCoincide = false;
+    }
+
+    if (Math.abs(d1) < REGION_BOUNDARY_SKIP || Math.abs(d2) < REGION_BOUNDARY_SKIP) continue;
+
+    validSamples++;
+    if (satisfies(d1, rel1) !== satisfies(d2, rel2)) {
+      return false;
+    }
+  }
+
+  if (validSamples >= REGION_MIN_VALID_SAMPLES) return true;
+
+  // Degenerate case: the two sides coincide at (almost) every point, so the gap is
+  // ~0 everywhere and there are no off-boundary samples to compare (e.g. a fold
+  // like `-(-3) * -1 > 3 * -1` vs `-3 > -3`). Such inequalities are constant-valued;
+  // with a shared strictness class, identical signed gaps mean identical truth.
+  return finiteSamples >= REGION_MIN_VALID_SAMPLES && gapsCoincide;
+};
+
+/**
+ * Fast two-stage validation check for equation/inequality equivalence.
+ *
+ * Equality is handled by the interval + root-matching solver. Inequalities must
+ * (1) share a strictness class, (2) have coincident boundaries (the `=` form is
+ * checked with the same solver), and (3) define the same solution region
+ * (sampled). A relation/strictness-class mismatch short-circuits to false.
  */
 export const areEquationsEquivalent = (eq1: Equation, eq2: Equation): boolean => {
+  const rel1 = eq1.relation ?? '=';
+  const rel2 = eq2.relation ?? '=';
+
+  if (RELATION_CLASS[rel1] !== RELATION_CLASS[rel2]) {
+    return false;
+  }
+
   const vars1 = getVariables(eq1.lhs).concat(getVariables(eq1.rhs));
   const vars2 = getVariables(eq2.lhs).concat(getVariables(eq2.rhs));
   const variables = Array.from(new Set(vars1.concat(vars2)));
@@ -501,19 +599,31 @@ export const areEquationsEquivalent = (eq1: Equation, eq2: Equation): boolean =>
     variables.push('x');
   }
 
-  const isWithinFormula = (
-    eq1.lhs.toString() === eq2.lhs.toString() ||
-    eq1.rhs.toString() === eq2.rhs.toString()
-  );
+  if (rel1 === '=') {
+    const isWithinFormula = (
+      eq1.lhs.toString() === eq2.lhs.toString() ||
+      eq1.rhs.toString() === eq2.rhs.toString()
+    );
 
-  if (isWithinFormula) {
-    const intervalResult = areEquationsEquivalentInterval(eq1, eq2, variables);
-    if (intervalResult === 'different') {
-      return false;
+    if (isWithinFormula) {
+      const intervalResult = areEquationsEquivalentInterval(eq1, eq2, variables);
+      if (intervalResult === 'different') {
+        return false;
+      }
     }
+
+    return areEquationsEquivalentPoint(eq1, eq2, variables);
   }
 
-  return areEquationsEquivalentPoint(eq1, eq2, variables);
+  // Inequality: boundaries must coincide (checked on the `=` form) and the
+  // solution regions must agree at sampled points.
+  const boundary1: Equation = { lhs: eq1.lhs, rhs: eq1.rhs, relation: '=' };
+  const boundary2: Equation = { lhs: eq2.lhs, rhs: eq2.rhs, relation: '=' };
+  if (!areEquationsEquivalentPoint(boundary1, boundary2, variables)) {
+    return false;
+  }
+
+  return areInequalityRegionsEquivalent(eq1, eq2, variables, rel1, rel2);
 };
 
 /**
@@ -932,6 +1042,15 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
     const targetPaths = getAllPaths(tempEq);
     const excludedParents = getExcludedParentPaths(originalEq, sourcePath);
 
+    // For inequalities, each transposition is tested with both the original and
+    // the flipped relation; the equivalence validator keeps the mathematically
+    // correct direction (e.g. dividing by a negative flips `<` to `>`) and
+    // rejects the other. Equalities only ever test the inherited relation.
+    const isInequality = !!originalEq.relation && originalEq.relation !== '=';
+    const relationVariants: RelationOperator[] = isInequality
+      ? [originalEq.relation as RelationOperator, flipRelation(originalEq.relation)]
+      : ['='];
+
     targetPaths.forEach((targetPath) => {
       if (excludedParents.has(targetPath)) {
         return;
@@ -953,6 +1072,50 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
 
       const targetNode = getNodeByPath(tempEq, targetPath);
 
+      // Parametrized original: the target subtree is replaced with a free symbol
+      // so a move is validated as an identity over an arbitrary operand, not a
+      // coincidence of the specific value. null if the path can't be mapped.
+      const paramVar = new math.SymbolNode('__y');
+      let originalEqParam: Equation | null = null;
+      try {
+        const targetPathInOrig = mapPathTempToOrig(originalEq, sourcePath, targetPath);
+        originalEqParam = replaceNodeAtPath(originalEq, targetPathInOrig, paramVar);
+      } catch {
+        originalEqParam = null;
+      }
+
+      // Records the candidate under the first relation variant the validator
+      // accepts. `candidateParamEq` (the parametrized form) is preferred; when it
+      // can't be built we fall back to validating the concrete candidate.
+      const tryAddMove = (candidateEq: Equation, candidateParamEq: Equation | null): void => {
+        for (const rel of relationVariants) {
+          const candRel: Equation = isInequality ? { ...candidateEq, relation: rel } : candidateEq;
+          const isNoOp = (
+            originalEq.lhs.toString() === candRel.lhs.toString() &&
+            originalEq.rhs.toString() === candRel.rhs.toString() &&
+            (originalEq.relation ?? '=') === rel
+          );
+          if (isNoOp) continue;
+
+          let isEquivalent = false;
+          try {
+            if (candidateParamEq && originalEqParam) {
+              const paramRel: Equation = isInequality ? { ...candidateParamEq, relation: rel } : candidateParamEq;
+              isEquivalent = areEquationsEquivalent(originalEqParam, paramRel);
+            } else {
+              isEquivalent = areEquationsEquivalent(originalEq, candRel);
+            }
+          } catch {
+            isEquivalent = areEquationsEquivalent(originalEq, candRel);
+          }
+
+          if (isEquivalent) {
+            moves[targetPath] = candRel;
+            return;
+          }
+        }
+      };
+
       // Declared as const to satisfy TypeScript operator union types
       const ops = ['+', '-', '*', '/'] as const;
 
@@ -960,75 +1123,39 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
         // Cast via never to satisfy very specific types of OperatorNodeMap in mathjs
         const nodeStandard = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [targetNode, removedNode]);
         const eqStandard = replaceNodeAtPath(tempEq, targetPath, nodeStandard);
-        
-        const isNoOpStandard = (
-          originalEq.lhs.toString() === eqStandard.lhs.toString() &&
-          originalEq.rhs.toString() === eqStandard.rhs.toString()
-        );
 
-        let isEquivalentStandard = false;
-        if (!isNoOpStandard) {
+        let eqStandardParam: Equation | null = null;
+        if (originalEqParam) {
           try {
-            const paramVar = new math.SymbolNode('__y');
-            const targetPathInOrig = mapPathTempToOrig(originalEq, sourcePath, targetPath);
-            const originalEqParam = replaceNodeAtPath(originalEq, targetPathInOrig, paramVar);
-
             const nodeStandardParam = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [paramVar, removedNode]);
-            const eqStandardParam = replaceNodeAtPath(tempEq, targetPath, nodeStandardParam);
-
-            isEquivalentStandard = areEquationsEquivalent(originalEqParam, eqStandardParam);
-          } catch (e) {
-            isEquivalentStandard = areEquationsEquivalent(originalEq, eqStandard);
+            eqStandardParam = replaceNodeAtPath(tempEq, targetPath, nodeStandardParam);
+          } catch {
+            eqStandardParam = null;
           }
         }
-
-        if (!isNoOpStandard && isEquivalentStandard) {
-          moves[targetPath] = eqStandard;
-        }
+        tryAddMove(eqStandard, eqStandardParam);
 
         if (op === '-' || op === '/') {
           const nodeReverse = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [removedNode, targetNode]);
           const eqReverse = replaceNodeAtPath(tempEq, targetPath, nodeReverse);
-          
-          const isNoOpReverse = (
-            originalEq.lhs.toString() === eqReverse.lhs.toString() &&
-            originalEq.rhs.toString() === eqReverse.rhs.toString()
-          );
 
-          let isEquivalentReverse = false;
-          if (!isNoOpReverse) {
+          let eqReverseParam: Equation | null = null;
+          if (originalEqParam) {
             try {
-              const paramVar = new math.SymbolNode('__y');
-              const targetPathInOrig = mapPathTempToOrig(originalEq, sourcePath, targetPath);
-              const originalEqParam = replaceNodeAtPath(originalEq, targetPathInOrig, paramVar);
-
               const nodeReverseParam = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [removedNode, paramVar]);
-              const eqReverseParam = replaceNodeAtPath(tempEq, targetPath, nodeReverseParam);
-
-              isEquivalentReverse = areEquationsEquivalent(originalEqParam, eqReverseParam);
-            } catch (e) {
-              isEquivalentReverse = areEquationsEquivalent(originalEq, eqReverse);
+              eqReverseParam = replaceNodeAtPath(tempEq, targetPath, nodeReverseParam);
+            } catch {
+              eqReverseParam = null;
             }
           }
-
-          if (!isNoOpReverse && isEquivalentReverse) {
-            moves[targetPath] = eqReverse;
-          }
+          tryAddMove(eqReverse, eqReverseParam);
         }
       });
 
       // Direct replacement is only valid if we are overwriting a neutral constant (0 or 1)
       if (isNeutralNode(targetNode)) {
         const eqDirect = replaceNodeAtPath(tempEq, targetPath, removedNode);
-        
-        const isNoOpDirect = (
-          originalEq.lhs.toString() === eqDirect.lhs.toString() &&
-          originalEq.rhs.toString() === eqDirect.rhs.toString()
-        );
-
-        if (!isNoOpDirect && areEquationsEquivalent(originalEq, eqDirect)) {
-          moves[targetPath] = eqDirect;
-        }
+        tryAddMove(eqDirect, null);
       }
     });
   } catch (err) {

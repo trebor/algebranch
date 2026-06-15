@@ -19,3 +19,13 @@ export const OPERATOR_DISPLAY: Record<string, string> = {
   '-': MINUS_SYMBOL,
   '*': MULTIPLY_SYMBOL,
 };
+
+// Display glyphs for relation operators (#34). The engine keeps ASCII (`<=`),
+// while the renderer shows the typographic ≤ / ≥.
+export const RELATION_DISPLAY: Record<string, string> = {
+  '=': '=',
+  '<': '<',
+  '>': '>',
+  '<=': '≤',
+  '>=': '≥',
+};

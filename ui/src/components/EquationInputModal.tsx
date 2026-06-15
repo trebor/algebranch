@@ -9,9 +9,15 @@ import {
   resetToEquationStringAtom
 } from '../store/equation';
 import { PreviewEquationNode } from './PreviewEquationNode';
-import { parseEquation, Equation } from 'math-engine-client';
+import { parseEquation, Equation, RelationOperator } from 'math-engine-client';
 import { THEME_GLASS } from '../constants/theme';
+import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import { trackEvent } from '../utils/analytics';
+
+// Relation operators the input modal lets the user choose between (#34).
+const RELATION_OPTIONS: RelationOperator[] = ['=', '<', '>', '<=', '>='];
+// Detects a relation operator in pasted/typed text (two-char forms first).
+const RELATION_REGEX = /<=|>=|<|>|=/;
 
 export const EquationInputModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(equationInputModalOpenAtom);
@@ -19,6 +25,7 @@ export const EquationInputModal: React.FC = () => {
 
   const [lhsStr, setLhsStr] = React.useState('');
   const [rhsStr, setRhsStr] = React.useState('');
+  const [relation, setRelation] = React.useState<RelationOperator>('=');
   const [parsedEq, setParsedEq] = React.useState<Equation | null>(null);
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
   const [infoStr, setInfoStr] = React.useState<string | null>(null);
@@ -32,6 +39,7 @@ export const EquationInputModal: React.FC = () => {
       // Reset inputs when opened
       setLhsStr('');
       setRhsStr('');
+      setRelation('=');
       setParsedEq(null);
       setErrorStr(null);
       setInfoStr(null);
@@ -77,11 +85,11 @@ export const EquationInputModal: React.FC = () => {
     if (!lhsTrim || !rhsTrim) {
       setParsedEq(null);
       setErrorStr(null);
-      setInfoStr('Add algebraic terms to both sides of the "=" sign');
+      setInfoStr('Add algebraic terms to both sides of the relation sign');
       return;
     }
 
-    const combined = `${lhsTrim} = ${rhsTrim}`;
+    const combined = `${lhsTrim} ${relation} ${rhsTrim}`;
 
     try {
       const parsed = parseEquation(combined);
@@ -99,23 +107,34 @@ export const EquationInputModal: React.FC = () => {
       }
       setErrorStr(rawMsg);
     }
-  }, [lhsStr, rhsStr]);
+  }, [lhsStr, rhsStr, relation]);
+
+  // Relation operators are owned by the dedicated selector, never the side
+  // inputs — strip any the user types/pastes into a side (#34).
+  const stripRelationChars = (val: string) => val.replace(/[=<>]/g, '');
 
   const handleLhsChange = (val: string) => {
-    if (val.includes('=')) return;
-    setLhsStr(val);
+    setLhsStr(stripRelationChars(val));
   };
 
   const handleRhsChange = (val: string) => {
-    if (val.includes('=')) return;
-    setRhsStr(val);
+    setRhsStr(stripRelationChars(val));
+  };
+
+  // Typing a single-character relation in a side input sets the relation and
+  // advances focus to the right side (mirrors the original `=` shortcut).
+  const handleRelationKey = (e: React.KeyboardEvent<HTMLInputElement>): boolean => {
+    if (e.key === '=' || e.key === '<' || e.key === '>') {
+      e.preventDefault();
+      setRelation(e.key as RelationOperator);
+      rhsRef.current?.focus();
+      return true;
+    }
+    return false;
   };
 
   const handleLhsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === '=') {
-      e.preventDefault();
-      rhsRef.current?.focus();
-    }
+    handleRelationKey(e);
   };
 
   const handleRhsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -126,20 +145,22 @@ export const EquationInputModal: React.FC = () => {
         const len = lhsStr.length;
         lhsRef.current.setSelectionRange(len, len);
       }
+      return;
     }
-    if (e.key === '=') {
-      e.preventDefault();
-    }
+    handleRelationKey(e);
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     const pastedText = e.clipboardData.getData('text');
-    if (pastedText.includes('=')) {
+    const match = pastedText.match(RELATION_REGEX);
+    if (match) {
       e.preventDefault();
-      const parts = pastedText.split('=');
-      const lhs = parts[0].trim();
-      const rhs = parts.slice(1).join('=').trim();
+      const splitIndex = match.index ?? 0;
+      const op = match[0] as RelationOperator;
+      const lhs = stripRelationChars(pastedText.slice(0, splitIndex)).trim();
+      const rhs = stripRelationChars(pastedText.slice(splitIndex + op.length)).trim();
       setLhsStr(lhs);
+      setRelation(op);
       setRhsStr(rhs);
       setTimeout(() => {
         rhsRef.current?.focus();
@@ -157,7 +178,7 @@ export const EquationInputModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const combined = `${lhsStr.trim()} = ${rhsStr.trim()}`;
+    const combined = `${lhsStr.trim()} ${relation} ${rhsStr.trim()}`;
     if (!lhsStr.trim() || !rhsStr.trim() || errorStr) return;
 
     try {
@@ -233,9 +254,18 @@ export const EquationInputModal: React.FC = () => {
                     autoCapitalize="off"
                     spellCheck="false"
                   />
-                  <span className="text-indigo-400 font-mono font-bold text-sm px-1 shrink-0">
-                    =
-                  </span>
+                  <select
+                    value={relation}
+                    onChange={(e) => setRelation(e.target.value as RelationOperator)}
+                    aria-label="Relation operator"
+                    className="text-indigo-400 font-mono font-bold text-sm px-1 shrink-0 bg-transparent cursor-pointer focus:outline-none text-center appearance-none hover:text-indigo-300 transition-colors"
+                  >
+                    {RELATION_OPTIONS.map((op) => (
+                      <option key={op} value={op} className="bg-neutral-900 text-white">
+                        {RELATION_DISPLAY[op]}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     ref={rhsRef}
                     type="text"
@@ -302,7 +332,7 @@ export const EquationInputModal: React.FC = () => {
                           <PreviewEquationNode path="lhs" customEquation={parsedEq} />
                         </div>
                         <span className="text-[1.1em] font-light font-mono px-[0.5em] py-[0.15em] border border-white/10 rounded-[0.4em] text-white/70 bg-white/5">
-                          =
+                          {RELATION_DISPLAY[parsedEq.relation ?? '='] ?? '='}
                         </span>
                         <div className="flex justify-start min-w-[2em]">
                           <PreviewEquationNode path="rhs" customEquation={parsedEq} />

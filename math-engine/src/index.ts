@@ -1,5 +1,9 @@
 import * as math from 'mathjs';
-import { Equation, ensureNodeIds } from './tree';
+import { Equation, RelationOperator, ensureNodeIds } from './tree';
+
+// Matches a single relational operator. Two-character operators are listed first
+// so `<=`/`>=` win over a bare `<`/`>`/`=` at the same position.
+const RELATION_REGEX = /<=|>=|<|>|=/g;
 
 export * from './interval';
 export * from './tree';
@@ -17,21 +21,27 @@ export * from './factor';
  * Parses an equation string of the form "LHS = RHS" into an Equation tree.
  */
 export const parseEquation = (eqStr: string): Equation => {
-  const delimiter = '=';
-  const parts = eqStr.split(delimiter);
-  const expectedPartsCount = 2;
+  const relationMatches = [...eqStr.matchAll(RELATION_REGEX)];
+  const expectedRelationCount = 1;
 
-  if (parts.length !== expectedPartsCount) {
-    throw new Error('Equation must contain exactly one "=" sign');
+  if (relationMatches.length !== expectedRelationCount) {
+    throw new Error('Equation must contain exactly one relation operator (=, <, >, <=, >=)');
   }
 
-  if (!parts[0].trim() || !parts[1].trim()) {
+  const match = relationMatches[0];
+  const relation = match[0] as RelationOperator;
+  const splitIndex = match.index ?? 0;
+  const lhsStr = eqStr.slice(0, splitIndex).trim();
+  const rhsStr = eqStr.slice(splitIndex + relation.length).trim();
+
+  if (!lhsStr || !rhsStr) {
     throw new Error('Both sides of the equation must be non-empty');
   }
 
   const eq = {
-    lhs: math.parse(parts[0].trim()),
-    rhs: math.parse(parts[1].trim()),
+    lhs: math.parse(lhsStr),
+    rhs: math.parse(rhsStr),
+    relation,
   };
 
   const allowedNodeTypes = new Set(['ConstantNode', 'SymbolNode', 'ParenthesisNode', 'OperatorNode', 'FunctionNode']);
@@ -136,5 +146,5 @@ export const equationToString = (eq: Equation): string => {
       return undefined;
     }
   };
-  return `${eq.lhs.toString(options)} = ${eq.rhs.toString(options)}`;
+  return `${eq.lhs.toString(options)} ${eq.relation ?? '='} ${eq.rhs.toString(options)}`;
 };

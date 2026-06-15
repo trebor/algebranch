@@ -1,9 +1,30 @@
 import * as math from 'mathjs';
 
+/** Relational operator joining the two sides. Defaults to '=' when omitted. */
+export type RelationOperator = '=' | '<' | '>' | '<=' | '>=';
+
 export interface Equation {
   readonly lhs: math.MathNode;
   readonly rhs: math.MathNode;
+  /** Relation between the sides; absent is treated as equality ('='). */
+  readonly relation?: RelationOperator;
 }
+
+const RELATION_FLIP: Record<RelationOperator, RelationOperator> = {
+  '=': '=',
+  '<': '>',
+  '>': '<',
+  '<=': '>=',
+  '>=': '<=',
+};
+
+/**
+ * Reverses the direction of a relation — used when both sides of an inequality
+ * are multiplied/divided by a negative quantity (e.g. `<` -> `>`). Equality is
+ * unaffected.
+ */
+export const flipRelation = (relation: RelationOperator = '='): RelationOperator =>
+  RELATION_FLIP[relation];
 
 interface NodeWithArgs extends math.MathNode {
   args: math.MathNode[];
@@ -100,6 +121,7 @@ export const replaceNodeAtPath = (eq: Equation, path: string, newNode: math.Math
   return {
     lhs: side === 'lhs' ? newRoot : eq.lhs,
     rhs: side === 'rhs' ? newRoot : eq.rhs,
+    relation: eq.relation,
   };
 };
 
@@ -153,6 +175,7 @@ export const removeNodeAtPath = (
       newEquation: {
         lhs: side === 'lhs' ? new math.ConstantNode(defaultZero) : eq.lhs,
         rhs: side === 'rhs' ? new math.ConstantNode(defaultZero) : eq.rhs,
+        relation: eq.relation,
       },
       removedNode: root,
     };
@@ -167,6 +190,7 @@ export const removeNodeAtPath = (
     newEquation: {
       lhs: side === 'lhs' ? newRoot : eq.lhs,
       rhs: side === 'rhs' ? newRoot : eq.rhs,
+      relation: eq.relation,
     },
     removedNode: removedNode as math.MathNode,
   };
@@ -297,7 +321,7 @@ export const ensureNodeIds = (eq: Equation): Equation => {
   // Strip redundant parenthesis across LHS and RHS trees
   const cleanedLhs = stripRedundantParentheses(eq.lhs, null, false);
   const cleanedRhs = stripRedundantParentheses(eq.rhs, null, false);
-  const cleanedEq: Equation = { lhs: cleanedLhs, rhs: cleanedRhs };
+  const cleanedEq: Equation = { lhs: cleanedLhs, rhs: cleanedRhs, relation: eq.relation };
 
   let counter = 0;
   // A simple deterministic hash of the equation's text representation to seed prefixes
@@ -348,6 +372,7 @@ export interface SerializedNode {
 export interface SerializedEquation {
   lhs: SerializedNode;
   rhs: SerializedNode;
+  relation?: RelationOperator;
 }
 
 const getLocalFunctionName = (node: math.FunctionNode): string => {
@@ -399,6 +424,7 @@ export const serializeEquation = (eq: Equation): SerializedEquation => {
   return {
     lhs: serializeNode(eq.lhs),
     rhs: serializeNode(eq.rhs),
+    relation: eq.relation,
   };
 };
 
@@ -435,6 +461,7 @@ export const deserializeEquation = (sEq: SerializedEquation): Equation => {
   return {
     lhs: deserializeNode(sEq.lhs),
     rhs: deserializeNode(sEq.rhs),
+    relation: sEq.relation,
   };
 };
 

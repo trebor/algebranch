@@ -476,7 +476,9 @@ export default function Home() {
     try {
       const eqStr = currentEq ? equationToString(currentEq) : '';
       const baseUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
-      const shareUrl = eqStr ? `${baseUrl}?eq=${encodeURIComponent(eqStr)}` : baseUrl;
+      const encodeSafe = (s: string) =>
+        encodeURIComponent(s).replace(/[()*!']/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+      const shareUrl = eqStr ? `${baseUrl}?eq=${encodeSafe(eqStr)}` : baseUrl;
 
       navigator.clipboard.writeText(shareUrl).then(() => {
         setSharedCopied(true);

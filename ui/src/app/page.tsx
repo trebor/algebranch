@@ -62,6 +62,7 @@ import {
   graphSizeAtom,
   previousGraphSizeAtom,
   availableFactsAtom,
+  settingsAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
@@ -105,6 +106,23 @@ const safeLocalStorage = {
     }
   }
 };
+
+interface MiniPetalInfo {
+  readonly char: string;
+  readonly x: number;
+  readonly y: number;
+  readonly tokenKey: keyof typeof THEME_GLASS;
+}
+
+const MINI_PETALS: readonly MiniPetalInfo[] = [
+  { char: '↔', x: 0, y: -22, tokenKey: 'EQUALS_MINI_PETAL_SWAP' },
+  { char: 'xⁿ', x: 17, y: -14, tokenKey: 'EQUALS_MINI_PETAL_POWER' },
+  { char: '+', x: 22, y: 5, tokenKey: 'EQUALS_MINI_PETAL_ADD' },
+  { char: '−', x: 10, y: 20, tokenKey: 'EQUALS_MINI_PETAL_SUB' },
+  { char: '⋅', x: -10, y: 20, tokenKey: 'EQUALS_MINI_PETAL_MUL' },
+  { char: '÷', x: -22, y: 5, tokenKey: 'EQUALS_MINI_PETAL_DIV' },
+  { char: 'ⁿ√', x: -17, y: -14, tokenKey: 'EQUALS_MINI_PETAL_ROOT' },
+];
 
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
@@ -153,6 +171,21 @@ export default function Home() {
   const isMobile = useIsMobile();
   const equalsRef = React.useRef<HTMLSpanElement>(null);
   const lastEqStrRef = React.useRef<string | null>(null);
+
+  const [settings, setSettings] = useAtom(settingsAtom);
+  const [showEqualsPopover, setShowEqualsPopover] = React.useState(false);
+  const showIdleHint = !equalsLocked && !radialMenuOpen && !settings.seenEqualsHint;
+
+  // Suppress equals sign idle hint after the first time the radial menu is opened
+  React.useEffect(() => {
+    if (radialMenuOpen && !settings.seenEqualsHint) {
+      setSettings((prev) => ({
+        ...prev,
+        seenEqualsHint: true,
+      }));
+      setShowEqualsPopover(false);
+    }
+  }, [radialMenuOpen, settings.seenEqualsHint, setSettings]);
 
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
   const activeScale = useMathScale(
@@ -978,24 +1011,88 @@ export default function Home() {
                     </div>
 
                     {/* Equals Operator sign */}
-                    <span
-                      ref={equalsRef}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (equalsLocked) return;
-                        setRadialMenuOpen(!radialMenuOpen);
-                      }}
-                      className={`${THEME_GLASS.EQUALS_SIGN} ${
-                        equalsLocked
-                          ? 'cursor-default'
-                          : 'cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95'
-                      }`}
-                    >
-                      {RELATION_DISPLAY[currentEq?.relation ?? '='] ?? '='}
-                      {!!onboardingChapterId && onboardingGlobalOp && (
-                        <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
-                      )}
-                    </span>
+                    <Tooltip content="Apply an operation to both sides" position="bottom" visible={equalsLocked ? false : undefined}>
+                      <span
+                        ref={equalsRef}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (equalsLocked) return;
+                          setRadialMenuOpen(!radialMenuOpen);
+                        }}
+                        className={`${THEME_GLASS.EQUALS_SIGN} ${
+                          equalsLocked
+                            ? 'cursor-default'
+                            : THEME_GLASS.EQUALS_SIGN_INTERACTIVE
+                        }`}
+                      >
+                        {RELATION_DISPLAY[currentEq?.relation ?? '='] ?? '='}
+                        {showIdleHint && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowEqualsPopover((prev) => !prev);
+                            }}
+                            className={THEME_GLASS.EQUALS_BADGE}
+                          >
+                            ?
+                          </button>
+                        )}
+                        {showIdleHint && showEqualsPopover && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className={THEME_GLASS.EQUALS_POPOVER}
+                          >
+                            {/* Mini Radial Menu Preview */}
+                            <div className="relative w-16 h-16 mx-auto mb-2.5 flex items-center justify-center pointer-events-none select-none">
+                              {/* Center equals */}
+                              <div className={THEME_GLASS.EQUALS_MINI_CENTER}>
+                                =
+                              </div>
+                              {/* Outer mini petals */}
+                              {MINI_PETALS.map((petal) => (
+                                <div
+                                  key={petal.char}
+                                  style={{
+                                    position: 'absolute',
+                                    left: `calc(50% + ${petal.x}px)`,
+                                    top: `calc(50% + ${petal.y}px)`,
+                                    transform: 'translate(-50%, -50%)',
+                                  }}
+                                  className={`${THEME_GLASS.EQUALS_MINI_PETAL_BASE} ${THEME_GLASS[petal.tokenKey]}`}
+                                >
+                                  {petal.char}
+                                </div>
+                              ))}
+                            </div>
+
+                            <span className={THEME_GLASS.EQUALS_POPOVER_TITLE}>
+                              Global Operations
+                            </span>
+                            <p className={THEME_GLASS.EQUALS_POPOVER_DESC}>
+                              Click the <strong>=</strong> sign to apply an operation to both sides.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  seenEqualsHint: true,
+                                }));
+                                setShowEqualsPopover(false);
+                              }}
+                              className={THEME_GLASS.EQUALS_POPOVER_BTN}
+                            >
+                              Got it
+                            </button>
+                          </div>
+                        )}
+                        {!!onboardingChapterId && onboardingGlobalOp && (
+                          <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                        )}
+                      </span>
+                    </Tooltip>
 
                     {/* RHS Term Tree */}
                     <div className="flex justify-start min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">

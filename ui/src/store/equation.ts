@@ -421,10 +421,12 @@ export const reduciblePathsAtom = atom<Record<string, ReducibleActionInfo[]>>({}
 
 export interface UserSettings {
   allowEvaluateToDecimal: boolean;
+  seenEqualsHint: boolean;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
   allowEvaluateToDecimal: true,
+  seenEqualsHint: false,
 };
 
 export const settingsModalOpenAtom = atom(false);

@@ -11,6 +11,7 @@ Shared instructions for all coding agents (Claude Code, Antigravity, etc.) worki
   - `Planned`: The implementation plan and checkboxes are finalized in the issue body. Ready to code.
   - `In progress`: Active development.
   - `Done`: Merged and closed.
+- **Board hygiene (keep columns honest)**: The board is the human's at-a-glance status — move an item the moment its real status changes, not retroactively. On picking up an `Inbox` item to scope it, move it to `Planning`; when the plan + checkboxes are finalized in the issue body, move it to `Planned`; on starting code, move it to `In progress`; on merge+close, `Done`. Before any handoff or shutdown, verify every item you touched sits in the column that matches reality. Move with `gh project item-edit` (project `PVT_kwHOAMNZWs4BaYSq`, Status field `PVTSSF_lAHOAMNZWs4BaYSqzhVQUn0`; option ids — Inbox `f75ad846`, Planning `70e62ae5`, Planned `61e4505c`, In progress `47fc9ee4`, Done `98236657`).
 - **Picking work**: Pick next work by priority, highest first, among `Planned` items. Read the board status with:
 
   ```sh

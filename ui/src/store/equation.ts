@@ -102,7 +102,12 @@ export const formatDerivation = (
     .map((node, i) => {
       const eq = equationToString(node.equation);
       if (i === 0) return `${i + 1}. ${eq}`;
-      const justification = node.change?.text ?? node.label;
+      const base = node.change?.text ?? node.label;
+      // Fold any domain restrictions (#63) into the transcript so a copied
+      // derivation never drops an assumed ≠0 condition.
+      const assumptions = node.change?.assumptions;
+      const justification =
+        base && assumptions?.length ? `${base}, assuming ${assumptions.join(', ')}` : base;
       return justification ? `${i + 1}. ${eq}  (${justification})` : `${i + 1}. ${eq}`;
     })
     .join('\n');

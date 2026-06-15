@@ -152,6 +152,12 @@ export const THEME_GLASS = {
   TREE_NODE_BADGE_SUBSTITUTE: 'bg-teal-600 border-teal-400 text-teal-50',
   SUB_COUNT_BADGE: 'bg-neutral-950 border-teal-400 text-teal-300',
 
+  // --- Domain restrictions (#63): history-tree badge + Step Details row ---
+  // Amber "caveat" treatment so an assumed ≠0 restriction can't slip by unseen.
+  TREE_NODE_BADGE_RESTRICTION: 'bg-amber-600 border-amber-400 text-amber-50',
+  TOOLTIP_ASSUMPTION: 'flex items-center gap-1.5 text-[11px] font-semibold leading-snug text-amber-300 rounded-md border border-amber-400/30 bg-amber-500/10 px-1.5 py-1',
+  TOOLTIP_ASSUMPTION_ICON: 'shrink-0 text-amber-400',
+
   // --- Unified Stacks & Chooser Design Tokens ---
   STACK_BADGE_SIMPLIFY: 'bg-neutral-950 border-amber-400 text-amber-400',
   STACK_BADGE_DISTRIBUTE: 'bg-neutral-950 border-purple-400 text-purple-400',

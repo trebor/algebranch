@@ -19,7 +19,7 @@ import {
   formatDerivation,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitFork, Infinity, Replace } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitFork, Infinity, Replace, TriangleAlert } from 'lucide-react';
 import { useIsMobile } from '../hooks/useBreakpoint';
 
 const COPIED_TIMEOUT = 2000;
@@ -504,6 +504,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
                       eyebrow={`Step Details — ${node.label}`}
                       meta={`Step ${stepNum}`}
                       description={node.change?.text}
+                      assumptions={node.change?.assumptions}
                       equation={node.equation}
                     />
                   }
@@ -541,6 +542,16 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
                     {node.change?.op === 'substitute' && (
                       <span className={`absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_SUBSTITUTE}`}>
                         <Replace size={9} />
+                      </span>
+                    )}
+
+                    {/* Domain-restriction badge (#63): marks steps that assume an
+                        expression is non-zero (cancellation / division by a variable),
+                        so the caveat is visible on the tree, not just in the tooltip.
+                        Offset below the substitute badge in case both apply. */}
+                    {!!node.change?.assumptions?.length && (
+                      <span className={`absolute ${node.change?.op === 'substitute' ? 'top-3' : '-top-1.5'} -right-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_RESTRICTION}`}>
+                        <TriangleAlert size={9} />
                       </span>
                     )}
 

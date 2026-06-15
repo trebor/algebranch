@@ -12,6 +12,9 @@ import {
 
 const eq = (s: string) => ensureNodeIds(parseEquation(s));
 
+const findOption = (s: string, label: string) =>
+  Object.values(getReducibleOptions(eq(s))).flat().find((o) => o.label === label);
+
 describe('describeTransposition — both-sides operations', () => {
   it('addend across = becomes "subtract N from both sides"', () => {
     // x + 4 = 11 : the 4 (lhs/1) moves to the RHS root
@@ -141,6 +144,73 @@ describe('describeReduction — in-place rewrites', () => {
       op: 'identity',
       text: 'factor out 3x from 6 * x ^ 2 + 9 * x → 3 * x * (2 * x + 3)'
     });
+  });
+});
+
+describe('domain restrictions when cancelling or dividing (#63)', () => {
+  it('cancelling a variable factor records "assuming x ≠ 0"', () => {
+    // m * x * 1 / x → m silently assumes x ≠ 0
+    const e = eq('m * x * 1 / x + b / x = 4');
+    const option = findOption('m * x * 1 / x + b / x = 4', 'Simplify Fraction');
+    expect(option).toBeDefined();
+    const change = describeReduction(e, option!);
+    // The restriction is carried structurally (not buried in the text prose) so
+    // the UI can flag it prominently.
+    expect(change.assumptions).toEqual(['x ≠ 0']);
+    expect(change.text).toBe('simplify m * x * 1 / x → m');
+  });
+
+  it('a variable collapsing to a constant is a cancellation, never "evaluate x = 1"', () => {
+    // The granular cancel option turns an x into 1; that is not constant folding.
+    const e = eq('m * x * 1 / x + b / x = 4');
+    const collapses = Object.values(getReducibleOptions(e))
+      .flat()
+      .map((o) => describeReduction(e, o))
+      .filter((c) => c.kind === 'rewrite' && c.op === 'evaluate');
+    // No evaluate step should claim a bare variable equals a constant.
+    for (const c of collapses) {
+      expect(c.text).not.toMatch(/evaluate [a-z] = /i);
+    }
+  });
+
+  it('folding a genuinely constant subtree stays an evaluate with no assumption', () => {
+    const e = eq('x = 11 - 4');
+    const option = Object.values(getReducibleOptions(e)).flat().find((o) => o.path.startsWith('rhs'));
+    expect(option).toBeDefined();
+    const change = describeReduction(e, option!);
+    expect(change).toMatchObject({ kind: 'rewrite', op: 'evaluate' });
+    expect(change.assumptions).toBeUndefined();
+  });
+
+  it('reducing a constant-denominator fraction adds no restriction', () => {
+    // 2 * x / 2 → x : the denominator is the constant 2, no ≠0 assumption.
+    const e = eq('2 * x / 2 = 5');
+    const change = describeReduction(e, { path: 'lhs', simplified: eq('x = 5'), type: 'reduce', label: 'Simplify' });
+    expect(change.text).toBe('simplify 2 * x / 2 → x');
+    expect(change.assumptions).toBeUndefined();
+  });
+
+  it('dividing both sides by a variable factor (transposition) assumes it ≠ 0', () => {
+    // a * x = b : moving the factor a across becomes "divide both sides by a"
+    const change = describeTransposition(eq('a * x = b'), 'lhs/0', 'rhs');
+    expect(change).toMatchObject({ kind: 'bothSides', op: 'divide', operand: 'a', assumptions: ['a ≠ 0'] });
+    expect(change!.text).toBe('divide both sides by a');
+  });
+
+  it('dividing both sides by a constant carries no restriction', () => {
+    const change = describeTransposition(eq('3 * x = 15'), 'lhs/0', 'rhs');
+    expect(change!.text).toBe('divide both sides by 3');
+    expect(change!.assumptions).toBeUndefined();
+  });
+
+  it('global-op divide by a variable assumes it ≠ 0; by a constant does not', () => {
+    const byVar = describeGlobalOp({ type: 'div', term: 'x' });
+    expect(byVar).toMatchObject({ op: 'divide', assumptions: ['x ≠ 0'] });
+    expect(byVar.text).toBe('divide both sides by x');
+
+    const byConst = describeGlobalOp({ type: 'div', term: '2' });
+    expect(byConst.text).toBe('divide both sides by 2');
+    expect(byConst.assumptions).toBeUndefined();
   });
 });
 

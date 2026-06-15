@@ -100,10 +100,28 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
 
       if (opNode.isUnary()) {
         const opSymbol = opNode.op === '-' ? '−' : opNode.op;
+        // Parenthesize a unary-minus operand of a unary minus so it reads "−(−3)"
+        // rather than the ambiguous "−−3" (mirrors EquationNode and equationToString).
+        const child = opNode.args[0];
+        const childNeedsParens =
+          opNode.op === '-' &&
+          child.type === 'OperatorNode' &&
+          (child as math.OperatorNode).isUnary() &&
+          (child as math.OperatorNode).op === '-';
         return (
           <div className="flex items-center gap-[0.05em]">
             <span className="text-indigo-400/60 font-bold select-none">{opSymbol}</span>
-            <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} customEquation={customEquation} />
+            {childNeedsParens ? (
+              <div className="flex items-center px-[0.05em] self-stretch">
+                <LeftParenSVG className="w-[0.32em] shrink-0 self-stretch text-white/20" />
+                <div className="px-[0.05em]">
+                  <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} customEquation={customEquation} />
+                </div>
+                <RightParenSVG className="w-[0.32em] shrink-0 self-stretch text-white/20" />
+              </div>
+            ) : (
+              <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} customEquation={customEquation} />
+            )}
           </div>
         );
       }

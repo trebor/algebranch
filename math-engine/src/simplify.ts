@@ -283,6 +283,15 @@ export const trySimplifyPowerOfRoot = (node: math.MathNode): math.MathNode | nul
 export const tryDistribution = (node: math.MathNode): math.MathNode | null => {
   if (!node) return null;
 
+  // A distributable inner term must be a BINARY `+`/`-`. A unary minus (e.g. `-1`,
+  // `-x`) also has op `-` but only one arg; treating it as `(b - c)` reads a
+  // missing second operand and throws (which silently hid valid folds and crashed
+  // autoSimplify on `-x * -1`).
+  const isBinaryAddSub = (n: math.MathNode): boolean =>
+    n.type === 'OperatorNode' &&
+    ((n as math.OperatorNode).op === '+' || (n as math.OperatorNode).op === '-') &&
+    (n as math.OperatorNode).args.length === 2;
+
   // Case 1: Multiplication, e.g. a * (b + c) or (b + c) * a
   if (node.type === 'OperatorNode' && (node as math.OperatorNode).op === '*') {
     const opNode = node as math.OperatorNode;
@@ -294,7 +303,7 @@ export const tryDistribution = (node: math.MathNode): math.MathNode | null => {
     while (rightContent.type === 'ParenthesisNode') {
       rightContent = (rightContent as math.ParenthesisNode).content;
     }
-    if (rightContent.type === 'OperatorNode' && ((rightContent as math.OperatorNode).op === '+' || (rightContent as math.OperatorNode).op === '-')) {
+    if (isBinaryAddSub(rightContent)) {
       const innerOp = rightContent as math.OperatorNode;
       const a = left;
       const b = innerOp.args[0];
@@ -314,7 +323,7 @@ export const tryDistribution = (node: math.MathNode): math.MathNode | null => {
     while (leftContent.type === 'ParenthesisNode') {
       leftContent = (leftContent as math.ParenthesisNode).content;
     }
-    if (leftContent.type === 'OperatorNode' && ((leftContent as math.OperatorNode).op === '+' || (leftContent as math.OperatorNode).op === '-')) {
+    if (isBinaryAddSub(leftContent)) {
       const innerOp = leftContent as math.OperatorNode;
       const a = right;
       const b = innerOp.args[0];
@@ -340,7 +349,7 @@ export const tryDistribution = (node: math.MathNode): math.MathNode | null => {
     while (leftContent.type === 'ParenthesisNode') {
       leftContent = (leftContent as math.ParenthesisNode).content;
     }
-    if (leftContent.type === 'OperatorNode' && ((leftContent as math.OperatorNode).op === '+' || (leftContent as math.OperatorNode).op === '-')) {
+    if (isBinaryAddSub(leftContent)) {
       const innerOp = leftContent as math.OperatorNode;
       const a = right;
       const b = innerOp.args[0];

@@ -12,12 +12,13 @@
 // …) stay engine/backend-only and are imported directly from 'math-engine' where
 // genuinely needed.
 
-export type { Equation, SerializedEquation, SerializedNode } from 'math-engine';
+export type { Equation, SerializedEquation, SerializedNode, RelationOperator } from 'math-engine';
 
 export {
   parseEquation,
   equationToString,
   formatNumber,
+  flipRelation,
   ensureNodeIds,
   getChildren,
   getNodeByPath,

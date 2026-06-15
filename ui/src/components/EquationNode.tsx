@@ -23,7 +23,7 @@ import {
   onboardingReduceHandleAtom,
   onboardingSubstitutionAtom,
 } from '../store/equation';
-import { OPERATOR_DISPLAY } from '../constants/mathSymbols';
+import { OPERATOR_DISPLAY, RELATION_DISPLAY } from '../constants/mathSymbols';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import { describeTransposition, describeReduction, describeSubstitution, describeCollapse } from 'math-engine';
@@ -51,7 +51,7 @@ const PREVIEW_MIN_SCALE = 0.6;
 const renderEquationPreviewRow = (eq: Equation, muted: boolean) => (
   <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
     <PreviewEquationNode path="lhs" customEquation={eq} />
-    <span className={`text-[1.3em] font-mono px-0.5 select-none ${muted ? 'text-transparent' : 'text-indigo-300'}`}>=</span>
+    <span className={`text-[1.3em] font-mono px-0.5 select-none ${muted ? 'text-transparent' : 'text-indigo-300'}`}>{RELATION_DISPLAY[eq.relation ?? '='] ?? '='}</span>
     <PreviewEquationNode path="rhs" customEquation={eq} />
   </div>
 );
@@ -500,10 +500,29 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
       if (opNode.isUnary()) {
         const opSymbol = opNode.op === '-' ? '−' : opNode.op;
+        // A unary minus applied to another unary minus would render as an ambiguous
+        // "−−3"; parenthesize the operand so it reads "−(−3)", matching the engine's
+        // own equationToString. Real ParenthesisNodes handle every other case.
+        const child = opNode.args[0];
+        const childNeedsParens =
+          opNode.op === '-' &&
+          child.type === 'OperatorNode' &&
+          (child as math.OperatorNode).isUnary() &&
+          (child as math.OperatorNode).op === '-';
         return (
           <div className="flex items-center gap-[0.05em]">
             <span className={`font-bold select-none ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_UNARY_ACTIVE}`} style={getOpStyle()}>{opSymbol}</span>
-            <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
+            {childNeedsParens ? (
+              <div className="flex items-center px-[0.05em]">
+                <LeftParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`} style={getOpStyle()} />
+                <div className="px-[0.05em]">
+                  <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
+                </div>
+                <RightParenSVG className={`w-[0.32em] shrink-0 self-stretch ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`} style={getOpStyle()} />
+              </div>
+            ) : (
+              <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
+            )}
           </div>
         );
       }

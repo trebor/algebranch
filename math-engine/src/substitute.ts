@@ -106,7 +106,7 @@ export const getSubstitutionOptions = (
       
       const substitutedLhs = replaceSymbol(eq.lhs, fact.variable, replacementNode);
       const substitutedRhs = replaceSymbol(eq.rhs, fact.variable, replacementNode);
-      const substituted = ensureNodeIds({ lhs: substitutedLhs, rhs: substitutedRhs });
+      const substituted = ensureNodeIds({ lhs: substitutedLhs, rhs: substitutedRhs, relation: eq.relation });
 
       for (const path of hits) {
         (result[path] ||= []).push({

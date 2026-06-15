@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName } from 'math-engine-client';
+import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
 import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, describeSubstitution, describeCollapse, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
@@ -1013,7 +1013,8 @@ export const swapSidesAtom = atom(
     const currentEq = get(currentEquationAtom);
     if (!currentEq) return;
 
-    const nextEq: Equation = { lhs: currentEq.rhs, rhs: currentEq.lhs };
+    // Swapping the sides reverses the relation's direction (e.g. `x < 5` -> `5 > x`).
+    const nextEq: Equation = { lhs: currentEq.rhs, rhs: currentEq.lhs, relation: flipRelation(currentEq.relation) };
     set(pushEquationAtom, nextEq, 'Swap Sides');
   }
 );

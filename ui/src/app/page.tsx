@@ -62,6 +62,7 @@ import {
   availableFactsAtom,
 } from '../store/equation';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
+import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
 import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
 import { Equation, parseEquation, ensureNodeIds, equationToString } from 'math-engine-client';
@@ -978,7 +979,7 @@ export default function Home() {
                           : 'cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95'
                       }`}
                     >
-                      =
+                      {RELATION_DISPLAY[currentEq?.relation ?? '='] ?? '='}
                       {!!onboardingChapterId && onboardingGlobalOp && (
                         <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
                       )}

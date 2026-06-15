@@ -291,6 +291,24 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(Object.keys(movesBase).length).toBe(0);
   });
 
+  test('#89 — dragging a quadratic variable offers standard transposition, not a quadratic-formula override', () => {
+    const eq = parseEquation('x ^ 2 + 5 * x + 6 = 0');
+
+    // Dragging the linear term `5 * x` (lhs/0/1) must yield ordinary transposition
+    // moves — not the single-positive-root quadratic-formula solve that used to
+    // hijack every drag. The quadratic formula is offered only via getReducibleOptions.
+    const linearTermMoves = generateValidMoves(eq, 'lhs/0/1');
+    expect(linearTermMoves['rhs']).toBeDefined();
+    expect(equationToString(linearTermMoves['rhs'])).toBe('x ^ 2 + 6 = 0 - 5 * x');
+
+    // No drag on a quadratic may produce a quadratic-formula (sqrt discriminant) move.
+    for (const path of ['lhs/0/1', 'lhs/0/1/1', 'lhs/1', 'lhs/0/0/0']) {
+      for (const target of Object.values(generateValidMoves(eq, path))) {
+        expect(equationToString(target)).not.toContain('sqrt');
+      }
+    }
+  });
+
   test('getSimplificationForPath simplifies roots of matching powers correctly', () => {
     // 1. sqrt(x ^ 2) = |x| — even roots are NOT collapsed here (sign would be
     //    lost); they are offered as a ± branch via getReducibleOptions (#45).

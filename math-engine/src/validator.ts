@@ -923,50 +923,10 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
       return moves;
     }
 
-    // Check if the selected node is a variable that can be solved via the quadratic formula
-    const selectedNode = getNodeByPath(originalEq, sourcePath);
-    if (selectedNode.type === 'SymbolNode') {
-      const solveVar = (selectedNode as math.SymbolNode).name;
-      const coeffs = tryExtractQuadratic(originalEq.lhs, originalEq.rhs, solveVar);
-      if (coeffs) {
-        const { a, b, c } = coeffs;
-
-        // Skip the quadratic formula when b=0 (no linear term).
-        // When b=0, the equation is solvable by isolation + square root.
-        if (!isZeroNode(b)) {
-
-        const b_sq = new math.OperatorNode('^', 'pow', [b, new math.ConstantNode(2)]);
-        const four_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(4), a]);
-        const four_a_c = new math.OperatorNode('*', 'multiply', [four_a, c]);
-        const discriminant = new math.OperatorNode('-', 'subtract', [b_sq, four_a_c]);
-        const sqrt_d = new math.FunctionNode('sqrt', [discriminant]);
-
-        let num_pos: math.MathNode;
-        if (isZeroNode(b)) {
-          num_pos = sqrt_d;
-        } else {
-          const neg_b = new math.OperatorNode('-', 'unaryMinus', [b]);
-          num_pos = new math.OperatorNode('+', 'add', [neg_b, sqrt_d]);
-        }
-
-        const two_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(2), a]);
-        const formula_pos = new math.OperatorNode('/', 'divide', [
-          new math.ParenthesisNode(num_pos),
-          new math.ParenthesisNode(two_a)
-        ]);
-
-        const varNode = new math.SymbolNode(solveVar);
-
-        if (sourcePath.startsWith('lhs')) {
-          moves['rhs'] = ensureNodeIds({ lhs: varNode, rhs: formula_pos });
-        } else {
-          moves['lhs'] = ensureNodeIds({ lhs: formula_pos, rhs: varNode });
-        }
-
-        return moves; // Return early with the quadratic formula solve move!
-        }
-      }
-    }
+    // NOTE: The quadratic formula is intentionally NOT offered here as a drag move.
+    // Dragging a variable should only generate standard transposition moves; the
+    // quadratic formula (both roots) is offered exclusively via the equation-level
+    // reduction/identity system (getReducibleOptions in simplify.ts). See issue #89.
 
     const { newEquation: tempEq, removedNode } = removeNodeAtPath(originalEq, sourcePath);
     const targetPaths = getAllPaths(tempEq);

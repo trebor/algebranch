@@ -176,16 +176,11 @@ export default function Home() {
   const [showEqualsPopover, setShowEqualsPopover] = React.useState(false);
   const showIdleHint = !equalsLocked && !radialMenuOpen && !settings.seenEqualsHint;
 
-  // Suppress equals sign idle hint after the first time the radial menu is opened
-  React.useEffect(() => {
-    if (radialMenuOpen && !settings.seenEqualsHint) {
-      setSettings((prev) => ({
-        ...prev,
-        seenEqualsHint: true,
-      }));
-      setShowEqualsPopover(false);
-    }
-  }, [radialMenuOpen, settings.seenEqualsHint, setSettings]);
+  // Permanently dismiss the equals-sign idle hint once the user interacts with it.
+  const dismissEqualsHint = React.useCallback(() => {
+    setShowEqualsPopover(false);
+    setSettings((prev) => (prev.seenEqualsHint ? prev : { ...prev, seenEqualsHint: true }));
+  }, [setSettings]);
 
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
   const activeScale = useMathScale(
@@ -1011,12 +1006,13 @@ export default function Home() {
                     </div>
 
                     {/* Equals Operator sign */}
-                    <Tooltip content="Apply an operation to both sides" position="bottom" visible={equalsLocked ? false : undefined}>
+                    <Tooltip content="Apply an operation to both sides" position="bottom" visible={equalsLocked || (showIdleHint && showEqualsPopover) ? false : undefined}>
                       <span
                         ref={equalsRef}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (equalsLocked) return;
+                          dismissEqualsHint();
                           setRadialMenuOpen(!radialMenuOpen);
                         }}
                         className={`${THEME_GLASS.EQUALS_SIGN} ${
@@ -1029,6 +1025,7 @@ export default function Home() {
                         {showIdleHint && (
                           <button
                             type="button"
+                            aria-label="What does the = sign do?"
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowEqualsPopover((prev) => !prev);
@@ -1039,19 +1036,19 @@ export default function Home() {
                           </button>
                         )}
                         {showIdleHint && showEqualsPopover && (
-                          <div
+                          <span
                             onClick={(e) => e.stopPropagation()}
                             className={THEME_GLASS.EQUALS_POPOVER}
                           >
                             {/* Mini Radial Menu Preview */}
-                            <div className="relative w-16 h-16 mx-auto mb-2.5 flex items-center justify-center pointer-events-none select-none">
+                            <span className="relative w-16 h-16 mx-auto mb-2.5 flex items-center justify-center pointer-events-none select-none">
                               {/* Center equals */}
-                              <div className={THEME_GLASS.EQUALS_MINI_CENTER}>
+                              <span className={THEME_GLASS.EQUALS_MINI_CENTER}>
                                 =
-                              </div>
+                              </span>
                               {/* Outer mini petals */}
                               {MINI_PETALS.map((petal) => (
-                                <div
+                                <span
                                   key={petal.char}
                                   style={{
                                     position: 'absolute',
@@ -1062,31 +1059,27 @@ export default function Home() {
                                   className={`${THEME_GLASS.EQUALS_MINI_PETAL_BASE} ${THEME_GLASS[petal.tokenKey]}`}
                                 >
                                   {petal.char}
-                                </div>
+                                </span>
                               ))}
-                            </div>
+                            </span>
 
                             <span className={THEME_GLASS.EQUALS_POPOVER_TITLE}>
                               Global Operations
                             </span>
-                            <p className={THEME_GLASS.EQUALS_POPOVER_DESC}>
+                            <span className={THEME_GLASS.EQUALS_POPOVER_DESC}>
                               Click the <strong>=</strong> sign to apply an operation to both sides.
-                            </p>
+                            </span>
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSettings((prev) => ({
-                                  ...prev,
-                                  seenEqualsHint: true,
-                                }));
-                                setShowEqualsPopover(false);
+                                dismissEqualsHint();
                               }}
                               className={THEME_GLASS.EQUALS_POPOVER_BTN}
                             >
                               Got it
                             </button>
-                          </div>
+                          </span>
                         )}
                         {!!onboardingChapterId && onboardingGlobalOp && (
                           <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />

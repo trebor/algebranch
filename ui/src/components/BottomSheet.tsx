@@ -107,12 +107,14 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     [onClose, sortedSnaps, activeSnapIndex, fitContent],
   );
 
-  // Reset snap index when opening
-  useEffect(() => {
-    if (isOpen) {
-      setActiveSnapIndex(0);
-    }
-  }, [isOpen]);
+  // Reset snap index when the sheet opens. Done during render via the
+  // previous-prop pattern (React's "adjust state when a prop changes") rather
+  // than an effect.
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) setActiveSnapIndex(0);
+  }
 
   // Compute the y offset from bottom for the initial snap point
   // The sheet height = snap fraction * viewport height

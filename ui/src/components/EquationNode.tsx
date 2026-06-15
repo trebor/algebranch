@@ -293,9 +293,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
   const nodeId = node ? (node as unknown as { id?: string }).id || '' : '';
 
-  if (!node) return null;
-
   const getChildId = (index: number): string => {
+    if (!node) return `${path}/${index}`;
     try {
       const children = getChildren(node);
       if (children && children[index]) {
@@ -465,6 +464,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
   // Recursive Render logic depending on Node type
   const renderContent = () => {
+    if (!node) return null;
     if (node.type === 'ConstantNode') {
       const constNode = node as math.ConstantNode;
       return (
@@ -751,6 +751,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     return stacks;
   }, [actions, substitutions, currentEq, path, pushEquation]);
 
+  // All hooks above run unconditionally; only now is it safe to bail out if this
+  // path no longer resolves to a node (the equation may have changed under us).
+  if (!node) return null;
+
   // The node box reserves space for ALL its active stacks: top padding for the row,
   // and minWidth so the row never overhangs.
   const handleCount = interactionStacks.length;
@@ -1005,6 +1009,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                     onClick={(e) => {
                       e.stopPropagation();
                       opt.onApply();
+                      // closeMenu() clears the hover-grace timer ref; this is an
+                      // event handler, not render, so the ref read is safe. The
+                      // rule's static analysis can't prove the call site.
+                      // eslint-disable-next-line react-hooks/refs
                       closeMenu();
                     }}
                   >

@@ -3,6 +3,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useAtomValue, useSetAtom, useAtom } from 'jotai';
+import { useIsHydrated } from '../hooks/useIsHydrated';
 import { Tooltip } from './Tooltip';
 import { TooltipCard } from './TooltipCard';
 import { Equation, parseEquation, ensureNodeIds, deserializeEquation } from 'math-engine-client';
@@ -77,11 +78,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   const setOnboardingShowDirectory = useSetAtom(onboardingShowDirectoryAtom);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [isMobileRecentsOpen, setIsMobileRecentsOpen] = React.useState(false);
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useIsHydrated();
 
   const handleRecentsClick = () => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;

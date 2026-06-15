@@ -85,12 +85,14 @@ export const FeedbackModal: React.FC = () => {
     };
   }, [isOpen, setIsOpen]);
 
-  // Reset form state when modal is opened
-  React.useEffect(() => {
-    if (isOpen) {
-      resetForm();
-    }
-  }, [isOpen, resetForm]);
+  // Reset form state when the modal opens. Done during render via the
+  // previous-prop pattern (React's "adjust state when a prop changes") rather
+  // than an effect, so the reset is applied before paint.
+  const [prevIsOpen, setPrevIsOpen] = React.useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) resetForm();
+  }
 
   const handleClose = () => {
     setIsOpen(false);

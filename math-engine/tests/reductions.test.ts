@@ -177,4 +177,26 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
       expect(results).toContain('a * 1 + b');
     });
   });
+
+  // The UI suppresses "Evaluate to Decimal" via filteredReduciblePathsAtom (a jotai
+  // atom that can't be imported here). This test pins the engine-side contract that
+  // filter depends on — the label is emitted — and mirrors the filter to document it.
+  test('engine emits the "Evaluate to Decimal" label the UI suppression filters on', () => {
+    const eq = parseEquation('x = 2.5 / 5');
+    const reductions = getReducibleOptions(eq);
+
+    const filtered: Record<string, typeof reductions[string]> = {};
+    Object.keys(reductions).forEach((path) => {
+      const filteredActions = reductions[path].filter(
+        (action) => action.label !== 'Evaluate to Decimal'
+      );
+      if (filteredActions.length > 0) {
+        filtered[path] = filteredActions;
+      }
+    });
+
+    expect(reductions['rhs'].find(r => r.label === 'Evaluate to Decimal')).toBeDefined();
+    expect(filtered['rhs']?.find(r => r.label === 'Evaluate to Decimal')).toBeUndefined();
+  });
 });
+

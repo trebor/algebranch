@@ -419,6 +419,51 @@ export const candidatePathsAtom = atom<Set<string>>(new Set<string>());
 export const targetPathsAtom = atom<Record<string, Equation>>({});
 export const reduciblePathsAtom = atom<Record<string, ReducibleActionInfo[]>>({});
 
+export interface UserSettings {
+  allowEvaluateToDecimal: boolean;
+}
+
+export const DEFAULT_SETTINGS: UserSettings = {
+  allowEvaluateToDecimal: true,
+};
+
+export const settingsModalOpenAtom = atom(false);
+export const rawSettingsAtom = atom<UserSettings>(DEFAULT_SETTINGS);
+
+export const settingsAtom = atom(
+  (get) => get(rawSettingsAtom),
+  (get, set, update: UserSettings | ((prev: UserSettings) => UserSettings)) => {
+    const prev = get(rawSettingsAtom);
+    const next = typeof update === 'function' ? update(prev) : update;
+    set(rawSettingsAtom, next);
+    if (typeof window !== 'undefined') {
+      try {
+        safeLocalStorage.setItem('algebranch_settings', JSON.stringify(next));
+      } catch (err) {
+        console.error('Failed to save settings to localStorage:', err);
+      }
+    }
+  }
+);
+
+export const filteredReduciblePathsAtom = atom<Record<string, ReducibleActionInfo[]>>((get) => {
+  const settings = get(settingsAtom);
+  const reduciblePaths = get(reduciblePathsAtom);
+  if (settings.allowEvaluateToDecimal) {
+    return reduciblePaths;
+  }
+  const filtered: Record<string, ReducibleActionInfo[]> = {};
+  Object.keys(reduciblePaths).forEach((path) => {
+    const filteredActions = reduciblePaths[path].filter(
+      (action) => action.label !== 'Evaluate to Decimal'
+    );
+    if (filteredActions.length > 0) {
+      filtered[path] = filteredActions;
+    }
+  });
+  return filtered;
+});
+
 // Derived Atoms
 
 /**
@@ -698,7 +743,7 @@ export const pushEquationAtom = atom(
       const hoverReducePath = get(hoverReducePathAtom);
       const hoverReduceIndex = get(hoverReduceIndexAtom);
       if (hoverReducePath) {
-        const reducible = get(reduciblePathsAtom);
+        const reducible = get(filteredReduciblePathsAtom);
         const actions = reducible[hoverReducePath];
         const index = hoverReduceIndex !== null ? hoverReduceIndex : 0;
         const action = actions?.[index];
@@ -1261,6 +1306,19 @@ export const hydrateWorkspaceTabsAtom = atom(
         set(rawGraphSizeAtom, savedGraphSize);
       }
 
+      const savedSettings = safeLocalStorage.getItem('algebranch_settings');
+      if (savedSettings) {
+        try {
+          const parsed = JSON.parse(savedSettings);
+          set(rawSettingsAtom, {
+            ...DEFAULT_SETTINGS,
+            ...parsed
+          });
+        } catch (err) {
+          console.error('Failed to parse settings from localStorage:', err);
+        }
+      }
+
       const savedTabs = safeLocalStorage.getItem('algebranch_workspace_tabs');
       const savedActiveId = safeLocalStorage.getItem('algebranch_active_tab_id');
       
@@ -1574,7 +1632,7 @@ export const setOnboardingStepAtom = atom(
           const targetResult = Object.values(get(targetPathsAtom)).find(eq => stripEq(eq) === targetStr);
           // 2. Live reduction: a simplify/distribute handle yields the expected equation
           const reduceAction = !targetResult
-            ? Object.values(get(reduciblePathsAtom)).flat().find(a => stripEq(a.equation) === targetStr)
+            ? Object.values(get(filteredReduciblePathsAtom)).flat().find(a => stripEq(a.equation) === targetStr)
             : undefined;
           // 2.5 Live substitution: a fact-based option yields the expected equation (#3)
           const subOption = !targetResult && !reduceAction
@@ -1674,7 +1732,7 @@ export const onboardingReduceHandleAtom = atom<{ path: string; index: number } |
   if (!step || !step.nextEquation) return null;
 
   const targetStr = step.nextEquation.replace(/\s+/g, '');
-  for (const [path, actions] of Object.entries(get(reduciblePathsAtom))) {
+  for (const [path, actions] of Object.entries(get(filteredReduciblePathsAtom))) {
     const index = actions.findIndex(a => equationToString(a.equation).replace(/\s+/g, '') === targetStr);
     if (index !== -1) return { path, index };
   }

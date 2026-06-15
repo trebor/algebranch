@@ -401,13 +401,13 @@ export default function Home() {
       } catch (err) {
         console.error('Initialization failed:', err);
         setInitError(err instanceof Error ? err.message : String(err));
+      } finally {
+        // Mark hydration complete once the mount-once localStorage load has run.
+        setIsHydrated(true);
+        // Signal global hydration so mount-time consumers (onboarding auto-resume)
+        // can safely mutate persisted workspace state without clobbering it.
+        setAppHydrated(true);
       }
-
-      // Mark hydration complete once the mount-once localStorage load has run.
-      setIsHydrated(true);
-      // Signal global hydration so mount-time consumers (onboarding auto-resume)
-      // can safely mutate persisted workspace state without clobbering it.
-      setAppHydrated(true);
     };
 
     initialize();

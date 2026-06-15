@@ -40,6 +40,16 @@ This section is the **canonical commit/merge protocol** for every agent in this 
 3. Commit only after the user explicitly approves.
 4. Never `git push`, `gh pr merge`, or merge directly without approval. Once commits are approved, offer to finalize: open/merge the PR, delete the feature branch, and clean up.
 
+## Local dev server
+
+**The human owns the local dev server** (`npm run dev`, http://localhost:3000) — they start, stop, and restart it. Agents must **not** launch it or poll it (no background `npm run dev`, no health-check curl loops); that wastes tokens on something the human does instantly, and avoids two agents fighting over the port.
+
+When a change needs verifying in the running app, **tell the human what to run and whether a restart is required**:
+- **UI changes** (anything under `ui/src` — components, store, theme): Next dev hot-reloads. **No restart.**
+- **`math-engine` changes**: require `npm run build` (rebuilds the `math-engine` dist the UI imports) **and** a dev-server restart to pick up the new bundle. **Flag this explicitly.**
+
+Agents can still hand the user `?eq=<equation>` test URLs without the server running. Only start the server yourself if the human explicitly asks.
+
 ## Two-agent coordination
 
 When alternating between **Claude Code and Antigravity** on this repo, follow [orchestration.md](orchestration.md) — the coordination doctrine (routing, quota policy, restart triggers, hand-off schema, resync-on-return). Keep the live hand-off in `BATON.md` (git-ignored, status/transport only). Task state still lives in GitHub Issues; the baton never holds plans or checklists.

@@ -1,5 +1,5 @@
 import * as math from 'mathjs';
-import { Equation, getChildren, replaceNodeAtPath, ensureNodeIds } from './tree';
+import { Equation, getChildren, ensureNodeIds, cloneWithChildren } from './tree';
 import { getVariables } from './validator';
 
 /**
@@ -57,11 +57,9 @@ export const getIsolatedDefinition = (
 
 /**
  * Forward substitution (#3, Phase 1): for each fact `y = expr`, every occurrence
- * of `y` in the equation yields an option replacing that one occurrence with
+ * of `y` in the equation yields an option replacing all occurrences with
  * `(expr)` — parenthesized when the replacement is an operator expression so
- * precedence is preserved. Options are grouped by node path; multiple facts for
- * the same variable produce multiple options on the same node (like the
- * quadratic ± branches).
+ * precedence is preserved. Options are grouped by node path for UI selection.
  *
  * Pure and synchronous — intended to run client-side via the unified engine
  * (#44), no API round-trip.
@@ -79,6 +77,18 @@ export const getSubstitutionOptions = (
     getChildren(node).forEach((child, i) => collectVarPaths(child, `${prefix}/${i}`, name, hits));
   };
 
+  const replaceSymbol = (node: math.MathNode, name: string, replacement: math.MathNode): math.MathNode => {
+    if (node.type === 'SymbolNode' && (node as math.SymbolNode).name === name) {
+      return replacement.cloneDeep();
+    }
+    const children = getChildren(node);
+    if (children.length > 0) {
+      const newChildren = children.map(child => replaceSymbol(child, name, replacement));
+      return cloneWithChildren(node, newChildren);
+    }
+    return node;
+  };
+
   for (const fact of facts) {
     if (!fact?.variable || !fact.expression) continue;
 
@@ -86,12 +96,18 @@ export const getSubstitutionOptions = (
     collectVarPaths(eq.lhs, 'lhs', fact.variable, hits);
     collectVarPaths(eq.rhs, 'rhs', fact.variable, hits);
 
-    for (const path of hits) {
-      try {
-        const cloned = fact.expression.cloneDeep();
-        const replacementNode =
-          cloned.type === 'OperatorNode' ? new math.ParenthesisNode(cloned) : cloned;
-        const substituted = ensureNodeIds(replaceNodeAtPath(eq, path, replacementNode));
+    if (hits.length === 0) continue;
+
+    try {
+      const cloned = fact.expression.cloneDeep();
+      const replacementNode =
+        cloned.type === 'OperatorNode' ? new math.ParenthesisNode(cloned) : cloned;
+      
+      const substitutedLhs = replaceSymbol(eq.lhs, fact.variable, replacementNode);
+      const substitutedRhs = replaceSymbol(eq.rhs, fact.variable, replacementNode);
+      const substituted = ensureNodeIds({ lhs: substitutedLhs, rhs: substitutedRhs });
+
+      for (const path of hits) {
         (result[path] ||= []).push({
           path,
           substituted,
@@ -99,10 +115,10 @@ export const getSubstitutionOptions = (
           replacement: fact.expression.toString(),
           fact,
         });
-      } catch {
-        // Path failed to resolve/replace — skip this occurrence.
-        continue;
       }
+    } catch {
+      // Skip if substitution fails
+      continue;
     }
   }
 

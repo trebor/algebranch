@@ -49,19 +49,18 @@ describe('getIsolatedDefinition — what counts as a usable fact', () => {
 });
 
 describe('getSubstitutionOptions — forward substitution', () => {
-  it('offers substitution at every matching variable occurrence, parenthesized', () => {
+  it('offers substitution at every matching variable occurrence, replacing all instances', () => {
     const options = getSubstitutionOptions(eq('3 * y + y = 12'), [fact('y = 2 * x + 1')]);
     const paths = Object.keys(options);
     expect(paths).toHaveLength(2); // both y occurrences
 
     for (const opts of Object.values(options)) {
       expect(opts).toHaveLength(1);
-      // each option substitutes only ITS occurrence
     }
     const results = Object.values(options).flat().map(o => norm(equationToString(o.substituted)));
-    // Precedence-critical parens are kept; redundant ones are normalized away.
-    expect(results).toContain(norm('3 * (2 * x + 1) + y = 12'));
-    expect(results).toContain(norm('3 * y + 2 * x + 1 = 12'));
+    // All occurrences should be replaced in each option's substituted equation.
+    expect(results[0]).toBe(norm('3 * (2 * x + 1) + 2 * x + 1 = 12'));
+    expect(results[1]).toBe(norm('3 * (2 * x + 1) + 2 * x + 1 = 12'));
   });
 
   it('does not parenthesize single-node replacements', () => {

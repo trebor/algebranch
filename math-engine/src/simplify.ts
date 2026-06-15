@@ -514,6 +514,168 @@ export const tryExpandPowerTerm = (node: math.MathNode): math.MathNode | null =>
 };
 
 /**
+ * The integer value of a node, seeing through parentheses and a unary minus
+ * (e.g. `-(3)` -> -3). Returns null for non-integer constants or anything
+ * variable. Used by fraction combination to decide the LCD path.
+ */
+const integerValueOf = (node: math.MathNode): number | null => {
+  const n = unwrapParens(node);
+  if (n.type === 'OperatorNode' && (n as math.OperatorNode).op === '-' && (n as math.OperatorNode).args.length === 1) {
+    const inner = integerValueOf((n as math.OperatorNode).args[0]);
+    return inner === null ? null : -inner;
+  }
+  if (n.type === 'ConstantNode') {
+    const v = Number((n as math.ConstantNode).value);
+    return Number.isInteger(v) ? v : null;
+  }
+  return null;
+};
+
+const isOneNode = (node: math.MathNode): boolean => integerValueOf(node) === 1;
+
+const gcdInt = (a: number, b: number): number => {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b) {
+    [a, b] = [b, a % b];
+  }
+  return a;
+};
+
+const lcmInt = (a: number, b: number): number => (a === 0 || b === 0 ? 0 : Math.abs(a * b) / gcdInt(a, b));
+
+/** Multiply two factors, dropping a trivial ×1 and folding constant×constant. */
+const multiplyFactors = (a: math.MathNode, b: math.MathNode): math.MathNode => {
+  const av = integerValueOf(a);
+  const bv = integerValueOf(b);
+  if (av !== null && bv !== null) return new math.ConstantNode(av * bv);
+  if (isOneNode(a)) return b;
+  if (isOneNode(b)) return a;
+  return new math.OperatorNode('*', 'multiply', [a, b]);
+};
+
+interface SignedTerm {
+  readonly sign: 1 | -1;
+  readonly node: math.MathNode;
+}
+
+/** Flatten an additive chain into signed leaf terms (a + b - c -> +a, +b, -c). */
+const flattenAddSub = (node: math.MathNode, sign: 1 | -1, out: SignedTerm[]): void => {
+  const n = unwrapParens(node);
+  if (n.type === 'OperatorNode') {
+    const op = (n as math.OperatorNode).op;
+    const args = (n as math.OperatorNode).args;
+    if (op === '+' && args.length === 2) {
+      flattenAddSub(args[0], sign, out);
+      flattenAddSub(args[1], sign, out);
+      return;
+    }
+    if (op === '-' && args.length === 2) {
+      flattenAddSub(args[0], sign, out);
+      flattenAddSub(args[1], sign === 1 ? -1 : 1, out);
+      return;
+    }
+    if (op === '-' && args.length === 1) {
+      flattenAddSub(args[0], sign === 1 ? -1 : 1, out);
+      return;
+    }
+  }
+  out.push({ sign, node });
+};
+
+/**
+ * Combine a sum/difference of fractions over a common denominator
+ * (`a/b ± c/d -> (a·d ± b·c)/(b·d)`), the inverse of fraction decomposition
+ * (#38). Flattens the additive chain into signed terms; each term must be a
+ * division node or an integer constant (so mixed integer+fraction works, e.g.
+ * `1/2 + 1`). Requires at least one real fraction, so plain sums like `x + 1`
+ * are left alone. Uses the least common denominator when every denominator is a
+ * positive integer (`2/3 + 1/6 -> (4 + 1)/6`); otherwise the product of the
+ * distinct denominators (`1/x + 1/y -> (y + x)/(x·y)`). The resulting
+ * `b·d ≠ 0` domain assumption is surfaced downstream by
+ * `domainRestrictionsForReduction` (#63).
+ */
+export const tryCombineFractions = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'OperatorNode') return null;
+  const rootOp = (node as math.OperatorNode).op;
+  if ((rootOp !== '+' && rootOp !== '-') || (node as math.OperatorNode).args.length !== 2) return null;
+
+  const flat: SignedTerm[] = [];
+  flattenAddSub(node, 1, flat);
+  if (flat.length < 2) return null;
+
+  // Decompose each term into numerator / denominator. Bail on any term that is
+  // neither a fraction nor an integer constant — combining those would be noise.
+  const terms: { sign: 1 | -1; num: math.MathNode; den: math.MathNode }[] = [];
+  let fractionCount = 0;
+  for (const { sign, node: termNode } of flat) {
+    const inner = unwrapParens(termNode);
+    if (inner.type === 'OperatorNode' && (inner as math.OperatorNode).op === '/' && (inner as math.OperatorNode).args.length === 2) {
+      const den = unwrapParens((inner as math.OperatorNode).args[1]);
+      terms.push({ sign, num: (inner as math.OperatorNode).args[0], den });
+      if (!isOneNode(den)) fractionCount++;
+    } else if (integerValueOf(inner) !== null) {
+      terms.push({ sign, num: inner, den: new math.ConstantNode(1) });
+    } else {
+      return null;
+    }
+  }
+  if (fractionCount < 1) return null;
+
+  // Common denominator: LCD when every denominator is a positive integer,
+  // otherwise the product of the distinct denominators.
+  const denVals = terms.map((t) => integerValueOf(t.den));
+  const allPositiveInt = denVals.every((v) => v !== null && v > 0);
+
+  const clean = (s: string) => s.replace(/[\s()]/g, '');
+  let denominator: math.MathNode;
+  let cofactorFor: (i: number) => math.MathNode;
+
+  if (allPositiveInt) {
+    const lcd = (denVals as number[]).reduce((acc, v) => lcmInt(acc, v), 1);
+    denominator = new math.ConstantNode(lcd);
+    cofactorFor = (i) => new math.ConstantNode(lcd / (denVals[i] as number));
+  } else {
+    // Distinct, non-unit denominators (deduped by string form).
+    const distinct: math.MathNode[] = [];
+    const seen = new Set<string>();
+    for (const t of terms) {
+      if (isOneNode(t.den)) continue;
+      const key = clean(t.den.toString());
+      if (!seen.has(key)) {
+        seen.add(key);
+        distinct.push(t.den);
+      }
+    }
+    denominator = distinct.reduce((acc, d) => multiplyFactors(acc, d), new math.ConstantNode(1) as math.MathNode);
+    cofactorFor = (i) => {
+      const skip = clean(terms[i].den.toString());
+      return distinct
+        .filter((d) => clean(d.toString()) !== skip)
+        .reduce((acc, d) => multiplyFactors(acc, d), new math.ConstantNode(1) as math.MathNode);
+    };
+  }
+
+  // Build the combined numerator as a signed sum of num·cofactor contributions.
+  let numerator: math.MathNode | null = null;
+  terms.forEach((t, i) => {
+    const contrib = multiplyFactors(t.num, cofactorFor(i));
+    if (numerator === null) {
+      numerator = t.sign === -1 ? new math.OperatorNode('-', 'unaryMinus', [contrib]) : contrib;
+    } else {
+      numerator = new math.OperatorNode(
+        t.sign === -1 ? '-' : '+',
+        t.sign === -1 ? 'subtract' : 'add',
+        [numerator, contrib],
+      );
+    }
+  });
+  if (numerator === null) return null;
+
+  return new math.OperatorNode('/', 'divide', [numerator, denominator]);
+};
+
+/**
  * True when some strict descendant of `p` has its own atomic simplification —
  * an identity element to drop (× 1, + 0), a constant subtree to fold, powers to
  * combine, or a root/power to reduce.
@@ -1018,6 +1180,33 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
             type: 'identity',
             label
           });
+        }
+      }
+    } catch {}
+
+    // Try combining a sum/difference of fractions over a common denominator (#61).
+    // Offered only on the maximal additive chain (parent is not itself +/-), so
+    // a 3-way sum gets one handle on the whole thing, not one per nested sub-sum.
+    try {
+      const node = getNodeByPath(eq, path);
+      let parentIsAdditive = false;
+      if (path.includes('/')) {
+        try {
+          const parent = getNodeByPath(eq, path.slice(0, path.lastIndexOf('/')));
+          parentIsAdditive =
+            parent.type === 'OperatorNode' && ['+', '-'].includes((parent as math.OperatorNode).op);
+        } catch {}
+      }
+      if (!parentIsAdditive) {
+        const combined = tryCombineFractions(node);
+        if (combined) {
+          const clean = (s: string) => s.replace(/[\s()]/g, '');
+          if (clean(combined.toString()) !== clean(node.toString())) {
+            const newEq = replaceNodeAtPath(eq, path, combined);
+            if (areEquationsEquivalent(eq, newEq)) {
+              rawReductions.push({ path, simplified: newEq, type: 'reduce', label: 'Combine Fractions' });
+            }
+          }
         }
       }
     } catch {}

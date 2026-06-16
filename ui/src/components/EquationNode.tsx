@@ -169,6 +169,14 @@ const RightParenSVG: React.FC<{ className?: string; style?: React.CSSProperties 
 interface EquationNodeProps {
   readonly path: string;
   readonly inExponent?: boolean;
+  /**
+   * Minimum top padding (em) the node's box must reserve, forced by a parent
+   * row so every sibling operand shares one top-boundary offset (#30). Without
+   * it, a handle-bearing operand reserves ~0.95em of button space up top while
+   * its bare siblings reserve only nodePy, dropping its text below theirs. The
+   * row hands every operand the row-wide max so their content centers line up.
+   */
+  readonly minPaddingTop?: number;
 }
 
 /**
@@ -222,7 +230,7 @@ const MATH_LAYOUT = {
   }
 };
 
-export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = false }) => {
+export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = false, minPaddingTop = 0 }) => {
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
   const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
@@ -575,9 +583,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
           child.type === 'OperatorNode' &&
           (child as math.OperatorNode).isUnary() &&
           (child as math.OperatorNode).op === '-';
+        // Share one top-boundary offset with the operand so the unary glyph
+        // lines up with the operand's text rather than its box center (#30).
+        const unaryTop = getNodePadding(`${path}/0`).paddingTop;
         return (
           <div className="flex items-center gap-[0.05em]">
-            <span className={`font-bold select-none ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_UNARY_ACTIVE}`} style={getOpStyle()}>{opSymbol}</span>
+            <span className={`font-bold select-none ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_UNARY_ACTIVE}`} style={{ ...getOpStyle(), display: 'inline-flex', alignItems: 'center', paddingTop: `${unaryTop}em`, paddingBottom: `${layout.nodePy}em` }}>{opSymbol}</span>
             {childNeedsParens ? (
               (() => {
                 const childPath = `${path}/0`;
@@ -619,7 +630,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 );
               })()
             ) : (
-              <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
+              <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} minPaddingTop={unaryTop} />
             )}
           </div>
         );
@@ -659,11 +670,24 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       // Normal binary operators (+, -, *) — centralized display glyphs (#28).
       const opSymbol = OPERATOR_DISPLAY[opNode.op] || opNode.op;
 
+      // Baseline alignment (#30): reserve the row-wide max top padding on both
+      // operands AND the operator glyph so every box shares one top-boundary
+      // offset and their content centers (text baselines) line up — instead of
+      // a handle-bearing operand dropping its text below its bare siblings.
+      const rowTop = Math.max(
+        getNodePadding(`${path}/0`).paddingTop,
+        getNodePadding(`${path}/1`).paddingTop,
+      );
+
       return (
         <div className="flex items-center gap-[0.2em] flex-nowrap justify-center py-[0.05em]">
-          <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
-          <span className={`font-medium select-none text-[0.85em] ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_ACTIVE}`} style={getOpStyle()}>{opSymbol}</span>
-          <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} />
+          <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} minPaddingTop={rowTop} />
+          {/* Outer span carries the shared padding at the parent's em (the inner
+              glyph is text-[0.85em], so padding em on it would be mis-scaled). */}
+          <span style={{ paddingTop: `${rowTop}em`, paddingBottom: `${layout.nodePy}em`, display: 'inline-flex', alignItems: 'center' }}>
+            <span className={`font-medium select-none text-[0.85em] ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_ACTIVE}`} style={getOpStyle()}>{opSymbol}</span>
+          </span>
+          <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} minPaddingTop={rowTop} />
         </div>
       );
     }
@@ -872,9 +896,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     ? `${handleCount * layout.btnSize + (handleCount - 1) * layout.btnGap + layout.nodePx * 2}em`
     : undefined;
 
-  const paddingTop = handleCount > 0
+  // A parent row may force a larger top reserve (minPaddingTop) so this node's
+  // text shares the same top-boundary offset as its handle-bearing siblings (#30).
+  const ownPaddingTop = handleCount > 0
     ? layout.btnTop + layout.btnSize + layout.textGap
     : layout.nodePy;
+  const paddingTop = Math.max(ownPaddingTop, minPaddingTop);
 
   const customStyle: React.CSSProperties = {
     transition: 'border-color 150ms, background-color 150ms, box-shadow 150ms, opacity 150ms',

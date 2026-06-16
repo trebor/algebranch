@@ -270,6 +270,24 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
       text: before && after ? `rationalize denominator ${before} → ${after}` : 'rationalize denominator',
     };
   }
+  // Completing the square (#62) reads better with its own verb than the generic
+  // "apply complete the square" while still showing the before → after.
+  if (option.label === 'Complete the Square') {
+    let before = '';
+    let after = '';
+    try {
+      before = nodeToString(getNodeByPath(eq, option.path));
+      after = nodeToString(getNodeByPath(option.simplified, option.path));
+    } catch {
+      /* fall back to a bare label */
+    }
+    return {
+      kind: 'rewrite',
+      op: 'identity',
+      detail: before && after ? `${before} → ${after}` : option.label,
+      text: before && after ? `complete the square ${before} → ${after}` : 'complete the square',
+    };
+  }
   if (option.type === 'identity') {
     const label = option.label ?? 'apply identity';
     let before = '';

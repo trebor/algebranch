@@ -862,10 +862,17 @@ const sumTerms = (list: SignedTerm[]): math.MathNode => {
   return acc;
 };
 
-const tryExtractQuadratic = (lhs: math.MathNode, rhs: math.MathNode, solveVar: string) => {
-  const fullExpr = new math.OperatorNode('-', 'subtract', [lhs, rhs]);
+/**
+ * Extract the quadratic coefficients {a, b, c} of a single expression in
+ * `solveVar`, where the expression is read as a·solveVar² + b·solveVar + c.
+ * Returns the coefficients as MathNodes, or null when the expression isn't a
+ * quadratic in `solveVar` (no squared term, or an unsupported term like
+ * solveVar³). Used both by the quadratic formula (over lhs − rhs) and by
+ * completing the square (over a bare expression node) — #62.
+ */
+export const tryExtractQuadraticExpr = (expr: math.MathNode, solveVar: string) => {
   const terms: SignedTerm[] = [];
-  collectTerms(fullExpr, 1, terms);
+  collectTerms(expr, 1, terms);
 
   const aList: SignedTerm[] = [];
   const bList: SignedTerm[] = [];
@@ -890,6 +897,11 @@ const tryExtractQuadratic = (lhs: math.MathNode, rhs: math.MathNode, solveVar: s
   const c = sumTerms(cList);
 
   return { a, b, c };
+};
+
+const tryExtractQuadratic = (lhs: math.MathNode, rhs: math.MathNode, solveVar: string) => {
+  const fullExpr = new math.OperatorNode('-', 'subtract', [lhs, rhs]);
+  return tryExtractQuadraticExpr(fullExpr, solveVar);
 };
 
 export interface QuadraticFormulaSolutions {

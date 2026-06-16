@@ -26,7 +26,7 @@ export type StepChange =
     }
   | {
       readonly kind: 'rewrite';
-      readonly op: 'evaluate' | 'simplify' | 'distribute' | 'identity' | 'quadratic' | 'substitute';
+      readonly op: 'evaluate' | 'simplify' | 'distribute' | 'identity' | 'quadratic' | 'quadratic_standard_form' | 'substitute';
       readonly detail?: string;
       readonly text: string;
       // Domain restrictions the step relies on, e.g. ['x ≠ 0'] when a variable
@@ -208,6 +208,10 @@ export const describeTransposition = (
  * we can show the before → after of the affected sub-expression.
  */
 export const describeReduction = (eq: Equation, option: ReductionOption): StepChange => {
+  // #90: the =0 normalization step that precedes the quadratic formula.
+  if (option.label === 'Write in Standard Form') {
+    return { kind: 'rewrite', op: 'quadratic_standard_form', detail: option.label, text: 'write in standard form (= 0)' };
+  }
   if (option.label && option.label.includes('Quadratic Formula')) {
     return { kind: 'rewrite', op: 'quadratic', detail: option.label, text: 'apply the quadratic formula' };
   }

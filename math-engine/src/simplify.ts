@@ -277,6 +277,91 @@ export const trySimplifyPowerOfRoot = (node: math.MathNode): math.MathNode | nul
 };
 
 /**
+ * Simplify a numeric radical by extracting the largest perfect n-th-power factor
+ * from an integer radicand, keeping the result exact (never decimalised):
+ *   sqrt(8)  -> 2 * sqrt(2)      sqrt(12)      -> 2 * sqrt(3)
+ *   sqrt(18) -> 3 * sqrt(2)      nthRoot(16,3) -> 2 * nthRoot(2, 3)
+ * Returns null when there is nothing to pull out — the radicand is already in
+ * simplest form (sqrt(2), sqrt(6)), is not a positive integer ≥ 2, or is itself
+ * a perfect power (sqrt(4) -> 2), which is left to constant folding so the two
+ * paths don't both offer a move on the same node (#66).
+ */
+export const trySimplifyRadical = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'FunctionNode') return null;
+  const funcNode = node as math.FunctionNode;
+  const nameStr = getFunctionName(funcNode);
+
+  // Resolve the radicand and the root degree (sqrt and 1-arg nthRoot are degree 2).
+  let radicandNode: math.MathNode;
+  let degree: number;
+  if (nameStr === 'sqrt' && funcNode.args.length === 1) {
+    radicandNode = funcNode.args[0];
+    degree = 2;
+  } else if (nameStr === 'nthRoot' && funcNode.args.length === 1) {
+    radicandNode = funcNode.args[0];
+    degree = 2;
+  } else if (nameStr === 'nthRoot' && funcNode.args.length === 2) {
+    radicandNode = funcNode.args[0];
+    const degNode = unwrapParens(funcNode.args[1]);
+    if (degNode.type !== 'ConstantNode') return null;
+    degree = Number((degNode as math.ConstantNode).value);
+  } else {
+    return null;
+  }
+
+  if (!Number.isInteger(degree) || degree < 2) return null;
+
+  const radicand = unwrapParens(radicandNode);
+  if (radicand.type !== 'ConstantNode') return null;
+  const k = (radicand as math.ConstantNode).value;
+  if (typeof k !== 'number' || !Number.isInteger(k) || k < 2) return null;
+
+  // Pull out every perfect n-th-power factor: k = coeff^degree * remaining.
+  let coeff = 1;
+  let remaining = k;
+  for (let f = 2; Math.pow(f, degree) <= remaining; f++) {
+    const fPow = Math.pow(f, degree);
+    while (remaining % fPow === 0) {
+      remaining /= fPow;
+      coeff *= f;
+    }
+  }
+
+  // coeff === 1: nothing extractable (already simplest). remaining === 1: the
+  // radicand was a perfect power, so this reduces to a bare integer — leave that
+  // to constant folding rather than emitting `coeff * root(1)`.
+  if (coeff === 1 || remaining === 1) return null;
+
+  const rootNode: math.MathNode =
+    nameStr === 'sqrt'
+      ? new math.FunctionNode('sqrt', [new math.ConstantNode(remaining)])
+      : funcNode.args.length === 2
+        ? new math.FunctionNode('nthRoot', [new math.ConstantNode(remaining), new math.ConstantNode(degree)])
+        : new math.FunctionNode('nthRoot', [new math.ConstantNode(remaining)]);
+
+  return new math.OperatorNode('*', 'multiply', [new math.ConstantNode(coeff), rootNode]);
+};
+
+/**
+ * True when the node at `path` is the radicand (first argument) of a sqrt/nthRoot
+ * function — used to suppress radicand-only suggestions (e.g. "Express as Cube"
+ * on the 8 inside sqrt(8)) that misfire when the real move is the radical (#66).
+ */
+const isRadicandOfRoot = (eq: Equation, path: string): boolean => {
+  const slash = path.lastIndexOf('/');
+  if (slash < 0) return false;
+  if (path.slice(slash + 1) !== '0') return false; // only the radicand (args[0])
+  try {
+    const parent = getNodeByPath(eq, path.slice(0, slash));
+    if (parent.type !== 'FunctionNode') return false;
+    const name = getFunctionName(parent as math.FunctionNode);
+    return name === 'sqrt' || name === 'nthRoot';
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Identifies distribution opportunities (e.g. a * (b + c) -> a * b + a * c, or (b + c) / a -> b / a + c / a)
  * and returns the expanded mathematical node.
  */
@@ -719,6 +804,9 @@ const subtreeHasFinerSimplification = (eq: Equation, p: string): boolean => {
     // Powers to combine (x * x -> x^2) or a root/power to reduce (sqrt(x^2)).
     if (tryCombinePowerTerms(node)) return true;
     if (trySimplifyRootOfPower(node) || trySimplifyPowerOfRoot(node)) return true;
+
+    // A numeric radical with an extractable perfect-power factor (sqrt(8) -> 2√2).
+    if (trySimplifyRadical(node)) return true;
   }
   return false;
 };
@@ -737,6 +825,17 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
       return clean(candidate.lhs.toString()) !== clean(eq.lhs.toString()) ||
              clean(candidate.rhs.toString()) !== clean(eq.rhs.toString());
     };
+
+    // 0. Simplify a numeric radical (sqrt(8) -> 2 * sqrt(2)). Offered BEFORE
+    // constant folding so the exact radical wins over decimalising the
+    // irrational (folding sqrt(8) would otherwise yield 2.83) — #66.
+    const radicalSimplified = trySimplifyRadical(node);
+    if (radicalSimplified) {
+      const candidate = replaceNodeAtPath(eq, p, radicalSimplified);
+      if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
+        return candidate;
+      }
+    }
 
     // 1. Try constant folding first (non-constant subtrees composed entirely of constants)
     if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
@@ -1031,6 +1130,8 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
         let label: string | undefined = undefined;
         if (isActualDistribution) {
           label = 'Distribute';
+        } else if (trySimplifyRadical(node)) {
+          label = 'Simplify Radical';
         } else {
           const isFraction = node.type === 'OperatorNode' && (node as math.OperatorNode).op === '/';
           label = isFraction ? 'Simplify Fraction' : 'Simplify';
@@ -1161,10 +1262,12 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
       }
     } catch {}
 
-    // Try expressing perfect power constants (e.g. 9 -> 3^2, 8 -> 2^3, 64 -> 8^2, 4^3, 2^6)
+    // Try expressing perfect power constants (e.g. 9 -> 3^2, 8 -> 2^3, 64 -> 8^2, 4^3, 2^6).
+    // Skipped on a radicand: under a sqrt/nthRoot, expressing 8 as 2^3 is a misfit
+    // suggestion competing with simplifying the radical itself (sqrt(8) -> 2√2) — #66.
     try {
       const node = getNodeByPath(eq, path);
-      const powerForms = tryExpressAsPowerOptions(node);
+      const powerForms = isRadicandOfRoot(eq, path) ? [] : tryExpressAsPowerOptions(node);
       for (const powerForm of powerForms) {
         const newEq = replaceNodeAtPath(eq, path, powerForm);
         if (areEquationsEquivalent(eq, newEq)) {

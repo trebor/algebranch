@@ -124,6 +124,25 @@ const MINI_PETALS: readonly MiniPetalInfo[] = [
   { char: 'ⁿ√', x: -17, y: -14, tokenKey: 'EQUALS_MINI_PETAL_ROOT' },
 ];
 
+/**
+ * Read the raw `eq` query parameter and percent-decode it ONCE. We pull it
+ * straight from the query string rather than via `URLSearchParams.get`, which
+ * applies form semantics and turns a literal `+` into a space — silently
+ * corrupting any equation with a sum (e.g. `sqrt(2)+sqrt(2)` → `sqrt(2) sqrt(2)`,
+ * which then fails to parse). `decodeURIComponent` leaves `+` untouched, so both
+ * the fully-encoded share links (`%2B`) and hand-written test URLs with a literal
+ * `+` resolve correctly. Returns null when absent or undecodable.
+ */
+const readEqParam = (search: string): string | null => {
+  const match = search.match(/[?&]eq=([^&#]*)/);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+};
+
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
@@ -262,11 +281,9 @@ export default function Home() {
         // Check if we have saved tabs to prevent overwriting hydrated tab trees with stale sessions
         const hasSavedTabs = typeof window !== 'undefined' && safeLocalStorage.getItem('algebranch_workspace_tabs') !== null;
         if (hasSavedTabs) {
-          const params = new URLSearchParams(window.location.search);
-          const urlEq = params.get('eq');
-          if (urlEq) {
+          const cleanEqStr = readEqParam(window.location.search);
+          if (cleanEqStr) {
             try {
-              const cleanEqStr = decodeURIComponent(urlEq);
               createNewSession(cleanEqStr);
               // Clear query parameter from the URL to prevent duplicate tabs on page refresh
               window.history.replaceState(null, '', window.location.pathname);
@@ -278,12 +295,10 @@ export default function Home() {
         }
 
         // 2. Check URL query string precedence (if sharing) - for legacy/first load without workspace tabs
-        const params = new URLSearchParams(window.location.search);
-        const urlEq = params.get('eq');
-        
-        if (urlEq) {
+        const cleanEqStr = readEqParam(window.location.search);
+
+        if (cleanEqStr) {
           try {
-            const cleanEqStr = decodeURIComponent(urlEq);
             const newEq = ensureNodeIds(parseEquation(cleanEqStr));
             const newTree: Record<string, HistoryNode> = {
               "0": {

@@ -343,6 +343,78 @@ export const trySimplifyRadical = (node: math.MathNode): math.MathNode | null =>
 };
 
 /**
+ * Parse a single additive term into a radical and its numeric coefficient:
+ *   sqrt(2)        -> { coeff: 1,  root: sqrt(2) }
+ *   3 * sqrt(2)    -> { coeff: 3,  root: sqrt(2) }
+ *   nthRoot(5,3)*4 -> { coeff: 4,  root: nthRoot(5, 3) }
+ * Returns null when the term is not `coeff * radical` with a single numeric
+ * coefficient and a sqrt/nthRoot factor (used to combine like radicals — #66).
+ */
+const parseRadicalTerm = (
+  node: math.MathNode,
+): { coeff: number; root: math.MathNode } | null => {
+  const isRadical = (n: math.MathNode): boolean => {
+    if (n.type !== 'FunctionNode') return false;
+    const name = getFunctionName(n as math.FunctionNode);
+    return name === 'sqrt' || name === 'nthRoot';
+  };
+
+  const inner = unwrapParens(node);
+
+  if (isRadical(inner)) {
+    return { coeff: 1, root: inner };
+  }
+
+  if (inner.type === 'OperatorNode' && (inner as math.OperatorNode).op === '*') {
+    const opNode = inner as math.OperatorNode;
+    if (opNode.args.length !== 2) return null;
+    const a = unwrapParens(opNode.args[0]);
+    const b = unwrapParens(opNode.args[1]);
+    if (a.type === 'ConstantNode' && isRadical(b)) {
+      const c = Number((a as math.ConstantNode).value);
+      return Number.isFinite(c) ? { coeff: c, root: b } : null;
+    }
+    if (b.type === 'ConstantNode' && isRadical(a)) {
+      const c = Number((b as math.ConstantNode).value);
+      return Number.isFinite(c) ? { coeff: c, root: a } : null;
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Combine two like radical terms over a binary +/- into a single exact term,
+ * keeping the irrational symbolic (never decimalised):
+ *   sqrt(2) + sqrt(2)      -> 2 * sqrt(2)
+ *   3 * sqrt(2) - sqrt(2)  -> 2 * sqrt(2)
+ *   a*sqrt(k) + b*sqrt(k)  -> (a + b) * sqrt(k)
+ * Unlike radicals (sqrt(2) + sqrt(3)) and non-radical terms return null. The
+ * radicands/degrees must match exactly (compared structurally); a cancelling
+ * pair collapses to 0 and a unit coefficient drops to the bare radical (#66).
+ */
+export const tryCombineLikeRadicals = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'OperatorNode') return null;
+  const opNode = node as math.OperatorNode;
+  if ((opNode.op !== '+' && opNode.op !== '-') || opNode.args.length !== 2) return null;
+
+  const left = parseRadicalTerm(opNode.args[0]);
+  const right = parseRadicalTerm(opNode.args[1]);
+  if (!left || !right) return null;
+
+  // Like radicals share the same root (same radicand and degree).
+  if (left.root.toString() !== right.root.toString()) return null;
+
+  const coeff = opNode.op === '+' ? left.coeff + right.coeff : left.coeff - right.coeff;
+  const root = left.root;
+
+  if (coeff === 0) return new math.ConstantNode(0);
+  if (coeff === 1) return root;
+  if (coeff === -1) return new math.OperatorNode('-', 'unaryMinus', [root]);
+  return new math.OperatorNode('*', 'multiply', [new math.ConstantNode(coeff), root]);
+};
+
+/**
  * True when the node at `path` is the radicand (first argument) of a sqrt/nthRoot
  * function — used to suppress radicand-only suggestions (e.g. "Express as Cube"
  * on the 8 inside sqrt(8)) that misfire when the real move is the radical (#66).
@@ -807,6 +879,9 @@ const subtreeHasFinerSimplification = (eq: Equation, p: string): boolean => {
 
     // A numeric radical with an extractable perfect-power factor (sqrt(8) -> 2√2).
     if (trySimplifyRadical(node)) return true;
+
+    // Like radicals to combine (sqrt(2) + sqrt(2) -> 2√2).
+    if (tryCombineLikeRadicals(node)) return true;
   }
   return false;
 };
@@ -832,6 +907,17 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
     const radicalSimplified = trySimplifyRadical(node);
     if (radicalSimplified) {
       const candidate = replaceNodeAtPath(eq, p, radicalSimplified);
+      if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
+        return candidate;
+      }
+    }
+
+    // 0.5 Combine like radicals (sqrt(2) + sqrt(2) -> 2 * sqrt(2)). Offered
+    // BEFORE constant folding so the exact term wins over decimalising the sum
+    // (folding sqrt(2) + sqrt(2) would otherwise yield 2.83) — #66.
+    const combinedRadicals = tryCombineLikeRadicals(node);
+    if (combinedRadicals) {
+      const candidate = replaceNodeAtPath(eq, p, combinedRadicals);
       if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
         return candidate;
       }
@@ -1132,6 +1218,8 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
           label = 'Distribute';
         } else if (trySimplifyRadical(node)) {
           label = 'Simplify Radical';
+        } else if (tryCombineLikeRadicals(node)) {
+          label = 'Combine Like Radicals';
         } else {
           const isFraction = node.type === 'OperatorNode' && (node as math.OperatorNode).op === '/';
           label = isFraction ? 'Simplify Fraction' : 'Simplify';

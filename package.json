@@ -14,6 +14,10 @@
     "build": "npm run build --workspace=math-engine && npm run build --workspace=ui",
     "test": "npm run test --workspace=math-engine",
     "lint": "npm run lint --workspace=ui",
-    "prepare": "npm run build --workspace=math-engine"
+    "prepare": "npm run build --workspace=math-engine",
+    "shoot": "node scripts/shoot.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.60.0"
   }
 }

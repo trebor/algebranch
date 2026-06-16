@@ -97,7 +97,21 @@ export const parseEquation = (eqStr: string): Equation => {
 };
 
 /**
- * Formats a number with 2 decimal places if it's reasonably-sized, or scientific notation if very large/small.
+ * Largest number of fractional digits we treat as an exact, user-meaningful
+ * decimal. A value whose shortest round-tripping representation has more
+ * fractional digits than this is treated as a float approximation (an
+ * irrational evaluation or floating-point noise like 0.1 + 0.2) and rounded
+ * for a compact display. Human-entered decimals essentially never exceed this,
+ * while doubles for irrationals fill out ~15-17 fractional digits — so the
+ * threshold cleanly separates "show verbatim" from "round". (#66)
+ */
+const MAX_EXACT_FRACTION_DIGITS = 12;
+
+/**
+ * Formats a number for display. Short, exact decimals are shown verbatim so a
+ * value the user actually typed (e.g. 1.41421356) is never silently truncated;
+ * long float approximations are rounded to 2 decimal places for a compact
+ * display, and very large/small magnitudes use scientific notation.
  */
 export const formatNumber = (val: any): string => {
   let numVal = val;
@@ -128,8 +142,18 @@ export const formatNumber = (val: any): string => {
   if (Number.isInteger(numVal)) {
     return numVal.toString();
   }
-  
-  // Round to max 2 decimal places
+
+  // `toString()` yields the shortest string that round-trips to this double.
+  // If it's a short, exact decimal, show it verbatim — never truncate precision
+  // the user entered. Only genuine approximations (long fractional tails) get
+  // rounded to 2 decimal places for a compact display.
+  const exact = numVal.toString();
+  const dot = exact.indexOf('.');
+  const fractionDigits = dot === -1 ? 0 : exact.length - dot - 1;
+  if (fractionDigits <= MAX_EXACT_FRACTION_DIGITS) {
+    return exact;
+  }
+
   const rounded = Math.round(numVal * 100) / 100;
   return rounded.toString();
 };

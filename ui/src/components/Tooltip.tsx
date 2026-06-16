@@ -39,6 +39,10 @@ interface TooltipProps {
  */
 // Module-level global to keep track of the currently active tooltip's dismiss function
 let activeTooltipClose: (() => void) | null = null;
+// Pending (delayed) show cancellers. The first tooltip to actually appear aborts
+// every other still-pending show, so a parent tooltip (e.g. a tree node card) can't
+// "steal" focus a beat after a nested child tooltip (e.g. a corner badge) has opened.
+const pendingTooltipShows = new Set<() => void>();
 
 export const Tooltip: React.FC<TooltipProps> = ({
   content,
@@ -60,6 +64,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const [calculatedPosition, setCalculatedPosition] = useState<'top' | 'bottom' | 'left' | 'right'>(position);
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const tooltipRef = React.useRef<HTMLDivElement>(null);
+  const showCancelRef = React.useRef<(() => void) | null>(null);
   const [adjustedLeft, setAdjustedLeft] = useState<number | null>(null);
 
   useIsomorphicLayoutEffect(() => {
@@ -150,6 +155,17 @@ export const Tooltip: React.FC<TooltipProps> = ({
     return () => cancelAnimationFrame(handle);
   }, []);
 
+  // On unmount, drop any still-pending show canceller so it can't linger in the
+  // module-level registry after this tooltip is gone.
+  useEffect(() => {
+    return () => {
+      if (showCancelRef.current) {
+        pendingTooltipShows.delete(showCancelRef.current);
+        showCancelRef.current = null;
+      }
+    };
+  }, []);
+
   // Dismiss tooltip instantly upon scrolling any container in the viewport
   useEffect(() => {
     if (!isVisible) return;
@@ -221,6 +237,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
     }
     if (showTimeoutId) return;
     const id = setTimeout(() => {
+      pendingTooltipShows.delete(cancelPending);
+      // Abort every other still-pending show so none can supersede us a beat later.
+      pendingTooltipShows.forEach((cancel) => cancel());
       // Dismiss any other open tooltip globally before showing this one
       if (activeTooltipClose && activeTooltipClose !== closeSelf) {
         activeTooltipClose();
@@ -228,10 +247,21 @@ export const Tooltip: React.FC<TooltipProps> = ({
       setIsVisible(true);
       activeTooltipClose = closeSelf;
     }, delay);
+    const cancelPending = () => {
+      clearTimeout(id);
+      pendingTooltipShows.delete(cancelPending);
+      setShowTimeoutId(null);
+    };
+    showCancelRef.current = cancelPending;
+    pendingTooltipShows.add(cancelPending);
     setShowTimeoutId(id);
   };
 
   const hideTooltip = () => {
+    if (showCancelRef.current) {
+      pendingTooltipShows.delete(showCancelRef.current);
+      showCancelRef.current = null;
+    }
     if (showTimeoutId) {
       clearTimeout(showTimeoutId);
       setShowTimeoutId(null);

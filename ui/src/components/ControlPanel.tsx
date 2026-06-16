@@ -4,7 +4,7 @@ import React from 'react';
 import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import { Tooltip } from './Tooltip';
 import { TooltipCard } from './TooltipCard';
-import { Equation, equationToString } from 'math-engine-client';
+import { Equation, equationToString, getEquationStatus } from 'math-engine-client';
 import { trackEvent } from '../utils/analytics';
 import {
   historyTreeAtom,
@@ -19,11 +19,16 @@ import {
   formatDerivation,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, GitFork, Infinity, Replace, TriangleAlert } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, CircleSlash, GitFork, Infinity, Replace, TriangleAlert } from 'lucide-react';
 import { useIsMobile } from '../hooks/useBreakpoint';
 import { useIsHydrated } from '../hooks/useIsHydrated';
 
 const COPIED_TIMEOUT = 2000;
+
+// Top offset (Tailwind class) for each vertical slot in the stack of badges
+// pinned to a tree node's top-right corner. Badges fill slots top-down in a
+// fixed priority order so multiple badges never overlap.
+const TREE_NODE_BADGE_SLOT_TOP = ['-top-1.5', 'top-3', 'top-[30px]'] as const;
 
 interface ControlPanelProps {
   onCloseMobile?: () => void;
@@ -427,6 +432,20 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
               const isCopied = copiedId === node.id;
               const stepNum = stepIndices.get(node.id) ?? 0;
 
+              // Right-corner badges stack top-down in a fixed priority order:
+              // substitute → restriction → contradiction/identity. Each present
+              // badge claims the next slot, so its vertical offset is just the
+              // count of higher-priority badges that are showing.
+              const eqStatus = getEquationStatus(node.equation);
+              const hasSubstituteBadge = node.change?.op === 'substitute';
+              const hasRestrictionBadge = !!node.change?.assumptions?.length;
+              const isContradiction = eqStatus === 'contradiction';
+              const isIdentity = eqStatus === 'identity';
+              const substituteSlot = 0;
+              const restrictionSlot = hasSubstituteBadge ? 1 : 0;
+              const statusSlot =
+                (hasSubstituteBadge ? 1 : 0) + (hasRestrictionBadge ? 1 : 0);
+
               if (loopAncestor) {
                 // Render Compact Loop Terminal Bubble!
                 return (
@@ -536,20 +555,53 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
 
                     {/* Substitution badge (#3): marks steps produced by substituting
                         a fact from another workspace */}
-                    {node.change?.op === 'substitute' && (
-                      <span className={`absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_SUBSTITUTE}`}>
-                        <Replace size={9} />
-                      </span>
+                    {hasSubstituteBadge && (
+                      <Tooltip
+                        content="Substituted from another workspace"
+                        position="top"
+                        className="w-max max-w-[240px] text-center text-sm"
+                        wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[substituteSlot]} -right-1.5`}
+                      >
+                        <span className={`h-4 w-4 rounded-full border text-[8px] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_SUBSTITUTE}`}>
+                          <Replace size={9} />
+                        </span>
+                      </Tooltip>
                     )}
 
                     {/* Domain-restriction badge (#63): marks steps that assume an
                         expression is non-zero (cancellation / division by a variable),
                         so the caveat is visible on the tree, not just in the tooltip.
-                        Offset below the substitute badge in case both apply. */}
-                    {!!node.change?.assumptions?.length && (
-                      <span className={`absolute ${node.change?.op === 'substitute' ? 'top-3' : '-top-1.5'} -right-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_RESTRICTION}`}>
-                        <TriangleAlert size={9} />
-                      </span>
+                        Stacks below the substitute badge in case both apply. */}
+                    {hasRestrictionBadge && (
+                      <Tooltip
+                        content={`Valid only if ${node.change?.assumptions?.join(' and ')}`}
+                        position="top"
+                        className="w-max max-w-[240px] text-center text-sm"
+                        wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[restrictionSlot]} -right-1.5`}
+                      >
+                        <span className={`h-4 w-4 rounded-full border text-[8px] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_RESTRICTION}`}>
+                          <TriangleAlert size={9} />
+                        </span>
+                      </Tooltip>
+                    )}
+
+                    {/* Contradiction / identity badge (#92): flags terminal states
+                        that collapsed to a constant relation — a contradiction
+                        (e.g. 3 = -3, no solution) or an identity (e.g. 0 = 0,
+                        always true). Stacks below any substitute/restriction badge. */}
+                    {(isContradiction || isIdentity) && (
+                      <Tooltip
+                        content={isContradiction
+                          ? 'Contradiction — this statement is false, so there is no solution'
+                          : 'Identity — this statement is always true'}
+                        position="top"
+                        className="w-max max-w-[240px] text-center text-sm"
+                        wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[statusSlot]} -right-1.5`}
+                      >
+                        <span className={`h-4 w-4 rounded-full border text-[8px] flex items-center justify-center shadow transition-all duration-300 ${isContradiction ? THEME_GLASS.TREE_NODE_BADGE_CONTRADICTION : THEME_GLASS.TREE_NODE_BADGE_IDENTITY}`}>
+                          {isContradiction ? <CircleSlash size={9} /> : <Check size={9} />}
+                        </span>
+                      </Tooltip>
                     )}
 
                     {/* Truncated Equation Label */}

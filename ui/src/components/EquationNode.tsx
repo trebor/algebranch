@@ -832,7 +832,18 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       }
     }));
 
-    if (reduceOptions.length > 0) {
+    // De-emphasize "Evaluate to Decimal" (#66): when the reduce stack is *only*
+    // decimal evaluation, it competes with an exact-form move that lives in a
+    // different type-stack (e.g. √2's "Square Root to Fractional Power" is an
+    // identity). Sink that decimal-only handle below the exact stacks so the
+    // exact move reads as the headline; decimal stays available as an opt-in.
+    // A mixed reduce stack keeps its lead — the engine already orders decimal
+    // last *within* it (getReducibleOptions).
+    const reduceIsDecimalOnly =
+      reduceOptions.length > 0 &&
+      reduceOptions.every((o) => o.label === 'Evaluate to Decimal');
+
+    if (reduceOptions.length > 0 && !reduceIsDecimalOnly) {
       stacks.push({ type: 'reduce', options: reduceOptions });
     }
     if (distributeOptions.length > 0) {
@@ -843,6 +854,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     }
     if (substituteOptions.length > 0) {
       stacks.push({ type: 'substitute', options: substituteOptions });
+    }
+    if (reduceOptions.length > 0 && reduceIsDecimalOnly) {
+      stacks.push({ type: 'reduce', options: reduceOptions });
     }
 
     return stacks;

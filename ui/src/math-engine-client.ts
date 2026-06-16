@@ -17,6 +17,9 @@ export type { Equation, SerializedEquation, SerializedNode, RelationOperator, Eq
 export {
   parseEquation,
   equationToString,
+  equationToLatex,
+  equationToLatexAligned,
+  equationToUnicode,
   formatNumber,
   flipRelation,
   ensureNodeIds,

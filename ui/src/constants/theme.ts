@@ -123,6 +123,18 @@ export const THEME_GLASS = {
   EQUALS_POPOVER_TITLE: 'text-[9px] font-bold text-indigo-400 uppercase tracking-wider select-none',
   EQUALS_POPOVER_DESC: 'text-[10.5px] leading-snug text-white/70',
   EQUALS_POPOVER_BTN: 'mt-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-[9px] font-bold rounded-lg self-end transition-all cursor-pointer shadow-md shadow-indigo-600/20 border border-indigo-400/20',
+  // Copy-as-format menu (#46): popover offering Plain / LaTeX / Unicode export.
+  COPY_MENU: 'absolute right-0 top-full mt-1.5 z-50 w-44 p-1 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-0.5 text-left',
+  COPY_MENU_ITEM: 'flex items-center justify-between gap-2 w-full px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none',
+  // Header naming the export scope (#46, option B): an eyebrow label over the
+  // nicely-rendered destination expression, so it's clear what will be copied.
+  COPY_MENU_HEADER: 'flex flex-col gap-0.5 px-2.5 pt-1.5 pb-2 mb-0.5 border-b border-white/10 select-none',
+  COPY_MENU_HEADER_LABEL: 'text-[9px] font-bold uppercase tracking-wider text-indigo-400/80',
+  COPY_MENU_HEADER_EXPR: 'block truncate text-[12px] text-indigo-50',
+  // Off-path node while an export-scope preview is active (#46): faded so the
+  // root -> selected path reads as the slice being copied.
+  COPY_PREVIEW_DIMMED: 'opacity-25 transition-opacity duration-200',
+
   EQUALS_MINI_PETAL_SWAP: 'text-amber-400 border-amber-500/20',
   EQUALS_MINI_PETAL_POWER: 'text-teal-400 border-teal-500/20',
   EQUALS_MINI_PETAL_ADD: 'text-indigo-400 border-indigo-500/20',

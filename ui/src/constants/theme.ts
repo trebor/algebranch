@@ -159,7 +159,7 @@ export const THEME_GLASS = {
   TARGET_GLOW: 'bg-emerald-400/20 blur-md rounded-lg -z-10 animate-pulse',
   MINI_TOOLBAR: 'bg-neutral-900 border border-white/10 rounded-[1em] px-[0.6em] py-[0.2em] shadow-lg text-[0.55em] whitespace-nowrap',
   MINI_TOOLBAR_BUTTON: 'p-[0.1em] hover:bg-white/10 text-indigo-400 hover:text-indigo-300 rounded-[1em] transition-colors flex items-center gap-[0.2em] cursor-pointer',
-  HANDLE_DISTRIBUTE: 'bg-purple-600 hover:bg-purple-500 text-white animate-pulse',
+  HANDLE_DISTRIBUTE: 'bg-purple-600 hover:bg-purple-500 text-white',
   HANDLE_IDENTITY: 'bg-indigo-600 hover:bg-indigo-500 text-white',
   HANDLE_SIMPLIFY: 'bg-amber-400 hover:bg-amber-300 text-neutral-950 shadow-inner',
   PING_DISTRIBUTE: 'bg-purple-500/40',
@@ -184,10 +184,10 @@ export const THEME_GLASS = {
   TREE_NODE_BADGE_IDENTITY: 'bg-emerald-600 border-emerald-400 text-emerald-50',
 
   // --- Unified Stacks & Chooser Design Tokens ---
-  STACK_BADGE_SIMPLIFY: 'bg-neutral-950 border-amber-400 text-amber-400',
-  STACK_BADGE_DISTRIBUTE: 'bg-neutral-950 border-purple-400 text-purple-400',
-  STACK_BADGE_IDENTITY: 'bg-neutral-950 border-indigo-400 text-indigo-400',
-  STACK_BADGE_SUBSTITUTE: 'bg-neutral-950 border-teal-400 text-teal-300',
+  STACK_BADGE_SIMPLIFY: 'bg-neutral-950 border-white text-white',
+  STACK_BADGE_DISTRIBUTE: 'bg-neutral-950 border-white text-white',
+  STACK_BADGE_IDENTITY: 'bg-neutral-950 border-white text-white',
+  STACK_BADGE_SUBSTITUTE: 'bg-neutral-950 border-white text-white',
 
   CHOOSER_OPTION_SIMPLIFY: 'font-mono text-xs text-amber-300',
   CHOOSER_OPTION_DISTRIBUTE: 'font-mono text-xs text-purple-300',

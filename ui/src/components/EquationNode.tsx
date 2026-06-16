@@ -170,13 +170,15 @@ interface EquationNodeProps {
   readonly path: string;
   readonly inExponent?: boolean;
   /**
-   * Minimum top padding (em) the node's box must reserve, forced by a parent
-   * row so every sibling operand shares one top-boundary offset (#30). Without
-   * it, a handle-bearing operand reserves ~0.95em of button space up top while
-   * its bare siblings reserve only nodePy, dropping its text below theirs. The
-   * row hands every operand the row-wide max so their content centers line up.
+   * Minimum top padding (a CSS length string) the node's box must reserve, forced
+   * by a parent row so every sibling operand shares one top-boundary offset (#30).
+   * Without it, a handle-bearing operand reserves a fixed button band up top while
+   * its bare siblings reserve only nodePy, dropping its text below theirs. The row
+   * hands every operand the row-wide max so their content centers line up. May mix
+   * units (rem for handle bands, em for bare padding), so it is combined via CSS
+   * max() rather than numeric Math.max (#121).
    */
-  readonly minPaddingTop?: number;
+  readonly minPaddingTop?: string;
 }
 
 /**
@@ -205,15 +207,27 @@ const canToggleRoot = (eq: math.MathNode | unknown): boolean => {
 };
 
 /**
- * Layout design tokens (in relative em units) used to calculate node dimensions dynamically.
+ * Layout design tokens for node dimensions.
+ *
+ * Two unit systems are at play (#121):
+ * - The **handle band** (btnSize/btnGap/btnTop/btnRight/textGap) is rendered at a
+ *   FIXED visual size, anchored to HANDLE_REM rem rather than the node's font. The
+ *   workspace auto-scaler (useMathScale, 0.4–2.8×) sizes the math text, but handles
+ *   no longer scale with it — so huge expressions don't get huge handles, nested
+ *   handles stay compact, and every handle reads at one consistent size. These
+ *   numbers are ratios of HANDLE_REM (the toolbar sets font-size: HANDLE_REM rem,
+ *   so the existing em/% internals resolve against that fixed anchor).
+ * - The **node's own text padding** (nodePx/nodePy) stays in em so a node's breathing
+ *   room scales with its (auto-scaled) glyphs.
  */
+const HANDLE_REM = 1.2;
 const MATH_LAYOUT = {
   // Normal layouts
   normal: {
     btnSize: 0.8,
     btnGap: 0.05,
-    btnTop: 0.08,
-    btnRight: 0.15,
+    btnTop: 0.22,
+    btnRight: 0.32,
     nodePx: 0.35,
     nodePy: 0.18,
     textGap: 0.07,
@@ -222,15 +236,52 @@ const MATH_LAYOUT = {
   exponent: {
     btnSize: 0.55,
     btnGap: 0.05,
-    btnTop: 0.05,
-    btnRight: 0.1,
+    btnTop: 0.14,
+    btnRight: 0.2,
     nodePx: 0.2,
     nodePy: 0.12,
     textGap: 0.05,
   }
 };
 
-export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = false, minPaddingTop = 0 }) => {
+type MathLayout = typeof MATH_LAYOUT.normal;
+
+/**
+ * Top space a handle-bearing node must reserve so its toolbar floats clear of the
+ * text. Fixed (rem) to match the fixed-size handle band, independent of the
+ * expression's auto-scale. Returns a CSS length string.
+ */
+const handleReserve = (layout: MathLayout): string =>
+  `${((layout.btnTop + layout.btnSize + layout.textGap) * HANDLE_REM).toFixed(4)}rem`;
+
+/**
+ * Largest of several CSS lengths. Used for baseline-alignment top padding (#30)
+ * where the candidates may mix units (rem handle bands vs em bare padding), so a
+ * numeric Math.max won't do — defer to CSS max() at layout time. Collapses to the
+ * single value when they're all identical.
+ */
+const cssMax = (...lengths: string[]): string => {
+  const unique = [...new Set(lengths)];
+  return unique.length === 1 ? unique[0] : `max(${unique.join(', ')})`;
+};
+
+/**
+ * Whether a handle should pulse (animate-ping). All handles stay visible for
+ * discoverability, but only the hovered node's handles pulse — quieting the
+ * always-on noise and tying the glow to "what you're pointing at" (#121). The
+ * onboarding tour forces its marked handle to pulse regardless of hover. A node
+ * selected as a transposition source (sourcePath) suppresses pulsing entirely.
+ */
+export const shouldPulseHandle = (params: {
+  sourcePath: string | null;
+  isHovered: boolean;
+  isStackMarked: boolean;
+}): boolean => {
+  if (params.sourcePath) return false;
+  return params.isHovered || params.isStackMarked;
+};
+
+export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = false, minPaddingTop = '0px' }) => {
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
   const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
@@ -347,13 +398,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     if (hasIdentity) handleCount++;
     if (hasSubstitute) handleCount++;
 
+    // Handle nodes reserve a fixed (rem) band; bare nodes reserve em padding that
+    // scales with their text. Returned as CSS length strings so callers can mix
+    // the two units via CSS max() (#121).
     const pPaddingTop = handleCount > 0
-      ? pLayout.btnTop + pLayout.btnSize + pLayout.textGap
-      : pLayout.nodePy;
+      ? handleReserve(pLayout)
+      : `${pLayout.nodePy}em`;
 
     return {
       paddingTop: pPaddingTop,
-      paddingBottom: pLayout.nodePy,
+      paddingBottom: `${pLayout.nodePy}em`,
     };
   };
 
@@ -538,8 +592,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             <div
               className="absolute inset-x-0"
               style={{
-                top: `${childPadding.paddingTop}em`,
-                bottom: `${childPadding.paddingBottom}em`
+                top: childPadding.paddingTop,
+                bottom: childPadding.paddingBottom
               }}
             >
               <LeftParenSVG
@@ -555,8 +609,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             <div
               className="absolute inset-x-0"
               style={{
-                top: `${childPadding.paddingTop}em`,
-                bottom: `${childPadding.paddingBottom}em`
+                top: childPadding.paddingTop,
+                bottom: childPadding.paddingBottom
               }}
             >
               <RightParenSVG
@@ -588,7 +642,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         const unaryTop = getNodePadding(`${path}/0`).paddingTop;
         return (
           <div className="flex items-center gap-[0.05em]">
-            <span className={`font-bold select-none ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_UNARY_ACTIVE}`} style={{ ...getOpStyle(), display: 'inline-flex', alignItems: 'center', paddingTop: `${unaryTop}em`, paddingBottom: `${layout.nodePy}em` }}>{opSymbol}</span>
+            <span className={`font-bold select-none ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_UNARY_ACTIVE}`} style={{ ...getOpStyle(), display: 'inline-flex', alignItems: 'center', paddingTop: unaryTop, paddingBottom: `${layout.nodePy}em` }}>{opSymbol}</span>
             {childNeedsParens ? (
               (() => {
                 const childPath = `${path}/0`;
@@ -599,8 +653,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       <div
                         className="absolute inset-x-0"
                         style={{
-                          top: `${childPadding.paddingTop}em`,
-                          bottom: `${childPadding.paddingBottom}em`
+                          top: childPadding.paddingTop,
+                          bottom: childPadding.paddingBottom
                         }}
                       >
                         <LeftParenSVG
@@ -616,8 +670,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       <div
                         className="absolute inset-x-0"
                         style={{
-                          top: `${childPadding.paddingTop}em`,
-                          bottom: `${childPadding.paddingBottom}em`
+                          top: childPadding.paddingTop,
+                          bottom: childPadding.paddingBottom
                         }}
                       >
                         <RightParenSVG
@@ -674,7 +728,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       // operands AND the operator glyph so every box shares one top-boundary
       // offset and their content centers (text baselines) line up — instead of
       // a handle-bearing operand dropping its text below its bare siblings.
-      const rowTop = Math.max(
+      const rowTop = cssMax(
         getNodePadding(`${path}/0`).paddingTop,
         getNodePadding(`${path}/1`).paddingTop,
       );
@@ -684,7 +738,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
           <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} minPaddingTop={rowTop} />
           {/* Outer span carries the shared padding at the parent's em (the inner
               glyph is text-[0.85em], so padding em on it would be mis-scaled). */}
-          <span style={{ paddingTop: `${rowTop}em`, paddingBottom: `${layout.nodePy}em`, display: 'inline-flex', alignItems: 'center' }}>
+          <span style={{ paddingTop: rowTop, paddingBottom: `${layout.nodePy}em`, display: 'inline-flex', alignItems: 'center' }}>
             <span className={`font-medium select-none text-[0.85em] ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_ACTIVE}`} style={getOpStyle()}>{opSymbol}</span>
           </span>
           <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} minPaddingTop={rowTop} />
@@ -890,25 +944,27 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   if (!node) return null;
 
   // The node box reserves space for ALL its active stacks: top padding for the row,
-  // and minWidth so the row never overhangs.
+  // and minWidth so the row never overhangs. The handle band is a fixed rem size
+  // (#121) while the node's own side padding stays em, so minWidth combines both.
   const handleCount = interactionStacks.length;
+  const handleBandWidth = (handleCount * layout.btnSize + (handleCount - 1) * layout.btnGap) * HANDLE_REM;
   const minWidth = handleCount > 0
-    ? `${handleCount * layout.btnSize + (handleCount - 1) * layout.btnGap + layout.nodePx * 2}em`
+    ? `calc(${handleBandWidth.toFixed(4)}rem + ${layout.nodePx * 2}em)`
     : undefined;
 
   // A parent row may force a larger top reserve (minPaddingTop) so this node's
   // text shares the same top-boundary offset as its handle-bearing siblings (#30).
-  const ownPaddingTop = handleCount > 0
-    ? layout.btnTop + layout.btnSize + layout.textGap
-    : layout.nodePy;
-  const paddingTop = Math.max(ownPaddingTop, minPaddingTop);
+  // Handle nodes reserve the fixed rem band; combine with the (possibly em) parent
+  // floor via CSS max() since the units may differ.
+  const ownPaddingTop = handleCount > 0 ? handleReserve(layout) : `${layout.nodePy}em`;
+  const paddingTop = cssMax(ownPaddingTop, minPaddingTop);
 
   const customStyle: React.CSSProperties = {
     transition: 'border-color 150ms, background-color 150ms, box-shadow 150ms, opacity 150ms',
     minWidth: minWidth,
     paddingLeft: `${layout.nodePx}em`,
     paddingRight: `${layout.nodePx}em`,
-    paddingTop: `${paddingTop}em`,
+    paddingTop: paddingTop,
     paddingBottom: `${layout.nodePy}em`,
   };
 
@@ -960,9 +1016,17 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       {interactionStacks.length > 0 && (
         <div 
           className={`absolute flex items-center z-25 ${
+            // Source-selection (transposition) mode dims/disables the whole toolbar.
+            // The resting de-emphasis lives on the individual buttons (below) so the
+            // count badges can stay full-opacity (opacity compounds through parents).
             sourcePath ? 'opacity-25 pointer-events-none grayscale' : 'opacity-100'
           }`}
           style={{
+            // Fixed-size handles (#121): anchoring font-size to rem makes every em
+            // dimension inside the toolbar (button, gap, badge, offsets) resolve
+            // against a constant, so handles no longer scale with the expression's
+            // auto-scale. btnTop/btnRight/btnGap are em ratios of this anchor.
+            fontSize: `${HANDLE_REM}rem`,
             top: `${layout.btnTop}em`,
             right: `${layout.btnRight}em`,
             gap: `${layout.btnGap}em`,
@@ -979,7 +1043,18 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               (stack.type !== 'substitute' && isHandleMarked && actions.length > 0 && actions[0].type === stack.type)
             );
 
-            const buttonClass = `flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group hover:scale-110 ${config.handleClass}`;
+            // Only the hovered node's handles pulse (#121); the onboarding tour
+            // still forces its marked handle to pulse so the step reads.
+            const pulse = shouldPulseHandle({ sourcePath, isHovered, isStackMarked });
+
+            // Resting de-emphasis (#121): dim the handle while preserving hue (the
+            // color codes the action type), lifting to full when the node is hovered
+            // (or the tour marks it). Pairs with the hover-gated pulse so the
+            // pointed-at node's handles pop. Opacity, not grayscale, keeps the type
+            // colors legible at rest. Applied to the button (not the toolbar) so the
+            // count badge — a sibling — can stay at full opacity.
+            const restingOpacity = (isHovered || isStackMarked) ? 'opacity-100' : 'opacity-55';
+            const buttonClass = `flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group hover:scale-110 ${restingOpacity} ${config.handleClass}`;
             const buttonStyle: React.CSSProperties = {
               width: `${layout.btnSize}em`,
               height: `${layout.btnSize}em`,
@@ -989,7 +1064,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               <>
                 <span
                   className={`absolute inset-0 group-hover:opacity-0 pointer-events-none ${
-                    !sourcePath ? 'animate-ping' : ''
+                    pulse ? 'animate-ping' : ''
                   } ${config.pingClass}`}
                   style={{ borderRadius: inExponent ? '0.12em' : '9999px' }}
                 />
@@ -997,23 +1072,31 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
                 )}
                 <IconComponent className={`h-[65%] w-[65%] ${config.iconClass}`} />
-                {!single && (
-                  <span
-                    className={`absolute flex items-center justify-center rounded-full font-bold border leading-none ${config.badgeClass}`}
-                    style={{
-                      fontSize: '0.3em',
-                      height: '1.5em',
-                      minWidth: '1.5em',
-                      padding: '0 0.2em',
-                      top: '-0.55em',
-                      right: '-0.55em',
-                    }}
-                  >
-                    {stack.options.length}
-                  </span>
-                )}
               </>
             );
+
+            // Count badge for multi-option stacks. Rendered as a sibling of the
+            // button (not a child) so it escapes the button's resting-opacity dim
+            // and stays at full opacity — a bright accent inviting inspection of the
+            // node's multiple options (#121). pointer-events-none so it never steals
+            // hover from the button it overlaps.
+            const badge = !single ? (
+              <span
+                className={`absolute flex items-center justify-center rounded-full font-bold border leading-none pointer-events-none ${config.badgeClass}`}
+                style={{
+                  fontSize: '0.4em',
+                  height: '1.5em',
+                  minWidth: '1.5em',
+                  padding: '0 0.2em',
+                  top: '-0.5em',
+                  right: '-0.5em',
+                }}
+              >
+                {/* Optical-center nudge: digits have no descender, so flex/line-box
+                    centering leaves them riding high — push down a hair (#121). */}
+                <span style={{ position: 'relative', top: '0.1em' }}>{stack.options.length}</span>
+              </span>
+            ) : null;
 
             // Single-option handle: a plain hover preview tooltip; click applies.
             if (single) {
@@ -1069,8 +1152,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             // once, below). Deliberately not a Tooltip, so it's immune to the global
             // single-active-tooltip churn that was dismissing it mid-traversal.
             return (
+              <span key={stack.type} className="relative inline-flex">
               <button
-                key={stack.type}
                 className={buttonClass}
                 style={buttonStyle}
                 onMouseEnter={(e) => {
@@ -1107,6 +1190,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               >
                 {buttonInner}
               </button>
+              {badge}
+              </span>
             );
           })}
           {openMenuType && menuAnchor && typeof document !== 'undefined' && (() => {

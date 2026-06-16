@@ -904,6 +904,98 @@ const tryExtractQuadratic = (lhs: math.MathNode, rhs: math.MathNode, solveVar: s
   return tryExtractQuadraticExpr(fullExpr, solveVar);
 };
 
+/**
+ * Append one `coeff · varPart` term (or a bare constant when `varPart` is null)
+ * to a SignedTerm list, lifting the sign out of the coefficient and eliding a
+ * unit coefficient so `1·x²` renders as `x²`. Zero coefficients are skipped.
+ */
+const pushStandardTerm = (
+  list: SignedTerm[],
+  coeff: math.MathNode,
+  varPart: math.MathNode | null
+) => {
+  if (isZeroNode(coeff)) return;
+
+  let sign = 1;
+  let mag: math.MathNode = coeff;
+  if (
+    coeff.type === 'OperatorNode' &&
+    (coeff as math.OperatorNode).fn === 'unaryMinus'
+  ) {
+    sign = -1;
+    mag = (coeff as math.OperatorNode).args[0];
+  } else if (
+    coeff.type === 'ConstantNode' &&
+    Number((coeff as math.ConstantNode).value) < 0
+  ) {
+    sign = -1;
+    mag = new math.ConstantNode(Math.abs(Number((coeff as math.ConstantNode).value)));
+  }
+
+  const isUnit =
+    mag.type === 'ConstantNode' && Number((mag as math.ConstantNode).value) === 1;
+
+  let node: math.MathNode;
+  if (!varPart) {
+    node = mag; // constant term
+  } else if (isUnit) {
+    node = varPart; // 1·x² → x²
+  } else {
+    node = new math.OperatorNode('*', 'multiply', [mag, varPart]);
+  }
+  list.push({ node, sign });
+};
+
+/**
+ * #90 — Produce the standard-form normalization `a·v² + b·v + c = 0` for a
+ * quadratic in `solveVar` that is NOT already written with one side equal to
+ * zero, so the `= 0` step (where a, b, c are read off) is inspectable rather
+ * than hidden inside the quadratic-formula jump.
+ *
+ * Returns null when the equation is already in `= 0` standard form (exactly one
+ * side is zero — apply the formula directly), when it isn't a quadratic in
+ * `solveVar`, or when there's no linear term (b = 0) — the latter is solved by
+ * isolation + square root rather than the formula, mirroring
+ * getQuadraticFormulaSolutions.
+ *
+ * The trinomial is built on the side that currently holds the variable (the
+ * other side becoming 0), with unit coefficients elided and zero terms dropped,
+ * so the result reads as conventional standard form.
+ */
+export const getQuadraticStandardForm = (eq: Equation, solveVar: string): Equation | null => {
+  const lhsZero = isZeroNode(eq.lhs);
+  const rhsZero = isZeroNode(eq.rhs);
+  // Exactly one side already zero ⇒ already in standard form; nothing to surface.
+  if (lhsZero !== rhsZero) return null;
+
+  // Read the coefficients off the side that holds the variable (var-side minus
+  // the other side) so the standard form keeps its natural signs whichever side
+  // the quadratic sits on, rather than negating when it's on the RHS.
+  const varOnLhs = hasVariable(eq.lhs, solveVar);
+  const coeffs = varOnLhs
+    ? tryExtractQuadratic(eq.lhs, eq.rhs, solveVar)
+    : tryExtractQuadratic(eq.rhs, eq.lhs, solveVar);
+  if (!coeffs) return null;
+  const { a, b, c } = coeffs;
+  if (isZeroNode(a)) return null; // not actually quadratic in solveVar
+  if (isZeroNode(b)) return null; // no linear term ⇒ square-root path, not the formula
+
+  const varNode = new math.SymbolNode(solveVar);
+  const varSq = new math.OperatorNode('^', 'pow', [varNode, new math.ConstantNode(2)]);
+
+  const terms: SignedTerm[] = [];
+  pushStandardTerm(terms, a, varSq);
+  pushStandardTerm(terms, b, varNode);
+  pushStandardTerm(terms, c, null);
+  const quadratic = sumTerms(terms);
+
+  const zero = new math.ConstantNode(0);
+  const eqOut = varOnLhs
+    ? { lhs: quadratic, rhs: zero }
+    : { lhs: zero, rhs: quadratic };
+  return ensureNodeIds(eqOut);
+};
+
 export interface QuadraticFormulaSolutions {
   solveVar: string;
   pos: Equation;

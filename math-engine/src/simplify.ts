@@ -1,6 +1,6 @@
 import * as math from 'mathjs';
 import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, ensureNodeIds } from './tree';
-import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions, getVariables, tryExtractQuadraticExpr } from './validator';
+import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions, getQuadraticStandardForm, getVariables, tryExtractQuadraticExpr } from './validator';
 import { HIGH_SCHOOL_IDENTITIES } from './rules';
 import { matchPattern, instantiatePattern, tryExpressAsPower, tryExpressAsPowerOptions } from './matcher';
 import { tryFactor } from './factor';
@@ -1668,13 +1668,29 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
     for (const sol of quadSolutions) {
       const hasVarOnLhs = (() => {
         let found = false;
-        sol.pos.lhs.traverse((n) => {
+        eq.lhs.traverse((n) => {
           if (n.type === 'SymbolNode' && (n as math.SymbolNode).name === sol.solveVar) found = true;
         });
         return found;
       })();
       const solvePath = hasVarOnLhs ? 'lhs' : 'rhs';
-      
+
+      // #90: when the equation isn't already in `= 0` standard form, surface the
+      // normalization (→ a·v² + b·v + c = 0) as its own inspectable step instead
+      // of jumping straight to the solution and hiding where a, b, c come from.
+      // The ± formula is then offered on the resulting standard form — the chain
+      // falls out of re-running options on the normalized equation.
+      const standardForm = getQuadraticStandardForm(eq, sol.solveVar);
+      if (standardForm) {
+        rawReductions.push({
+          path: solvePath,
+          simplified: standardForm,
+          type: 'identity',
+          label: 'Write in Standard Form'
+        });
+        continue;
+      }
+
       rawReductions.push({
         path: solvePath,
         simplified: sol.pos,

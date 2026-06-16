@@ -4,7 +4,8 @@ import React from 'react';
 import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import { Tooltip } from './Tooltip';
 import { TooltipCard } from './TooltipCard';
-import { Equation, equationToString, getEquationStatus } from 'math-engine-client';
+import { CopyFormatMenu } from './CopyFormatMenu';
+import { equationToString, getEquationStatus } from 'math-engine-client';
 import { trackEvent } from '../utils/analytics';
 import {
   historyTreeAtom,
@@ -16,19 +17,26 @@ import {
   getCanonicalKey,
   rightSidebarOpenAtom,
   resetHistoryModalOpenAtom,
+  exportPreviewActiveAtom,
   formatDerivation,
+  equationToFormat,
+  getDerivationScope,
+  getActivePathIds,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
-import { RotateCcw, ChevronLeft, ChevronRight, Copy, Check, CircleSlash, GitFork, Infinity, Replace, TriangleAlert } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Check, CircleSlash, GitFork, Infinity, Replace, TriangleAlert } from 'lucide-react';
 import { useIsMobile } from '../hooks/useBreakpoint';
 import { useIsHydrated } from '../hooks/useIsHydrated';
-
-const COPIED_TIMEOUT = 2000;
 
 // Top offset (Tailwind class) for each vertical slot in the stack of badges
 // pinned to a tree node's top-right corner. Badges fill slots top-down in a
 // fixed priority order so multiple badges never overlap.
 const TREE_NODE_BADGE_SLOT_TOP = ['-top-1.5', 'top-3', 'top-[30px]'] as const;
+
+// Shared dashed-flow treatment so the loop connector and the export-path preview
+// animate identically (same dash pattern + speed) (#46).
+const FLOW_DASH_ARRAY = '5, 5';
+const FLOW_DASH_ANIMATION = 'dash 30s linear infinite';
 
 interface ControlPanelProps {
   onCloseMobile?: () => void;
@@ -46,19 +54,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
   const setResetHistoryModalOpen = useSetAtom(resetHistoryModalOpenAtom);
 
 
-  const [copiedId, setCopiedId] = React.useState<string | null>(null);
-  const [derivationCopied, setDerivationCopied] = React.useState(false);
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
+  const [exportPreviewActive, setExportPreview] = useAtom(exportPreviewActiveAtom);
   const isMounted = useIsHydrated();
 
-  const handleCopyDerivation = () => {
-    const text = formatDerivation(tree, currentNodeId);
-    navigator.clipboard.writeText(text).then(() => {
-      setDerivationCopied(true);
-      trackEvent({ action: 'copy_derivation', category: 'history', label: currentNodeId });
-      setTimeout(() => setDerivationCopied(false), COPIED_TIMEOUT);
-    });
-  };
+  const exportScope = getDerivationScope(tree, currentNodeId);
 
   const activeCardRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -74,22 +74,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
     }, 100);
     return () => clearTimeout(timer);
   }, [currentNodeId]);
-
-  const handleCopyStep = (e: React.MouseEvent, node: Equation, id: string) => {
-    e.stopPropagation();
-    const eqStr = equationToString(node);
-    navigator.clipboard.writeText(eqStr).then(() => {
-      setCopiedId(id);
-      trackEvent({
-        action: 'copy_step',
-        category: 'history',
-        label: id,
-      });
-      setTimeout(() => {
-        setCopiedId(null);
-      }, COPIED_TIMEOUT);
-    });
-  };
 
   // Undo moves to the parent step
   const activeNode = tree[currentNodeId];
@@ -305,15 +289,20 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
           </h2>
         </Tooltip>
         <div className="flex items-center gap-1.5">
-          <Tooltip content="Copy full derivation">
-            <button
-              onClick={handleCopyDerivation}
-              disabled={Object.keys(tree).length <= 1}
-              className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer ${derivationCopied ? 'text-emerald-400' : 'text-white'}`}
-            >
-              {derivationCopied ? <Check size={16} /> : <Copy size={16} />}
-            </button>
-          </Tooltip>
+          <CopyFormatMenu
+            getText={(format) => formatDerivation(tree, currentNodeId, format)}
+            iconSize={16}
+            triggerClassName={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer text-white`}
+            copiedClassName="text-emerald-400"
+            tooltip="Copy full derivation"
+            disabled={Object.keys(tree).length <= 1}
+            trackAction="copy_derivation"
+            trackCategory="history"
+            trackLabel={currentNodeId}
+            scopeLabel={`Full derivation · ${exportScope.stepCount} ${exportScope.stepCount === 1 ? 'step' : 'steps'}`}
+            scopeDetail={exportScope.endpoint}
+            onPreviewChange={setExportPreview}
+          />
           <Tooltip content="Undo step (⌘Z)">
             <button
               onClick={handleUndo}
@@ -376,14 +365,21 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
                 const cp2y = startY + (endY - startY) * 0.55;
 
                 const d = `M ${startX} ${startY} C ${startX} ${cp1y}, ${endX} ${cp2y}, ${endX} ${endY}`;
+                // While hovering a full-derivation copy trigger, animate the active
+                // path edges with a downward-flowing dash (reusing the loop's `dash`
+                // keyframe) to show direction of travel root -> selected (#46, opt B).
+                const isPreviewPath = exportPreviewActive && child.isActive;
                 return (
                   <path
                     key={`${parent.id}-${child.id}`}
                     d={d}
                     fill="none"
-                    stroke={child.isActive ? "rgba(129, 140, 248, 0.6)" : "rgba(255, 255, 255, 0.12)"}
-                    strokeWidth={child.isActive ? 2.5 : 1.5}
+                    stroke={isPreviewPath ? "rgba(165, 180, 252, 0.95)" : child.isActive ? "rgba(129, 140, 248, 0.6)" : "rgba(255, 255, 255, 0.12)"}
+                    strokeWidth={isPreviewPath ? 3 : child.isActive ? 2.5 : 1.5}
+                    strokeDasharray={isPreviewPath ? FLOW_DASH_ARRAY : undefined}
+                    strokeLinecap="round"
                     className="transition-all duration-300"
+                    style={isPreviewPath ? { animation: FLOW_DASH_ANIMATION } : undefined}
                   />
                 );
               })}
@@ -410,10 +406,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
                         fill="none"
                         stroke="rgba(217, 70, 239, 0.85)"
                         strokeWidth={2.5}
-                        strokeDasharray="5, 5"
+                        strokeDasharray={FLOW_DASH_ARRAY}
                         className="transition-all duration-300 animate-dash"
                         style={{
-                          animation: 'dash 30s linear infinite',
+                          animation: FLOW_DASH_ANIMATION,
                         }}
                       />
                     );
@@ -429,7 +425,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
               const isActive = activePathSet.has(node.id);
               const isCurrent = currentNodeId === node.id;
               const isLoopHighlight = hoveredLoopTargetId === node.id || (loopAncestor && hoveredLoopTargetId === loopAncestor.id);
-              const isCopied = copiedId === node.id;
               const stepNum = stepIndices.get(node.id) ?? 0;
 
               // Right-corner badges stack top-down in a fixed priority order:
@@ -540,7 +535,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
                         : isCurrent
                         ? THEME_GLASS.TREE_NODE_ACTIVE
                         : THEME_GLASS.TREE_NODE_DEFAULT
-                    }`}
+                    } ${exportPreviewActive && !isActive ? THEME_GLASS.COPY_PREVIEW_DIMMED : ''}`}
                   >
                     {/* Step index badge on top-left */}
                     <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
@@ -612,16 +607,20 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
                     {/* Hover Actions Toolbar */}
                     <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 contextual-actions z-20">
 
-                      <Tooltip content="Copy Equation" position="top">
-                        <button
-                          onClick={(e) => handleCopyStep(e, node.equation, node.id)}
-                          className={`p-1 rounded-md border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-neutral-950 ${THEME_GLASS.TEXT_MUTED} hover:text-white hover:bg-white/10 hover:border-white/15 cursor-pointer ${
-                            isCopied ? 'text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10 opacity-100' : ''
-                          }`}
-                        >
-                          {isCopied ? <Check size={10} /> : <Copy size={10} />}
-                        </button>
-                      </Tooltip>
+                      <CopyFormatMenu
+                        getText={(format) => equationToFormat(node.equation, format)}
+                        iconSize={10}
+                        triggerClassName={`p-1 rounded-md border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-neutral-950 ${THEME_GLASS.TEXT_MUTED} hover:text-white hover:bg-white/10 hover:border-white/15 cursor-pointer`}
+                        copiedClassName="text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10 opacity-100"
+                        tooltip="Copy equation"
+                        tooltipPosition="top"
+                        trackAction="copy_step"
+                        trackCategory="history"
+                        trackLabel={node.id}
+                        scopeLabel="This step"
+                        scopeDetail={equationToFormat(node.equation, 'unicode')}
+                        stopPropagation
+                      />
                     </div>
                   </div>
                 </Tooltip>
@@ -648,16 +647,6 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
   const activeNode = tree[currentNodeId];
   const canUndo = activeNode && activeNode.parentId !== null;
   const canRedo = activeNode && activeNode.childrenIds.length > 0;
-
-  const [derivationCopied, setDerivationCopied] = React.useState(false);
-  const handleCopyDerivation = () => {
-    const text = formatDerivation(tree, currentNodeId);
-    navigator.clipboard.writeText(text).then(() => {
-      setDerivationCopied(true);
-      trackEvent({ action: 'copy_derivation', category: 'history', label: currentNodeId });
-      setTimeout(() => setDerivationCopied(false), COPIED_TIMEOUT);
-    });
-  };
 
   const handleUndo = () => {
     if (canUndo && activeNode.parentId) {
@@ -704,6 +693,12 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
     onCloseMobile?.();
   };
 
+  const [exportPreviewActive, setExportPreview] = useAtom(exportPreviewActiveAtom);
+  const exportScope = getDerivationScope(tree, currentNodeId);
+  // The timeline lists every node (incl. off-path branches), so the export-scope
+  // preview dims the ones not on the active path (#46, option B).
+  const activePathIds = React.useMemo(() => getActivePathIds(tree, currentNodeId), [tree, currentNodeId]);
+
   const sortedNodes = React.useMemo(() => {
     return Object.values(tree).sort((a, b) => a.timestamp - b.timestamp);
   }, [tree]);
@@ -734,14 +729,20 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
       <div className={`flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
         <span className="text-sm font-semibold text-indigo-300">Steps Timeline</span>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleCopyDerivation}
+          <CopyFormatMenu
+            getText={(format) => formatDerivation(tree, currentNodeId, format)}
+            iconSize={16}
+            triggerClassName={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer text-white`}
+            copiedClassName="text-emerald-400"
+            tooltip="Copy full derivation"
             disabled={sortedNodes.length <= 1}
-            className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer ${derivationCopied ? 'text-emerald-400' : 'text-white'}`}
-            title="Copy full derivation"
-          >
-            {derivationCopied ? <Check size={16} /> : <Copy size={16} />}
-          </button>
+            trackAction="copy_derivation"
+            trackCategory="history"
+            trackLabel={currentNodeId}
+            scopeLabel={`Full derivation · ${exportScope.stepCount} ${exportScope.stepCount === 1 ? 'step' : 'steps'}`}
+            scopeDetail={exportScope.endpoint}
+            onPreviewChange={setExportPreview}
+          />
           <button
             onClick={handleUndo}
             disabled={!canUndo}
@@ -781,7 +782,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
               key={node.id}
               ref={isCurrent ? activeItemRef : undefined}
               onClick={() => handleStepClick(node.id)}
-              className="relative flex flex-col gap-1 cursor-pointer group select-none"
+              className={`relative flex flex-col gap-1 cursor-pointer group select-none ${exportPreviewActive && !activePathIds.has(node.id) ? THEME_GLASS.COPY_PREVIEW_DIMMED : ''}`}
             >
               {/* Left timeline badge/dot */}
               <div

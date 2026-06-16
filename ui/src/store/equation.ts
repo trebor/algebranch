@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation } from 'math-engine-client';
+import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
 import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, describeSubstitution, describeCollapse, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
@@ -79,15 +79,32 @@ export const getSessionLatestTimestamp = (tree: Record<string, HistoryNode> | Re
 };
 
 /**
+ * Output format for copy/export (#46). `plain` is the ASCII serialization;
+ * `latex` and `unicode` are the pretty serializers from the engine. Only the
+ * equations are reformatted — step justifications stay plain prose.
+ */
+export type ExportFormat = 'plain' | 'latex' | 'unicode';
+
+/** Serializes a single equation in the requested export format (#46). */
+export const equationToFormat = (eq: Equation, format: ExportFormat): string => {
+  if (format === 'latex') return equationToLatex(eq);
+  if (format === 'unicode') return equationToUnicode(eq);
+  return equationToString(eq);
+};
+
+/**
  * Build a human-readable transcript of the active derivation path
  * (root -> currentNodeId): numbered steps, each line the equation plus a
  * justification — the structured change description (#42), falling back to the
  * coarse label for moves that aren't descriptor-wired. The `parentId` chain is a
  * unique path (loop bubbles are off-chain); the seen-guard is belt-and-suspenders.
+ *
+ * `format` (#46) selects how the equations are rendered; justifications stay plain.
  */
 export const formatDerivation = (
   tree: Record<string, HistoryNode>,
   currentNodeId: string,
+  format: ExportFormat = 'plain',
 ): string => {
   const chain: HistoryNode[] = [];
   const seen = new Set<string>();
@@ -98,19 +115,77 @@ export const formatDerivation = (
     id = tree[id].parentId;
   }
   chain.reverse();
-  return chain
-    .map((node, i) => {
-      const eq = equationToString(node.equation);
-      if (i === 0) return `${i + 1}. ${eq}`;
-      const base = node.change?.text ?? node.label;
-      // Fold any domain restrictions (#63) into the transcript so a copied
-      // derivation never drops an assumed ≠0 condition.
-      const assumptions = node.change?.assumptions;
-      const justification =
-        base && assumptions?.length ? `${base}, assuming ${assumptions.join(', ')}` : base;
-      return justification ? `${i + 1}. ${eq}  (${justification})` : `${i + 1}. ${eq}`;
+
+  // The justification for a step: its structured descriptor (#42), falling back
+  // to the coarse label, with any domain restrictions (#63) folded in so a copied
+  // derivation never drops an assumed ≠0 condition.
+  const justificationOf = (node: HistoryNode): string | undefined => {
+    const base = node.change?.text ?? node.label;
+    const assumptions = node.change?.assumptions;
+    return base && assumptions?.length ? `${base}, assuming ${assumptions.join(', ')}` : base;
+  };
+
+  // LaTeX exports as a single `aligned` math block (no `$`): renders directly in
+  // KaTeX/MathJax and pastes into Overleaf, unlike a numbered `$…$` transcript.
+  // Reasons sit in a `&&` column so the renderer aligns them tidily (#46).
+  if (format === 'latex') {
+    const rows = chain.map((node, i) => {
+      const justification = i === 0 ? undefined : justificationOf(node);
+      return equationToLatexAligned(node.equation, justification);
+    });
+    return `\\begin{aligned}\n${rows.join(' \\\\\n')}\n\\end{aligned}`;
+  }
+
+  // Plain / Unicode: numbered transcript with each reason padded to a shared start
+  // column so they line up under a monospace face — the column does the separating,
+  // so no delimiter is needed (#46). (Unicode superscripts/√ aren't always exactly
+  // one cell, so its alignment is best-effort.)
+  const lines = chain.map((node, i) => ({
+    left: `${i + 1}. ${equationToFormat(node.equation, format)}`,
+    reason: i === 0 ? undefined : justificationOf(node),
+  }));
+  const reasonColumn = Math.max(0, ...lines.filter((l) => l.reason).map((l) => Array.from(l.left).length));
+  const REASON_GAP = 2;
+  return lines
+    .map((l) => {
+      if (!l.reason) return l.left;
+      const pad = ' '.repeat(reasonColumn - Array.from(l.left).length + REASON_GAP);
+      return `${l.left}${pad}${l.reason}`;
     })
     .join('\n');
+};
+
+/**
+ * The set of node ids on the active derivation path (root -> currentNodeId),
+ * walking the unique `parentId` chain. Used to highlight/dim by membership when
+ * previewing what a full-derivation export will contain (#46, option B).
+ */
+export const getActivePathIds = (
+  tree: Record<string, HistoryNode>,
+  currentNodeId: string,
+): Set<string> => {
+  const ids = new Set<string>();
+  let id: string | null = currentNodeId;
+  while (id && tree[id] && !ids.has(id)) {
+    ids.add(id);
+    id = tree[id].parentId;
+  }
+  return ids;
+};
+
+/**
+ * Scope summary for a full-derivation export (#46, option B): how many steps it
+ * spans and the plain-text endpoint equation that defines the path. Surfaced in
+ * the copy menu so the exported slice is named, not guessed.
+ */
+export const getDerivationScope = (
+  tree: Record<string, HistoryNode>,
+  currentNodeId: string,
+): { stepCount: number; endpoint: string } => {
+  const stepCount = getActivePathIds(tree, currentNodeId).size;
+  const node = tree[currentNodeId];
+  // Render the endpoint in display glyphs (x² − 9/4 = √5), not ASCII source.
+  return { stepCount, endpoint: node ? equationToUnicode(node.equation) : '' };
 };
 
 export interface VisualTreeNode extends HistoryNode {
@@ -394,6 +469,9 @@ export const hoverPathAtom = atom<string | null>(null);
 export const hoverReducePathAtom = atom<string | null>(null);
 export const hoverReduceIndexAtom = atom<number | null>(null);
 export const hoveredLoopTargetIdAtom = atom<string | null>(null);
+// True while the user hovers a full-derivation copy trigger; the history tree
+// dims off-path nodes so the export scope (root -> selected) is visible (#46).
+export const exportPreviewActiveAtom = atom(false);
 export const leftSidebarOpenAtom = atom(true);
 export const rightSidebarOpenAtom = atom(true);
 export const feedbackModalOpenAtom = atom(false);

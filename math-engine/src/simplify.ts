@@ -1670,5 +1670,19 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
     reduciblePaths[bestRed.path].push(bestRed);
   });
 
+  // De-emphasize "Evaluate to Decimal" so an exact-form move is always the
+  // headline (#66): decimal is a separate, opt-in step, never the primary one.
+  // Stable partition — sink it to the bottom of each node's list while keeping
+  // the relative order of every other option intact.
+  Object.keys(reduciblePaths).forEach((path) => {
+    const list = reduciblePaths[path];
+    const decimals = list.filter((r) => r.label === 'Evaluate to Decimal');
+    if (decimals.length === 0 || decimals.length === list.length) return;
+    reduciblePaths[path] = [
+      ...list.filter((r) => r.label !== 'Evaluate to Decimal'),
+      ...decimals,
+    ];
+  });
+
   return reduciblePaths;
 };

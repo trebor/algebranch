@@ -234,6 +234,24 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
       ...(assumptions.length ? { assumptions } : {}),
     };
   }
+  // Combining like radicals (#66) reads better with its own verb than the
+  // generic "simplify a → b" while still showing the before → after.
+  if (option.label === 'Combine Like Radicals') {
+    let before = '';
+    let after = '';
+    try {
+      before = nodeToString(getNodeByPath(eq, option.path));
+      after = nodeToString(getNodeByPath(option.simplified, option.path));
+    } catch {
+      /* fall back to a bare label */
+    }
+    return {
+      kind: 'rewrite',
+      op: 'simplify',
+      detail: before && after ? `${before} → ${after}` : undefined,
+      text: before && after ? `combine like radicals ${before} → ${after}` : 'combine like radicals',
+    };
+  }
   if (option.type === 'identity') {
     const label = option.label ?? 'apply identity';
     let before = '';

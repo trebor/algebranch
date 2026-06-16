@@ -415,6 +415,138 @@ export const tryCombineLikeRadicals = (node: math.MathNode): math.MathNode | nul
 };
 
 /**
+ * Resolve a sqrt/nthRoot node to its integer radical form, pulling out any
+ * perfect n-th-power factor so the radicand is in simplest form:
+ *   sqrt(2)       -> { degree: 2, radicand: 2, extraCoeff: 1 }
+ *   sqrt(8)       -> { degree: 2, radicand: 2, extraCoeff: 2 }  (= 2√2)
+ *   nthRoot(2, 3) -> { degree: 3, radicand: 2, extraCoeff: 1 }
+ * `extraCoeff` is the integer factored out of the radical (reuses Deliverable
+ * 1's extraction — #66). Returns null when the radicand is not a positive
+ * integer, or reduces to 1 (a perfect power, e.g. sqrt(4) -> 2, no radical left).
+ */
+const integerRadicalForm = (
+  root: math.MathNode,
+): { degree: number; radicand: number; extraCoeff: number } | null => {
+  if (root.type !== 'FunctionNode') return null;
+  const funcNode = root as math.FunctionNode;
+  const nameStr = getFunctionName(funcNode);
+
+  let radicandNode: math.MathNode;
+  let degree: number;
+  if (nameStr === 'sqrt' && funcNode.args.length === 1) {
+    radicandNode = funcNode.args[0];
+    degree = 2;
+  } else if (nameStr === 'nthRoot' && funcNode.args.length === 1) {
+    radicandNode = funcNode.args[0];
+    degree = 2;
+  } else if (nameStr === 'nthRoot' && funcNode.args.length === 2) {
+    radicandNode = funcNode.args[0];
+    const degNode = unwrapParens(funcNode.args[1]);
+    if (degNode.type !== 'ConstantNode') return null;
+    degree = Number((degNode as math.ConstantNode).value);
+  } else {
+    return null;
+  }
+
+  if (!Number.isInteger(degree) || degree < 2) return null;
+
+  const radicand = unwrapParens(radicandNode);
+  if (radicand.type !== 'ConstantNode') return null;
+  const k = (radicand as math.ConstantNode).value;
+  if (typeof k !== 'number' || !Number.isInteger(k) || k < 2) return null;
+
+  // Pull out every perfect n-th-power factor: k = extraCoeff^degree * remaining.
+  let extraCoeff = 1;
+  let remaining = k;
+  for (let f = 2; Math.pow(f, degree) <= remaining; f++) {
+    const fPow = Math.pow(f, degree);
+    while (remaining % fPow === 0) {
+      remaining /= fPow;
+      extraCoeff *= f;
+    }
+  }
+
+  // remaining === 1 means the radicand was a perfect power, so no irrational
+  // radical survives (sqrt(4) -> 2) — leave that to constant folding.
+  if (remaining === 1) return null;
+
+  return { degree, radicand: remaining, extraCoeff };
+};
+
+/**
+ * Rationalize the denominator of a fraction whose denominator is a numeric
+ * radical (optionally with an integer coefficient), keeping the result exact:
+ *   1 / sqrt(2)       -> sqrt(2) / 2
+ *   3 / sqrt(2)       -> 3 * sqrt(2) / 2
+ *   1 / (2 * sqrt(3)) -> sqrt(3) / 6
+ *   2 / sqrt(2)       -> sqrt(2)          (numeric fraction reduces to 1)
+ *   1 / nthRoot(2, 3) -> nthRoot(4, 3) / 2
+ *   1 / sqrt(8)       -> sqrt(2) / 4      (reuses Deliverable 1's extraction)
+ * Multiplies numerator and denominator by the factor that clears the radical
+ * (sqrt(k) for square roots, nthRoot(k^(n-1), n) for n-th roots), then reduces
+ * the resulting numeric fraction. Returns null when the denominator is not a
+ * numeric radical term, or there is nothing to rationalize (#66, Deliverable 3).
+ */
+export const tryRationalizeDenominator = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'OperatorNode') return null;
+  const opNode = node as math.OperatorNode;
+  if (opNode.op !== '/' || opNode.args.length !== 2) return null;
+
+  const numerator = opNode.args[0];
+  const denominator = opNode.args[1];
+
+  // The denominator must be `radical` or `coeff * radical` with an integer coeff.
+  const denomTerm = parseRadicalTerm(denominator);
+  if (!denomTerm || !Number.isInteger(denomTerm.coeff)) return null;
+
+  const form = integerRadicalForm(denomTerm.root);
+  if (!form) return null;
+  const { degree, radicand } = form;
+
+  // Effective denominator is (coeff * extraCoeff) * root(radicand) with a
+  // square-/power-free radicand; the multiplier clears that radical.
+  const denomCoeff = denomTerm.coeff * form.extraCoeff;
+  if (denomCoeff === 0) return null;
+
+  // Multiplier that rationalizes: sqrt(k)·sqrt(k) = k, and
+  // nthRoot(k, n)·nthRoot(k^(n-1), n) = nthRoot(k^n, n) = k.
+  const multiplier: math.MathNode =
+    degree === 2
+      ? new math.FunctionNode('sqrt', [new math.ConstantNode(radicand)])
+      : new math.FunctionNode('nthRoot', [
+          new math.ConstantNode(Math.pow(radicand, degree - 1)),
+          new math.ConstantNode(degree),
+        ]);
+
+  // After multiplying through, the denominator is the bare integer denomCoeff·k.
+  const newDenomInt = denomCoeff * radicand;
+
+  const numInner = unwrapParens(numerator);
+  let numeratorNode: math.MathNode;
+  let denomInt = newDenomInt;
+
+  if (numInner.type === 'ConstantNode' && Number.isInteger((numInner as math.ConstantNode).value)) {
+    // Numeric numerator: reduce the resulting integer fraction (2/√2 -> √2).
+    const c = (numInner as math.ConstantNode).value as number;
+    const g = gcdInt(c, newDenomInt);
+    const cReduced = c / g;
+    denomInt = newDenomInt / g;
+    numeratorNode =
+      cReduced === 1
+        ? multiplier
+        : cReduced === -1
+          ? new math.OperatorNode('-', 'unaryMinus', [multiplier])
+          : new math.OperatorNode('*', 'multiply', [new math.ConstantNode(cReduced), multiplier]);
+  } else {
+    // General numerator: multiply it by the rationalizing factor, no reduction.
+    numeratorNode = new math.OperatorNode('*', 'multiply', [numerator, multiplier]);
+  }
+
+  if (denomInt === 1) return numeratorNode;
+  return new math.OperatorNode('/', 'divide', [numeratorNode, new math.ConstantNode(denomInt)]);
+};
+
+/**
  * True when the node at `path` is the radicand (first argument) of a sqrt/nthRoot
  * function — used to suppress radicand-only suggestions (e.g. "Express as Cube"
  * on the 8 inside sqrt(8)) that misfire when the real move is the radical (#66).
@@ -882,6 +1014,9 @@ const subtreeHasFinerSimplification = (eq: Equation, p: string): boolean => {
 
     // Like radicals to combine (sqrt(2) + sqrt(2) -> 2√2).
     if (tryCombineLikeRadicals(node)) return true;
+
+    // A radical denominator to rationalize (1 / sqrt(2) -> sqrt(2) / 2).
+    if (tryRationalizeDenominator(node)) return true;
   }
   return false;
 };
@@ -918,6 +1053,17 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
     const combinedRadicals = tryCombineLikeRadicals(node);
     if (combinedRadicals) {
       const candidate = replaceNodeAtPath(eq, p, combinedRadicals);
+      if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
+        return candidate;
+      }
+    }
+
+    // 0.6 Rationalize a radical denominator (1 / sqrt(2) -> sqrt(2) / 2). Offered
+    // BEFORE constant folding so the exact rationalized form wins over decimalising
+    // the fraction (folding 1 / sqrt(2) would otherwise yield 0.707) — #66.
+    const rationalized = tryRationalizeDenominator(node);
+    if (rationalized) {
+      const candidate = replaceNodeAtPath(eq, p, rationalized);
       if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
         return candidate;
       }
@@ -1220,6 +1366,8 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
           label = 'Simplify Radical';
         } else if (tryCombineLikeRadicals(node)) {
           label = 'Combine Like Radicals';
+        } else if (tryRationalizeDenominator(node)) {
+          label = 'Rationalize Denominator';
         } else {
           const isFraction = node.type === 'OperatorNode' && (node as math.OperatorNode).op === '/';
           label = isFraction ? 'Simplify Fraction' : 'Simplify';

@@ -1,6 +1,6 @@
 import * as math from 'mathjs';
 import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, ensureNodeIds } from './tree';
-import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions } from './validator';
+import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions, getVariables, tryExtractQuadraticExpr } from './validator';
 import { HIGH_SCHOOL_IDENTITIES } from './rules';
 import { matchPattern, instantiatePattern, tryExpressAsPower, tryExpressAsPowerOptions } from './matcher';
 import { tryFactor } from './factor';
@@ -563,6 +563,85 @@ const isRadicandOfRoot = (eq: Equation, path: string): boolean => {
   } catch {
     return false;
   }
+};
+
+/** Build a node for an exact rational, as p, p / q, or -(…) for negatives. */
+const fractionToNode = (frac: math.Fraction): math.MathNode => {
+  const n = Number(frac.n); // mathjs Fraction stores sign separately in `s`
+  const d = Number(frac.d);
+  const magnitude: math.MathNode =
+    d === 1
+      ? new math.ConstantNode(n)
+      : new math.OperatorNode('/', 'divide', [new math.ConstantNode(n), new math.ConstantNode(d)]);
+  return frac.s < 0 ? new math.OperatorNode('-', 'unaryMinus', [magnitude]) : magnitude;
+};
+
+/**
+ * Complete the square on a quadratic expression a·v² + b·v + c (in one variable
+ * v), rewriting it to vertex form a·(v + b/(2a))² + (c − b²/(4a)). Keeps the
+ * results as exact fractions — never decimals — consistent with #66/#9. Returns
+ * null when the node isn't a numeric quadratic in a single variable, has no
+ * linear term (b = 0, already complete), or otherwise can't be completed (#62).
+ */
+export const tryCompleteTheSquare = (node: math.MathNode): math.MathNode | null => {
+  if (!node) return null;
+
+  for (const solveVar of getVariables(node)) {
+    const coeffs = tryExtractQuadraticExpr(node, solveVar);
+    if (!coeffs) continue;
+
+    // Require numeric a, b, c so the completed form is exact and self-contained.
+    // Symbolic coefficients (e.g. a stray second variable) are deferred.
+    let af: math.Fraction, bf: math.Fraction, cf: math.Fraction;
+    try {
+      af = math.fraction(coeffs.a.compile().evaluate());
+      bf = math.fraction(coeffs.b.compile().evaluate());
+      cf = math.fraction(coeffs.c.compile().evaluate());
+    } catch {
+      continue;
+    }
+
+    // a ≠ 0 (must be quadratic) and b ≠ 0 (b = 0 is already a completed square).
+    if (Number(af.n) === 0 || Number(bf.n) === 0) continue;
+
+    // h = b / (2a); k = c − b² / (4a)
+    const h = math.divide(bf, math.multiply(af, 2) as math.Fraction) as math.Fraction;
+    const k = math.subtract(
+      cf,
+      math.divide(math.multiply(bf, bf) as math.Fraction, math.multiply(af, 4) as math.Fraction)
+    ) as math.Fraction;
+
+    // (v ± |h|)
+    const inner = new math.OperatorNode(
+      h.s < 0 ? '-' : '+',
+      h.s < 0 ? 'subtract' : 'add',
+      [new math.SymbolNode(solveVar), fractionToNode(math.abs(h) as math.Fraction)]
+    );
+    const squared = new math.OperatorNode('^', 'pow', [
+      new math.ParenthesisNode(inner),
+      new math.ConstantNode(2),
+    ]);
+
+    // a · (…)², dropping a redundant ×1
+    const scaled: math.MathNode =
+      Number(af.n) === 1 && Number(af.d) === 1
+        ? squared
+        : new math.OperatorNode('*', 'multiply', [fractionToNode(af), squared]);
+
+    // … ± |k|, dropping a redundant + 0
+    const result: math.MathNode =
+      Number(k.n) === 0
+        ? scaled
+        : new math.OperatorNode(
+            k.s < 0 ? '-' : '+',
+            k.s < 0 ? 'subtract' : 'add',
+            [scaled, fractionToNode(math.abs(k) as math.Fraction)]
+          );
+
+    return result;
+  }
+
+  return null;
 };
 
 /**
@@ -1494,6 +1573,21 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
         if (clean(factored.node.toString()) === clean(node.toString())) continue; // no-op
         if (areEquationsEquivalent(eq, newEq)) {
           rawReductions.push({ path, simplified: newEq, type: 'identity', label: factored.label });
+        }
+      }
+    } catch {}
+
+    // Try completing the square on a quadratic expression (x²+6x+5 -> (x+3)²-4).
+    // An identity rewrite offered in place, so it works on a bare quadratic, on
+    // `... = 0`, and on the RHS of `y = ...` (vertex form for graphing) — #62.
+    try {
+      const node = getNodeByPath(eq, path);
+      const completed = tryCompleteTheSquare(node);
+      if (completed) {
+        const newEq = replaceNodeAtPath(eq, path, completed);
+        const clean = (s: string) => s.replace(/[\s()]/g, '');
+        if (clean(completed.toString()) !== clean(node.toString()) && areEquationsEquivalent(eq, newEq)) {
+          rawReductions.push({ path, simplified: newEq, type: 'identity', label: 'Complete the Square' });
         }
       }
     } catch {}

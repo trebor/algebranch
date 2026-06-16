@@ -158,6 +158,18 @@ describe('describeReduction — in-place rewrites', () => {
       text: 'rationalize denominator 1 / sqrt(2) → sqrt(2) / 2'
     });
   });
+
+  it('describes completing the square with its own verb (#62)', () => {
+    const e = eq('x ^ 2 + 6 * x + 5 = 0');
+    const option = findOption('x ^ 2 + 6 * x + 5 = 0', 'Complete the Square');
+    expect(option).toBeDefined();
+    const change = describeReduction(e, option!);
+    expect(change).toMatchObject({
+      kind: 'rewrite',
+      op: 'identity',
+      text: 'complete the square x ^ 2 + 6 * x + 5 → (x + 3) ^ 2 - 4'
+    });
+  });
 });
 
 describe('domain restrictions when cancelling or dividing (#63)', () => {

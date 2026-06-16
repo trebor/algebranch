@@ -58,6 +58,23 @@ When a change needs verifying in the running app, **tell the human what to run a
 
 Agents can still hand the user `?eq=<equation>` test URLs without the server running. Only start the server yourself if the human explicitly asks.
 
+## Visual verification (headless screenshots)
+
+For UI-heavy, layout-sensitive work (handle crowding, baseline alignment, scaling, spacing) **don't reason about `em`/`rem`/flow in your head — look at the real render.** Playwright is a committed `devDependency`; `scripts/shoot.mjs` (run via `npm run shoot`) loads the running app in headless Chromium and writes a PNG you can open/read directly. A screenshot is a faithful render of the actual app (real CSS, real layout), so it's the trustworthy way to confirm visual changes.
+
+```sh
+# dev server must be up (human-owned); fresh clones need: npx playwright install chromium
+npm run shoot -- --eq "sqrt(4*9)+x=12"                       # default 1280x800 viewport
+npm run shoot -- --eq "x^2-9=0" --width 480 --height 360     # small viewport → exercises useMathScale
+npm run shoot -- --eq "sqrt(4*9)+x=12" --no-motion --hover "<css-selector>"
+```
+
+PNGs land in `screenshots/` (gitignored) by default; never commit them. Caveats to respect:
+- **Animations are time-based** — a screenshot is one frame. Pass `--no-motion` for a clean static layout shot (e.g. when the `animate-ping` pulse would obscure spacing).
+- **Hover/click states must be scripted** — use `--hover`/`--click` with a CSS selector to capture interaction-gated UI.
+- **Scale is viewport-dependent** — `useMathScale` (0.4–2.8×) keys off container size, so set `--width`/`--height` deliberately to test scale extremes; a captured layout is only valid for that viewport.
+- **The human owns the dev server** — this script *points at* `localhost:3000`; it does not (and must not) start the server.
+
 ## Two-agent coordination
 
 When alternating between **Claude Code and Antigravity** on this repo, follow [orchestration.md](orchestration.md) — the coordination doctrine (routing, quota policy, restart triggers, hand-off schema, resync-on-return). Keep the live hand-off in `BATON.md` (git-ignored, status/transport only). Task state still lives in GitHub Issues; the baton never holds plans or checklists.

@@ -35,9 +35,16 @@ This section is the **canonical commit/merge protocol** for every agent in this 
 - **Squash and Merge**: Always use the **Squash and Merge** strategy when merging feature branches into `main` to maintain a clean, linear commit history.
 - **Pre-Merge Validation**: Before merging any branch, run the full validation gate — **lint → type-check → test → build**. The lint, type-check, and test commands are defined in [rules.md](rules.md) under **Validation Commands** (the single source of truth — do not restate them here); the build step is `npm run build` (compiles `math-engine`, then `ui`).
 
+**Test-driven development (mandatory)** — write the test *before* the implementation, following red → green → refactor:
+1. **Red**: For each new behavior or bug fix, first add a test that captures the desired behavior, run it, and confirm it **fails for the right reason** (asserting the new behavior, not erroring on a typo/missing import). A bug fix starts with a test that reproduces the bug.
+2. **Green**: Write the minimum implementation to make that test pass; do not write production logic that isn't driven by a failing test.
+3. **Refactor**: Clean up with the tests green.
+- This applies to all `math-engine` logic and any testable `ui` logic (store, helpers, pure functions). For purely visual/interaction UI tweaks where a unit test genuinely can't lead, say so explicitly and fall back to the manual test-URL verification in the commit lifecycle below.
+- Cover the real branches: the happy path, edge cases, and the null/no-op cases (when a transform should *not* fire). Prefer a failing test over a manual probe when scoping behavior.
+
 **Commit & approval lifecycle** — never skip a step without explicit user authorization:
-1. Write the changes, run the validation gate, and confirm it passes.
-2. **Halt.** Summarize the changes, point the user to the modified files for review/verification, and provide **specific local test URLs** (e.g., `http://localhost:3000/?eq=<test-expression>`) with detailed guidance on what to interact with, what test inputs/operators to click, and what exact visual or logical behavior to verify. Do **not** commit speculatively.
+1. Write the changes test-first per the TDD cycle above, run the full validation gate, and confirm it passes.
+2. **Halt.** Summarize the changes, point the user to the modified files for review/verification, and provide **specific local test URLs** (e.g., `http://localhost:3000/?eq=<test-expression>`) with detailed guidance on what to interact with, what test inputs/operators to click, and what exact visual or logical behavior to verify. **Always URL-encode the equation** (everything after `?eq=`) so it survives the share-link round-trip **and stays fully clickable in the terminal**. `encodeURIComponent` covers the round-trip cases — `=`→`%3D`, `/`→`%2F`, `+`→`%2B`, `,`→`%2C` (form-decoding silently turns a raw `+` into a space, corrupting sums) — but it leaves `(`, `)`, `*` raw, and most CLIs drop a trailing `)` from the hyperlink (so the user can't click the whole URL). Encode those too: `(`→`%28`, `)`→`%29`, `*`→`%2A`. Do **not** commit speculatively.
 3. Commit only after the user explicitly approves.
 4. Never `git push`, `gh pr merge`, or merge directly without approval. Once commits are approved, offer to finalize: open/merge the PR, delete the feature branch, and clean up.
 

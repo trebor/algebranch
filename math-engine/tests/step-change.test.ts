@@ -146,6 +146,18 @@ describe('describeReduction — in-place rewrites', () => {
       text: 'factor out 3x from 6 * x ^ 2 + 9 * x → 3 * x * (2 * x + 3)'
     });
   });
+
+  it('describes rationalizing a radical denominator with its own verb (#66)', () => {
+    const e = eq('x = 1 / sqrt(2)');
+    const option = findOption('x = 1 / sqrt(2)', 'Rationalize Denominator');
+    expect(option).toBeDefined();
+    const change = describeReduction(e, option!);
+    expect(change).toMatchObject({
+      kind: 'rewrite',
+      op: 'simplify',
+      text: 'rationalize denominator 1 / sqrt(2) → sqrt(2) / 2'
+    });
+  });
 });
 
 describe('domain restrictions when cancelling or dividing (#63)', () => {

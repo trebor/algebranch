@@ -24,7 +24,7 @@ import {
   onboardingSubstitutionAtom,
   ReducibleActionInfo,
 } from '../store/equation';
-import { OPERATOR_DISPLAY, RELATION_DISPLAY } from '../constants/mathSymbols';
+import { OPERATOR_DISPLAY, RELATION_DISPLAY, symbolToGlyph } from '../constants/mathSymbols';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
@@ -513,8 +513,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
     if (node.type === 'SymbolNode') {
       const symbolNode = node as math.SymbolNode;
-      const displayMap: Record<string, string> = { pi: 'π', e: 'e' };
-      const val = displayMap[symbolNode.name] || symbolNode.name;
+      const val = symbolToGlyph(symbolNode.name);
       return (
         <span className={`italic font-serif ${isStatic ? THEME_GLASS.MATH_VAR_STATIC : THEME_GLASS.MATH_VAR_ACTIVE} font-medium`}>
           {val}

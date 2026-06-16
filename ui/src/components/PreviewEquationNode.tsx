@@ -5,7 +5,7 @@ import { useAtomValue } from 'jotai';
 import * as math from 'mathjs';
 import { currentEquationAtom } from '../store/equation';
 import { Equation, getNodeByPath, getFunctionName, formatNumber } from 'math-engine-client';
-import { OPERATOR_DISPLAY } from '../constants/mathSymbols';
+import { OPERATOR_DISPLAY, symbolToGlyph } from '../constants/mathSymbols';
 
 const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
   <svg
@@ -78,8 +78,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
 
     if (node.type === 'SymbolNode') {
       const symbolNode = node as math.SymbolNode;
-      const displayMap: Record<string, string> = { pi: 'π', e: 'e' };
-      const val = displayMap[symbolNode.name] || symbolNode.name;
+      const val = symbolToGlyph(symbolNode.name);
       return <span className="italic font-serif text-sky-400/80 font-medium">{val}</span>;
     }
 

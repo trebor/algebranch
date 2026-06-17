@@ -14,6 +14,7 @@ import { SettingsModal } from '../components/SettingsModal';
 import { OnboardingTour } from '../components/OnboardingTour';
 import { Tooltip } from '../components/Tooltip';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
+import { ShareMenu } from '../components/ShareMenu';
 import { FactsStrip } from '../components/FactsStrip';
 import { BottomNav } from '../components/BottomNav';
 import { BottomSheet } from '../components/BottomSheet';
@@ -48,6 +49,7 @@ import {
   appHydratedAtom,
   toastAtom,
   createNewSessionAtom,
+  createSessionFromStateAtom,
   currentTabNameAtom,
   deleteSessionAtom,
   deleteConfirmationModalOpenAtom,
@@ -68,8 +70,8 @@ import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Share2, Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
-import { Equation, parseEquation, ensureNodeIds, equationToString } from 'math-engine-client';
+import { Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
+import { parseEquation, equationToString, compressString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
 import { trackEvent } from '../utils/analytics';
@@ -143,6 +145,17 @@ const readEqParam = (search: string): string | null => {
   }
 };
 
+/**
+ * Read the raw `ws` (workspace) query parameter. Since it is Base64URL encoded,
+ * no further decoding is required. Returns null when absent.
+ */
+const readWsParam = (search: string): string | null => {
+  const match = search.match(/[?&]ws=([^&#]*)/);
+  if (!match) return null;
+  return match[1];
+};
+
+
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
@@ -154,7 +167,6 @@ export default function Home() {
   
   const [tree, setTree] = useAtom(historyTreeAtom);
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
-  const [sharedCopied, setSharedCopied] = React.useState(false);
   const [savedSessions, setSavedSessions] = useAtom(savedSessionsAtom);
   const tabs = useAtomValue(tabsAtom);
   const activeTabId = useAtomValue(activeTabIdAtom);
@@ -169,6 +181,7 @@ export default function Home() {
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
   const setAppHydrated = useSetAtom(appHydratedAtom);
   const createNewSession = useSetAtom(createNewSessionAtom);
+  const createSessionFromState = useSetAtom(createSessionFromStateAtom);
   const deleteSession = useSetAtom(deleteSessionAtom);
   const setDeleteConfirmationModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
   const currentTabName = useAtomValue(currentTabNameAtom);
@@ -223,10 +236,21 @@ export default function Home() {
 
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {
-    const initialize = () => {
+    const initialize = async () => {
       try {
         // Hydrate workspace tabs state
         hydrateWorkspaceTabs();
+
+        // If the URL contains an equation (?eq=) or workspace (?ws=) parameter,
+        // bypass the first-run onboarding tutorial so the user sees the content immediately.
+        const hasUrlParam = readWsParam(window.location.search) || readEqParam(window.location.search);
+        if (hasUrlParam) {
+          try {
+            safeLocalStorage.setItem('algebranch_onboarding_completed', 'true');
+          } catch (e) {
+            console.warn('Failed to set onboarding completed flag:', e);
+          }
+        }
 
         // 0. Set default sidebar states for mobile/tablet
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
@@ -278,63 +302,31 @@ export default function Home() {
           console.error('Failed to load saved sessions list:', err);
         }
 
-        // Check if we have saved tabs to prevent overwriting hydrated tab trees with stale sessions
-        const hasSavedTabs = typeof window !== 'undefined' && safeLocalStorage.getItem('algebranch_workspace_tabs') !== null;
-        if (hasSavedTabs) {
-          const cleanEqStr = readEqParam(window.location.search);
-          if (cleanEqStr) {
-            try {
-              createNewSession(cleanEqStr);
-              // Clear query parameter from the URL to prevent duplicate tabs on page refresh
-              window.history.replaceState(null, '', window.location.pathname);
-            } catch (err) {
-              console.error('Failed to parse equation from URL query parameter:', err);
-            }
+        // 1. Check URL query string parameters first to load shared workspaces or equations
+        const cleanStateStr = readWsParam(window.location.search);
+        if (cleanStateStr) {
+          try {
+            const decompressed = await decompressString(cleanStateStr);
+            const { tree, currentNodeId, name } = JSON.parse(decompressed);
+            createSessionFromState({ tree, currentNodeId, name });
+            // Clear query parameter from the URL to prevent duplicate tabs on page refresh
+            window.history.replaceState(null, '', window.location.pathname);
+          } catch (err) {
+            console.error('Failed to parse shared state from URL:', err);
           }
           return;
         }
 
-        // 2. Check URL query string precedence (if sharing) - for legacy/first load without workspace tabs
         const cleanEqStr = readEqParam(window.location.search);
-
         if (cleanEqStr) {
           try {
-            const newEq = ensureNodeIds(parseEquation(cleanEqStr));
-            const newTree: Record<string, HistoryNode> = {
-              "0": {
-                id: "0",
-                equation: newEq,
-                parentId: null,
-                childrenIds: [],
-                label: "Initial",
-                timestamp: Date.now(),
-              }
-            };
-
-            // Create a new session for the shared link so it doesn't overwrite existing work
-            const newSessionId = `session_shared_${Date.now()}`;
-            setTree(newTree);
-            setCurrentNodeId("0");
-            setCurrentSessionId(newSessionId);
-
-            // Add this new shared session to the library list
-            const newSession: SavedSession = {
-              id: newSessionId,
-              name: cleanEqStr,
-              timestamp: Date.now(),
-              tree: serializeTree(newTree),
-              currentNodeId: "0",
-            };
-            const updated = [newSession, ...sessions];
-            setSavedSessions(updated);
-            safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
-            safeLocalStorage.setItem('algebranch_current_session_id', newSessionId);
+            createNewSession(cleanEqStr);
             // Clear query parameter from the URL to prevent duplicate tabs on page refresh
             window.history.replaceState(null, '', window.location.pathname);
-            return;
           } catch (err) {
             console.error('Failed to parse equation from URL query parameter:', err);
           }
+          return;
         }
         
         // 3. Otherwise, check if there was a saved active session
@@ -426,7 +418,7 @@ export default function Home() {
     };
 
     initialize();
-  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession, setAppHydrated]);
+  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession, createSessionFromState, setAppHydrated]);
 
   // Save derivation steps to local storage and update address bar URL reactively
   React.useEffect(() => {
@@ -487,28 +479,7 @@ export default function Home() {
 
   }, [tree, currentNodeId, currentSessionId, setSavedSessions, currentTabName]);
 
-  const handleShare = () => {
-    try {
-      const eqStr = currentEq ? equationToString(currentEq) : '';
-      const baseUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
-      const encodeSafe = (s: string) =>
-        encodeURIComponent(s).replace(/[()*!']/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
-      const shareUrl = eqStr ? `${baseUrl}?eq=${encodeSafe(eqStr)}` : baseUrl;
 
-      navigator.clipboard.writeText(shareUrl).then(() => {
-        setSharedCopied(true);
-        trackEvent({
-          action: 'share_link',
-          category: 'interaction',
-        });
-        setTimeout(() => {
-          setSharedCopied(false);
-        }, 2000);
-      });
-    } catch (err) {
-      console.error('Failed to copy share link:', err);
-    }
-  };
 
   // Register PWA Service Worker on mount (production only)
   React.useEffect(() => {
@@ -855,44 +826,43 @@ export default function Home() {
           </Link>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setSettingsModalOpen(true)}
-            className={THEME_GLASS.HEADER_BUTTON}
-            aria-label="Settings"
-          >
-            <SettingsIcon size={14} className="text-indigo-400 group-hover:rotate-45 transition-transform" />
-            <span className="hidden sm:inline">Settings</span>
-          </button>
-          <button
-            onClick={() => {
-              if (currentEq) {
-                setFeedbackContext(`Active Equation: ${equationToString(currentEq)}`);
-              } else {
-                setFeedbackContext(null);
-              }
-              setFeedbackModalOpen(true);
+          <ShareMenu
+            equationString={currentEq ? equationToString(currentEq) : ''}
+            getCompressedWorkspace={async () => {
+              if (!tree || !currentNodeId) return '';
+              const serialized = serializeTree(tree);
+              const stateStr = JSON.stringify({ tree: serialized, currentNodeId, name: currentTabName });
+              return await compressString(stateStr);
             }}
-            className={THEME_GLASS.HEADER_BUTTON}
-          >
-            <MessageSquarePlus size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
-            <span className="hidden sm:inline">Feedback</span>
-          </button>
-          <button
-            onClick={handleShare}
-            className={THEME_GLASS.HEADER_BUTTON}
-          >
-            {sharedCopied ? (
-              <>
-                <Check size={14} className="text-emerald-400" />
-                <span className="text-emerald-400 font-bold hidden sm:inline">Link Copied!</span>
-              </>
-            ) : (
-              <>
-                <Share2 size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
-                <span className="hidden sm:inline">Share</span>
-              </>
-            )}
-          </button>
+            triggerClassName={THEME_GLASS.HEADER_BUTTON}
+            tooltip="Create Share Link"
+          />
+          <Tooltip content="Submit Feedback or Report Bug" position="bottom" autoAlign={false}>
+            <button
+              onClick={() => {
+                if (currentEq) {
+                  setFeedbackContext(`Active Equation: ${equationToString(currentEq)}`);
+                } else {
+                  setFeedbackContext(null);
+                }
+                setFeedbackModalOpen(true);
+              }}
+              className={THEME_GLASS.HEADER_BUTTON}
+            >
+              <MessageSquarePlus size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">Feedback</span>
+            </button>
+          </Tooltip>
+          <Tooltip content="Settings" position="bottom" autoAlign={false}>
+            <button
+              onClick={() => setSettingsModalOpen(true)}
+              className={THEME_GLASS.HEADER_BUTTON}
+              aria-label="Settings"
+            >
+              <SettingsIcon size={14} className="text-indigo-400 group-hover:rotate-45 transition-transform" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
+          </Tooltip>
         </div>
       </header>
 

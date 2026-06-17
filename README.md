@@ -13,6 +13,12 @@ Algebranch is an interactive tool for working through algebra one step at a time
 
 ---
 
+## 💡 Why Algebranch
+
+The idea came from personal experience: as a dyslexic, I found the hardest part of math was rarely the ideas – it was keeping the symbols straight on the page. Building it became far easier when [*Interactive algebraic manipulation*](docs/shuffle.pdf), by Geoffrey Irving, supplied a key technical insight – and, with it, the nudge to finally build the thing.
+
+---
+
 ## ✨ Key Features
 
 *   **Guided, never automated**: Algebranch won't solve the problem for you. You make each move and see how the algebra unfolds.

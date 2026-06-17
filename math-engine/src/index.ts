@@ -21,6 +21,7 @@ export * from './graphing';
 export * from './factor';
 export * from './serialize';
 export * from './compress';
+export * from './sync';
 
 /**
  * Parses an equation string of the form "LHS = RHS" into an Equation tree.

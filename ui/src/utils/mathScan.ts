@@ -2,25 +2,25 @@
 // Copyright (C) 2026 Robert Harris
 
 import { Equation, equationToString, serializeEquation, deserializeEquation, SerializedEquation } from 'math-engine-client';
+// computeMathSync wraps the heavy solving surface (generateValidMoves /
+// getReducibleOptions), so — like those — it is imported directly from the
+// engine rather than through the lightweight math-engine-client shim.
+import { computeMathSync, MathSyncResult } from 'math-engine';
 import type { OnboardingChapter } from '../store/equation';
 
-const API_MATH_ENDPOINT = '/api/math';
+export type MathScanResult = MathSyncResult;
 
-export interface MathScanResult {
-  activePaths: string[];
-  reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' | 'identity'; label?: string }[]>;
-  targetPaths: Record<string, SerializedEquation>;
-}
-
-// Module-level scan cache: deterministic calculation inputs -> server response.
+// Module-level scan cache: deterministic calculation inputs -> scan result.
 // Keys include node IDs (serializedEq) so cache hits preserve FLIP continuity.
 const scanCache = new Map<string, MathScanResult>();
-const inFlightScans = new Map<string, Promise<MathScanResult>>();
 
 /**
- * Fetch the math scan (candidate/target/reducible analysis) for an equation
- * state, with caching and in-flight deduplication so concurrent requests for
- * the same state share one round-trip.
+ * Compute the math scan (candidate/target/reducible analysis) for an equation
+ * state, with caching so repeated requests for the same state reuse one result.
+ *
+ * The analysis runs fully client-side via the engine's `computeMathSync` (#136);
+ * the async signature is retained so callers stay unchanged from when this was a
+ * `POST /api/math` round-trip.
  */
 export const fetchMathScan = (eq: Equation, sourcePath: string | null): Promise<MathScanResult> => {
   const eqStr = equationToString(eq);
@@ -30,25 +30,9 @@ export const fetchMathScan = (eq: Equation, sourcePath: string | null): Promise<
   const cached = scanCache.get(cacheKey);
   if (cached) return Promise.resolve(cached);
 
-  const pending = inFlightScans.get(cacheKey);
-  if (pending) return pending;
-
-  const request = (async () => {
-    try {
-      const res = await fetch(API_MATH_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'sync-state', eqStr, serializedEq, sourcePath })
-      });
-      const data: MathScanResult = await res.json();
-      scanCache.set(cacheKey, data);
-      return data;
-    } finally {
-      inFlightScans.delete(cacheKey);
-    }
-  })();
-  inFlightScans.set(cacheKey, request);
-  return request;
+  const data = computeMathSync(eq, sourcePath);
+  scanCache.set(cacheKey, data);
+  return Promise.resolve(data);
 };
 
 const strip = (s: string) => s.replace(/\s+/g, '');

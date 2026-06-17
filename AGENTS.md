@@ -26,6 +26,17 @@ Shared instructions for all coding agents (Claude Code, Antigravity, etc.) worki
   - On shutdown/handoff: Update the issue description or post a comment with completed steps, details, and next tasks so the next agent can resume cold.
 - Do **not** create roadmap, checklist, or plan files in the codebase.
 
+## Clickable references (required)
+
+In **messages to the human**, every reference to an issue, PR, milestone, the project board, or a commit **must** be a Markdown link, with the bare reference as the link text — so the terminal shows the short form (e.g. `#123`) while the full URL is one click away. Base URL: `https://github.com/trebor/algebranch`.
+
+- **Issues / PRs**: `[#123](https://github.com/trebor/algebranch/issues/123)` — the `/issues/<n>` path resolves to PRs too, so it's safe when the type is unknown.
+- **Commits**: `[2556c52](https://github.com/trebor/algebranch/commit/2556c52)` (short or full SHA).
+- **Milestones**: `[Public release](https://github.com/trebor/algebranch/milestone/1)`.
+- **Project board**: `[Algebranch board](https://github.com/users/trebor/projects/6/views/2)`.
+
+This applies to prose addressed to the human. Commit messages, PR/issue bodies, and board text rely on GitHub's native `#123` autolinking — do **not** add Markdown links there.
+
 ## Development guardrails
 
 This section is the **canonical commit/merge protocol** for every agent in this repo. Tool entry files (e.g. `CLAUDE.md`) reference it — they must not restate or override it.

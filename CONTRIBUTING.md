@@ -16,6 +16,15 @@ bot comments with a link and asks you to reply with a short confirmation. Once y
 sign, the CLA status check turns green and stays green for all your future pull
 requests. See [CLA.md](CLA.md) for the full terms, including the corporate variant.
 
+**AI-assisted contributions are welcome.** You may use coding assistants or
+autonomous agents. But an AI tool is an instrument, not a contributor: it cannot
+sign the CLA and holds no rights. **You**, the human author, sign the CLA and
+remain fully responsible for everything you submit — including that it is your
+original work and infringes no third-party copyright, patent, or other rights,
+even where an AI tool produced part of it. A `Co-Authored-By` trailer naming an
+AI assistant is attribution only and carries no legal weight. See
+[CLA.md §8](CLA.md#8-ai-assisted-contributions) for the full terms.
+
 ## Development setup
 
 Algebranch is a monorepo with two workspaces:

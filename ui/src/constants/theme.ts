@@ -51,6 +51,7 @@ export const THEME_GLASS = {
   // Buttons
   BUTTON_PRIMARY: 'bg-indigo-600/95 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/10 border border-indigo-400/20 active:scale-95 transition-all duration-150 cursor-pointer',
   BUTTON_SECONDARY: 'bg-neutral-900 border border-white/10 hover:bg-neutral-800 hover:border-white/20 text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer',
+  BUTTON_SECONDARY_ACCENT: 'bg-indigo-950/45 hover:bg-indigo-900/50 border border-indigo-500/25 hover:border-indigo-400/35 text-indigo-300 hover:text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer',
   BUTTON_SECONDARY_MUTED: 'bg-neutral-950 border border-white/5 rounded-xl text-white/30 transition-all duration-150 cursor-not-allowed',
   BUTTON_DANGER: 'bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 transition-all duration-150 cursor-pointer',
 
@@ -119,6 +120,17 @@ export const THEME_GLASS = {
   SPINNER: 'animate-spin rounded-full border-indigo-500/20 border-t-indigo-400 shrink-0',
   ICON_BUTTON: 'p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-white/10 text-white/40 hover:text-white transition-all cursor-pointer shadow-md',
   ICON_BUTTON_DANGER: 'p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-red-500/10 text-white/40 hover:text-red-400 hover:border-red-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-md',
+  // Icon button in its "on" state (e.g. the graph toggle while the graph is open)
+  ICON_BUTTON_ACTIVE: 'p-2 rounded-xl border border-indigo-400/30 bg-indigo-600/90 hover:bg-indigo-500 text-white transition-all cursor-pointer shadow-md',
+  // Floating footer for the onboarding coach card / welcome modal: a slightly
+  // more opaque tint than the card so scrolling content stays legible as it
+  // passes under the pinned controls. Under the new black step-content card,
+  // this blueish footer uses a subtle top border to create a clean divider.
+  TOUR_FOOTER: 'bg-[#110f22]/95 backdrop-blur-md border-t border-white/5',
+  // Onboarding walkthrough coach card container: a dark neutral background
+  // to match the chapter-menu cards and welcome modal, highlighting the
+  // content area.
+  TOUR_CARD: 'w-full shrink-0 border-t border-white/10 bg-neutral-950/95 rounded-b-2xl z-40 overflow-hidden flex flex-col max-h-[38dvh] sm:max-h-none shadow-lg',
   EQUALS_SIGN: 'relative text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black transition-all',
   EQUALS_SIGN_INTERACTIVE: 'cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95',
   EQUALS_BADGE: 'absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-indigo-600 border border-indigo-400 flex items-center justify-center text-[7.5px] text-white font-bold select-none cursor-pointer shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse z-20',

@@ -5,7 +5,7 @@ import { atom } from 'jotai';
 import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
-import { applyGlobalOp, GlobalOpParams, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
+import { applyGlobalOp, GlobalOpParams, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
 import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
@@ -602,6 +602,18 @@ export const graphDataAtom = atom((get) => {
   } catch {
     return null;
   }
+});
+
+/**
+ * Whether the current equation can be legitimately graphed: today that means a
+ * single graph variable (the grapher plots one variable against value). Drives
+ * whether the graph toggle is offered at all. Cheap — counts variables only, no
+ * curve sampling — so it's safe to read even while the graph panel is closed.
+ * When multi-variable graphing lands, relax this to also allow >1.
+ */
+export const isGraphViableAtom = atom((get) => {
+  const eq = get(currentEquationAtom);
+  return !!eq && getGraphVariables(eq).length === 1;
 });
 
 // ==========================================
@@ -1502,6 +1514,9 @@ export const hydrateWorkspaceTabsAtom = atom(
       if (savedActiveId) {
         set(rawActiveTabIdAtom, savedActiveId);
       }
+
+      const onboardingCompleted = safeLocalStorage.getItem('algebranch_onboarding_completed') === 'true';
+      set(onboardingCompletedAtom, onboardingCompleted);
     } catch (err) {
       console.error('Failed to hydrate workspace tabs from localStorage:', err);
     }
@@ -1521,6 +1536,7 @@ export const onboardingChapterIdAtom = atom<string | null>(null);
 export const onboardingStepIndexAtom = atom<number | null>(null);
 export const onboardingHighlightPathAtom = atom<string | null>(null);
 export const onboardingShowDirectoryAtom = atom<boolean>(false);
+export const onboardingCompletedAtom = atom<boolean>(false);
 
 // Onboarding step progress is stored PER CHAPTER (chapterId -> stepIndex) so
 // starting/resuming one chapter never clobbers another chapter's saved step.
@@ -1744,10 +1760,21 @@ export const setOnboardingStepAtom = atom(
       set(onboardingShowDirectoryAtom, false);
       set(tutorialFactsAtom, []);
       set(sourcePathAtom, null);
+
+      // Remove chapterId from the active tab so it behaves as a normal tab
+      const activeTabId = get(rawActiveTabIdAtom);
+      if (activeTabId) {
+        set(tabsAtom, (prev) =>
+          prev.map((t) => (t.id === activeTabId ? { ...t, chapterId: undefined } : t))
+        );
+      }
+
       if (typeof window !== 'undefined') {
         safeLocalStorage.setItem('algebranch_onboarding_active', 'false');
+        safeLocalStorage.setItem('algebranch_onboarding_completed', 'true');
+        set(onboardingCompletedAtom, true);
+
         if (nextIndex !== null && nextIndex >= chapter.steps.length) {
-          safeLocalStorage.setItem('algebranch_onboarding_completed', 'true');
           safeLocalStorage.removeItem('algebranch_onboarding_chapter_id');
           safeLocalStorage.removeItem('algebranch_onboarding_active');
           if (finishedChapterId) clearOnboardingStep(finishedChapterId);

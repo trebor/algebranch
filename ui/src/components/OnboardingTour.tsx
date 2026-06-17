@@ -3,7 +3,7 @@
 
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useIsHydrated } from '../hooks/useIsHydrated';
@@ -259,13 +259,13 @@ export const OnboardingTour: React.FC = () => {
     }
   }, [currentEq, chapterId, stepIndex, sourcePath, setStep]);
 
-  const handleSkipPrompt = () => {
+  const handleSkipPrompt = useCallback(() => {
     setShowPrompt(false);
     setShowDirectory(false);
     if (typeof window !== 'undefined') {
       localStorage.setItem('algebranch_onboarding_completed', 'true');
     }
-  };
+  }, [setShowPrompt, setShowDirectory]);
 
   // Escape on the opening prompt/directory skips straight into the app, so a
   // user who just wants to start solving isn't trapped by the tutorial.
@@ -279,7 +279,7 @@ export const OnboardingTour: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showPrompt]);
+  }, [showPrompt, handleSkipPrompt]);
 
   const handleStartChapter = (id: string) => {
     setShowPrompt(false);

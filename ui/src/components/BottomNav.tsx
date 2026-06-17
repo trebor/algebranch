@@ -3,9 +3,8 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
-import { motion } from 'framer-motion';
 import { Undo2, LayoutGrid, Library, GitFork, Redo2 } from 'lucide-react';
 import { historyTreeAtom, currentNodeIdAtom, activeBottomSheetAtom } from '../store/equation';
 import { Tooltip } from './Tooltip';

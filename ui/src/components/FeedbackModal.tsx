@@ -6,7 +6,7 @@
 import React from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MessageSquare, Bug, Lightbulb, Star, Send, CheckCircle2, Paperclip } from 'lucide-react';
+import { X, MessageSquare, Bug, Lightbulb, Star, CheckCircle2, Paperclip } from 'lucide-react';
 import { feedbackModalOpenAtom, feedbackContextAtom, historyTreeAtom, HistoryNode, currentNodeIdAtom } from '../store/equation';
 import { equationToString } from 'math-engine-client';
 import { trackEvent } from '../utils/analytics';
@@ -144,7 +144,7 @@ ${formattedTree}
 
       // Show success step explaining that their mail client has been opened
       setIsSuccess(true);
-    } catch (err) {
+    } catch {
       setErrorStr('Failed to open your mail client. Please try again.');
     }
   };

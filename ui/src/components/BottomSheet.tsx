@@ -51,12 +51,6 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   // Sorted snap points (ascending) for consistent behavior
   const sortedSnaps = [...snapPoints].sort((a, b) => a - b);
 
-  // Current snap height in viewport pixels
-  const getSnapHeight = (index: number) => {
-    const snap = sortedSnaps[Math.min(index, sortedSnaps.length - 1)] ?? sortedSnaps[0];
-    return typeof window !== 'undefined' ? window.innerHeight * snap : 500;
-  };
-
   // Lock body scroll when sheet is open
   useEffect(() => {
     if (isOpen) {
@@ -81,6 +75,12 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         }
         return;
       }
+
+      // Current snap height in viewport pixels
+      const getSnapHeight = (index: number) => {
+        const snap = sortedSnaps[Math.min(index, sortedSnaps.length - 1)] ?? sortedSnaps[0];
+        return typeof window !== 'undefined' ? window.innerHeight * snap : 500;
+      };
 
       const sheetHeight = getSnapHeight(activeSnapIndex);
       // Close if velocity is high or dragged past 30% of sheet height

@@ -48,7 +48,7 @@ interface ControlPanelProps {
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBorder }) => {
   const isMobile = useIsMobile();
-  const [tree, setTree] = useAtom(historyTreeAtom);
+  const [tree] = useAtom(historyTreeAtom);
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
   const setSourcePath = useSetAtom(sourcePathAtom);
   const setHoverPath = useSetAtom(hoverPathAtom);
@@ -641,7 +641,7 @@ interface TimelineContentProps {
 }
 
 export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile }) => {
-  const [tree, setTree] = useAtom(historyTreeAtom);
+  const [tree] = useAtom(historyTreeAtom);
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
   const setSourcePath = useSetAtom(sourcePathAtom);
   const setHoverPath = useSetAtom(hoverPathAtom);

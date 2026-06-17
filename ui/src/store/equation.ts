@@ -5,7 +5,7 @@ import { atom } from 'jotai';
 import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
-import { applyGlobalOp, GlobalOpParams, StepChange, describeTransposition, describeReduction, describeGlobalOp, describeSubstitution, describeCollapse, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
+import { applyGlobalOp, GlobalOpParams, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
 import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
@@ -201,7 +201,6 @@ export interface VisualTreeNode extends HistoryNode {
 // Tree Coordinates Constants
 const ROW_HEIGHT = 72;
 const COL_WIDTH = 75;
-const BUBBLE_SIZE = 40;
 const PADDING_LEFT = 40;
 const PADDING_TOP = 32;
 

@@ -28,7 +28,7 @@ import {
   ReducibleActionInfo,
 } from '../store/equation';
 import { OPERATOR_DISPLAY, RELATION_DISPLAY, symbolToGlyph } from '../constants/mathSymbols';
-import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
+import { THEME_GLASS } from '../constants/theme';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
 import { describeTransposition, describeReduction, describeSubstitution, describeCollapse } from 'math-engine';
@@ -288,7 +288,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
   const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
-  const [hoverReduceIndex, setHoverReduceIndex] = useAtom(hoverReduceIndexAtom);
+  const [, setHoverReduceIndex] = useAtom(hoverReduceIndexAtom);
   const reduciblePaths = useAtomValue(filteredReduciblePathsAtom);
   const substitutionPaths = useAtomValue(substitutionPathsAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
@@ -439,23 +439,24 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   // During the tour, only the specific handle the tutorial wants clicked is
   // offered (the one whose result matches the step's expected equation);
   // every other handle is locked out like the rest of the UI.
-  const allActions = reduciblePaths[path] || [];
-  const actions = !isOnboardingActive
-    ? allActions
-    : isHandleMarked && onboardingReduceHandle && allActions[onboardingReduceHandle.index]
-      ? [allActions[onboardingReduceHandle.index]]
+  const actions = React.useMemo(() => {
+    const all = reduciblePaths[path] || [];
+    if (!isOnboardingActive) return all;
+    return isHandleMarked && onboardingReduceHandle && all[onboardingReduceHandle.index]
+      ? [all[onboardingReduceHandle.index]]
       : [];
-  const isReducible = actions.length > 0;
+  }, [reduciblePaths, path, isOnboardingActive, isHandleMarked, onboardingReduceHandle]);
 
   // Substitution handles (#3): offered on variable nodes matching a fact from
   // another workspace. During the tour, only the option the step expects is live
   // (mirrors the reduce-handle lockdown).
-  const allSubstitutions = substitutionPaths[path] || [];
-  const substitutions = !isOnboardingActive
-    ? allSubstitutions
-    : isSubHandleMarked && onboardingSubstitution && allSubstitutions[onboardingSubstitution.index]
-      ? [allSubstitutions[onboardingSubstitution.index]]
+  const substitutions = React.useMemo(() => {
+    const all = substitutionPaths[path] || [];
+    if (!isOnboardingActive) return all;
+    return isSubHandleMarked && onboardingSubstitution && all[onboardingSubstitution.index]
+      ? [all[onboardingSubstitution.index]]
       : [];
+  }, [substitutionPaths, path, isOnboardingActive, isSubHandleMarked, onboardingSubstitution]);
 
   // Toggle Root Sign (+/- branches) via global action
   const handleToggleRootSign = (e: React.MouseEvent) => {
@@ -546,7 +547,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
   // Styling hooks
   const canClick = sourcePath ? (isSelected || isTarget) : isCandidate;
-  const canHover = sourcePath ? (isSelected || isTarget) : isCandidate;
 
   // Only dim candidate nodes if the user is actively hovering over *some* valid candidate.
   // Otherwise, if they hover static parts of the expression, keep all candidates bright (scan mode).

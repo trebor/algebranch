@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
 /**
  * Utility to convert an ArrayBuffer to a URL-safe Base64 string (Base64URL).
  */

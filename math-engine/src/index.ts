@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
 import * as math from 'mathjs';
 import { Equation, RelationOperator, ensureNodeIds } from './tree';
 
@@ -18,6 +21,7 @@ export * from './graphing';
 export * from './factor';
 export * from './serialize';
 export * from './compress';
+export * from './sync';
 
 /**
  * Parses an equation string of the form "LHS = RHS" into an Equation tree.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
 /**
  * Premium UI Theme Constants
  * Enforces strict typing, UPPER_CASE constants, and 2-space indentation.

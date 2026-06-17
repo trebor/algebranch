@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
 import React from 'react';
 import { TriangleAlert } from 'lucide-react';
 import { Equation } from 'math-engine-client';

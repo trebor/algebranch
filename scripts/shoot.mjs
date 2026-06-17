@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
 /**
  * shoot.mjs — headless screenshot helper for visually verifying UI changes.
  *

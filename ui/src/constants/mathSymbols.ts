@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
 // Centralized display glyphs for math symbols.
 //
 // This is the RENDERING layer only — the engine AST and serialized strings keep

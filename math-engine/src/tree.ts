@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
 import * as math from 'mathjs';
 
 /** Relational operator joining the two sides. Defaults to '=' when omitted. */

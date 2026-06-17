@@ -14,6 +14,7 @@ import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
 import { ResetHistoryModal } from '../components/ResetHistoryModal';
 import { EquationInputModal } from '../components/EquationInputModal';
 import { SettingsModal } from '../components/SettingsModal';
+import { AboutModal } from '../components/AboutModal';
 import { OnboardingTour } from '../components/OnboardingTour';
 import { Tooltip } from '../components/Tooltip';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
@@ -1206,6 +1207,7 @@ export default function Home() {
       <ResetHistoryModal />
       <EquationInputModal />
       <SettingsModal />
+      <AboutModal />
 
       {/* Mobile-only Bottom navigation and Sheets */}
       {!onboardingChapterId && <BottomNav />}

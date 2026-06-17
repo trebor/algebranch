@@ -510,6 +510,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
 };
 
 export const settingsModalOpenAtom = atom(false);
+export const aboutModalOpenAtom = atom(false);
 export const rawSettingsAtom = atom<UserSettings>(DEFAULT_SETTINGS);
 
 export const settingsAtom = atom(

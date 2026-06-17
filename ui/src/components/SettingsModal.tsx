@@ -4,12 +4,13 @@
 'use client';
 
 import React from 'react';
-import { useAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sliders } from 'lucide-react';
+import { X, Sliders, Info } from 'lucide-react';
 import {
   settingsModalOpenAtom,
   settingsAtom,
+  aboutModalOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
@@ -17,6 +18,7 @@ import { trackEvent } from '../utils/analytics';
 export const SettingsModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(settingsModalOpenAtom);
   const [settings, setSettings] = useAtom(settingsAtom);
+  const setAboutOpen = useSetAtom(aboutModalOpenAtom);
 
   // Escape key handler
   React.useEffect(() => {
@@ -124,7 +126,17 @@ export const SettingsModal: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className={`flex justify-end gap-3 mt-6 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} pt-4 select-none shrink-0`}>
+            <div className={`flex justify-between items-center gap-3 mt-6 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} pt-4 select-none shrink-0`}>
+              <button
+                onClick={() => {
+                  setAboutOpen(true);
+                  setIsOpen(false);
+                }}
+                className="px-3 py-2 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <Info size={12} />
+                <span>About Algebranch</span>
+              </button>
               <button
                 onClick={handleClose}
                 className={`px-4 py-2 text-xs font-semibold ${THEME_GLASS.BUTTON_SECONDARY}`}

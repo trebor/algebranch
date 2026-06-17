@@ -11,6 +11,11 @@ node_modules/
 # Test coverage reports
 /math-engine/coverage/
 
+# Environment / secrets — never commit local env files
+.env
+.env.*
+!.env.example
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

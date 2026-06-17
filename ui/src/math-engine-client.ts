@@ -37,4 +37,6 @@ export {
   deserializeEquation,
   deserializeNode,
   getEquationStatus,
+  compressString,
+  decompressString,
 } from 'math-engine';

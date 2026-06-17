@@ -910,7 +910,12 @@ export const createNewSessionAtom = atom(
       };
 
       const prevTabs = get(tabsAtom);
-      set(tabsAtom, [...prevTabs, newTab]);
+      const isOnlyDefaultTab = prevTabs.length === 1 && prevTabs[0].id === 'tab_initial' && !prevTabs[0].isModified;
+      if (isOnlyDefaultTab) {
+        set(tabsAtom, [newTab]);
+      } else {
+        set(tabsAtom, [...prevTabs, newTab]);
+      }
       set(activeTabIdAtom, newTabId);
 
       set(currentSessionIdAtom, newId);
@@ -943,6 +948,75 @@ export const createNewSessionAtom = atom(
       }
     } catch (err) {
       console.error('Failed to create new session:', err);
+    }
+  }
+);
+
+/**
+ * Action: Create a new session from a shared tree and current node.
+ */
+export const createSessionFromStateAtom = atom(
+  null,
+  (get, set, params: { tree: Record<string, SerializedHistoryNode>; currentNodeId: string; name?: string }) => {
+    const { tree: serializedTree, currentNodeId, name } = params;
+    const newId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      const tree = deserializeTree(serializedTree);
+      // Fallback workspace name from the root node of the tree
+      const rootNode = tree["0"] || Object.values(tree)[0];
+      const fallbackName = rootNode ? equationToString(rootNode.equation) : "Shared Workspace";
+      const tabName = name || fallbackName;
+
+      const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const newTab: WorkspaceTab = {
+        id: newTabId,
+        name: tabName,
+        historyTree: tree,
+        currentNodeId: currentNodeId,
+        sessionId: newId,
+        timestamp: Date.now()
+      };
+
+      const prevTabs = get(tabsAtom);
+      const isOnlyDefaultTab = prevTabs.length === 1 && prevTabs[0].id === 'tab_initial' && !prevTabs[0].isModified;
+      if (isOnlyDefaultTab) {
+        set(tabsAtom, [newTab]);
+      } else {
+        set(tabsAtom, [...prevTabs, newTab]);
+      }
+      set(activeTabIdAtom, newTabId);
+
+      set(currentSessionIdAtom, newId);
+      set(sourcePathAtom, null);
+      set(hoverPathAtom, null);
+      set(hoverReducePathAtom, null);
+      set(hoverReduceIndexAtom, null);
+      set(hoveredLoopTargetIdAtom, null);
+
+      // Show transient status toast message
+      set(toastAtom, { message: "Opened shared workspace", key: Date.now() });
+
+      // Add to saved sessions list immediately
+      const sessions = get(savedSessionsAtom);
+      const newSession: SavedSession = {
+        id: newId,
+        name: tabName,
+        timestamp: Date.now(),
+        tree: serializedTree,
+        currentNodeId: currentNodeId,
+      };
+      const updatedSessions = [newSession, ...sessions];
+      set(savedSessionsAtom, updatedSessions);
+
+      try {
+        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
+        safeLocalStorage.setItem('algebranch_current_session_id', newId);
+      } catch (err) {
+        console.error('Failed to save sessions to localStorage:', err);
+      }
+    } catch (err) {
+      console.error('Failed to load shared session:', err);
     }
   }
 );

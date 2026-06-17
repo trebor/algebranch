@@ -165,9 +165,11 @@ export const OnboardingTour: React.FC = () => {
     if (typeof window !== 'undefined') {
       const completed = localStorage.getItem('algebranch_onboarding_completed');
       const neverStarted = Object.keys(readOnboardingSteps()).length === 0;
+      // If the URL contains an equation or a workspace state, bypass the onboarding welcome prompt
+      const hasUrlParam = /[?&](eq|ws)=/.test(window.location.search);
       // Derived from localStorage (external store) reads, so it can't be a
       // render-time computation; the setState belongs in this effect.
-      if (showDirectory || (!completed && !chapterId && neverStarted)) {
+      if (showDirectory || (!completed && !chapterId && neverStarted && !hasUrlParam)) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setShowPrompt(true);
       } else {

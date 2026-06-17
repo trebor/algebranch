@@ -1,0 +1,39 @@
+name: "CLA Assistant"
+
+# Self-hosted CLA gate (CLA Assistant Lite). Signatures are stored in this repo
+# on the `cla-signatures` branch — no third-party data storage. Pull requests are
+# blocked until the contributor signs CLA.md.
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, closed, synchronize]
+
+# Allow the action to read PRs/comments and write the signature file + status.
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  CLAAssistant:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "CLA Assistant"
+        if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event_name == 'pull_request_target'
+        uses: contributor-assistant/github-action@v2.6.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Where signatures are persisted (in this repo, on the branch below).
+          path-to-signatures: "signatures/version1/cla.json"
+          branch: "cla-signatures"
+          # The document contributors are agreeing to.
+          path-to-document: "https://github.com/trebor/algebranch/blob/main/CLA.md"
+          # The exact comment a contributor posts to sign.
+          custom-pr-sign-comment: "I have read the CLA Document and I hereby sign the CLA"
+          custom-notsigned-prcomment: "Thank you for your contribution to Algebranch. Before it can be merged, please read our [Contributor License Agreement](https://github.com/trebor/algebranch/blob/main/CLA.md) and sign it by posting the following comment on this pull request:"
+          custom-allsigned-prcomment: "All contributors have signed the CLA. ✍️ ✅"
+          # Bots that never need to sign.
+          allowlist: dependabot[bot],github-actions[bot]

@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "description": "Interactive Algebraic Derivation Monorepo",
+  "license": "GPL-3.0-or-later",
+  "author": "Robert Harris",
   "workspaces": [
     "math-engine",
     "ui"

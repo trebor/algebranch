@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
 // math-engine-client: thin re-export of the single source-of-truth engine.
 //
 // This file used to be a ~569-line verbatim copy of `math-engine/src` (a

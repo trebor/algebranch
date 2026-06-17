@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
 // Onboarding tutorial content: chapters, steps, and expected derivation chains.
 // Pure data — no store/engine imports — so the math-engine test suite can
 // validate every chapter's chain against the real engine (tests/onboarding.test.ts).

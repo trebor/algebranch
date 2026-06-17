@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
 /**
  * Interval Arithmetic Module
  * Enforces strict typing, arrow functions, and 2-space indentation.

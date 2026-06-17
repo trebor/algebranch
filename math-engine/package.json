@@ -2,6 +2,8 @@
   "name": "math-engine",
   "version": "1.0.0",
   "description": "Pure TypeScript mathematical engine for interactive algebraic manipulation",
+  "license": "GPL-3.0-or-later",
+  "author": "Robert Harris",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {

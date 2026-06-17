@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
 'use client';
 
 import React, { useState, useEffect, useLayoutEffect } from 'react';

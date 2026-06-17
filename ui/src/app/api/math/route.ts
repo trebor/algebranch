@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
 import { NextRequest, NextResponse } from 'next/server';
 import { 
   generateValidMoves, 

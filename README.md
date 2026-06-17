@@ -1,91 +1,79 @@
-# 📐 Algebranch — Interactive Algebraic Derivation System
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="ui/public/logo.png">
+    <img src="ui/public/logo-black.png" alt="Algebranch logo" width="140" height="140">
+  </picture>
+</p>
 
-Algebranch is a premium, interactive mathematical derivation application built to demystify algebraic manipulations. Unlike traditional computer algebra systems that act as symbolic "black boxes" performing full simplifications automatically, Algebranch focuses on **transparent, step-by-step user-directed derivations**. 
+# Algebranch: Interactive Algebraic Derivation System
 
-It exposes the recursive tree structure of mathematical equations via an intuitive, glassmorphic layout where users click terms and physically relocate them, automatically calculating valid algebraic transpositions in real-time under a secure, serverless architecture.
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
+Algebranch is an interactive tool for working through algebra one step at a time. Most math software is a black box: you type in a problem and it hands back the answer. Algebranch is the opposite: equations are laid out as movable pieces, and **you** drive every step, rearranging the equation yourself while Algebranch works out each move and keeps the math correct. It is free and open-source.
 
 ---
 
-## 🏗️ Project Architecture & Monorepo Structure
+## ✨ Key Features
 
-This project is organized as a high-performance monorepo split into two decoupled packages to isolate computational logic from the presentation layer:
+*   **Guided, never automated**: Algebranch won't solve the problem for you. You make each move and see how the algebra unfolds.
+*   **Mistake-proof**: Every move is checked; only the ones that keep the equation true are allowed.
+*   **Branch and explore**: Go back to any earlier step and try a different route. Your work grows into a tree of alternatives rather than a single line.
+*   **Algebraic identities**: Apply standard identities, such as factoring or expanding, with a click.
+*   **Substitution**: Substitute a value for a variable, or collapse a complex expression into a single variable and expand it back later.
+*   **Equation library**: Start from a built-in library of 80+ examples, spanning linear equations, quadratics, and factoring.
+
+---
+
+## 🧮 Using Algebranch
+
+1.  **Select a term**: Click a term to select it. It highlights to show what will move.
+2.  **Choose where it goes**: Valid destinations light up green. Click one to move the term there. Algebranch updates the rest of the equation, such as switching a plus to a minus when a term crosses the equals sign.
+3.  **Simplify or expand**: Click the amber handles to simplify or expand a term.
+4.  **Go back or branch**: Each step is saved on the history timeline. Click any earlier step to return to it or start a new branch from there.
+
+**Deep links**: Add `?eq=<equation>` to the URL to open a specific starting equation, for example `?eq=x^2-9=0`. The in-app share button builds these links for you.
+
+---
+
+## ⚙️ Running Locally
+
+Requires **Node.js 18+** and npm. It is an npm-workspaces monorepo, so run every command from the repo root. The dev server runs at [http://localhost:3000](http://localhost:3000).
+
+```bash
+npm install      # install all packages (root, ui, math-engine)
+npm run dev      # start the dev server
+npm test         # run the math-engine test suite
+npm run build    # production build
+```
+
+---
+
+## 🏗️ Architecture
+
+Algebranch is a monorepo with two packages:
 
 ```mermaid
 graph TD
-    subgraph Client [Client Presentation Layer Browser]
-        A[Interactive Workspace UI] -->|Local Parse & Render| B[mathjs AST Parser]
-        A -->|Stable ID Projection| C[FLIP Reflow Animation Engine]
+    subgraph Browser [Everything Runs in the Browser]
+        A[Interactive Workspace UI] -->|Parse and Render| B[mathjs AST Parser]
+        A -->|Stable ID Projection| C[Layout Animation Engine]
+        A -->|Selected term| D[math-engine Library]
+        D -->|1. Map valid moves| E[Interval Arithmetic Validator]
+        D -->|2. Equivalence checks| F[Equivalence Points Engine]
+        D -->|3. Simplify and distribute| G[Terms Simplifier and Distributor]
+        D -->|candidate target reducible paths| A
     end
-    subgraph Server [Secure Backend Layer Vercel Serverless]
-        D[API Gateway /api/math] -->|1. Deserializes AST| E[Interval Arithmetic Validator]
-        D -->|2. Maps Valid Moves| F[Equivalence Points Engine]
-        D -->|3. Algebraic Simplification| G[Terms Simplifier & Distributor]
-    end
-    A -->|POST /api/math JSON AST| D
-    D -->|JSON AST targetPaths| A
 ```
 
-*   **`/math-engine`**: A pure, portable, and zero-dependency TypeScript mathematical reasoning library. It contains the interval arithmetic evaluator, point-evaluation identity tester, algebraic simplification/distribution rules, and AST serializers.
-*   **`/ui`**: A premium Next.js frontend application powered by Jotai atomic state management, custom curved SVG branching timeline canvases, and a JS-based nested FLIP layout transition reflow engine.
+*   **`/math-engine`**: A portable TypeScript reasoning library with no DOM, React, or Next.js dependencies: the interval-arithmetic evaluator, identity tester, simplification and distribution rules, and AST serializers.
+*   **`/ui`**: A Next.js frontend using Jotai for state, custom SVG canvases for the branching history timeline, and custom layout animations that slide terms smoothly to their new positions. It imports the math engine directly and runs all solving and validation in the browser (see SPEC §4.3).
 
-> For the authoritative architecture — data representation, validation mechanism, and the execution boundary — see **[SPEC.md §2–§5](SPEC.md)**.
+> For the full architecture (data representation, validation, and execution model), see **[SPEC.md §2–§5](SPEC.md)**.
 
 ---
 
-## 🔒 Serverless IP Protection
+## 📄 License
 
-To keep the proprietary algebraic reasoning algorithms off the browser, all solving and validation run server-side: the client posts the serialized AST (`SerializedEquation`) to a Next.js serverless route (`POST /api/math`) and renders the candidate/target/reducible paths it returns. Node IDs are preserved across the boundary so the 350ms FLIP reflows stay stable.
+Copyright (C) 2026 Robert Harris.
 
-> **[SPEC.md §4.3 (Deployment & Execution Boundary)](SPEC.md) is the canonical description** of the client/server split, the `math-engine-client` path alias, and which engine functions run where. This section is a summary.
-
----
-
-## 🎓 The Nomenclature Framework
-
-Algebranch defines a strict **five-state nomenclature** for every node in the expression tree, kept consistent across UI elements, Jotai state, and the core math engine. **[SPEC.md §8 (Nomenclature Framework)](SPEC.md) is the canonical definition**; the state names, semantics, and `THEME_GLASS` token names below are a summary that must match it exactly:
-
-1.  **Candidate (Movable)** (`THEME_GLASS.CARD_CANDIDATE_SCAN`): Interactive terms that can be repositioned to another node in the AST (tracked client-side by `candidatePathsAtom`).
-2.  **Source** (`THEME_GLASS.SOURCE`): The single selected Candidate currently undergoing transposition (at most one at a time).
-3.  **Target (Destination)** (`THEME_GLASS.TARGET`): Emerald drop slots representing mathematically sound destinations for the active **Source**.
-4.  **Static (Inert)** (`THEME_GLASS.STATIC`): Inert, non-interactive terms forming the stable visual landscape of the equation.
-5.  **Simplify / Reducible (Transformable)** (`THEME_GLASS.CARD_CANDIDATE_SCAN`): Nodes offering constant folding (`13 - 5` $\rightarrow$ `8`), fraction simplification (`6 / 2` $\rightarrow$ `3`), redundant-term removal (`+ 0`, `* 1`, `(x) -> x`), or distribution (`2*(x + 3)` $\rightarrow$ `2*x + 6`), surfaced via amber handles.
-
-> See **[SPEC.md §8](SPEC.md)** for the full semantics and visual specification of each state.
-
----
-
-## ⚙️ Quick Start: Running Locally
-
-This repository uses **npm workspaces** to manage packages, compile dependencies, and run tests uniformly from the root directory.
-
-### Prerequisites
-Make sure you have Node.js (v18+) and npm installed.
-
-### 1. Install All Dependencies
-Install dependencies for the root, `/ui`, and `/math-engine` in a single command:
-```bash
-npm install
-```
-
-### 2. Start the Development Server
-Launch the local Next.js development server:
-```bash
-npm run dev
-```
-The application will run locally at [http://localhost:3000](http://localhost:3000).
-
-### 3. Run the Math-Engine Test Suite
-Algebranch is strictly validated via automated unit testing. Run the math-engine Jest suite:
-```bash
-npm run test
-```
-
----
-
-## 📐 Key Features
-
-*   **Two-Click Interaction**: Select a term on click, and click any glowing green slot to transpose it standardly.
-*   **Branching History Tree Timeline**: Track derivations on a DFS coordinate canvas showing S-curve bezier paths between chronological steps. You can click any step bubble to restore or branch.
-*   **Automatic Parenthesis Stripping**: High-precision operator precedence utility that automatically cleans up redundant parentheses on transposition (e.g., `(x + 4) / 2 = 5` $\rightarrow$ `x + 4 = 5 * 2`) while strictly preserving necessary groupings.
-*   **Algebraic Distribution Engine**: Expands complex terms recursively via yellow reduction dots (e.g., expanding and folding `2 * (x + 3)` to `2 * x + 6`).
-*   **Interval Arithmetic Identity Validation**: Handwritten point evaluator plugging random coordinates into proposed states to assert equality under 10ms.
+Algebranch is free software, licensed under the **GNU General Public License v3.0 or later** (`GPL-3.0-or-later`). You may redistribute and/or modify it under the terms of that license; it is distributed in the hope that it will be useful, but **without any warranty**. See the [`LICENSE`](LICENSE) file for the full text, or <https://www.gnu.org/licenses/gpl-3.0.html>.

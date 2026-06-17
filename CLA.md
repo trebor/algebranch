@@ -117,6 +117,30 @@ third-party: [named here]".
 You agree to notify the Project Maintainer of any facts or circumstances of which
 You become aware that would make these representations inaccurate in any respect.
 
+### 8. AI-assisted Contributions
+
+You may develop Contributions with the assistance of artificial-intelligence
+tools (for example, code completion, code generation, or autonomous coding
+agents). Such tools are **instruments You use, not contributors to or parties to
+this Agreement**: they hold no rights in Your Contributions and grant none, and
+nothing in this Agreement is or can be "signed" or agreed to by such a tool. You
+remain fully responsible for every Contribution You submit, however it was
+produced.
+
+In particular, the representations in Section 4 apply in full to AI-assisted
+material. You represent that You are entitled to grant the licenses in this
+Agreement over the entire Contribution, that each Contribution is Your original
+creation, and that, to the best of Your knowledge, no part of it incorporates or
+infringes any third-party copyright, patent, trade secret, or other right —
+including material that an AI tool may have reproduced from other sources. Where
+You are aware of any such third-party material or restriction, You will identify
+it as required by Sections 4 and 6.
+
+Attribution metadata that names an AI tool (for example, a `Co-Authored-By`
+trailer naming an AI assistant) is **informational only**. It records how the
+work was produced and creates no rights, obligations, license grants, or
+signatures, and it does not relieve You of any representation in this Agreement.
+
 ---
 
 ## Corporate Contributor License Agreement (CCLA)
@@ -125,7 +149,7 @@ This Corporate CLA is for an entity (the "Corporation") that has assigned
 employees to contribute to the Project on its behalf. It allows the Corporation
 to make Contributions and to authorize designated employees to do so.
 
-The terms of Sections 1–7 of the Individual CLA above apply equally to the
+The terms of Sections 1–8 of the Individual CLA above apply equally to the
 Corporation, with the following additions:
 
 1. **"You"** in the Corporate context means the Corporation identified at signing,

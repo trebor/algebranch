@@ -38,4 +38,4 @@ jobs:
           custom-notsigned-prcomment: "Thank you for your contribution to Algebranch. Before it can be merged, please read our [Contributor License Agreement](https://github.com/trebor/algebranch/blob/main/CLA.md) and sign it by posting the following comment on this pull request:"
           custom-allsigned-prcomment: "All contributors have signed the CLA. ✍️ ✅"
           # Bots that never need to sign.
-          allowlist: dependabot[bot],github-actions[bot]
+          allowlist: trebor,dependabot[bot],github-actions[bot]

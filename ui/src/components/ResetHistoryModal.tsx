@@ -4,7 +4,7 @@
 'use client';
 
 import React from 'react';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, AlertTriangle, RotateCcw } from 'lucide-react';
 import {

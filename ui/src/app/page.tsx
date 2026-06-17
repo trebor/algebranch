@@ -7,7 +7,7 @@ import React from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
 import { Sidebar, SidebarContent, EquationLibraryContent } from '../components/Sidebar';
-import { ControlPanel, TimelineContent } from '../components/ControlPanel';
+import { ControlPanel } from '../components/ControlPanel';
 import { GraphPanel } from '../components/GraphPanel';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
@@ -29,7 +29,6 @@ import {
   hoverPathAtom,
   targetPathsAtom,
   reduciblePathsAtom,
-  hoverReducePathAtom,
   sourcePathAtom,
   syncMathStateAtom,
   clearMathStateAtom,
@@ -54,7 +53,6 @@ import {
   createNewSessionAtom,
   createSessionFromStateAtom,
   currentTabNameAtom,
-  deleteSessionAtom,
   deleteConfirmationModalOpenAtom,
   tabsAtom,
   activeTabIdAtom,
@@ -66,14 +64,13 @@ import {
   onboardingGlobalOpAtom,
   graphSizeAtom,
   previousGraphSizeAtom,
-  availableFactsAtom,
   settingsAtom,
 } from '../store/equation';
-import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
+import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, Menu, BookOpen, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
 import { parseEquation, equationToString, compressString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -161,9 +158,8 @@ const readWsParam = (search: string): string | null => {
 
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
-  const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
+  const [, setHoverPath] = useAtom(hoverPathAtom);
   const [targetPaths, setTargetPaths] = useAtom(targetPathsAtom);
-  const hoverReducePath = useAtomValue(hoverReducePathAtom);
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
   const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
   const [rightSidebarOpen, setRightSidebarOpen] = useAtom(rightSidebarOpenAtom);
@@ -185,7 +181,6 @@ export default function Home() {
   const setAppHydrated = useSetAtom(appHydratedAtom);
   const createNewSession = useSetAtom(createNewSessionAtom);
   const createSessionFromState = useSetAtom(createSessionFromStateAtom);
-  const deleteSession = useSetAtom(deleteSessionAtom);
   const setDeleteConfirmationModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
   const currentTabName = useAtomValue(currentTabNameAtom);
   const addTab = useSetAtom(addTabAtom);
@@ -202,7 +197,6 @@ export default function Home() {
   const swapSides = useSetAtom(swapSidesAtom);
   const [graphSize, setGraphSize] = useAtom(graphSizeAtom);
   const previousGraphSize = useAtomValue(previousGraphSizeAtom);
-  const availableFacts = useAtomValue(availableFactsAtom);
   const isMobile = useIsMobile();
   const equalsRef = React.useRef<HTMLSpanElement>(null);
   const lastEqStrRef = React.useRef<string | null>(null);
@@ -480,6 +474,11 @@ export default function Home() {
       console.error('Failed to save history to local storage:', err);
     }
 
+    // Intentionally fires only on content changes (tree/node/session/name).
+    // `tabs`/`activeTabId` are read only to gate whether to persist, and
+    // `savedSessions` is *written* by this effect — including them would
+    // re-fire on its own output and risk a save loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree, currentNodeId, currentSessionId, setSavedSessions, currentTabName]);
 
 
@@ -564,7 +563,7 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, [currentEq, sourcePath, syncMathState, clearMathState, setTargetPaths]);
+  }, [currentEq, sourcePath, syncMathState, clearMathState, setTargetPaths, setMathLoading]);
 
   // Keyboard Shortcuts (Issue #17)
   useKeyboardShortcuts([

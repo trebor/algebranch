@@ -53,7 +53,7 @@ export const GraphPanel: React.FC = () => {
   const eq = useAtomValue(currentEquationAtom);
   const graphData = useAtomValue(graphDataAtom);
   const graphSize = useAtomValue(graphSizeAtom);
-  const [customViewport, setCustomViewport] = useAtom(customViewportAtom);
+  const [, setCustomViewport] = useAtom(customViewportAtom);
   
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = React.useState({ width: 360, height: 260 });

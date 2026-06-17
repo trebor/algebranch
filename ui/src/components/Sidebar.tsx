@@ -11,8 +11,6 @@ import { Tooltip } from './Tooltip';
 import { TooltipCard } from './TooltipCard';
 import { Equation, parseEquation, ensureNodeIds, deserializeEquation } from 'math-engine-client';
 import {
-  currentEquationAtom,
-  pushEquationAtom,
   resetToEquationStringAtom,
   savedSessionsAtom,
   currentSessionIdAtom,
@@ -20,14 +18,13 @@ import {
   presetCategoriesAtom,
   presetSearchQueryAtom,
   leftSidebarOpenAtom,
-  deleteConfirmationModalOpenAtom,
   equationInputModalOpenAtom,
   onboardingShowDirectoryAtom,
   SavedSession,
 } from '../store/equation';
-import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
+import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
-import { Terminal, ShieldAlert, Plus, Minus, X, Percent, Play, Sparkles, Trash2, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Triangle, Activity, BookOpen, Library, LayoutGrid, PenTool, Search } from 'lucide-react';
+import { ShieldAlert, X, Percent, Play, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Triangle, Activity, BookOpen, Library, LayoutGrid, PenTool, Search } from 'lucide-react';
 
 const getCategoryIcon = (category: string) => {
   switch (category) {
@@ -68,14 +65,12 @@ interface SidebarContentProps {
 export const SidebarContent: React.FC<SidebarContentProps> = ({
   onCloseMobile,
 }) => {
-  const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
-  const resetToEquation = useSetAtom(resetToEquationStringAtom);
+  const [, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
 
   const savedSessions = useAtomValue(savedSessionsAtom);
   const currentSessionId = useAtomValue(currentSessionIdAtom);
   const currentSession = savedSessions.find(s => s.id === currentSessionId);
   const loadSession = useSetAtom(loadSessionAtom);
-  const setDeleteModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
 
   const setIsInputModalOpen = useSetAtom(equationInputModalOpenAtom);
   const setOnboardingShowDirectory = useSetAtom(onboardingShowDirectoryAtom);
@@ -366,7 +361,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
   onCloseMobile,
   showHeader = false,
 }) => {
-  const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
+  const [, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
   const resetToEquation = useSetAtom(resetToEquationStringAtom);
   const presetCategories = useAtomValue(presetCategoriesAtom);
   const [searchQuery, setSearchQuery] = useAtom(presetSearchQueryAtom);

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { Plus, X, Layers, Pencil } from 'lucide-react';
 import {
   tabsAtom,
@@ -12,7 +12,6 @@ import {
   equationInputModalOpenAtom,
   WorkspaceTab
 } from '../store/equation';
-import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
 import { TooltipCard } from './TooltipCard';
 
@@ -27,7 +26,7 @@ const formatTimestamp = (ts: number): string => {
 };
 
 export const WorkspaceTabs: React.FC = () => {
-  const [tabs, setTabs] = useAtom(tabsAtom);
+  const [tabs] = useAtom(tabsAtom);
   const [activeTabId, setActiveTabId] = useAtom(activeTabIdAtom);
   const [, closeTab] = useAtom(closeTabAtom);
   const [, renameTab] = useAtom(renameTabAtom);

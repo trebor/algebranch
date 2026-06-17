@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Robert Harris
 name: "CLA Assistant"
 
 # Self-hosted CLA gate (CLA Assistant Lite). Signatures are stored in this repo

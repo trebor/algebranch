@@ -159,7 +159,16 @@ export const EquationInputModal: React.FC = () => {
       }
       return;
     }
-    handleRelationKey(e);
+    
+    if (e.key === '=' || e.key === '<' || e.key === '>') {
+      e.preventDefault();
+      setRelation(e.key as RelationOperator);
+      lhsRef.current?.focus();
+      if (lhsRef.current) {
+        const len = lhsStr.length;
+        lhsRef.current.setSelectionRange(len, len);
+      }
+    }
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {

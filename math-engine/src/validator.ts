@@ -226,15 +226,28 @@ export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>
     const opNode = node as math.OperatorNode;
     const args = opNode.args.map((arg) => evaluatePoint(arg, scope));
     if (opNode.isUnary()) {
-      if (opNode.op === '-') return math.unaryMinus(args[0]) as any;
+      // Native fast path: the dominant case is a plain real operand. Falling
+      // through to mathjs only for Complex values avoids typed-function dispatch
+      // and complex coercion on every node (the hot path, #144).
+      if (opNode.op === '-') {
+        return typeof args[0] === 'number' ? -args[0] : (math.unaryMinus(args[0]) as any);
+      }
       if (opNode.op === '+') return args[0];
     } else {
       const [left, right] = args;
-      if (opNode.op === '+') return math.add(left, right) as any;
-      if (opNode.op === '-') return math.subtract(left, right) as any;
-      if (opNode.op === '*') return math.multiply(left, right) as any;
-      if (opNode.op === '/') return math.divide(left, right) as any;
-      if (opNode.op === '^') return math.pow(left, right) as any;
+      const bothReal = typeof left === 'number' && typeof right === 'number';
+      if (opNode.op === '+') return bothReal ? left + right : (math.add(left, right) as any);
+      if (opNode.op === '-') return bothReal ? left - right : (math.subtract(left, right) as any);
+      if (opNode.op === '*') return bothReal ? left * right : (math.multiply(left, right) as any);
+      if (opNode.op === '/') return bothReal ? left / right : (math.divide(left, right) as any);
+      if (opNode.op === '^') {
+        // A negative base raised to a non-integer power is genuinely complex
+        // (mathjs returns the principal root); only then defer to mathjs.
+        if (bothReal && (left >= 0 || Number.isInteger(right))) {
+          return Math.pow(left, right);
+        }
+        return math.pow(left, right) as any;
+      }
     }
   }
   if (node.type === 'FunctionNode') {
@@ -242,7 +255,13 @@ export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>
     const args = funcNode.args.map((arg) => evaluatePoint(arg, scope));
     const nameStr = getFunctionName(funcNode);
 
-    if (nameStr === 'sqrt') return math.sqrt(args[0]) as any;
+    if (nameStr === 'sqrt') {
+      // Native fast path for the common non-negative-real case; mathjs handles
+      // sqrt of a negative (→ Complex) and any already-complex argument.
+      return typeof args[0] === 'number' && args[0] >= 0
+        ? Math.sqrt(args[0])
+        : (math.sqrt(args[0]) as any);
+    }
     if (nameStr === 'nthRoot') {
       const base = args[0];
       const degree = args[1] !== undefined ? args[1] : 2;
@@ -264,6 +283,20 @@ export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>
 };
 
 /**
+ * Native-number fast paths for the numeric hot loops (#144). mathjs's `math.*`
+ * functions run full typed-function type-resolution (isComplex / isFraction /
+ * isMatrix / …) on every call; for the overwhelmingly common real-number case
+ * that dispatch overhead dwarfs the arithmetic itself. These helpers use native
+ * ops when both operands are plain numbers and defer to mathjs only when a
+ * Complex (or other non-number) value is actually in play, preserving the exact
+ * results the equivalence checker depends on.
+ */
+const addV = (a: any, b: any): any => (typeof a === 'number' && typeof b === 'number' ? a + b : (math.add(a, b) as any));
+const subV = (a: any, b: any): any => (typeof a === 'number' && typeof b === 'number' ? a - b : (math.subtract(a, b) as any));
+const divV = (a: any, b: any): any => (typeof a === 'number' && typeof b === 'number' ? a / b : (math.divide(a, b) as any));
+const absNum = (a: any): number => (typeof a === 'number' ? Math.abs(a) : Number(math.abs(a)));
+
+/**
  * Numerically solves LHS - RHS = 0 for a specific variable using Newton-Raphson.
  * Returns the root value or null if it fails to converge.
  */
@@ -276,7 +309,7 @@ export const solveForVariable = (
 ): any | null => {
   const f = (x: any): any => {
     const localScope = { ...scope, [solveVar]: x };
-    return math.subtract(evaluatePoint(nodeLHS, localScope), evaluatePoint(nodeRHS, localScope));
+    return subV(evaluatePoint(nodeLHS, localScope), evaluatePoint(nodeRHS, localScope));
   };
 
   let x: any = initialGuess; // Initial guess
@@ -289,18 +322,18 @@ export const solveForVariable = (
     if (isValNaN(y) || !isValFinite(y)) {
       return null;
     }
-    if (Number(math.abs(y)) < tolerance) {
+    if (absNum(y) < tolerance) {
       return x;
     }
-    const dy = math.divide(math.subtract(f(math.add(x, h)), f(math.subtract(x, h))), 2 * h);
-    if (Number(math.abs(dy)) < 1e-12) {
-      x = math.add(x, 1.5); // Shift guess if derivative is zero
+    const dy = divV(subV(f(addV(x, h)), f(subV(x, h))), 2 * h);
+    if (absNum(dy) < 1e-12) {
+      x = addV(x, 1.5); // Shift guess if derivative is zero
       continue;
     }
-    x = math.subtract(x, math.divide(y, dy));
+    x = subV(x, divV(y, dy));
   }
 
-  if (Number(math.abs(f(x))) < 1e-7) {
+  if (absNum(f(x)) < 1e-7) {
     return x;
   }
   return null;
@@ -338,8 +371,8 @@ export const isEquationSatisfiedAtRoot = (
         }
         hasCheckedAnyRoot = true;
         const localScope = { ...scope, [solveVar]: root };
-        const dTarget = math.subtract(evaluatePoint(eqTarget.lhs, localScope), evaluatePoint(eqTarget.rhs, localScope));
-        if (isValNaN(dTarget) || !isValFinite(dTarget) || Number(math.abs(dTarget)) > 1e-5) {
+        const dTarget = subV(evaluatePoint(eqTarget.lhs, localScope), evaluatePoint(eqTarget.rhs, localScope));
+        if (isValNaN(dTarget) || !isValFinite(dTarget) || absNum(dTarget) > 1e-5) {
           return false;
         }
       }
@@ -348,12 +381,12 @@ export const isEquationSatisfiedAtRoot = (
 
   if (!hasCheckedAnyRoot) {
     // Fallback for constant equations or equations with no real roots on the domain
-    const d1 = math.subtract(evaluatePoint(eqSource.lhs, scope), evaluatePoint(eqSource.rhs, scope));
-    const d2 = math.subtract(evaluatePoint(eqTarget.lhs, scope), evaluatePoint(eqTarget.rhs, scope));
+    const d1 = subV(evaluatePoint(eqSource.lhs, scope), evaluatePoint(eqSource.rhs, scope));
+    const d2 = subV(evaluatePoint(eqTarget.lhs, scope), evaluatePoint(eqTarget.rhs, scope));
     if (isValNaN(d1) || isValNaN(d2) || !isValFinite(d1) || !isValFinite(d2)) {
       return false;
     }
-    return Number(math.abs(math.subtract(d1, d2))) <= POINT_TOLERANCE;
+    return absNum(subV(d1, d2)) <= POINT_TOLERANCE;
   }
 
   return true;
@@ -442,8 +475,8 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
       for (const solveVar of variables) {
         for (const root of roots1[solveVar]) {
           const localScope = { ...scope, [solveVar]: root };
-          const dTarget = math.subtract(evaluatePoint(eq2.lhs, localScope), evaluatePoint(eq2.rhs, localScope));
-          if (isValNaN(dTarget) || !isValFinite(dTarget) || Number(math.abs(dTarget)) > 1e-5) {
+          const dTarget = subV(evaluatePoint(eq2.lhs, localScope), evaluatePoint(eq2.rhs, localScope));
+          if (isValNaN(dTarget) || !isValFinite(dTarget) || absNum(dTarget) > 1e-5) {
             return false;
           }
         }
@@ -453,8 +486,8 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
       for (const solveVar of variables) {
         for (const root of roots2[solveVar]) {
           const localScope = { ...scope, [solveVar]: root };
-          const dTarget = math.subtract(evaluatePoint(eq1.lhs, localScope), evaluatePoint(eq1.rhs, localScope));
-          if (isValNaN(dTarget) || !isValFinite(dTarget) || Number(math.abs(dTarget)) > 1e-5) {
+          const dTarget = subV(evaluatePoint(eq1.lhs, localScope), evaluatePoint(eq1.rhs, localScope));
+          if (isValNaN(dTarget) || !isValFinite(dTarget) || absNum(dTarget) > 1e-5) {
             return false;
           }
         }
@@ -470,12 +503,12 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
       }
 
       if (!hasCheckedAnyRoot) {
-        const d1 = math.subtract(evaluatePoint(eq1.lhs, scope), evaluatePoint(eq1.rhs, scope));
-        const d2 = math.subtract(evaluatePoint(eq2.lhs, scope), evaluatePoint(eq2.rhs, scope));
+        const d1 = subV(evaluatePoint(eq1.lhs, scope), evaluatePoint(eq1.rhs, scope));
+        const d2 = subV(evaluatePoint(eq2.lhs, scope), evaluatePoint(eq2.rhs, scope));
         if (isValNaN(d1) || isValNaN(d2) || !isValFinite(d1) || !isValFinite(d2)) {
           return false;
         }
-        if (Number(math.abs(math.subtract(d1, d2))) > POINT_TOLERANCE) {
+        if (absNum(subV(d1, d2)) > POINT_TOLERANCE) {
           return false;
         }
       }

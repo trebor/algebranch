@@ -869,7 +869,7 @@
             font-weight="${fontWeight}" 
             fill="${textColor}" 
             text-anchor="middle" 
-            dominant-baseline="central">${n.label}</text>\n`;
+            dominant-baseline="alphabetic">${n.label}</text>\n`;
       });
 
       let guideMarkup = "";
@@ -909,7 +909,7 @@
       offscreenCtx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
       offscreenCtx.fillStyle = '#000000';
       offscreenCtx.textAlign = 'center';
-      offscreenCtx.textBaseline = 'middle';
+      offscreenCtx.textBaseline = 'alphabetic';
       
       const drawX = W / 2;
       const drawY = H / 2;

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/trebor/algebranch/security/advisories/new
+    about: Please report security issues privately, not as public issues. See SECURITY.md.
+  - name: In-app feedback
+    url: https://algebranch.org
+    about: You can also send feedback or report a bug from inside the app via the Feedback button.

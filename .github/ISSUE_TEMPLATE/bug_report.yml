@@ -1,0 +1,64 @@
+name: Bug report
+description: Report something that is broken or behaving incorrectly
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug! Please search existing issues
+        first to avoid duplicates. For security vulnerabilities, **do not** open
+        a public issue — see [SECURITY.md](https://github.com/trebor/algebranch/blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+      placeholder: When I do X, Y happens, but I expected Z.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: |
+        Exact steps so we can see it too. A share link or `?eq=` deep link that
+        reproduces the issue is the fastest way to get a fix.
+      placeholder: |
+        1. Open https://… (or ?eq=x^2-9=0)
+        2. Click the term '…'
+        3. See the error
+    validations:
+      required: true
+  - type: input
+    id: share-link
+    attributes:
+      label: Share link / equation
+      description: A `?eq=` or share-menu link that reproduces the problem, if applicable.
+      placeholder: https://…/?eq=x%5E2-9%3D0
+    validations:
+      required: false
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device type
+      options:
+        - Desktop
+        - Mobile
+        - Tablet
+    validations:
+      required: false
+  - type: input
+    id: environment
+    attributes:
+      label: Browser & OS
+      placeholder: e.g. Chrome 130 on macOS 15, Safari on iOS 18
+    validations:
+      required: false
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or extra context
+      description: Drag images here, or add anything else that helps.
+    validations:
+      required: false

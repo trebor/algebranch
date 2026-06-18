@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a new capability or an improvement
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! Please search existing issues first — there may
+        already be a discussion you can add to.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: The motivation or use case. What are you trying to do that is hard or impossible today?
+      placeholder: As a learner, I want to … so that …
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How you imagine it working. Sketches, examples, or example equations are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about, and why they fall short.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of Algebranch does this touch?
+      options:
+        - Math engine (transformations, correctness)
+        - UI / interaction
+        - Equation library
+        - Graphing
+        - Onboarding / docs
+        - Other / not sure
+    validations:
+      required: false

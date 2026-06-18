@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Robert Harris
+name: CI
+
+# Pre-merge validation gate: lint -> type-check -> test -> build.
+# Mirrors the local gate every agent runs before merging (see AGENTS.md /
+# rules.md). Runs on PRs into main and on pushes to main (post-merge safety).
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same ref so only the latest commit is gated.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `npm ci` runs the root `prepare` script, which builds the math-engine
+      # workspace the UI consumes — so the steps below see a ready dist.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npm run type-check
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

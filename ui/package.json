@@ -8,7 +8,8 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --max-warnings 0"
+    "lint": "eslint --max-warnings 0",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "framer-motion": "^12.40.0",

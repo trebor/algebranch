@@ -15,12 +15,12 @@ Shared instructions for all coding agents (Claude Code, Antigravity, etc.) worki
 - **Picking work**: Pick next work by priority, highest first, among `Planned` items. Read the board status with:
 
   ```sh
-  gh project item-list 6 --owner trebor --format json --limit 50 \
+  gh project item-list 6 --owner trebor --format json --limit 500 \
     | jq -r '.items[] | [(.content.number//"-"), (.status//"-"), (.priority//"-"), (.content.title//.title)] | @tsv' \
     | sort -k3
   ```
 
-  `gh issue list` shows the same issues without the priority/status ordering.
+  `gh issue list` shows the same issues without the priority/status ordering. **Always pass a large `--limit` (e.g. `--limit 500`) to `gh issue list` / `gh project item-list` when searching or enumerating** — both default to only 30 results and will silently truncate the ~100-issue backlog, so a search can "succeed" while missing real items.
 - **How, design rationale, where-I-left-off**: Linked/written in the active GitHub issue. 
   - On startup: Read the plan using `gh issue view <issue_number>`.
   - On shutdown/handoff: Update the issue description or post a comment with completed steps, details, and next tasks so the next agent can resume cold.

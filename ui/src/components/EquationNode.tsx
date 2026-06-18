@@ -1266,7 +1266,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 {previewOption ? (
                   renderEquationPreviewRow(previewOption.equation, false)
                 ) : (
-                  <span className={`text-[10px] italic select-none ${THEME_GLASS.TEXT_MUTED}`}>Hover an option to preview</span>
+                  <span className={`text-sm italic select-none ${THEME_GLASS.TEXT_MUTED}`}>Hover an option to preview</span>
                 )}
               </ScaledEquationFit>
             );

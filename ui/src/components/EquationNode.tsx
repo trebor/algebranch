@@ -50,8 +50,11 @@ interface UnifiedStackOption {
 }
 
 // Floor below which an equation preview stops shrinking and scrolls instead, so a
-// pathologically wide equation never becomes unreadably small.
-const PREVIEW_MIN_SCALE = 0.6;
+// pathologically wide equation never becomes unreadably small. Matches the global
+// useMathScale floor (0.4) so a wide preview — e.g. the quadratic formula as a
+// substitution — scales down to fit the popup rather than clamping early and
+// spilling off the right edge.
+const PREVIEW_MIN_SCALE = 0.4;
 
 const renderEquationPreviewRow = (eq: Equation, muted: boolean) => (
   <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
@@ -1251,7 +1254,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 ))}
               </div>
             );
-            const previewEl = (
+            const previewEl = previewOption ? (
               <ScaledEquationFit
                 key={`${path}:${openMenuType}`}
                 measureEq={stack.options[0]?.equation ?? null}
@@ -1263,12 +1266,19 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   </div>
                 ))}
               >
-                {previewOption ? (
-                  renderEquationPreviewRow(previewOption.equation, false)
-                ) : (
-                  <span className={`text-sm italic select-none ${THEME_GLASS.TEXT_MUTED}`}>Hover an option to preview</span>
-                )}
+                {renderEquationPreviewRow(previewOption.equation, false)}
               </ScaledEquationFit>
+            ) : (
+              // The empty-state hint centers in the popup, NOT inside the scaled
+              // equation grid — that grid is min-w-max (sized to the widest option),
+              // so a wide option would push the hint off-center and clip it (the
+              // overflow viewport pins the oversized track left). A plain full-width
+              // flex keeps it dead-centered regardless of option width. Width stays
+              // stable on hover because the equation's container never grows the
+              // popup (overflow-x-auto), so swapping in the equation doesn't reflow.
+              <div className="w-full flex items-center justify-center py-3 px-1.5">
+                <span className={`text-sm italic select-none ${THEME_GLASS.TEXT_MUTED}`}>Hover an option to preview</span>
+              </div>
             );
 
             // Keep the interactive rows nearest the handle so the cursor lands on

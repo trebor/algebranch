@@ -7,7 +7,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Tooltip } from './Tooltip';
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
 import {
   sourcePathAtom,
   hoverPathAtom,

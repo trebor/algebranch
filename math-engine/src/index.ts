@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
+import { mjs } from './mathjs';
 import { Equation, RelationOperator, ensureNodeIds } from './tree';
 
 // Matches a single relational operator. Two-character operators are listed first
 // so `<=`/`>=` win over a bare `<`/`>`/`=` at the same position.
 const RELATION_REGEX = /<=|>=|<|>|=/g;
 
+export * from './mathjs';
 export * from './interval';
 export * from './tree';
 export * from './validator';
@@ -45,8 +47,8 @@ export const parseEquation = (eqStr: string): Equation => {
   }
 
   const eq = {
-    lhs: math.parse(lhsStr),
-    rhs: math.parse(rhsStr),
+    lhs: mjs.parse(lhsStr),
+    rhs: mjs.parse(rhsStr),
     relation,
   };
 

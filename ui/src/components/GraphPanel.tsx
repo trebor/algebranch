@@ -9,7 +9,7 @@ import { currentEquationAtom, graphDataAtom, graphSizeAtom, customViewportAtom }
 import { THEME_GLASS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
 import { evaluatePoint, formatNumber } from 'math-engine';
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
 
 const GRAPH_BACKGROUND_COLOR = '#050508';
 

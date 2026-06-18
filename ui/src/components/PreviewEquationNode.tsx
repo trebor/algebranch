@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useAtomValue } from 'jotai';
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
 import { currentEquationAtom } from '../store/equation';
 import { Equation, getNodeByPath, getFunctionName, formatNumber } from 'math-engine-client';
 import { OPERATOR_DISPLAY, symbolToGlyph } from '../constants/mathSymbols';

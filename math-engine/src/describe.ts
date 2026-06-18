@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
+import { mjs } from './mathjs';
 import { Equation, getNodeByPath, replaceNodeAtPath } from './tree';
 import { ReductionOption, isConstantSubtree } from './simplify';
 import { GlobalOpParams } from './globalOps';
@@ -465,7 +466,7 @@ export const describeGlobalOp = (params: GlobalOpParams): StepChange => {
       // 'div' — dividing both sides by a variable expression assumes it ≠ 0 (#63).
       let isVariableDivisor = false;
       try {
-        isVariableDivisor = !isConstantSubtree(math.parse(operand));
+        isVariableDivisor = !isConstantSubtree(mjs.parse(operand));
       } catch {
         /* unparseable operand → no assumption */
       }

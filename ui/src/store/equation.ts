@@ -6,7 +6,8 @@ import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPat
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
 import { applyGlobalOp, GlobalOpParams, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
+import { mjs } from 'math-engine';
 import { Preset, PRESET_LIST } from '../constants/presets';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
@@ -742,18 +743,18 @@ const normalizeAST = (node: math.MathNode): math.MathNode => {
       // Commutative sorting of arguments based on their string representation
       normalizedArgs.sort((a, b) => a.toString().localeCompare(b.toString()));
     }
-    return new math.OperatorNode(opNode.op, opNode.fn, normalizedArgs);
+    return new mjs.OperatorNode(opNode.op, opNode.fn, normalizedArgs);
   }
 
   if (node.type === 'ParenthesisNode') {
     const parenNode = node as math.ParenthesisNode;
-    return new math.ParenthesisNode(normalizeAST(parenNode.content));
+    return new mjs.ParenthesisNode(normalizeAST(parenNode.content));
   }
 
   if (node.type === 'FunctionNode') {
     const fnNode = node as math.FunctionNode;
     const normalizedArgs = fnNode.args.map(arg => normalizeAST(arg));
-    return new math.FunctionNode(getFunctionName(fnNode), normalizedArgs);
+    return new mjs.FunctionNode(getFunctionName(fnNode), normalizedArgs);
   }
 
   return node;
@@ -1179,7 +1180,7 @@ export const toggleRootSignAtom = atom(
       ) {
         nextNode = (targetNode as math.OperatorNode).args[0];
       } else {
-        nextNode = new math.OperatorNode('-', 'subtract', [targetNode]);
+        nextNode = new mjs.OperatorNode('-', 'subtract', [targetNode]);
       }
 
       const nextEq = replaceNodeAtPath(currentEq, path, nextNode);

@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useAtomValue } from 'jotai';
-import * as math from 'mathjs';
+import { mjs } from 'math-engine';
 import { Replace } from 'lucide-react';
 import { availableFactsAtom, onboardingChapterIdAtom, graphSizeAtom } from '../store/equation';
 import { equationToString } from 'math-engine-client';
@@ -40,7 +40,7 @@ export const FactsStrip: React.FC = () => {
       </span>
       <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none min-w-0 py-0.5">
       {facts.map((fact, i) => {
-        const factEq = { lhs: new math.SymbolNode(fact.variable), rhs: fact.expression };
+        const factEq = { lhs: new mjs.SymbolNode(fact.variable), rhs: fact.expression };
         const eqStr = equationToString(factEq);
         // Tabs are often auto-named with their equation; showing "y = 2x · y = 2x"
         // is noise — only attribute the source when it adds information.

@@ -51,7 +51,7 @@ export const THEME_GLASS = {
   // Buttons
   BUTTON_PRIMARY: 'bg-indigo-600/95 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/10 border border-indigo-400/20 active:scale-95 transition-all duration-150 cursor-pointer',
   BUTTON_SECONDARY: 'bg-neutral-900 border border-white/10 hover:bg-neutral-800 hover:border-white/20 text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer',
-  BUTTON_SECONDARY_ACCENT: 'bg-indigo-950/45 hover:bg-indigo-900/50 border border-indigo-500/25 hover:border-indigo-400/35 text-indigo-300 hover:text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer',
+  BUTTON_SECONDARY_ACCENT: 'bg-indigo-900/40 hover:bg-indigo-800/50 border border-indigo-500/30 hover:border-indigo-400/40 text-indigo-200 hover:text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer',
   BUTTON_SECONDARY_MUTED: 'bg-neutral-950 border border-white/5 rounded-xl text-white/30 transition-all duration-150 cursor-not-allowed',
   BUTTON_DANGER: 'bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 transition-all duration-150 cursor-pointer',
 

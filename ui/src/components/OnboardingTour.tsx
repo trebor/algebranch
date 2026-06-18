@@ -520,7 +520,7 @@ export const OnboardingTour: React.FC = () => {
                 <div className="flex items-center justify-between gap-2.5 w-full">
                   <button
                     onClick={handleAllChapters}
-                    className={`flex-1 h-8 px-3 text-[11px] font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
+                    className={`flex-1 h-8 px-2 text-[11px] font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
                   >
                     <BookOpen size={12} className="shrink-0" />
                     <span>All Chapters</span>
@@ -528,7 +528,7 @@ export const OnboardingTour: React.FC = () => {
                   {nextChapter && (
                     <button
                       onClick={handleFinish}
-                      className={`flex-1 h-8 px-3 text-[11px] font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
+                      className={`flex-1 h-8 px-2 text-[11px] font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
                     >
                       <Play size={12} className="shrink-0" />
                       <span>Explore Freely</span>

@@ -402,6 +402,9 @@
         <label for="rL2">Level 2 Radius (px) <span class="val" id="rL2Val">36</span></label>
         <input type="range" id="rL2" min="10" max="50" step="1" value="36">
         
+        <label for="textScale">Text Scale Factor <span class="val" id="textScaleVal">1.33</span></label>
+        <input type="range" id="textScale" min="0.50" max="1.50" step="0.01" value="1.33">
+        
         <div class="presets-row" style="margin-top: 0.25rem;">
           <button class="preset-chip" onclick="setCircleSizes(34, 26, 22)">Compact</button>
           <button class="preset-chip" onclick="setCircleSizes(40, 32, 26)">Medium</button>
@@ -453,6 +456,7 @@
     const rRootSlider = document.getElementById('rRoot');
     const rL1Slider = document.getElementById('rL1');
     const rL2Slider = document.getElementById('rL2');
+    const textScaleSlider = document.getElementById('textScale');
     const svgContainer = document.getElementById('svgContainer');
     const toast = document.getElementById('toast');
 
@@ -581,6 +585,7 @@
       const scurveFactor = parseFloat(sCurveFactorSlider.value);
       const angleDev = parseInt(departureAngleSlider.value);
       
+      const textScale = parseFloat(textScaleSlider.value);
       const rRoot = parseInt(rRootSlider.value);
       const rL1 = parseInt(rL1Slider.value);
       const rL2 = parseInt(rL2Slider.value);
@@ -864,7 +869,7 @@
       <circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="${strokeW}" ${filterStr} />
       <text x="${n.x}" y="${n.y}" data-cx="${n.x}" data-cy="${n.y}" 
             font-family="${fontFamily}" 
-            font-size="${n.r * 1.0}" 
+            font-size="${n.r * textScale}" 
             ${fontStyle}
             font-weight="${fontWeight}" 
             fill="${textColor}" 
@@ -1004,6 +1009,7 @@
       document.getElementById('rRootVal').innerText = rRootSlider.value;
       document.getElementById('rL1Val').innerText = rL1Slider.value;
       document.getElementById('rL2Val').innerText = rL2Slider.value;
+      document.getElementById('textScaleVal').innerText = textScaleSlider.value;
     }
 
     // Set presets helper
@@ -1059,6 +1065,7 @@
         rRoot: parseInt(rRootSlider.value),
         rL1: parseInt(rL1Slider.value),
         rL2: parseInt(rL2Slider.value),
+        textScale: parseFloat(textScaleSlider.value),
         theme: activeTheme
       };
       
@@ -1112,7 +1119,7 @@
     }
 
     // Setup input listeners
-    [eqInput, scaleFactorSlider, marginSizeSlider, sCurveFactorSlider, departureAngleSlider, rRootSlider, rL1Slider, rL2Slider].forEach(el => {
+    [eqInput, scaleFactorSlider, marginSizeSlider, sCurveFactorSlider, departureAngleSlider, rRootSlider, rL1Slider, rL2Slider, textScaleSlider].forEach(el => {
       el.addEventListener('input', updatePreview);
     });
     document.getElementById('showCircleGuide').addEventListener('change', updatePreview);
@@ -1129,6 +1136,8 @@
     }
     const scaleParam = urlParams.get('scale');
     if (scaleParam) scaleFactorSlider.value = scaleParam;
+    const textScaleParam = urlParams.get('textscale');
+    if (textScaleParam) textScaleSlider.value = textScaleParam;
     const marginParam = urlParams.get('margin');
     if (marginParam) marginSizeSlider.value = marginParam;
     const scurveParam = urlParams.get('scurve');

@@ -301,7 +301,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
   return (
     <div
       data-flip-id={nodeId}
-      className="relative inline-flex items-center justify-center p-[0.2em] border border-white/5 bg-white/0 rounded-[0.4em]"
+      className="relative inline-flex items-center justify-center"
     >
       {renderContent()}
     </div>

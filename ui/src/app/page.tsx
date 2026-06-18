@@ -4,6 +4,7 @@
 'use client';
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
 import { Sidebar, SidebarContent, EquationLibraryContent } from '../components/Sidebar';
@@ -111,6 +112,14 @@ const safeLocalStorage = {
   }
 };
 
+// Layout effect on the client, plain effect on the server — avoids the SSR
+// useLayoutEffect warning while still measuring before paint in the browser.
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
+
+// Gap (px) between the = sign and the portaled idle-hint popover. Matches the
+// old `mb-3` (0.75rem) spacing now that positioning is computed, not class-based.
+const EQUALS_POPOVER_GAP = 12;
+
 interface MiniPetalInfo {
   readonly char: string;
   readonly x: number;
@@ -202,17 +211,63 @@ export default function Home() {
   const isGraphViable = useAtomValue(isGraphViableAtom);
   const isMobile = useIsMobile();
   const equalsRef = React.useRef<HTMLSpanElement>(null);
+  const equalsPopoverRef = React.useRef<HTMLDivElement>(null);
   const lastEqStrRef = React.useRef<string | null>(null);
 
   const [settings, setSettings] = useAtom(settingsAtom);
   const [showEqualsPopover, setShowEqualsPopover] = React.useState(false);
+  // Fixed-viewport coords for the portaled idle-hint popover (#172). null until
+  // measured, so we can hide it (opacity 0) for the first frame to avoid a flash
+  // at (0,0). `placement` flips above→below when there isn't room overhead.
+  const [equalsPopoverPos, setEqualsPopoverPos] = React.useState<
+    { top: number; left: number } | null
+  >(null);
   const showIdleHint = !equalsLocked && !radialMenuOpen && !settings.seenEqualsHint;
+  const isEqualsPopoverOpen = showIdleHint && showEqualsPopover;
 
   // Permanently dismiss the equals-sign idle hint once the user interacts with it.
   const dismissEqualsHint = React.useCallback(() => {
     setShowEqualsPopover(false);
     setSettings((prev) => (prev.seenEqualsHint ? prev : { ...prev, seenEqualsHint: true }));
   }, [setSettings]);
+
+  // Position the portaled idle-hint popover relative to the = sign. Because it
+  // now lives on <body> (escaping the overflow-clipped/scaled equation canvas),
+  // its coords are computed from the trigger rect and kept in sync on scroll /
+  // resize. Clamp horizontally to the viewport; flip below the sign when there
+  // isn't room above. Mirrors the Tooltip portal's positioning approach.
+  useIsomorphicLayoutEffect(() => {
+    if (!isEqualsPopoverOpen) {
+      setEqualsPopoverPos(null);
+      return;
+    }
+    const compute = () => {
+      const anchor = equalsRef.current;
+      const popover = equalsPopoverRef.current;
+      if (!anchor) return;
+      const a = anchor.getBoundingClientRect();
+      const popW = popover?.offsetWidth ?? 192; // w-48 fallback before first measure
+      const popH = popover?.offsetHeight ?? 160;
+      // Horizontal: centre on the = sign, clamped 8px inside each viewport edge.
+      const centerX = a.left + a.width / 2;
+      const halfW = popW / 2;
+      const left = Math.max(halfW + 8, Math.min(centerX, window.innerWidth - halfW - 8));
+      // Vertical: prefer above the sign; fall back to below when it won't fit;
+      // then clamp the box fully on-screen so it can never run off the top/bottom
+      // (the extreme short-landscape case in #172's verify viewport).
+      const fitsAbove = a.top - EQUALS_POPOVER_GAP - popH >= 8;
+      const rawTop = fitsAbove ? a.top - EQUALS_POPOVER_GAP - popH : a.bottom + EQUALS_POPOVER_GAP;
+      const top = Math.max(8, Math.min(rawTop, window.innerHeight - popH - 8));
+      setEqualsPopoverPos({ left, top });
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    window.addEventListener('scroll', compute, true);
+    return () => {
+      window.removeEventListener('resize', compute);
+      window.removeEventListener('scroll', compute, true);
+    };
+  }, [isEqualsPopoverOpen]);
 
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
   // Destructure so the ref-typed members (containerRef/contentRef) are kept
@@ -1064,9 +1119,18 @@ export default function Home() {
                             ?
                           </button>
                         )}
-                        {showIdleHint && showEqualsPopover && (
-                          <span
+                        {isEqualsPopoverOpen && typeof document !== 'undefined' && createPortal(
+                          <div
+                            ref={equalsPopoverRef}
                             onClick={(e) => e.stopPropagation()}
+                            style={{
+                              position: 'fixed',
+                              left: `${equalsPopoverPos?.left ?? 0}px`,
+                              top: `${equalsPopoverPos?.top ?? 0}px`,
+                              transform: 'translateX(-50%)',
+                              opacity: equalsPopoverPos ? 1 : 0,
+                              zIndex: 9999, // above all in-canvas content (#172)
+                            }}
                             className={THEME_GLASS.EQUALS_POPOVER}
                           >
                             {/* Mini Radial Menu Preview */}
@@ -1108,7 +1172,8 @@ export default function Home() {
                             >
                               Got it
                             </button>
-                          </span>
+                          </div>,
+                          document.body
                         )}
                         {!!onboardingChapterId && onboardingGlobalOp && (
                           <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />

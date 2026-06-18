@@ -21,7 +21,8 @@ import {
   clearOnboardingStep,
   syncTourToActiveTabAtom,
   activeTabIdAtom,
-  tabsAtom
+  tabsAtom,
+  onboardingCompletedAtom
 } from '../store/equation';
 import { equationToString } from 'math-engine-client';
 import { prefetchChapterScans } from '../utils/mathScan';
@@ -95,6 +96,7 @@ export const OnboardingTour: React.FC = () => {
   const [showDirectory, setShowDirectory] = useAtom(onboardingShowDirectoryAtom);
   const setStep = useSetAtom(setOnboardingStepAtom);
   const startChapter = useSetAtom(startOnboardingChapterAtom);
+  const [completed, setCompleted] = useAtom(onboardingCompletedAtom);
   const currentEq = useAtomValue(currentEquationAtom);
   const sourcePath = useAtomValue(sourcePathAtom);
   
@@ -166,7 +168,6 @@ export const OnboardingTour: React.FC = () => {
   // popping when a tab switch clears the active chapter mid-tour.
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const completed = localStorage.getItem('algebranch_onboarding_completed');
       const neverStarted = Object.keys(readOnboardingSteps()).length === 0;
       // If the URL contains an equation or a workspace state, bypass the onboarding welcome prompt
       const hasUrlParam = /[?&](eq|ws)=/.test(window.location.search);
@@ -179,7 +180,7 @@ export const OnboardingTour: React.FC = () => {
         setShowPrompt(false);
       }
     }
-  }, [chapterId, showDirectory]);
+  }, [chapterId, showDirectory, completed]);
 
   // Pre-warm the math scan cache for the chapter's known derivation chain so
   // stepping through the tutorial never waits on the backend. Runs once per
@@ -265,7 +266,8 @@ export const OnboardingTour: React.FC = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('algebranch_onboarding_completed', 'true');
     }
-  }, [setShowPrompt, setShowDirectory]);
+    setCompleted(true);
+  }, [setShowPrompt, setShowDirectory, setCompleted]);
 
   // Escape on the opening prompt/directory skips straight into the app, so a
   // user who just wants to start solving isn't trapped by the tutorial.
@@ -339,13 +341,13 @@ export const OnboardingTour: React.FC = () => {
   if (showPrompt) {
     if (!mounted || typeof document === 'undefined') return null;
     return createPortal(
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 max-lg:pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className={`${THEME_GLASS.PANEL} max-w-md w-full p-6 flex flex-col gap-6 ${THEME_GLASS.TOOLTIP_DETAILS}`}
+          className={`${THEME_GLASS.PANEL} max-w-md w-full pt-6 pb-0 flex flex-col gap-6 max-h-[85svh] overflow-y-auto overflow-x-hidden ${THEME_GLASS.TOOLTIP_DETAILS}`}
         >
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between px-6">
             <div className="flex items-center gap-2.5">
               <Image
                 src="/logo.png"
@@ -367,7 +369,7 @@ export const OnboardingTour: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 px-6">
             <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed`}>
               Algebranch is an interactive sandbox where you manipulate equations by tapping and transposing terms. Choose an interactive chapter below to learn the ropes!
             </p>
@@ -425,10 +427,15 @@ export const OnboardingTour: React.FC = () => {
             </div>
           </div>
 
-          <div className={`flex items-center justify-end gap-3 pt-2 border-t ${THEME_GLASS.PANEL_BORDER}`}>
+          {/* Floating Skip footer: sticky to the bottom of the modal so the chapter
+              list scrolls underneath it and the opt-out is always in view. Full-bleed
+              — the modal drops its horizontal padding (moved onto the content rows
+              above) so this strip spans edge to edge with no -mx and thus no sideways
+              scroll. Soft top shadow instead of a hard divider line. */}
+          <div className={`sticky bottom-0 px-6 py-3 flex items-center justify-end gap-3 ${THEME_GLASS.TOUR_FOOTER}`}>
             <button
               onClick={handleSkipPrompt}
-              className={`px-4 py-2 text-xs font-bold ${THEME_GLASS.TEXT_MUTED_LIGHT} hover:text-white transition-colors cursor-pointer`}
+              className={`px-4 py-2 text-xs font-bold ${THEME_GLASS.BUTTON_SECONDARY}`}
             >
               Skip and Solve Freely
             </button>
@@ -444,7 +451,13 @@ export const OnboardingTour: React.FC = () => {
     const chapterIndex = ONBOARDING_CHAPTERS.findIndex(c => c.id === activeChapter.id);
     const nextChapter = chapterIndex >= 0 ? ONBOARDING_CHAPTERS[chapterIndex + 1] : undefined;
 
-    const handleFinish = () => setStep(null);
+    const handleFinish = () => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('algebranch_onboarding_completed', 'true');
+      }
+      setCompleted(true);
+      setStep(null);
+    };
 
     if (!mounted || typeof document === 'undefined') return null;
 
@@ -504,20 +517,21 @@ export const OnboardingTour: React.FC = () => {
                   </button>
                 )}
 
-                <div className="flex items-center justify-center gap-4">
+                <div className="flex items-center justify-between gap-2.5 w-full">
                   <button
                     onClick={handleAllChapters}
-                    className={`text-[11px] font-bold ${THEME_GLASS.TEXT_MUTED_LIGHT} hover:text-white transition-colors cursor-pointer flex items-center gap-1.5`}
+                    className={`flex-1 h-8 px-2 text-[11px] font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
                   >
-                    <BookOpen size={11} />
+                    <BookOpen size={12} className="shrink-0" />
                     <span>All Chapters</span>
                   </button>
                   {nextChapter && (
                     <button
                       onClick={handleFinish}
-                      className={`text-[11px] font-bold ${THEME_GLASS.TEXT_MUTED_LIGHT} hover:text-white transition-colors cursor-pointer`}
+                      className={`flex-1 h-8 px-2 text-[11px] font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
                     >
-                      Explore Freely
+                      <Play size={12} className="shrink-0" />
+                      <span>Explore Freely</span>
                     </button>
                   )}
                 </div>
@@ -537,11 +551,11 @@ export const OnboardingTour: React.FC = () => {
         initial={{ height: 0, opacity: 0 }}
         animate={{ height: 'auto', opacity: 1 }}
         transition={THEME_ANIMATIONS.LAYOUT_TRANSITION}
-        className="w-full shrink-0 border-t border-white/10 bg-[#110f22]/60 backdrop-blur-md rounded-b-2xl px-4 py-3 sm:px-6 z-40 overflow-hidden"
+        className={THEME_GLASS.TOUR_CARD}
       >
-        <div className="max-w-2xl mx-auto w-full flex flex-col gap-2.5">
+        <div className="w-full flex flex-col gap-2.5 min-h-0 flex-1 pt-3 sm:pt-4 pb-0">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="max-w-2xl mx-auto w-full flex items-center justify-between px-4 sm:px-6">
             <button
               onClick={handleAllChapters}
               className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer group/title"
@@ -552,104 +566,115 @@ export const OnboardingTour: React.FC = () => {
             </button>
             <button
               onClick={() => setStep(null)}
-              className={`text-[10px] font-bold ${THEME_GLASS.TEXT_MUTED} hover:text-white transition-colors cursor-pointer flex items-center gap-1`}
-              aria-label="Exit tour"
+              className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${THEME_GLASS.PANEL_BORDER} ${THEME_GLASS.TEXT_MUTED_BRIGHT} hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-1`}
+              aria-label="Exit tutorial"
             >
-              <span>Exit Tour</span>
-              <X size={10} className="shrink-0" />
+              <span>Exit Tutorial</span>
+              <X size={11} className="shrink-0" />
             </button>
           </div>
 
-          {/* Title & Desc */}
-          <div className="flex flex-col gap-1">
-            <h4 className="text-xs font-bold text-white">{activeStep.title}</h4>
-            <p className={`text-[11px] ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed mt-0.5`}>
-              {activeStep.description}
-            </p>
+          {/* Scrollable body: on a capped mobile sheet the title/description/legend
+              scroll within the card so the pinned header + step controls stay put
+              and the equation canvas keeps its guaranteed minimum height. */}
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden w-full">
+            <div className="max-w-2xl mx-auto w-full flex flex-col gap-2.5 px-4 sm:px-6 pb-3 min-h-0">
+              {/* Title & Desc */}
+              <div className="flex flex-col gap-1">
+                <h4 className="text-xs font-bold text-white">{activeStep.title}</h4>
+                <p className={`text-[11px] ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed mt-0.5`}>
+                  {activeStep.description}
+                </p>
+              </div>
+
+              {/* Node-kind color legend (steps with legend: 'nodeTypes') */}
+              {activeStep.legend === 'nodeTypes' && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+                  <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-sky-300 font-serif italic font-medium text-[10px]`}>x</span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-white/90 text-[9px] leading-tight">Variable</span>
+                      <span className="text-sky-300/80 text-[7px] leading-none">The unknown to find</span>
+                    </div>
+                  </div>
+
+                  <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-yellow-400/90 font-semibold text-[10px]`}>3</span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-white/90 text-[9px] leading-tight">Constant</span>
+                      <span className="text-yellow-400/85 text-[7px] leading-none">A known number</span>
+                    </div>
+                  </div>
+
+                  <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-white/90 font-bold text-[10px]`}>+</span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-white/90 text-[9px] leading-tight">Operator</span>
+                      <span className={`${THEME_GLASS.TEXT_MUTED} text-[7px] leading-none`}>Combines terms</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-zinc-900/60 border border-zinc-800/40 text-zinc-500">
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_LOCKED} text-[10px]`}>4</span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-zinc-400 text-[9px] leading-tight font-medium">Immobile</span>
+                      <span className="text-zinc-500/80 text-[7px] leading-none font-sans">Locked in place</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Selection-state color legend (steps with legend: 'sourceTarget') */}
+              {activeStep.legend === 'sourceTarget' && (
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_SOURCE} text-[10px]`}>4</span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-white/90 text-[9px] leading-tight">Source</span>
+                      <span className="text-indigo-300/80 text-[7px] leading-none">The term you picked up</span>
+                    </div>
+                  </div>
+
+                  <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_TARGET} text-[10px]`}>11</span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-white/90 text-[9px] leading-tight">Target</span>
+                      <span className="text-emerald-300/80 text-[7px] leading-none">Tap to drop it there</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
 
-          {/* Node-kind color legend (steps with legend: 'nodeTypes') */}
-          {activeStep.legend === 'nodeTypes' && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
-              <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
-                <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-sky-300 font-serif italic font-medium text-[10px]`}>x</span>
-                <div className="flex flex-col">
-                  <span className="font-bold text-white/90 text-[9px] leading-tight">Variable</span>
-                  <span className="text-sky-300/80 text-[7px] leading-none">The unknown to find</span>
-                </div>
-              </div>
+          {/* Controls — footer pinned to the bottom of the card, placed outside the
+              scroll container so it goes true full-bleed regardless of scrollbars. */}
+          <div className={`w-full shrink-0 ${THEME_GLASS.TOUR_FOOTER}`}>
+            <div className="max-w-2xl mx-auto w-full px-4 py-3 sm:px-6 flex items-center justify-between">
+              <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} font-bold`}>
+                Step {stepIndex + 1} of {activeChapter.steps.length}
+              </span>
 
-              <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
-                <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-yellow-400/90 font-semibold text-[10px]`}>3</span>
-                <div className="flex flex-col">
-                  <span className="font-bold text-white/90 text-[9px] leading-tight">Constant</span>
-                  <span className="text-yellow-400/85 text-[7px] leading-none">A known number</span>
-                </div>
-              </div>
+              <div className="flex items-center gap-2">
+                {stepIndex > 0 && (
+                  <button
+                    onClick={() => setStep(stepIndex - 1)}
+                    className={`h-7 px-2.5 text-[10px] font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_SECONDARY}`}
+                  >
+                    <ArrowLeft size={10} />
+                    <span>Back</span>
+                  </button>
+                )}
 
-              <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
-                <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-white/90 font-bold text-[10px]`}>+</span>
-                <div className="flex flex-col">
-                  <span className="font-bold text-white/90 text-[9px] leading-tight">Operator</span>
-                  <span className={`${THEME_GLASS.TEXT_MUTED} text-[7px] leading-none`}>Combines terms</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 p-1.5 rounded-lg bg-zinc-900/60 border border-zinc-800/40 text-zinc-500">
-                <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_LOCKED} text-[10px]`}>4</span>
-                <div className="flex flex-col">
-                  <span className="font-bold text-zinc-400 text-[9px] leading-tight font-medium">Immobile</span>
-                  <span className="text-zinc-500/80 text-[7px] leading-none font-sans">Locked in place</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Selection-state color legend (steps with legend: 'sourceTarget') */}
-          {activeStep.legend === 'sourceTarget' && (
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
-                <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_SOURCE} text-[10px]`}>4</span>
-                <div className="flex flex-col">
-                  <span className="font-bold text-white/90 text-[9px] leading-tight">Source</span>
-                  <span className="text-indigo-300/80 text-[7px] leading-none">The term you picked up</span>
-                </div>
-              </div>
-
-              <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
-                <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_TARGET} text-[10px]`}>11</span>
-                <div className="flex flex-col">
-                  <span className="font-bold text-white/90 text-[9px] leading-tight">Target</span>
-                  <span className="text-emerald-300/80 text-[7px] leading-none">Tap to drop it there</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Controls */}
-          <div className={`flex items-center justify-between pt-2 border-t ${THEME_GLASS.PANEL_BORDER} mt-1`}>
-            <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} font-bold`}>
-              Step {stepIndex + 1} of {activeChapter.steps.length}
-            </span>
-            
-            <div className="flex items-center gap-2">
-              {stepIndex > 0 && (
                 <button
-                  onClick={() => setStep(stepIndex - 1)}
-                  className={`h-7 px-2.5 text-[10px] font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_SECONDARY}`}
+                  onClick={() => setStep(isLastStep ? null : stepIndex + 1)}
+                  className={`h-7 px-3 text-[10px] font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_PRIMARY}`}
                 >
-                  <ArrowLeft size={10} />
-                  <span>Back</span>
+                  <span>{isLastStep ? 'Finish' : 'Next'}</span>
+                  {isLastStep ? <CheckCircle2 size={10} /> : <ArrowRight size={10} />}
                 </button>
-              )}
-              
-              <button
-                onClick={() => setStep(isLastStep ? null : stepIndex + 1)}
-                className={`h-7 px-3 text-[10px] font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_PRIMARY}`}
-              >
-                <span>{isLastStep ? 'Finish' : 'Next'}</span>
-                {isLastStep ? <CheckCircle2 size={10} /> : <ArrowRight size={10} />}
-              </button>
+              </div>
             </div>
           </div>
         </div>

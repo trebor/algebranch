@@ -65,6 +65,7 @@ import {
   onboardingGlobalOpAtom,
   graphSizeAtom,
   previousGraphSizeAtom,
+  isGraphViableAtom,
   settingsAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
@@ -198,6 +199,7 @@ export default function Home() {
   const swapSides = useSetAtom(swapSidesAtom);
   const [graphSize, setGraphSize] = useAtom(graphSizeAtom);
   const previousGraphSize = useAtomValue(previousGraphSizeAtom);
+  const isGraphViable = useAtomValue(isGraphViableAtom);
   const isMobile = useIsMobile();
   const equalsRef = React.useRef<HTMLSpanElement>(null);
   const lastEqStrRef = React.useRef<string | null>(null);
@@ -699,6 +701,8 @@ export default function Home() {
     {
       key: 'g',
       action: () => {
+        // Don't open a graph that isn't viable; only allow closing an open one.
+        if (graphSize === 'hidden' && !isGraphViable) return;
         if (graphSize === 'hidden') {
           setGraphSize('split');
         } else if (graphSize === 'expand') {
@@ -870,7 +874,9 @@ export default function Home() {
       </header>
 
       {/* Under-header Layout (Sidebar + Main Workspace + Right Sidebar) */}
-      <div className="flex-1 flex w-full overflow-hidden min-h-0 relative z-20 px-4 pb-4 pt-0">
+      <div className={`flex-1 flex w-full overflow-hidden min-h-0 relative z-20 px-4 max-lg:px-0 pt-0 ${
+        onboardingChapterId ? 'pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:pb-4' : 'pb-4'
+      }`}>
         {/* Backdrop overlay for mobile drawers */}
         <div
           onClick={() => {
@@ -919,14 +925,14 @@ export default function Home() {
             </div>
           ) : (
             <div className="shrink-0">
-              <div className="w-full flex items-center justify-between bg-transparent px-0 pt-2 pb-0 gap-4 shrink-0 select-none">
+              <div className="w-full flex items-center justify-between bg-transparent px-0 max-lg:px-3 pt-2 pb-0 gap-4 shrink-0 select-none">
                 <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
                   <div className="h-[30px] w-32 bg-white/5 border border-white/5 animate-pulse rounded-xl" />
                 </div>
               </div>
             </div>
           )}
-          <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL} overflow-hidden`}>
+          <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL} overflow-hidden max-lg:border-x-0 max-lg:rounded-none`}>
 
             {/* 1. Active Derivation Workspace */}
             <div
@@ -936,8 +942,8 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className={`active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full px-2 py-4 sm:p-4 lg:p-8 text-base font-light cursor-default relative group/canvas ${
-                onboardingChapterId ? 'overflow-hidden' : 'overflow-auto'
+              className={`active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full px-2 pt-16 pb-4 sm:p-4 lg:p-8 text-base font-light cursor-default relative group/canvas ${
+                onboardingChapterId ? 'overflow-auto lg:overflow-hidden' : 'overflow-auto'
               }`}
             >
               {/* Calculating Math Engine Spinner / Toast Notification */}
@@ -955,6 +961,25 @@ export default function Home() {
               {/* Contextual Action Buttons for Active Workspace */}
               {currentEq && (
                 <div className="absolute top-4 right-4 z-30 contextual-actions flex items-center gap-2">
+                  {/* Graph toggle — only offered when the equation is legitimately
+                      graphable (single variable), or while the graph is already
+                      open so it can always be closed. Replaces the old oversized
+                      floating "Graph" pill. */}
+                  {(isGraphViable || graphSize !== 'hidden') && (
+                    <Tooltip content={graphSize === 'hidden' ? 'Show graph (G)' : 'Hide graph (G)'} position="left">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGraphSize(graphSize === 'hidden' ? 'split' : 'hidden');
+                        }}
+                        className={graphSize === 'hidden' ? THEME_GLASS.ICON_BUTTON : THEME_GLASS.ICON_BUTTON_ACTIVE}
+                        aria-label={graphSize === 'hidden' ? 'Show graph' : 'Hide graph'}
+                      >
+                        <TrendingUp size={14} />
+                      </button>
+                    </Tooltip>
+                  )}
+
                   <Tooltip content="Clone workspace" position="left">
                     <button
                       onClick={(e) => {
@@ -1096,23 +1121,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Show Graph Floating Handle when hidden */}
-              {graphSize === 'hidden' && (
-                <div className="absolute right-4 bottom-4 z-35 animate-[fadeIn_0.2s_ease-out]">
-                  <Tooltip content="Show variable relationship graph (G)" position="left" autoAlign={false}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setGraphSize('split');
-                      }}
-                      className="px-3.5 py-1.5 rounded-full border border-indigo-500/35 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-500/10 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
-                    >
-                      <TrendingUp size={14} />
-                      <span>Graph</span>
-                    </button>
-                  </Tooltip>
-                </div>
-              )}
             </div>
 
             {/* Substitutions available from other workspaces (#3) — docked at the

@@ -711,17 +711,19 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         );
       }
 
-      // Binary Exponentiation operator (Superscript rendering)
+      // Binary Exponentiation operator (Superscript rendering).
+      // Align the exponent to the TOP of the base (items-start) rather than a
+      // shared baseline: a tall flex-container base like (x+2) has no real text
+      // baseline, so the flex spec synthesizes one at its bottom edge — making a
+      // fixed upward offset land the exponent at the base's vertical midline,
+      // where it reads as multiplication (#194). Top-anchoring makes a proper
+      // raised superscript regardless of how tall the base group is.
       if (opNode.op === '^') {
         return (
-          <div className="inline-flex items-baseline relative" style={{ paddingTop: '0.8em' }}>
-            <div>
-              <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
-            </div>
-            <div className="relative" style={{ top: '-0.8em' }}>
-              <div className="text-[0.65em] ml-[0.05em] opacity-90 scale-90" style={{ display: 'inline-block' }}>
-                <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={true} />
-              </div>
+          <div className="inline-flex items-start">
+            <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
+            <div className="text-[0.65em] ml-[0.05em] opacity-90 scale-90 relative" style={{ top: '-0.4em', display: 'inline-block' }}>
+              <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={true} />
             </div>
           </div>
         );

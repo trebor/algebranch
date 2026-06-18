@@ -547,13 +547,16 @@ export default function Home() {
     const syncState = async () => {
       try {
         setMathLoading(true);
-        const data = await fetchMathScan(currentEq, sourcePath);
+        const data = await fetchMathScan(currentEq, sourcePath, { isActive: () => active });
 
         if (!active) return;
 
         // Atomically synchronize state inside Jotai store action
         syncMathState(data);
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
         console.error('Failed to sync math state from server:', err);
       } finally {
         if (active) {

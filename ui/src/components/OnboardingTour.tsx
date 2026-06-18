@@ -193,6 +193,7 @@ export const OnboardingTour: React.FC = () => {
 
     let active = true;
     prefetchChapterScans(chapter, currentEq, () => active).catch(err => {
+      if (err instanceof Error && err.name === 'AbortError') return;
       console.warn('Tutorial scan prefetch failed (live fetches will cover):', err);
     });
     return () => {

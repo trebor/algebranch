@@ -22,17 +22,32 @@ const scanCache = new Map<string, MathScanResult>();
  * the async signature is retained so callers stay unchanged from when this was a
  * `POST /api/math` round-trip.
  */
-export const fetchMathScan = (eq: Equation, sourcePath: string | null): Promise<MathScanResult> => {
+export const fetchMathScan = async (
+  eq: Equation,
+  sourcePath: string | null,
+  options?: { isActive?: () => boolean }
+): Promise<MathScanResult> => {
   const eqStr = equationToString(eq);
   const serializedEq = serializeEquation(eq);
   const cacheKey = JSON.stringify({ eqStr, serializedEq, sourcePath });
 
   const cached = scanCache.get(cacheKey);
-  if (cached) return Promise.resolve(cached);
+  if (cached) return cached;
+
+  // Yield to the event loop so the browser can paint the static equation and loading state.
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
+
+  if (options?.isActive && !options.isActive()) {
+    const err = new Error('The operation was aborted.');
+    err.name = 'AbortError';
+    throw err;
+  }
 
   const data = computeMathSync(eq, sourcePath);
   scanCache.set(cacheKey, data);
-  return Promise.resolve(data);
+  return data;
 };
 
 const strip = (s: string) => s.replace(/\s+/g, '');
@@ -53,7 +68,7 @@ export const prefetchChapterScans = async (
   let eq = startEq;
   if (strip(equationToString(eq)) !== strip(chapter.initialEquation)) return;
 
-  let base = await fetchMathScan(eq, null);
+  let base = await fetchMathScan(eq, null, { isActive });
   let pendingTargets: Record<string, SerializedEquation> | null = null;
 
   for (const step of chapter.steps) {
@@ -65,7 +80,7 @@ export const prefetchChapterScans = async (
       // No-op step. Selection prompts warm the selection scan whose targets
       // the following transpose step will click.
       if (step.highlightPath) {
-        const sel = await fetchMathScan(eq, step.highlightPath);
+        const sel = await fetchMathScan(eq, step.highlightPath, { isActive });
         pendingTargets = sel.targetPaths;
       }
       continue;
@@ -88,7 +103,7 @@ export const prefetchChapterScans = async (
       let targets = pendingTargets;
       const selPath = step.selectPath || step.highlightPath;
       if (!targets && selPath) {
-        const sel = await fetchMathScan(eq, selPath);
+        const sel = await fetchMathScan(eq, selPath, { isActive });
         targets = sel.targetPaths;
       }
       if (targets) {
@@ -100,6 +115,6 @@ export const prefetchChapterScans = async (
 
     eq = deserializeEquation(nextSer);
     pendingTargets = null;
-    base = await fetchMathScan(eq, null);
+    base = await fetchMathScan(eq, null, { isActive });
   }
 };

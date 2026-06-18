@@ -874,7 +874,7 @@ export default function Home() {
       </header>
 
       {/* Under-header Layout (Sidebar + Main Workspace + Right Sidebar) */}
-      <div className={`flex-1 flex w-full overflow-hidden min-h-0 relative z-20 px-4 pt-0 ${
+      <div className={`flex-1 flex w-full overflow-hidden min-h-0 relative z-20 px-4 max-lg:px-0 pt-0 ${
         onboardingChapterId ? 'pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:pb-4' : 'pb-4'
       }`}>
         {/* Backdrop overlay for mobile drawers */}
@@ -925,14 +925,14 @@ export default function Home() {
             </div>
           ) : (
             <div className="shrink-0">
-              <div className="w-full flex items-center justify-between bg-transparent px-0 pt-2 pb-0 gap-4 shrink-0 select-none">
+              <div className="w-full flex items-center justify-between bg-transparent px-0 max-lg:px-3 pt-2 pb-0 gap-4 shrink-0 select-none">
                 <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
                   <div className="h-[30px] w-32 bg-white/5 border border-white/5 animate-pulse rounded-xl" />
                 </div>
               </div>
             </div>
           )}
-          <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL} overflow-hidden`}>
+          <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL} overflow-hidden max-lg:border-x-0 max-lg:rounded-none`}>
 
             {/* 1. Active Derivation Workspace */}
             <div

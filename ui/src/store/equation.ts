@@ -10,6 +10,7 @@ import * as math from 'mathjs';
 import { Preset, PRESET_LIST } from '../constants/presets';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
+import { sentenceCase } from '../utils/text';
 
 // Global Initial Value Constants
 export const INITIAL_EQUATION_STRING = '2 * (x + 3) = 10';
@@ -123,7 +124,8 @@ export const formatDerivation = (
   // to the coarse label, with any domain restrictions (#63) folded in so a copied
   // derivation never drops an assumed ≠0 condition.
   const justificationOf = (node: HistoryNode): string | undefined => {
-    const base = node.change?.text ?? node.label;
+    // Sentence-case to match the history rail (#125); see sentenceCase.
+    const base = sentenceCase(node.change?.text ?? node.label);
     const assumptions = node.change?.assumptions;
     return base && assumptions?.length ? `${base}, assuming ${assumptions.join(', ')}` : base;
   };

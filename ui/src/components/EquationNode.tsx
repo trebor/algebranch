@@ -1050,14 +1050,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             // still forces its marked handle to pulse so the step reads.
             const pulse = shouldPulseHandle({ sourcePath, isHovered, isStackMarked });
 
-            // Resting de-emphasis (#121): dim the handle while preserving hue (the
-            // color codes the action type), lifting to full when the node is hovered
-            // (or the tour marks it). Pairs with the hover-gated pulse so the
-            // pointed-at node's handles pop. Opacity, not grayscale, keeps the type
-            // colors legible at rest. Applied to the button (not the toolbar) so the
-            // count badge — a sibling — can stay at full opacity.
-            const restingOpacity = (isHovered || isStackMarked) ? 'opacity-100' : 'opacity-55';
-            const buttonClass = `flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group hover:scale-110 ${restingOpacity} ${config.handleClass}`;
+            // Handles rest at full opacity for discoverability (the hue codes the
+            // action type); only the pulse (animate-ping) is hover-gated, so the
+            // pointed-at node's handles animate without dimming the rest into a
+            // dingy resting state. The transposition-source dim still applies at
+            // the toolbar level (sourcePath) — that's a deliberate "this is the
+            // selected term" affordance, not resting de-emphasis.
+            const buttonClass = `flex items-center justify-center cursor-pointer shadow-md transition-all duration-150 relative group hover:scale-110 opacity-100 ${config.handleClass}`;
             const buttonStyle: React.CSSProperties = {
               width: `${layout.btnSize}em`,
               height: `${layout.btnSize}em`,
@@ -1079,8 +1078,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             );
 
             // Count badge for multi-option stacks. Rendered as a sibling of the
-            // button (not a child) so it escapes the button's resting-opacity dim
-            // and stays at full opacity — a bright accent inviting inspection of the
+            // button (not a child) — a bright accent inviting inspection of the
             // node's multiple options (#121). pointer-events-none so it never steals
             // hover from the button it overlaps.
             const badge = !single ? (
@@ -1091,8 +1089,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   height: '1.5em',
                   minWidth: '1.5em',
                   padding: '0 0.2em',
-                  top: '-0.5em',
-                  right: '-0.5em',
+                  top: '-0.8em',
+                  right: '-0.8em',
                 }}
               >
                 {/* Optical-center nudge: digits have no descender, so flex/line-box

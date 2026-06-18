@@ -665,10 +665,11 @@
       nodes.forEach(n => {
         items.push({ rx: n.rx, ry: n.ry, r: n.r });
       });
-      items.push({ rx: rxtrunkBase, ry: rytrunkBase, r: rRoot / 2 }); // Trunk base represented as circle of radius rRoot / 2
       
       function getScaleAt(uVal, vVal) {
         let minS = Infinity;
+        
+        // Constrain nodes
         for (const item of items) {
           const dx = item.rx - uVal;
           const dy = item.ry - vVal;
@@ -680,6 +681,22 @@
             }
           }
         }
+        
+        // Constrain trunk base line segment (width rRoot centered at rxtrunkBase, at rytrunkBase)
+        const dx_rel = rxtrunkBase - uVal;
+        const dy_rel = rytrunkBase - vVal;
+        const dist_sq = dx_rel * dx_rel + dy_rel * dy_rel;
+        if (dist_sq > 0.001) {
+          const w_half = rRoot / 2;
+          const val = dist_sq * R_max * R_max - dy_rel * dy_rel * w_half * w_half;
+          if (val >= 0) {
+            const sVal = (-Math.abs(dx_rel) * w_half + Math.sqrt(val)) / dist_sq;
+            if (sVal < minS) {
+              minS = sVal;
+            }
+          }
+        }
+        
         return minS;
       }
       

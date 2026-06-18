@@ -28,7 +28,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://algebranch.vercel.app"),
+  metadataBase: new URL("https://algebranch.org"),
   title: "Algebranch - Interactive Algebraic Steps",
   description: "An interactive step-by-step mathematical exploration and algebraic manipulation system.",
   manifest: "/manifest.json",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Algebranch - Interactive Algebraic Steps",
     description: "An interactive step-by-step mathematical exploration and algebraic manipulation system.",
-    url: "https://algebranch.vercel.app",
+    url: "https://algebranch.org",
     siteName: "Algebranch",
     images: [
       {

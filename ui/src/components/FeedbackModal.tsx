@@ -129,7 +129,7 @@ History Tree:
 ${formattedTree}
 `;
 
-      const mailtoUrl = `mailto:feedback@algebranch.com?subject=${encodeURIComponent(
+      const mailtoUrl = `mailto:feedback@algebranch.org?subject=${encodeURIComponent(
         `[Algebranch Feedback] ${typeLabel}: ${subject.trim()}`
       )}&body=${encodeURIComponent(bodyText)}`;
 

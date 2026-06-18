@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
+import { mjs } from './mathjs';
 import {
   Interval,
   createInterval,
@@ -230,23 +231,23 @@ export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>
       // through to mathjs only for Complex values avoids typed-function dispatch
       // and complex coercion on every node (the hot path, #144).
       if (opNode.op === '-') {
-        return typeof args[0] === 'number' ? -args[0] : (math.unaryMinus(args[0]) as any);
+        return typeof args[0] === 'number' ? -args[0] : (mjs.unaryMinus(args[0]) as any);
       }
       if (opNode.op === '+') return args[0];
     } else {
       const [left, right] = args;
       const bothReal = typeof left === 'number' && typeof right === 'number';
-      if (opNode.op === '+') return bothReal ? left + right : (math.add(left, right) as any);
-      if (opNode.op === '-') return bothReal ? left - right : (math.subtract(left, right) as any);
-      if (opNode.op === '*') return bothReal ? left * right : (math.multiply(left, right) as any);
-      if (opNode.op === '/') return bothReal ? left / right : (math.divide(left, right) as any);
+      if (opNode.op === '+') return bothReal ? left + right : (mjs.add(left, right) as any);
+      if (opNode.op === '-') return bothReal ? left - right : (mjs.subtract(left, right) as any);
+      if (opNode.op === '*') return bothReal ? left * right : (mjs.multiply(left, right) as any);
+      if (opNode.op === '/') return bothReal ? left / right : (mjs.divide(left, right) as any);
       if (opNode.op === '^') {
         // A negative base raised to a non-integer power is genuinely complex
         // (mathjs returns the principal root); only then defer to mathjs.
         if (bothReal && (left >= 0 || Number.isInteger(right))) {
           return Math.pow(left, right);
         }
-        return math.pow(left, right) as any;
+        return mjs.pow(left, right) as any;
       }
     }
   }
@@ -260,23 +261,23 @@ export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>
       // sqrt of a negative (→ Complex) and any already-complex argument.
       return typeof args[0] === 'number' && args[0] >= 0
         ? Math.sqrt(args[0])
-        : (math.sqrt(args[0]) as any);
+        : (mjs.sqrt(args[0]) as any);
     }
     if (nameStr === 'nthRoot') {
       const base = args[0];
       const degree = args[1] !== undefined ? args[1] : 2;
-      return math.pow(base, math.divide(1, degree)) as any;
+      return mjs.pow(base, mjs.divide(1, degree)) as any;
     }
-    if (nameStr === 'sin') return math.sin(args[0]) as any;
-    if (nameStr === 'cos') return math.cos(args[0]) as any;
-    if (nameStr === 'tan') return math.tan(args[0]) as any;
-    if (nameStr === 'cot') return math.cot(args[0]) as any;
-    if (nameStr === 'sec') return math.sec(args[0]) as any;
-    if (nameStr === 'csc') return math.csc(args[0]) as any;
+    if (nameStr === 'sin') return mjs.sin(args[0]) as any;
+    if (nameStr === 'cos') return mjs.cos(args[0]) as any;
+    if (nameStr === 'tan') return mjs.tan(args[0]) as any;
+    if (nameStr === 'cot') return mjs.cot(args[0]) as any;
+    if (nameStr === 'sec') return mjs.sec(args[0]) as any;
+    if (nameStr === 'csc') return mjs.csc(args[0]) as any;
     if (nameStr === 'log') {
       const val = args[0];
       const base = args[1] !== undefined ? args[1] : Math.E;
-      return math.log(val, base) as any;
+      return mjs.log(val, base) as any;
     }
   }
   throw new Error(`Unsupported point node type: ${node.type}`);
@@ -291,10 +292,10 @@ export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>
  * Complex (or other non-number) value is actually in play, preserving the exact
  * results the equivalence checker depends on.
  */
-const addV = (a: any, b: any): any => (typeof a === 'number' && typeof b === 'number' ? a + b : (math.add(a, b) as any));
-const subV = (a: any, b: any): any => (typeof a === 'number' && typeof b === 'number' ? a - b : (math.subtract(a, b) as any));
-const divV = (a: any, b: any): any => (typeof a === 'number' && typeof b === 'number' ? a / b : (math.divide(a, b) as any));
-const absNum = (a: any): number => (typeof a === 'number' ? Math.abs(a) : Number(math.abs(a)));
+const addV = (a: any, b: any): any => (typeof a === 'number' && typeof b === 'number' ? a + b : (mjs.add(a, b) as any));
+const subV = (a: any, b: any): any => (typeof a === 'number' && typeof b === 'number' ? a - b : (mjs.subtract(a, b) as any));
+const divV = (a: any, b: any): any => (typeof a === 'number' && typeof b === 'number' ? a / b : (mjs.divide(a, b) as any));
+const absNum = (a: any): number => (typeof a === 'number' ? Math.abs(a) : Number(mjs.abs(a)));
 
 /**
  * Numerically solves LHS - RHS = 0 for a specific variable using Newton-Raphson.
@@ -410,8 +411,8 @@ export const areExpressionsValueEqual = (a: math.MathNode, b: math.MathNode): bo
     try {
       const va = evaluatePoint(a, scope);
       const vb = evaluatePoint(b, scope);
-      const diff = Number(math.abs(math.subtract(va, vb)));
-      const mag = Number(math.abs(va));
+      const diff = Number(mjs.abs(mjs.subtract(va, vb)));
+      const mag = Number(mjs.abs(va));
       if (isValNaN(diff) || !isValFinite(diff) || isValNaN(mag) || !isValFinite(mag)) continue;
       validSamples++;
       if (diff > 1e-6 * (1 + mag)) return false;
@@ -592,8 +593,8 @@ const areInequalityRegionsEquivalent = (
     let d1: number;
     let d2: number;
     try {
-      d1 = Number(math.subtract(evaluatePoint(eq1.lhs, scope), evaluatePoint(eq1.rhs, scope)));
-      d2 = Number(math.subtract(evaluatePoint(eq2.lhs, scope), evaluatePoint(eq2.rhs, scope)));
+      d1 = Number(mjs.subtract(evaluatePoint(eq1.lhs, scope), evaluatePoint(eq1.rhs, scope)));
+      d2 = Number(mjs.subtract(evaluatePoint(eq2.lhs, scope), evaluatePoint(eq2.rhs, scope)));
     } catch {
       continue;
     }
@@ -812,7 +813,7 @@ const getTermCategory = (node: math.MathNode, solveVar: string): TermCategory | 
       exponent.type === 'ConstantNode' &&
       Number((exponent as math.ConstantNode).value) === 2
     ) {
-      return { category: 'a', coeff: new math.ConstantNode(1) };
+      return { category: 'a', coeff: new mjs.ConstantNode(1) };
     }
   }
 
@@ -868,7 +869,7 @@ const getTermCategory = (node: math.MathNode, solveVar: string): TermCategory | 
   let unwrapped = node;
   while (unwrapped.type === 'ParenthesisNode') unwrapped = (unwrapped as math.ParenthesisNode).content;
   if (unwrapped.type === 'SymbolNode' && (unwrapped as math.SymbolNode).name === solveVar) {
-    return { category: 'b', coeff: new math.ConstantNode(1) };
+    return { category: 'b', coeff: new mjs.ConstantNode(1) };
   }
 
   return null;
@@ -882,17 +883,17 @@ const isZeroNode = (node: math.MathNode): boolean => {
 
 const sumTerms = (list: SignedTerm[]): math.MathNode => {
   const filtered = list.filter(item => !isZeroNode(item.node));
-  if (filtered.length === 0) return new math.ConstantNode(0);
+  if (filtered.length === 0) return new mjs.ConstantNode(0);
   let acc: math.MathNode = filtered[0].sign === -1
-    ? new math.OperatorNode('-', 'unaryMinus', [filtered[0].node])
+    ? new mjs.OperatorNode('-', 'unaryMinus', [filtered[0].node])
     : filtered[0].node;
 
   for (let i = 1; i < filtered.length; i++) {
     const item = filtered[i];
     if (item.sign === 1) {
-      acc = new math.OperatorNode('+', 'add', [acc, item.node]);
+      acc = new mjs.OperatorNode('+', 'add', [acc, item.node]);
     } else {
-      acc = new math.OperatorNode('-', 'subtract', [acc, item.node]);
+      acc = new mjs.OperatorNode('-', 'subtract', [acc, item.node]);
     }
   }
   return acc;
@@ -936,7 +937,7 @@ export const tryExtractQuadraticExpr = (expr: math.MathNode, solveVar: string) =
 };
 
 const tryExtractQuadratic = (lhs: math.MathNode, rhs: math.MathNode, solveVar: string) => {
-  const fullExpr = new math.OperatorNode('-', 'subtract', [lhs, rhs]);
+  const fullExpr = new mjs.OperatorNode('-', 'subtract', [lhs, rhs]);
   return tryExtractQuadraticExpr(fullExpr, solveVar);
 };
 
@@ -965,7 +966,7 @@ const pushStandardTerm = (
     Number((coeff as math.ConstantNode).value) < 0
   ) {
     sign = -1;
-    mag = new math.ConstantNode(Math.abs(Number((coeff as math.ConstantNode).value)));
+    mag = new mjs.ConstantNode(Math.abs(Number((coeff as math.ConstantNode).value)));
   }
 
   const isUnit =
@@ -977,7 +978,7 @@ const pushStandardTerm = (
   } else if (isUnit) {
     node = varPart; // 1·x² → x²
   } else {
-    node = new math.OperatorNode('*', 'multiply', [mag, varPart]);
+    node = new mjs.OperatorNode('*', 'multiply', [mag, varPart]);
   }
   list.push({ node, sign });
 };
@@ -1016,8 +1017,8 @@ export const getQuadraticStandardForm = (eq: Equation, solveVar: string): Equati
   if (isZeroNode(a)) return null; // not actually quadratic in solveVar
   if (isZeroNode(b)) return null; // no linear term ⇒ square-root path, not the formula
 
-  const varNode = new math.SymbolNode(solveVar);
-  const varSq = new math.OperatorNode('^', 'pow', [varNode, new math.ConstantNode(2)]);
+  const varNode = new mjs.SymbolNode(solveVar);
+  const varSq = new mjs.OperatorNode('^', 'pow', [varNode, new mjs.ConstantNode(2)]);
 
   const terms: SignedTerm[] = [];
   pushStandardTerm(terms, a, varSq);
@@ -1025,7 +1026,7 @@ export const getQuadraticStandardForm = (eq: Equation, solveVar: string): Equati
   pushStandardTerm(terms, c, null);
   const quadratic = sumTerms(terms);
 
-  const zero = new math.ConstantNode(0);
+  const zero = new mjs.ConstantNode(0);
   const eqOut = varOnLhs
     ? { lhs: quadratic, rhs: zero }
     : { lhs: zero, rhs: quadratic };
@@ -1053,35 +1054,35 @@ export const getQuadraticFormulaSolutions = (eq: Equation): QuadraticFormulaSolu
       // simple isolation and square root — the pedagogically correct approach.
       if (isZeroNode(b)) continue;
 
-      const b_sq = new math.OperatorNode('^', 'pow', [b, new math.ConstantNode(2)]);
-      const four_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(4), a]);
-      const four_a_c = new math.OperatorNode('*', 'multiply', [four_a, c]);
-      const discriminant = new math.OperatorNode('-', 'subtract', [b_sq, four_a_c]);
-      const sqrt_d = new math.FunctionNode('sqrt', [discriminant]);
+      const b_sq = new mjs.OperatorNode('^', 'pow', [b, new mjs.ConstantNode(2)]);
+      const four_a = new mjs.OperatorNode('*', 'multiply', [new mjs.ConstantNode(4), a]);
+      const four_a_c = new mjs.OperatorNode('*', 'multiply', [four_a, c]);
+      const discriminant = new mjs.OperatorNode('-', 'subtract', [b_sq, four_a_c]);
+      const sqrt_d = new mjs.FunctionNode('sqrt', [discriminant]);
 
       let num_pos: math.MathNode;
       let num_neg: math.MathNode;
       if (isZeroNode(b)) {
         num_pos = sqrt_d;
-        num_neg = new math.OperatorNode('-', 'unaryMinus', [sqrt_d]);
+        num_neg = new mjs.OperatorNode('-', 'unaryMinus', [sqrt_d]);
       } else {
-        const neg_b = new math.OperatorNode('-', 'unaryMinus', [b]);
-        num_pos = new math.OperatorNode('+', 'add', [neg_b, sqrt_d]);
-        num_neg = new math.OperatorNode('-', 'subtract', [neg_b, sqrt_d]);
+        const neg_b = new mjs.OperatorNode('-', 'unaryMinus', [b]);
+        num_pos = new mjs.OperatorNode('+', 'add', [neg_b, sqrt_d]);
+        num_neg = new mjs.OperatorNode('-', 'subtract', [neg_b, sqrt_d]);
       }
 
-      const two_a = new math.OperatorNode('*', 'multiply', [new math.ConstantNode(2), a]);
+      const two_a = new mjs.OperatorNode('*', 'multiply', [new mjs.ConstantNode(2), a]);
       
-      const formula_pos = new math.OperatorNode('/', 'divide', [
-        new math.ParenthesisNode(num_pos),
-        new math.ParenthesisNode(two_a)
+      const formula_pos = new mjs.OperatorNode('/', 'divide', [
+        new mjs.ParenthesisNode(num_pos),
+        new mjs.ParenthesisNode(two_a)
       ]);
-      const formula_neg = new math.OperatorNode('/', 'divide', [
-        new math.ParenthesisNode(num_neg),
-        new math.ParenthesisNode(two_a)
+      const formula_neg = new mjs.OperatorNode('/', 'divide', [
+        new mjs.ParenthesisNode(num_neg),
+        new mjs.ParenthesisNode(two_a)
       ]);
 
-      const varNode = new math.SymbolNode(solveVar);
+      const varNode = new mjs.SymbolNode(solveVar);
 
       // Determine where the quadratic was located (mostly on LHS or RHS)
       const lhsHasQuadratic = hasVariable(eq.lhs, solveVar);
@@ -1226,7 +1227,7 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
       // Parametrized original: the target subtree is replaced with a free symbol
       // so a move is validated as an identity over an arbitrary operand, not a
       // coincidence of the specific value. null if the path can't be mapped.
-      const paramVar = new math.SymbolNode('__y');
+      const paramVar = new mjs.SymbolNode('__y');
       let originalEqParam: Equation | null = null;
       try {
         const targetPathInOrig = mapPathTempToOrig(originalEq, sourcePath, targetPath);
@@ -1272,13 +1273,13 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
 
       ops.forEach((op) => {
         // Cast via never to satisfy very specific types of OperatorNodeMap in mathjs
-        const nodeStandard = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [targetNode, removedNode]);
+        const nodeStandard = new mjs.OperatorNode(op as never, OP_TO_FN[op] as never, [targetNode, removedNode]);
         const eqStandard = replaceNodeAtPath(tempEq, targetPath, nodeStandard);
 
         let eqStandardParam: Equation | null = null;
         if (originalEqParam) {
           try {
-            const nodeStandardParam = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [paramVar, removedNode]);
+            const nodeStandardParam = new mjs.OperatorNode(op as never, OP_TO_FN[op] as never, [paramVar, removedNode]);
             eqStandardParam = replaceNodeAtPath(tempEq, targetPath, nodeStandardParam);
           } catch {
             eqStandardParam = null;
@@ -1287,13 +1288,13 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
         tryAddMove(eqStandard, eqStandardParam);
 
         if (op === '-' || op === '/') {
-          const nodeReverse = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [removedNode, targetNode]);
+          const nodeReverse = new mjs.OperatorNode(op as never, OP_TO_FN[op] as never, [removedNode, targetNode]);
           const eqReverse = replaceNodeAtPath(tempEq, targetPath, nodeReverse);
 
           let eqReverseParam: Equation | null = null;
           if (originalEqParam) {
             try {
-              const nodeReverseParam = new math.OperatorNode(op as never, OP_TO_FN[op] as never, [removedNode, paramVar]);
+              const nodeReverseParam = new mjs.OperatorNode(op as never, OP_TO_FN[op] as never, [removedNode, paramVar]);
               eqReverseParam = replaceNodeAtPath(tempEq, targetPath, nodeReverseParam);
             } catch {
               eqReverseParam = null;
@@ -1342,7 +1343,7 @@ export const getEquationStatus = (eq: Equation): EquationStatus => {
     const rhsVal = eq.rhs.compile().evaluate();
     const relation = eq.relation || '=';
 
-    const cmp = math.compare(lhsVal, rhsVal) as number;
+    const cmp = mjs.compare(lhsVal, rhsVal) as number;
     if (relation === '=') return cmp === 0 ? 'identity' : 'contradiction';
     if (relation === '<') return cmp < 0 ? 'identity' : 'contradiction';
     if (relation === '>') return cmp > 0 ? 'identity' : 'contradiction';

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
+import { mjs } from './mathjs';
 import { Equation, RelationOperator, flipRelation } from './tree';
 
 export type GlobalOpType =
@@ -59,8 +60,8 @@ export const applyGlobalOp = (eq: Equation, params: GlobalOpParams): Equation =>
 
   if (type === 'square' || type === 'power') {
     return {
-      lhs: new math.OperatorNode('^', 'pow', [eq.lhs, new math.ConstantNode(effectivePower)]),
-      rhs: new math.OperatorNode('^', 'pow', [eq.rhs, new math.ConstantNode(effectivePower)]),
+      lhs: new mjs.OperatorNode('^', 'pow', [eq.lhs, new mjs.ConstantNode(effectivePower)]),
+      rhs: new mjs.OperatorNode('^', 'pow', [eq.rhs, new mjs.ConstantNode(effectivePower)]),
       relation,
     };
   }
@@ -68,14 +69,14 @@ export const applyGlobalOp = (eq: Equation, params: GlobalOpParams): Equation =>
   if (type === 'sqrt' || type === 'root') {
     if (effectivePower === 2) {
       return {
-        lhs: new math.FunctionNode('sqrt', [eq.lhs]),
-        rhs: new math.FunctionNode('sqrt', [eq.rhs]),
+        lhs: new mjs.FunctionNode('sqrt', [eq.lhs]),
+        rhs: new mjs.FunctionNode('sqrt', [eq.rhs]),
         relation,
       };
     }
     return {
-      lhs: new math.FunctionNode('nthRoot', [eq.lhs, new math.ConstantNode(effectivePower)]),
-      rhs: new math.FunctionNode('nthRoot', [eq.rhs, new math.ConstantNode(effectivePower)]),
+      lhs: new mjs.FunctionNode('nthRoot', [eq.lhs, new mjs.ConstantNode(effectivePower)]),
+      rhs: new mjs.FunctionNode('nthRoot', [eq.rhs, new mjs.ConstantNode(effectivePower)]),
       relation,
     };
   }
@@ -94,15 +95,15 @@ export const applyGlobalOp = (eq: Equation, params: GlobalOpParams): Equation =>
   // subtraction, and equalities are never flipped.
   let newRelation: RelationOperator | undefined = relation;
   if (relation && relation !== '=' && (type === 'mul' || type === 'div')) {
-    const operandValue = constantValue(math.parse(term.trim()));
+    const operandValue = constantValue(mjs.parse(term.trim()));
     if (operandValue !== null && operandValue < 0) {
       newRelation = flipRelation(relation);
     }
   }
 
   return {
-    lhs: new math.OperatorNode(opSym, opName, [eq.lhs, math.parse(term.trim())]),
-    rhs: new math.OperatorNode(opSym, opName, [eq.rhs, math.parse(term.trim())]),
+    lhs: new mjs.OperatorNode(opSym, opName, [eq.lhs, mjs.parse(term.trim())]),
+    rhs: new mjs.OperatorNode(opSym, opName, [eq.rhs, mjs.parse(term.trim())]),
     relation: newRelation,
   };
 };

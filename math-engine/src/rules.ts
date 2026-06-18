@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
+import { mjs } from './mathjs';
 
 export interface RewriteRule {
   id: string;
@@ -716,8 +717,8 @@ export const HIGH_SCHOOL_IDENTITIES: RewriteRule[] = RAW_RULES.map((rule) => {
   try {
     return {
       ...rule,
-      sourcePattern: math.parse(rule.sourcePatternStr),
-      targetPattern: math.parse(rule.targetPatternStr),
+      sourcePattern: mjs.parse(rule.sourcePatternStr),
+      targetPattern: mjs.parse(rule.targetPatternStr),
     };
   } catch (err) {
     console.error(`Failed to parse rewrite rule patterns for: ${rule.id}`, err);

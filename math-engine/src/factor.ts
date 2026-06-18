@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
+import { mjs } from './mathjs';
 
 /**
  * Factoring of univariate integer-coefficient polynomials (Phase 1: GCF
@@ -75,7 +76,7 @@ const gcfFactor = (coeffs: number[], v: string): FactorOption | null => {
   const reduced = coeffs.slice(k).map((c) => c / g);
   const prefixVar = k === 0 ? '' : k === 1 ? v : `${v}^${k}`;
   const prefix = g !== 1 && prefixVar ? `${g}*${prefixVar}` : g !== 1 ? `${g}` : prefixVar;
-  const node = math.parse(`${prefix} * (${polyToString(reduced, v)})`);
+  const node = mjs.parse(`${prefix} * (${polyToString(reduced, v)})`);
   return { node, label: `Factor out ${prefix.replace('*', '')}` };
 };
 
@@ -94,7 +95,7 @@ const monicQuadratic = (coeffs: number[], v: string): FactorOption | null => {
     if (p === 0 || c % p !== 0) continue;
     const q = c / p;
     if (p + q === b) {
-      return { node: math.parse(`${binomial(v, p)} * ${binomial(v, q)}`), label: 'Factor' };
+      return { node: mjs.parse(`${binomial(v, p)} * ${binomial(v, q)}`), label: 'Factor' };
     }
   }
   return null;
@@ -139,7 +140,7 @@ const generalQuadratic = (coeffs: number[], v: string): FactorOption | null => {
     const xPart = d === 1 ? v : `${d}*${v}`;
     return n < 0 ? `(${xPart} + ${-n})` : `(${xPart} - ${n})`;
   };
-  return { node: math.parse(`${term(f1)} * ${term(f2)}`), label: 'Factor' };
+  return { node: mjs.parse(`${term(f1)} * ${term(f2)}`), label: 'Factor' };
 };
 
 /**
@@ -150,7 +151,7 @@ const generalQuadratic = (coeffs: number[], v: string): FactorOption | null => {
 export const tryFactor = (node: math.MathNode): FactorOption[] => {
   let coeffs: number[];
   try {
-    const detailed = math.rationalize(node, {}, true) as unknown as { coefficients: number[] };
+    const detailed = mjs.rationalize(node, {}, true) as unknown as { coefficients: number[] };
     coeffs = detailed.coefficients;
   } catch {
     return [];

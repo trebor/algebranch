@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
+import { mjs, fractionMath } from './mathjs';
 import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, ensureNodeIds } from './tree';
 import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions, getQuadraticStandardForm, getVariables, tryExtractQuadraticExpr } from './validator';
 import { HIGH_SCHOOL_IDENTITIES } from './rules';
@@ -81,7 +82,7 @@ export const isConstantSubtree = (node: math.MathNode): boolean => {
   return false;
 };
 
-const mathFraction = math.create(math.all, { number: 'Fraction' });
+const mathFraction = fractionMath;
 
 /**
  * Checks if a mathematical node contains any constant node with a decimal point.
@@ -117,11 +118,11 @@ export const evaluateConstantSubtree = (node: math.MathNode): math.MathNode | nu
         const d = Number(val.d);
 
         if (d === 1) {
-          return new math.ConstantNode(s * n);
+          return new mjs.ConstantNode(s * n);
         } else {
-          return new math.OperatorNode('/', 'divide', [
-            new math.ConstantNode(s * n),
-            new math.ConstantNode(d)
+          return new mjs.OperatorNode('/', 'divide', [
+            new mjs.ConstantNode(s * n),
+            new mjs.ConstantNode(d)
           ]);
         }
       }
@@ -145,7 +146,7 @@ export const evaluateConstantSubtree = (node: math.MathNode): math.MathNode | nu
       }
     }
     if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
-      return new math.ConstantNode(numVal);
+      return new mjs.ConstantNode(numVal);
     }
   } catch {
     // ignore
@@ -337,12 +338,12 @@ export const trySimplifyRadical = (node: math.MathNode): math.MathNode | null =>
 
   const rootNode: math.MathNode =
     nameStr === 'sqrt'
-      ? new math.FunctionNode('sqrt', [new math.ConstantNode(remaining)])
+      ? new mjs.FunctionNode('sqrt', [new mjs.ConstantNode(remaining)])
       : funcNode.args.length === 2
-        ? new math.FunctionNode('nthRoot', [new math.ConstantNode(remaining), new math.ConstantNode(degree)])
-        : new math.FunctionNode('nthRoot', [new math.ConstantNode(remaining)]);
+        ? new mjs.FunctionNode('nthRoot', [new mjs.ConstantNode(remaining), new mjs.ConstantNode(degree)])
+        : new mjs.FunctionNode('nthRoot', [new mjs.ConstantNode(remaining)]);
 
-  return new math.OperatorNode('*', 'multiply', [new math.ConstantNode(coeff), rootNode]);
+  return new mjs.OperatorNode('*', 'multiply', [new mjs.ConstantNode(coeff), rootNode]);
 };
 
 /**
@@ -411,10 +412,10 @@ export const tryCombineLikeRadicals = (node: math.MathNode): math.MathNode | nul
   const coeff = opNode.op === '+' ? left.coeff + right.coeff : left.coeff - right.coeff;
   const root = left.root;
 
-  if (coeff === 0) return new math.ConstantNode(0);
+  if (coeff === 0) return new mjs.ConstantNode(0);
   if (coeff === 1) return root;
-  if (coeff === -1) return new math.OperatorNode('-', 'unaryMinus', [root]);
-  return new math.OperatorNode('*', 'multiply', [new math.ConstantNode(coeff), root]);
+  if (coeff === -1) return new mjs.OperatorNode('-', 'unaryMinus', [root]);
+  return new mjs.OperatorNode('*', 'multiply', [new mjs.ConstantNode(coeff), root]);
 };
 
 /**
@@ -515,10 +516,10 @@ export const tryRationalizeDenominator = (node: math.MathNode): math.MathNode | 
   // nthRoot(k, n)·nthRoot(k^(n-1), n) = nthRoot(k^n, n) = k.
   const multiplier: math.MathNode =
     degree === 2
-      ? new math.FunctionNode('sqrt', [new math.ConstantNode(radicand)])
-      : new math.FunctionNode('nthRoot', [
-          new math.ConstantNode(Math.pow(radicand, degree - 1)),
-          new math.ConstantNode(degree),
+      ? new mjs.FunctionNode('sqrt', [new mjs.ConstantNode(radicand)])
+      : new mjs.FunctionNode('nthRoot', [
+          new mjs.ConstantNode(Math.pow(radicand, degree - 1)),
+          new mjs.ConstantNode(degree),
         ]);
 
   // After multiplying through, the denominator is the bare integer denomCoeff·k.
@@ -538,15 +539,15 @@ export const tryRationalizeDenominator = (node: math.MathNode): math.MathNode | 
       cReduced === 1
         ? multiplier
         : cReduced === -1
-          ? new math.OperatorNode('-', 'unaryMinus', [multiplier])
-          : new math.OperatorNode('*', 'multiply', [new math.ConstantNode(cReduced), multiplier]);
+          ? new mjs.OperatorNode('-', 'unaryMinus', [multiplier])
+          : new mjs.OperatorNode('*', 'multiply', [new mjs.ConstantNode(cReduced), multiplier]);
   } else {
     // General numerator: multiply it by the rationalizing factor, no reduction.
-    numeratorNode = new math.OperatorNode('*', 'multiply', [numerator, multiplier]);
+    numeratorNode = new mjs.OperatorNode('*', 'multiply', [numerator, multiplier]);
   }
 
   if (denomInt === 1) return numeratorNode;
-  return new math.OperatorNode('/', 'divide', [numeratorNode, new math.ConstantNode(denomInt)]);
+  return new mjs.OperatorNode('/', 'divide', [numeratorNode, new mjs.ConstantNode(denomInt)]);
 };
 
 /**
@@ -574,9 +575,9 @@ const fractionToNode = (frac: math.Fraction): math.MathNode => {
   const d = Number(frac.d);
   const magnitude: math.MathNode =
     d === 1
-      ? new math.ConstantNode(n)
-      : new math.OperatorNode('/', 'divide', [new math.ConstantNode(n), new math.ConstantNode(d)]);
-  return frac.s < 0 ? new math.OperatorNode('-', 'unaryMinus', [magnitude]) : magnitude;
+      ? new mjs.ConstantNode(n)
+      : new mjs.OperatorNode('/', 'divide', [new mjs.ConstantNode(n), new mjs.ConstantNode(d)]);
+  return frac.s < 0 ? new mjs.OperatorNode('-', 'unaryMinus', [magnitude]) : magnitude;
 };
 
 /**
@@ -597,9 +598,9 @@ export const tryCompleteTheSquare = (node: math.MathNode): math.MathNode | null 
     // Symbolic coefficients (e.g. a stray second variable) are deferred.
     let af: math.Fraction, bf: math.Fraction, cf: math.Fraction;
     try {
-      af = math.fraction(coeffs.a.compile().evaluate());
-      bf = math.fraction(coeffs.b.compile().evaluate());
-      cf = math.fraction(coeffs.c.compile().evaluate());
+      af = mjs.fraction(coeffs.a.compile().evaluate());
+      bf = mjs.fraction(coeffs.b.compile().evaluate());
+      cf = mjs.fraction(coeffs.c.compile().evaluate());
     } catch {
       continue;
     }
@@ -608,37 +609,37 @@ export const tryCompleteTheSquare = (node: math.MathNode): math.MathNode | null 
     if (Number(af.n) === 0 || Number(bf.n) === 0) continue;
 
     // h = b / (2a); k = c − b² / (4a)
-    const h = math.divide(bf, math.multiply(af, 2) as math.Fraction) as math.Fraction;
-    const k = math.subtract(
+    const h = mjs.divide(bf, mjs.multiply(af, 2) as math.Fraction) as math.Fraction;
+    const k = mjs.subtract(
       cf,
-      math.divide(math.multiply(bf, bf) as math.Fraction, math.multiply(af, 4) as math.Fraction)
+      mjs.divide(mjs.multiply(bf, bf) as math.Fraction, mjs.multiply(af, 4) as math.Fraction)
     ) as math.Fraction;
 
     // (v ± |h|)
-    const inner = new math.OperatorNode(
+    const inner = new mjs.OperatorNode(
       h.s < 0 ? '-' : '+',
       h.s < 0 ? 'subtract' : 'add',
-      [new math.SymbolNode(solveVar), fractionToNode(math.abs(h) as math.Fraction)]
+      [new mjs.SymbolNode(solveVar), fractionToNode(mjs.abs(h) as math.Fraction)]
     );
-    const squared = new math.OperatorNode('^', 'pow', [
-      new math.ParenthesisNode(inner),
-      new math.ConstantNode(2),
+    const squared = new mjs.OperatorNode('^', 'pow', [
+      new mjs.ParenthesisNode(inner),
+      new mjs.ConstantNode(2),
     ]);
 
     // a · (…)², dropping a redundant ×1
     const scaled: math.MathNode =
       Number(af.n) === 1 && Number(af.d) === 1
         ? squared
-        : new math.OperatorNode('*', 'multiply', [fractionToNode(af), squared]);
+        : new mjs.OperatorNode('*', 'multiply', [fractionToNode(af), squared]);
 
     // … ± |k|, dropping a redundant + 0
     const result: math.MathNode =
       Number(k.n) === 0
         ? scaled
-        : new math.OperatorNode(
+        : new mjs.OperatorNode(
             k.s < 0 ? '-' : '+',
             k.s < 0 ? 'subtract' : 'add',
-            [scaled, fractionToNode(math.abs(k) as math.Fraction)]
+            [scaled, fractionToNode(mjs.abs(k) as math.Fraction)]
           );
 
     return result;
@@ -681,11 +682,11 @@ export const tryDistribution = (node: math.MathNode): math.MathNode | null => {
       const c = innerOp.args[1];
       const op = innerOp.op;
 
-      const term1 = new math.OperatorNode('*', 'multiply', [a, b]);
-      const term2 = new math.OperatorNode('*', 'multiply', [a, c]);
-      return new math.OperatorNode(op, op === '+' ? 'add' : 'subtract', [
-        new math.ParenthesisNode(term1),
-        new math.ParenthesisNode(term2),
+      const term1 = new mjs.OperatorNode('*', 'multiply', [a, b]);
+      const term2 = new mjs.OperatorNode('*', 'multiply', [a, c]);
+      return new mjs.OperatorNode(op, op === '+' ? 'add' : 'subtract', [
+        new mjs.ParenthesisNode(term1),
+        new mjs.ParenthesisNode(term2),
       ]);
     }
 
@@ -701,11 +702,11 @@ export const tryDistribution = (node: math.MathNode): math.MathNode | null => {
       const c = innerOp.args[1];
       const op = innerOp.op;
 
-      const term1 = new math.OperatorNode('*', 'multiply', [b, a]);
-      const term2 = new math.OperatorNode('*', 'multiply', [c, a]);
-      return new math.OperatorNode(op, op === '+' ? 'add' : 'subtract', [
-        new math.ParenthesisNode(term1),
-        new math.ParenthesisNode(term2),
+      const term1 = new mjs.OperatorNode('*', 'multiply', [b, a]);
+      const term2 = new mjs.OperatorNode('*', 'multiply', [c, a]);
+      return new mjs.OperatorNode(op, op === '+' ? 'add' : 'subtract', [
+        new mjs.ParenthesisNode(term1),
+        new mjs.ParenthesisNode(term2),
       ]);
     }
   }
@@ -727,11 +728,11 @@ export const tryDistribution = (node: math.MathNode): math.MathNode | null => {
       const c = innerOp.args[1];
       const op = innerOp.op;
 
-      const term1 = new math.OperatorNode('/', 'divide', [b, a]);
-      const term2 = new math.OperatorNode('/', 'divide', [c, a]);
-      return new math.OperatorNode(op, op === '+' ? 'add' : 'subtract', [
-        new math.ParenthesisNode(term1),
-        new math.ParenthesisNode(term2),
+      const term1 = new mjs.OperatorNode('/', 'divide', [b, a]);
+      const term2 = new mjs.OperatorNode('/', 'divide', [c, a]);
+      return new mjs.OperatorNode(op, op === '+' ? 'add' : 'subtract', [
+        new mjs.ParenthesisNode(term1),
+        new mjs.ParenthesisNode(term2),
       ]);
     }
   }
@@ -812,14 +813,14 @@ export const tryCombinePowerTerms = (node: math.MathNode): math.MathNode | null 
   const right = opNode.args[1];
 
   let baseLeft = left;
-  let expLeft: math.MathNode = new math.ConstantNode(1);
+  let expLeft: math.MathNode = new mjs.ConstantNode(1);
   if (left.type === 'OperatorNode' && (left as math.OperatorNode).op === '^') {
     baseLeft = (left as math.OperatorNode).args[0];
     expLeft = (left as math.OperatorNode).args[1];
   }
 
   let baseRight = right;
-  let expRight: math.MathNode = new math.ConstantNode(1);
+  let expRight: math.MathNode = new mjs.ConstantNode(1);
   if (right.type === 'OperatorNode' && (right as math.OperatorNode).op === '^') {
     baseRight = (right as math.OperatorNode).args[0];
     expRight = (right as math.OperatorNode).args[1];
@@ -842,15 +843,15 @@ export const tryCombinePowerTerms = (node: math.MathNode): math.MathNode | null 
       const valL = expLeft.type === 'ConstantNode' ? Number((expLeft as math.ConstantNode).value) : NaN;
       const valR = expRight.type === 'ConstantNode' ? Number((expRight as math.ConstantNode).value) : NaN;
       if (!isNaN(valL) && !isNaN(valR)) {
-        sumNode = new math.ConstantNode(valL + valR);
+        sumNode = new mjs.ConstantNode(valL + valR);
       } else {
-        sumNode = new math.OperatorNode('+', 'add', [expLeft, expRight]);
+        sumNode = new mjs.OperatorNode('+', 'add', [expLeft, expRight]);
       }
     } catch {
-      sumNode = new math.OperatorNode('+', 'add', [expLeft, expRight]);
+      sumNode = new mjs.OperatorNode('+', 'add', [expLeft, expRight]);
     }
 
-    return new math.OperatorNode('^', 'pow', [baseLeft, sumNode]);
+    return new mjs.OperatorNode('^', 'pow', [baseLeft, sumNode]);
   }
 
   return null;
@@ -879,7 +880,7 @@ export const tryExpandPowerTerm = (node: math.MathNode): math.MathNode | null =>
   // Construct base * base * ... * base (n times)
   let result = base;
   for (let i = 1; i < n; i++) {
-    result = new math.OperatorNode('*', 'multiply', [result, base]);
+    result = new mjs.OperatorNode('*', 'multiply', [result, base]);
   }
   return result;
 };
@@ -919,10 +920,10 @@ const lcmInt = (a: number, b: number): number => (a === 0 || b === 0 ? 0 : Math.
 const multiplyFactors = (a: math.MathNode, b: math.MathNode): math.MathNode => {
   const av = integerValueOf(a);
   const bv = integerValueOf(b);
-  if (av !== null && bv !== null) return new math.ConstantNode(av * bv);
+  if (av !== null && bv !== null) return new mjs.ConstantNode(av * bv);
   if (isOneNode(a)) return b;
   if (isOneNode(b)) return a;
-  return new math.OperatorNode('*', 'multiply', [a, b]);
+  return new mjs.OperatorNode('*', 'multiply', [a, b]);
 };
 
 interface SignedTerm {
@@ -986,7 +987,7 @@ export const tryCombineFractions = (node: math.MathNode): math.MathNode | null =
       terms.push({ sign, num: (inner as math.OperatorNode).args[0], den });
       if (!isOneNode(den)) fractionCount++;
     } else if (integerValueOf(inner) !== null) {
-      terms.push({ sign, num: inner, den: new math.ConstantNode(1) });
+      terms.push({ sign, num: inner, den: new mjs.ConstantNode(1) });
     } else {
       return null;
     }
@@ -1004,8 +1005,8 @@ export const tryCombineFractions = (node: math.MathNode): math.MathNode | null =
 
   if (allPositiveInt) {
     const lcd = (denVals as number[]).reduce((acc, v) => lcmInt(acc, v), 1);
-    denominator = new math.ConstantNode(lcd);
-    cofactorFor = (i) => new math.ConstantNode(lcd / (denVals[i] as number));
+    denominator = new mjs.ConstantNode(lcd);
+    cofactorFor = (i) => new mjs.ConstantNode(lcd / (denVals[i] as number));
   } else {
     // Distinct, non-unit denominators (deduped by string form).
     const distinct: math.MathNode[] = [];
@@ -1018,12 +1019,12 @@ export const tryCombineFractions = (node: math.MathNode): math.MathNode | null =
         distinct.push(t.den);
       }
     }
-    denominator = distinct.reduce((acc, d) => multiplyFactors(acc, d), new math.ConstantNode(1) as math.MathNode);
+    denominator = distinct.reduce((acc, d) => multiplyFactors(acc, d), new mjs.ConstantNode(1) as math.MathNode);
     cofactorFor = (i) => {
       const skip = clean(terms[i].den.toString());
       return distinct
         .filter((d) => clean(d.toString()) !== skip)
-        .reduce((acc, d) => multiplyFactors(acc, d), new math.ConstantNode(1) as math.MathNode);
+        .reduce((acc, d) => multiplyFactors(acc, d), new mjs.ConstantNode(1) as math.MathNode);
     };
   }
 
@@ -1032,9 +1033,9 @@ export const tryCombineFractions = (node: math.MathNode): math.MathNode | null =
   terms.forEach((t, i) => {
     const contrib = multiplyFactors(t.num, cofactorFor(i));
     if (numerator === null) {
-      numerator = t.sign === -1 ? new math.OperatorNode('-', 'unaryMinus', [contrib]) : contrib;
+      numerator = t.sign === -1 ? new mjs.OperatorNode('-', 'unaryMinus', [contrib]) : contrib;
     } else {
-      numerator = new math.OperatorNode(
+      numerator = new mjs.OperatorNode(
         t.sign === -1 ? '-' : '+',
         t.sign === -1 ? 'subtract' : 'add',
         [numerator, contrib],
@@ -1043,7 +1044,7 @@ export const tryCombineFractions = (node: math.MathNode): math.MathNode | null =
   });
   if (numerator === null) return null;
 
-  return new math.OperatorNode('/', 'divide', [numerator, denominator]);
+  return new mjs.OperatorNode('/', 'divide', [numerator, denominator]);
 };
 
 /**
@@ -1236,7 +1237,7 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
     // smaller, after the student takes it.
     if (!subtreeHasFinerSimplification(eq, p)) {
       try {
-        const simplifiedNode = math.simplify(node.toString());
+        const simplifiedNode = mjs.simplify(node.toString());
         if (simplifiedNode.toString() !== node.toString()) {
           // Enforce complexity reduction to filter out non-simplifying reorderings (e.g. (y - 1) * 2 -> 2 * (y - 1))
           if (countNodes(simplifiedNode) < countNodes(node)) {
@@ -1355,7 +1356,7 @@ export const autoSimplify = (eq: Equation): Equation => {
 
       // Try mathjs built-in simplify for algebraic reductions (e.g. combining like terms)
       try {
-        const simplifiedNode = math.simplify(node.toString());
+        const simplifiedNode = mjs.simplify(node.toString());
         if (simplifiedNode.toString() !== node.toString()) {
           // Enforce complexity reduction to filter out non-simplifying reorderings (e.g. (y - 1) * 2 -> 2 * (y - 1))
           if (countNodes(simplifiedNode) < countNodes(node)) {
@@ -1498,7 +1499,7 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
 
         if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
           if (!Number.isInteger(numVal)) {
-            const decNode = new math.ConstantNode(numVal);
+            const decNode = new mjs.ConstantNode(numVal);
             const newEq = replaceNodeAtPath(eq, path, decNode);
             
             if (areEquationsEquivalent(eq, newEq)) {
@@ -1724,7 +1725,7 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
       const negEq = replaceNodeAtPath(
         eq,
         path,
-        new math.OperatorNode('-', 'unaryMinus', [analysis.base.clone()]),
+        new mjs.OperatorNode('-', 'unaryMinus', [analysis.base.clone()]),
       );
       rawReductions.push({ path, simplified: posEq, type: 'reduce', label: 'Take Root (+)' });
       rawReductions.push({ path, simplified: negEq, type: 'reduce', label: 'Take Root (-)' });

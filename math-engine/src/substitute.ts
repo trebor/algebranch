@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
+import { mjs } from './mathjs';
 import { Equation, getChildren, ensureNodeIds, cloneWithChildren, replaceNodeAtPath } from './tree';
 import { getVariables, getFunctionName } from './validator';
 
@@ -105,7 +106,7 @@ export const getSubstitutionOptions = (
     try {
       const cloned = fact.expression.cloneDeep();
       const replacementNode =
-        cloned.type === 'OperatorNode' ? new math.ParenthesisNode(cloned) : cloned;
+        cloned.type === 'OperatorNode' ? new mjs.ParenthesisNode(cloned) : cloned;
       
       const substitutedLhs = replaceSymbol(eq.lhs, fact.variable, replacementNode);
       const substitutedRhs = replaceSymbol(eq.rhs, fact.variable, replacementNode);
@@ -139,13 +140,13 @@ const normalizeAST = (node: math.MathNode): math.MathNode => {
     if (opNode.op === '+' || opNode.op === '*') {
       normalizedArgs.sort((a, b) => a.toString().localeCompare(b.toString()));
     }
-    return new math.OperatorNode(opNode.op, opNode.fn, normalizedArgs);
+    return new mjs.OperatorNode(opNode.op, opNode.fn, normalizedArgs);
   }
 
   if (unwrapped.type === 'FunctionNode') {
     const fnNode = unwrapped as math.FunctionNode;
     const normalizedArgs = fnNode.args.map(arg => normalizeAST(arg));
-    return new math.FunctionNode(getFunctionName(fnNode), normalizedArgs);
+    return new mjs.FunctionNode(getFunctionName(fnNode), normalizedArgs);
   }
 
   return unwrapped;
@@ -179,7 +180,7 @@ export const getCombineOptions = (
       if (areNodesCanonicallyEqual(node, fact.expression)) {
         try {
           const substituted = ensureNodeIds(
-            replaceNodeAtPath(eq, path, new math.SymbolNode(fact.variable))
+            replaceNodeAtPath(eq, path, new mjs.SymbolNode(fact.variable))
           );
           (result[path] ||= []).push({
             path,

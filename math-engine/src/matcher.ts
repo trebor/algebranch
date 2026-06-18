@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
+import { mjs } from './mathjs';
 import { getFunctionName } from './validator';
 
 export interface WildcardBindings {
@@ -220,9 +221,9 @@ export function tryExpressAsPowerOptions(node: math.MathNode): math.MathNode[] {
     const b = Math.pow(val, 1 / p);
     const roundedB = Math.round(b);
     if (Math.abs(Math.pow(roundedB, p) - val) < 1e-9) {
-      options.push(new math.OperatorNode('^', 'pow', [
-        new math.ConstantNode(roundedB),
-        new math.ConstantNode(p)
+      options.push(new mjs.OperatorNode('^', 'pow', [
+        new mjs.ConstantNode(roundedB),
+        new mjs.ConstantNode(p)
       ]));
     }
   }

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import * as math from 'mathjs';
+import type * as math from 'mathjs';
+import { mjs } from './mathjs';
 
 /** Relational operator joining the two sides. Defaults to '=' when omitted. */
 export type RelationOperator = '=' | '<' | '>' | '<=' | '>=';
@@ -156,7 +157,7 @@ export const removeNodeAtPath = (
         return children[remainingIdx];
       } else if (children.length === unaryCount) {
         const defaultZero = 0;
-        return new math.ConstantNode(defaultZero);
+        return new mjs.ConstantNode(defaultZero);
       } else {
         const newChildren = children.filter((_, i) => i !== idxToRemove);
         return cloneWithChildren(node, newChildren);
@@ -176,8 +177,8 @@ export const removeNodeAtPath = (
     const defaultZero = 0;
     return {
       newEquation: {
-        lhs: side === 'lhs' ? new math.ConstantNode(defaultZero) : eq.lhs,
-        rhs: side === 'rhs' ? new math.ConstantNode(defaultZero) : eq.rhs,
+        lhs: side === 'lhs' ? new mjs.ConstantNode(defaultZero) : eq.lhs,
+        rhs: side === 'rhs' ? new mjs.ConstantNode(defaultZero) : eq.rhs,
         relation: eq.relation,
       },
       removedNode: root,
@@ -438,18 +439,18 @@ export const deserializeNode = (sNode: SerializedNode): math.MathNode => {
   let node: math.MathNode;
 
   if (sNode.type === 'ConstantNode') {
-    node = new math.ConstantNode(sNode.value);
+    node = new mjs.ConstantNode(sNode.value);
   } else if (sNode.type === 'SymbolNode') {
-    node = new math.SymbolNode(sNode.name!);
+    node = new mjs.SymbolNode(sNode.name!);
   } else if (sNode.type === 'ParenthesisNode') {
     const content = deserializeNode(sNode.content!);
-    node = new math.ParenthesisNode(content);
+    node = new mjs.ParenthesisNode(content);
   } else if (sNode.type === 'OperatorNode') {
     const args = sNode.args!.map((child) => deserializeNode(child));
-    node = new math.OperatorNode(sNode.op! as any, sNode.fn! as any, args);
+    node = new mjs.OperatorNode(sNode.op! as any, sNode.fn! as any, args);
   } else if (sNode.type === 'FunctionNode') {
     const args = sNode.args!.map((child) => deserializeNode(child));
-    node = new math.FunctionNode(sNode.name!, args);
+    node = new mjs.FunctionNode(sNode.name!, args);
   } else {
     throw new Error(`Unsupported node type during deserialization: ${sNode.type}`);
   }

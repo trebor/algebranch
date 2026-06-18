@@ -10,6 +10,7 @@ import { TooltipCard } from './TooltipCard';
 import { CopyFormatMenu } from './CopyFormatMenu';
 import { equationToString, getEquationStatus } from 'math-engine-client';
 import { trackEvent } from '../utils/analytics';
+import { sentenceCase } from '../utils/text';
 import {
   historyTreeAtom,
   currentNodeIdAtom,
@@ -517,7 +518,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
                     <TooltipCard
                       eyebrow={`Step Details — ${node.label}`}
                       meta={`Step ${stepNum}`}
-                      description={node.change?.text}
+                      description={sentenceCase(node.change?.text)}
                       assumptions={node.change?.assumptions}
                       equation={node.equation}
                     />

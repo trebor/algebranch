@@ -1726,8 +1726,8 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
         path,
         new math.OperatorNode('-', 'unaryMinus', [analysis.base.clone()]),
       );
-      rawReductions.push({ path, simplified: posEq, type: 'reduce', label: 'Take root (+)' });
-      rawReductions.push({ path, simplified: negEq, type: 'reduce', label: 'Take root (-)' });
+      rawReductions.push({ path, simplified: posEq, type: 'reduce', label: 'Take Root (+)' });
+      rawReductions.push({ path, simplified: negEq, type: 'reduce', label: 'Take Root (-)' });
     } catch {
       /* skip paths that fail to resolve */
     }

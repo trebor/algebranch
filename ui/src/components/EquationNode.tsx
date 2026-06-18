@@ -1223,7 +1223,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 {stack.options.map((opt, i) => (
                   <button
                     key={i}
-                    className={`w-full text-left px-1.5 py-1.5 flex flex-col gap-0.5 cursor-pointer ${THEME_GLASS.LIST_ITEM_HOVER}`}
+                    className={`w-full min-w-0 text-left px-1.5 py-1.5 flex flex-col gap-0.5 cursor-pointer ${THEME_GLASS.LIST_ITEM_HOVER}`}
                     onMouseEnter={() => {
                       setHoveredOption({ type: stack.type, index: i });
                       if (stack.type !== 'substitute') {
@@ -1241,7 +1241,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                       closeMenu();
                     }}
                   >
-                    <span className={`whitespace-nowrap leading-snug ${optionLabelClass}`}>{opt.label}</span>
+                    <span className={`block truncate leading-snug ${optionLabelClass}`}>{opt.label}</span>
                     {opt.subLabel && <span className={`text-[10px] leading-snug ${THEME_GLASS.TEXT_MUTED}`}>{opt.subLabel}</span>}
                     {opt.assumptions && opt.assumptions.length > 0 && (
                       <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} mt-0.5`}>

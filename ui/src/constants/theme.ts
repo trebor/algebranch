@@ -133,7 +133,7 @@ export const THEME_GLASS = {
   TOUR_CARD: 'w-full shrink-0 border-t border-white/10 bg-neutral-950/95 rounded-b-2xl z-40 overflow-hidden flex flex-col max-h-[38dvh] sm:max-h-none shadow-lg',
   EQUALS_SIGN: 'relative text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black transition-all',
   EQUALS_SIGN_INTERACTIVE: 'cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95',
-  EQUALS_BADGE: 'absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-indigo-600 border border-indigo-400 flex items-center justify-center text-[7.5px] text-white font-bold select-none cursor-pointer shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse z-20',
+  EQUALS_BADGE: 'absolute -top-2 -right-2 w-5 h-5 rounded-full bg-indigo-600 border border-indigo-400 flex items-center justify-center text-[11px] leading-none text-white font-bold select-none cursor-pointer shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse z-20',
   EQUALS_POPOVER: 'absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-40 w-48 p-3 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-1.5 text-left',
   EQUALS_POPOVER_TITLE: 'text-[9px] font-bold text-indigo-400 uppercase tracking-wider select-none',
   EQUALS_POPOVER_DESC: 'text-[10.5px] leading-snug text-white/70',

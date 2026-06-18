@@ -183,17 +183,15 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
         );
       }
 
-      // Binary Exponentiation operator (Superscript rendering)
+      // Binary Exponentiation operator (Superscript rendering). Top-anchor the
+      // exponent to the base so a tall group base (e.g. (x+2)) can't drop it to
+      // the midline where it reads as multiplication — see EquationNode (#194).
       if (opNode.op === '^') {
         return (
-          <div className="inline-flex items-baseline relative" style={{ paddingTop: '0.8em' }}>
-            <div>
-              <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} customEquation={customEquation} />
-            </div>
-            <div className="relative" style={{ top: '-0.8em' }}>
-              <div className="text-[0.65em] ml-[0.05em] opacity-70 scale-90" style={{ display: 'inline-block' }}>
-                <PreviewEquationNode path={`${path}/1`} inExponent={true} customEquation={customEquation} />
-              </div>
+          <div className="inline-flex items-start">
+            <PreviewEquationNode path={`${path}/0`} inExponent={inExponent} customEquation={customEquation} />
+            <div className="text-[0.65em] ml-[0.05em] opacity-70 scale-90 relative" style={{ top: '-0.4em', display: 'inline-block' }}>
+              <PreviewEquationNode path={`${path}/1`} inExponent={true} customEquation={customEquation} />
             </div>
           </div>
         );

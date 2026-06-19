@@ -373,7 +373,7 @@
         <div class="section-title">Branch Ratios & Dimensions</div>
         
         <label for="scaleFactor">Vertical Scale Factor ($f$) <span class="val" id="scaleFactorVal">0.88</span></label>
-        <input type="range" id="scaleFactor" min="0.40" max="0.90" step="0.01" value="0.88">
+        <input type="range" id="scaleFactor" min="0.40" max="1.00" step="0.01" value="0.88">
         
         <label for="marginSize">Canvas Margin (px) <span class="val" id="marginSizeVal">20</span></label>
         <input type="range" id="marginSize" min="5" max="80" step="1" value="20">
@@ -383,11 +383,11 @@
       <div class="form-group">
         <div class="section-title">S-Curve Parameters</div>
         
-        <label for="sCurveFactor">S-Curve Strength <span class="val" id="sCurveFactorVal">0.82</span></label>
-        <input type="range" id="sCurveFactor" min="0.10" max="1.50" step="0.02" value="0.82">
+        <label for="sCurveFactor">S-Curve Strength <span class="val" id="sCurveFactorVal">0.78</span></label>
+        <input type="range" id="sCurveFactor" min="0.10" max="1.50" step="0.02" value="0.78">
         
-        <label for="departureAngle">Branch Separation Angle <span class="val" id="departureAngleVal">48°</span></label>
-        <input type="range" id="departureAngle" min="15" max="75" step="1" value="48">
+        <label for="departureAngle">Branch Separation Angle <span class="val" id="departureAngleVal">50°</span></label>
+        <input type="range" id="departureAngle" min="15" max="75" step="1" value="50">
       </div>
 
       <!-- Node Circle Sizes -->
@@ -403,8 +403,8 @@
         <label for="rL2">Level 2 Radius (px) <span class="val" id="rL2Val">36</span></label>
         <input type="range" id="rL2" min="10" max="50" step="1" value="36">
         
-        <label for="textScale">Text Scale Factor <span class="val" id="textScaleVal">1.33</span></label>
-        <input type="range" id="textScale" min="0.50" max="1.50" step="0.01" value="1.33">
+        <label for="textScale">Text Scale Factor <span class="val" id="textScaleVal">1.74</span></label>
+        <input type="range" id="textScale" min="0.50" max="2.00" step="0.01" value="1.74">
         
         <div class="presets-row" style="margin-top: 0.25rem;">
           <button class="preset-chip" onclick="setCircleSizes(34, 26, 22)">Compact</button>
@@ -936,14 +936,24 @@
 
       let guideMarkup = "";
       if (showGuide) {
-        const xMin_abs = 250 + S * (rxMin - u);
-        const xMax_abs = 250 + S * (rxMax - u);
-        const yMin_abs = 250 + S * (ryMin - v);
-        const yMax_abs = 250 + S * (ryMax - v);
+        let xMin_abs = xTrunkBase - rRoot / 2;
+        let xMax_abs = xTrunkBase + rRoot / 2;
+        let yMin_abs = yTrunkBase;
+        let yMax_abs = yTrunkBase;
+        
+        nodes.forEach(n => {
+          if (n.x - n.r < xMin_abs) xMin_abs = n.x - n.r;
+          if (n.x + n.r > xMax_abs) xMax_abs = n.x + n.r;
+          if (n.y - n.r < yMin_abs) yMin_abs = n.y - n.r;
+          if (n.y + n.r > yMax_abs) yMax_abs = n.y + n.r;
+        });
+        
+        const bboxWidth = xMax_abs - xMin_abs;
+        const bboxHeight = yMax_abs - yMin_abs;
         
         guideMarkup = `
   <!-- Bounding Box Guide (Dashed cyan) -->
-  <rect class="crop-guide" x="${xMin_abs}" y="${yMin_abs}" width="${S * (rxMax - rxMin)}" height="${S * (ryMax - ryMin)}" fill="none" stroke="#33ccff" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.65" />
+  <rect class="crop-guide" x="${xMin_abs}" y="${yMin_abs}" width="${bboxWidth}" height="${bboxHeight}" fill="none" stroke="#33ccff" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.65" />
   
   <!-- Circular Crop Guide (Maximum Inscribed Circle - Inset by 2px to prevent clipping) -->
   <circle class="crop-guide" cx="250" cy="250" r="248" fill="none" stroke="#ff3366" stroke-width="2" stroke-dasharray="8,6" opacity="0.85" />\n`;

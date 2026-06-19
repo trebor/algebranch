@@ -6,6 +6,7 @@
 import React from 'react';
 import { useAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import { X, Info, ExternalLink, Shield } from 'lucide-react';
 import { aboutModalOpenAtom } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
@@ -82,18 +83,29 @@ export const AboutModal: React.FC = () => {
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-5 text-sm text-zinc-300 leading-relaxed">
               {/* App Meta & Description */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-base font-extrabold text-white tracking-wide">Algebranch</span>
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20`}>
-                    v{APP_VERSION}
-                  </span>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-4">
+                  <Image
+                    src="/logo.png"
+                    alt="Algebranch Logo"
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 object-contain rounded-xl border border-white/10 shrink-0"
+                  />
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-base font-extrabold text-white tracking-wide">Algebranch</span>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                        v{APP_VERSION}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400">
+                      {COPYRIGHT_NOTICE} · Released under the GNU General Public License (GPLv3).
+                    </p>
+                  </div>
                 </div>
                 <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
                   An interactive, pedagogical workspace for step-by-step algebraic derivations, equation transpositions, and visual mathematical exploration.
-                </p>
-                <p className="text-[11px] text-zinc-400">
-                  {COPYRIGHT_NOTICE} · Released under the GNU General Public License (GPLv3).
                 </p>
               </div>
 

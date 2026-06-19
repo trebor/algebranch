@@ -364,6 +364,7 @@
           <button class="toggle-btn active" onclick="setTheme('bw')">B&W</button>
           <button class="toggle-btn" onclick="setTheme('neon')">Neon Glow</button>
           <button class="toggle-btn" onclick="setTheme('minimal')">Minimalist</button>
+          <button class="toggle-btn" onclick="setTheme('gradient')">Chromatic</button>
         </div>
       </div>
 
@@ -445,7 +446,7 @@
 
   <script>
     // System Theme State
-    let activeTheme = 'bw'; // 'bw', 'neon', 'minimal'
+    let activeTheme = 'bw'; // 'bw', 'neon', 'minimal', 'gradient'
     
     // Core Elements
     const eqInput = document.getElementById('eqInput');
@@ -759,27 +760,27 @@
       const a1R = -angleDev;
       
       // Trunk
-      branches.push({ type: 'trunk', x1: xTrunkBase, y1: yTrunkBase, w1: Math.round(rRoot * 1.0), x2: xRoot, y2: yRoot, w2: Math.round(rRoot * 0.75) });
+      branches.push({ type: 'trunk', fromNodeId: 'trunkBase', toNodeId: 'root', x1: xTrunkBase, y1: yTrunkBase, w1: Math.round(rRoot * 1.0), x2: xRoot, y2: yRoot, w2: Math.round(rRoot * 0.75) });
       
       // L1 Left
-      branches.push({ type: 'scurve', x1: xRoot, y1: yRoot, w1: Math.round(rL1 * 0.9), a1: a1L, x2: l1_left.x, y2: l1_left.y, w2: Math.round(rL1 * 0.55), a2: -90, d1: dCtrl1, d2: dCtrl1 });
+      branches.push({ type: 'scurve', fromNodeId: 'root', toNodeId: 'l1_left', x1: xRoot, y1: yRoot, w1: Math.round(rL1 * 0.9), a1: a1L, x2: l1_left.x, y2: l1_left.y, w2: Math.round(rL1 * 0.55), a2: -90, d1: dCtrl1, d2: dCtrl1 });
       // L1 Right
-      branches.push({ type: 'scurve', x1: xRoot, y1: yRoot, w1: Math.round(rL1 * 0.9), a1: a1R, x2: l1_right.x, y2: l1_right.y, w2: Math.round(rL1 * 0.55), a2: -90, d1: dCtrl1, d2: dCtrl1 });
+      branches.push({ type: 'scurve', fromNodeId: 'root', toNodeId: 'l1_right', x1: xRoot, y1: yRoot, w1: Math.round(rL1 * 0.9), a1: a1R, x2: l1_right.x, y2: l1_right.y, w2: Math.round(rL1 * 0.55), a2: -90, d1: dCtrl1, d2: dCtrl1 });
       
       // L2 LHS
       if (hasLHSChildren) {
         const l2_left_left = nodes.find(n => n.id === 'l2_left_left');
         const l2_left_right = nodes.find(n => n.id === 'l2_left_right');
-        branches.push({ type: 'scurve', x1: l1_left.x, y1: l1_left.y, w1: Math.round(rL2 * 0.65), a1: a1L, x2: l2_left_left.x, y2: l2_left_left.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
-        branches.push({ type: 'scurve', x1: l1_left.x, y1: l1_left.y, w1: Math.round(rL2 * 0.65), a1: a1R, x2: l2_left_right.x, y2: l2_left_right.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
+        branches.push({ type: 'scurve', fromNodeId: 'l1_left', toNodeId: 'l2_left_left', x1: l1_left.x, y1: l1_left.y, w1: Math.round(rL2 * 0.65), a1: a1L, x2: l2_left_left.x, y2: l2_left_left.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
+        branches.push({ type: 'scurve', fromNodeId: 'l1_left', toNodeId: 'l2_left_right', x1: l1_left.x, y1: l1_left.y, w1: Math.round(rL2 * 0.65), a1: a1R, x2: l2_left_right.x, y2: l2_left_right.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
       }
       
       // L2 RHS
       if (hasRHSChildren) {
         const l2_right_left = nodes.find(n => n.id === 'l2_right_left');
         const l2_right_right = nodes.find(n => n.id === 'l2_right_right');
-        branches.push({ type: 'scurve', x1: l1_right.x, y1: l1_right.y, w1: Math.round(rL2 * 0.65), a1: a1L, x2: l2_right_left.x, y2: l2_right_left.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
-        branches.push({ type: 'scurve', x1: l1_right.x, y1: l1_right.y, w1: Math.round(rL2 * 0.65), a1: a1R, x2: l2_right_right.x, y2: l2_right_right.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
+        branches.push({ type: 'scurve', fromNodeId: 'l1_right', toNodeId: 'l2_right_left', x1: l1_right.x, y1: l1_right.y, w1: Math.round(rL2 * 0.65), a1: a1L, x2: l2_right_left.x, y2: l2_right_left.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
+        branches.push({ type: 'scurve', fromNodeId: 'l1_right', toNodeId: 'l2_right_right', x1: l1_right.x, y1: l1_right.y, w1: Math.round(rL2 * 0.65), a1: a1R, x2: l2_right_right.x, y2: l2_right_right.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
       }
       
       // Resolve Theme styles
@@ -820,6 +821,34 @@
         nodeStroke = "#1a1a1a";
         textColor = "#1a1a1a";
         canvasStroke = "#e1e8ed";
+      } else if (activeTheme === 'gradient') {
+        fillBg = "#0b0c10";
+        branchColor = "#ffffff";
+        nodeFill = "#ffffff";
+        nodeStroke = "#0b0c10";
+        textColor = "#ffffff";
+        canvasStroke = "rgba(255, 255, 255, 0.1)";
+        
+        const nodeColors = {
+          'trunkBase': '#4f46e5', // Indigo
+          'root': '#7c3aed',      // Purple
+          'l1_left': '#06b6d4',   // Cyan
+          'l1_right': '#ec4899',  // Pink
+          'l2_left_left': '#10b981',  // Emerald
+          'l2_left_right': '#0d9488', // Teal
+          'l2_right_left': '#f59e0b', // Amber
+          'l2_right_right': '#ef4444' // Red
+        };
+        
+        branches.forEach((b, idx) => {
+          const fromColor = nodeColors[b.fromNodeId] || '#ffffff';
+          const toColor = nodeColors[b.toNodeId] || '#ffffff';
+          gradientDef += `
+    <linearGradient id="branchGrad_${idx}" x1="${b.x1}" y1="${b.y1}" x2="${b.x2}" y2="${b.y2}" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="${fromColor}" />
+      <stop offset="100%" stop-color="${toColor}" />
+    </linearGradient>`;
+        });
       }
       
       // Generate SVG Markup
@@ -836,12 +865,13 @@
       const ctrlOffset1 = S * 30;
       const ctrlOffset2 = S * 40;
 
-      branches.forEach(b => {
+      branches.forEach((b, idx) => {
+        const fillAttr = activeTheme === 'gradient' ? `fill="url(#branchGrad_${idx})"` : '';
         if (b.type === 'scurve') {
           const d = makeTaperedAngledSCurve(b.x1, b.y1, b.w1, b.a1, b.x2, b.y2, b.w2, b.a2, b.d1, b.d2);
-          svgMarkup += `      <path d="${d}" />\n`;
+          svgMarkup += `      <path d="${d}" ${fillAttr} />\n`;
         } else if (b.type === 'trunk') {
-          svgMarkup += `      <path d="M ${b.x1 - b.w1/2},${b.y1} C ${b.x1 - b.w1/3},${b.y1 - ctrlOffset1} ${b.x2 - b.w2/3},${b.y2 + ctrlOffset1} ${b.x2 - b.w2/2},${b.y2} L ${b.x2 + b.w2/2},${b.y2} C ${b.x2 + b.w2/3},${b.y2 + ctrlOffset2} ${b.x1 + b.w1/3},${b.y1 - ctrlOffset1} ${b.x1 + b.w1/2},${b.y1} Z" />\n`;
+          svgMarkup += `      <path d="M ${b.x1 - b.w1/2},${b.y1} C ${b.x1 - b.w1/3},${b.y1 - ctrlOffset1} ${b.x2 - b.w2/3},${b.y2 + ctrlOffset1} ${b.x2 - b.w2/2},${b.y2} L ${b.x2 + b.w2/2},${b.y2} C ${b.x2 + b.w2/3},${b.y2 + ctrlOffset2} ${b.x1 + b.w1/3},${b.y1 - ctrlOffset1} ${b.x1 + b.w1/2},${b.y1} Z" ${fillAttr} />\n`;
         }
       });
 
@@ -862,17 +892,37 @@
           fontWeight = 'normal';
         }
         
-        const strokeW = activeTheme === 'neon' ? 3 : 4;
-        const filterStr = activeTheme === 'neon' ? 'filter="url(#glow)"' : '';
+        const nodeColors = {
+          'root': '#7c3aed',
+          'l1_left': '#06b6d4',
+          'l1_right': '#ec4899',
+          'l2_left_left': '#10b981',
+          'l2_left_right': '#0d9488',
+          'l2_right_left': '#f59e0b',
+          'l2_right_right': '#ef4444'
+        };
+        
+        let strokeW = activeTheme === 'neon' ? 3 : 4;
+        let filterStr = activeTheme === 'neon' ? 'filter="url(#glow)"' : '';
+        let currentNodeFill = nodeFill;
+        let currentNodeStroke = nodeStroke;
+        let currentTextColor = textColor;
+        
+        if (activeTheme === 'gradient') {
+          currentNodeFill = nodeColors[n.id] || '#ffffff';
+          currentNodeStroke = fillBg;
+          currentTextColor = '#ffffff';
+          strokeW = 2.5; // Thin background-colored outline to cut out branches
+        }
         
         svgMarkup += `      <!-- Node ${n.label} -->
-      <circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="${strokeW}" ${filterStr} />
+      <circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${currentNodeFill}" stroke="${currentNodeStroke}" stroke-width="${strokeW}" ${filterStr} />
       <text x="${n.x}" y="${n.y}" data-cx="${n.x}" data-cy="${n.y}" 
             font-family="${fontFamily}" 
             font-size="${n.r * textScale}" 
             ${fontStyle}
             font-weight="${fontWeight}" 
-            fill="${textColor}" 
+            fill="${currentTextColor}" 
             text-anchor="middle" 
             dominant-baseline="alphabetic">${n.label}</text>\n`;
       });
@@ -1032,8 +1082,10 @@
       const buttons = document.querySelectorAll('#themeToggle button');
       buttons.forEach(btn => btn.classList.remove('active'));
       
-      const themeIndex = theme === 'bw' ? 0 : theme === 'neon' ? 1 : 2;
-      buttons[themeIndex].classList.add('active');
+      const themeIndex = theme === 'bw' ? 0 : theme === 'neon' ? 1 : theme === 'minimal' ? 2 : 3;
+      if (buttons[themeIndex]) {
+        buttons[themeIndex].classList.add('active');
+      }
       
       updatePreview();
     }
@@ -1131,7 +1183,7 @@
       eqInput.value = eqParam;
     }
     const themeParam = urlParams.get('theme');
-    if (themeParam && ['bw', 'neon', 'minimal'].includes(themeParam)) {
+    if (themeParam && ['bw', 'neon', 'minimal', 'gradient'].includes(themeParam)) {
       setTheme(themeParam);
     }
     const scaleParam = urlParams.get('scale');

@@ -406,6 +406,9 @@
         <label for="textScale">Text Scale Factor <span class="val" id="textScaleVal">1.74</span></label>
         <input type="range" id="textScale" min="0.50" max="2.00" step="0.01" value="1.74">
         
+        <label for="nodeStrokeWidth">Node Stroke Width (px) <span class="val" id="nodeStrokeWidthVal">2.5</span></label>
+        <input type="range" id="nodeStrokeWidth" min="0.0" max="8.0" step="0.1" value="2.5">
+        
         <div class="presets-row" style="margin-top: 0.25rem;">
           <button class="preset-chip" onclick="setCircleSizes(34, 26, 22)">Compact</button>
           <button class="preset-chip" onclick="setCircleSizes(40, 32, 26)">Medium</button>
@@ -462,6 +465,7 @@
     const rL1Slider = document.getElementById('rL1');
     const rL2Slider = document.getElementById('rL2');
     const textScaleSlider = document.getElementById('textScale');
+    const nodeStrokeWidthSlider = document.getElementById('nodeStrokeWidth');
     const svgContainer = document.getElementById('svgContainer');
     const toast = document.getElementById('toast');
 
@@ -592,6 +596,7 @@
       const angleDev = parseInt(departureAngleSlider.value);
       
       const textScale = parseFloat(textScaleSlider.value);
+      const nodeStrokeWidth = parseFloat(nodeStrokeWidthSlider.value);
       const rRoot = parseInt(rRootSlider.value);
       const rL1 = parseInt(rL1Slider.value);
       const rL2 = parseInt(rL2Slider.value);
@@ -907,7 +912,7 @@
           'l2_right_right': '#ef4444'
         };
         
-        let strokeW = activeTheme === 'neon' ? 3 : 4;
+        let strokeW = nodeStrokeWidth;
         let filterStr = activeTheme === 'neon' ? 'filter="url(#glow)"' : '';
         let currentNodeFill = nodeFill;
         let currentNodeStroke = nodeStroke;
@@ -917,7 +922,6 @@
           currentNodeFill = nodeColors[n.id] || '#ffffff';
           currentNodeStroke = fillBg;
           currentTextColor = '#ffffff';
-          strokeW = 2.5; // Thin background-colored outline to cut out branches
         }
         
         svgMarkup += `      <!-- Node ${n.label} -->
@@ -1077,6 +1081,7 @@
       document.getElementById('rL1Val').innerText = rL1Slider.value;
       document.getElementById('rL2Val').innerText = rL2Slider.value;
       document.getElementById('textScaleVal').innerText = textScaleSlider.value;
+      document.getElementById('nodeStrokeWidthVal').innerText = nodeStrokeWidthSlider.value;
     }
 
     // Set presets helper
@@ -1103,6 +1108,10 @@
       if (buttons[themeIndex]) {
         buttons[themeIndex].classList.add('active');
       }
+      
+      // Update stroke width default for the theme
+      const strokeW = theme === 'neon' ? 3 : theme === 'gradient' ? 2.5 : 4;
+      nodeStrokeWidthSlider.value = strokeW;
       
       updatePreview();
     }
@@ -1136,6 +1145,7 @@
         rL2: parseInt(rL2Slider.value),
         textScale: parseFloat(textScaleSlider.value),
         theme: activeTheme,
+        nodeStrokeWidth: parseFloat(nodeStrokeWidthSlider.value),
         hideText: document.getElementById('hideText').checked
       };
       
@@ -1189,7 +1199,7 @@
     }
 
     // Setup input listeners
-    [eqInput, scaleFactorSlider, marginSizeSlider, sCurveFactorSlider, departureAngleSlider, rRootSlider, rL1Slider, rL2Slider, textScaleSlider].forEach(el => {
+    [eqInput, scaleFactorSlider, marginSizeSlider, sCurveFactorSlider, departureAngleSlider, rRootSlider, rL1Slider, rL2Slider, textScaleSlider, nodeStrokeWidthSlider].forEach(el => {
       el.addEventListener('input', updatePreview);
     });
     document.getElementById('showCircleGuide').addEventListener('change', updatePreview);
@@ -1213,6 +1223,8 @@
     if (scaleParam) scaleFactorSlider.value = scaleParam;
     const textScaleParam = urlParams.get('textscale');
     if (textScaleParam) textScaleSlider.value = textScaleParam;
+    const nodeStrokeWidthParam = urlParams.get('strokewidth');
+    if (nodeStrokeWidthParam) nodeStrokeWidthSlider.value = nodeStrokeWidthParam;
     const marginParam = urlParams.get('margin');
     if (marginParam) marginSizeSlider.value = marginParam;
     const scurveParam = urlParams.get('scurve');

@@ -875,7 +875,7 @@ export default function Home() {
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-90 active:scale-98 transition-all">
             <Image
-              src="/logo.png"
+              src="/logo-textless.png"
               alt="Algebranch Logo"
               width={44}
               height={44}

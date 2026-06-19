@@ -83,28 +83,28 @@ export const AboutModal: React.FC = () => {
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-5 text-sm text-zinc-300 leading-relaxed">
               {/* App Meta & Description */}
-              <div className="flex flex-col items-center text-center gap-3">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-5">
                 <Image
-                  src="/logo.png"
+                  src="/logo-textless.png"
                   alt="Algebranch Logo"
                   width={96}
                   height={96}
                   className="h-24 w-24 object-contain rounded-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.3)] shrink-0"
                 />
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 min-w-0">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-baseline gap-2">
                     <span className="text-xl font-extrabold text-white tracking-wide">Algebranch</span>
                     <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
                       v{APP_VERSION}
                     </span>
                   </div>
+                  <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                    An interactive, pedagogical workspace for step-by-step algebraic derivations, equation transpositions, and visual mathematical exploration.
+                  </p>
                   <p className="text-[11px] text-zinc-400">
                     {COPYRIGHT_NOTICE} · Released under the GNU General Public License (GPLv3).
                   </p>
                 </div>
-                <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_LIGHT} max-w-sm mt-1`}>
-                  An interactive, pedagogical workspace for step-by-step algebraic derivations, equation transpositions, and visual mathematical exploration.
-                </p>
               </div>
 
               {/* GPLv3 License text area */}

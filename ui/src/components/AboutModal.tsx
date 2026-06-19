@@ -85,7 +85,7 @@ export const AboutModal: React.FC = () => {
               {/* App Meta & Description */}
               <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-5">
                 <Image
-                  src="/logo-textless.png"
+                  src="/logo.png"
                   alt="Algebranch Logo"
                   width={115}
                   height={115}

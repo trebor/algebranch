@@ -877,10 +877,10 @@ export default function Home() {
             <Image
               src="/logo-textless.png"
               alt="Algebranch Logo"
-              width={44}
-              height={44}
+              width={53}
+              height={53}
               priority
-              className="h-11 w-11 object-contain rounded-full"
+              className="h-[53px] w-[53px] object-contain rounded-full"
             />
             <div>
               <h1 className="text-base font-bold text-white tracking-wide">Algebranch</h1>

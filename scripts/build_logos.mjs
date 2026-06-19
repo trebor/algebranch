@@ -86,14 +86,17 @@ async function generateLogo({ outPath, size, theme, hideText, isFavicon = false 
       container.style.borderRadius = '0';
       container.style.background = 'transparent';
 
-      // For the favicon, remove the background rect entirely to make it transparent,
-      // and force all HTML elements to have transparent backgrounds to avoid any solid backdrop.
+      // For the favicon, keep the background rect but force it to be solid black (#000000)
+      // with a slight transparency (99% opacity). This guarantees Chromium generates a 32-bit
+      // RGBA PNG output (colorType=6) for Turbopack while displaying a solid black background.
       if (isFavicon) {
         const bgRect = container.querySelector('svg > rect');
         if (bgRect) {
-          bgRect.remove();
+          bgRect.setAttribute('fill', '#000000');
+          bgRect.setAttribute('fill-opacity', '0.99');
         }
         
+        // Force other HTML elements to be transparent so the backdrop doesn't block alpha
         const style = document.createElement('style');
         style.textContent = '* { background: transparent !important; }';
         document.head.appendChild(style);
@@ -174,7 +177,7 @@ async function main() {
       hideText: true
     });
 
-    // 7. favicon.ico (Chromatic, textless, 32x32 Windows icon resource)
+    // 7. favicon.ico (Chromatic, textless, 32x32 Windows icon resource with solid black background)
     await generateLogo({
       outPath: join(appDir, 'favicon.ico'),
       size: 32,

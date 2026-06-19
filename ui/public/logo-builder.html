@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Algebranch Logo Playground</title>
+  <!-- Modern Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Georgia:ital@1&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-color: #0b0c10;
+      --card-bg: rgba(26, 28, 36, 0.45);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-color: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary-neon: #00ffff;
+      --secondary-neon: #8a2be2;
+      --accent-neon: #4169e1;
+      --slider-track: rgba(255, 255, 255, 0.1);
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(138, 43, 226, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(0, 255, 255, 0.08) 0%, transparent 45%);
+    }
+
+    header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(11, 12, 16, 0.85);
+      backdrop-filter: blur(12px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(90deg, #00ffff, #8a2be2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    header p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .main-container {
+      display: flex;
+      flex: 1;
+      padding: 2rem;
+      gap: 2rem;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .controls-panel {
+      flex: 1;
+      max-width: 450px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.75rem;
+      backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+
+    .preview-panel {
+      flex: 1.2;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      position: relative;
+    }
+
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-color);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    label span.val {
+      color: var(--primary-neon);
+      font-family: monospace;
+    }
+
+    input[type="text"] {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem;
+      color: #fff;
+      font-family: inherit;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary-neon);
+      box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+    }
+
+    /* Range Sliders styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--slider-track);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary-neon);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    /* Option Toggle Group */
+    .toggle-group {
+      display: flex;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .toggle-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: var(--primary-neon);
+      color: #000;
+      box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+    }
+
+    /* SVG Rendering Canvas Container */
+    .svg-container {
+      width: 100%;
+      max-width: 480px;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      background: #000;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    /* Buttons block */
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      width: 100%;
+      max-width: 480px;
+      gap: 1rem;
+    }
+
+    .btn {
+      flex: 1 1 calc(50% - 0.5rem);
+      border: none;
+      border-radius: 8px;
+      padding: 0.875rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(90deg, var(--accent-neon), var(--secondary-neon));
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Quick settings presets buttons */
+    .presets-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .preset-chip:hover {
+      background: rgba(0, 255, 255, 0.1);
+      color: var(--primary-neon);
+      border-color: var(--primary-neon);
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .toast {
+      position: absolute;
+      bottom: 20px;
+      background: rgba(0, 255, 255, 0.95);
+      color: #000;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      box-shadow: 0 10px 20px rgba(0, 255, 255, 0.3);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Algebranch Logo Playground</h1>
+    <p>Construct math expression trees & design custom vector SVG/PNG assets</p>
+  </header>
+
+  <div class="main-container">
+    
+    <!-- LEFT SIDEBAR: CONTROLS -->
+    <div class="controls-panel">
+      
+      <!-- Expression Input -->
+      <div class="form-group">
+        <div class="section-title">Algebraic Content</div>
+        <label for="eqInput">Equation String</label>
+        <input type="text" id="eqInput" value="𝑥 = 6 × 7" placeholder="e.g. x = 6 x 7">
+        <div class="presets-row">
+          <button class="preset-chip" onclick="setEquation('𝑥 = 6 × 7')">𝑥 = 6 × 7</button>
+          <button class="preset-chip" onclick="setEquation('7 × 6 = 40 + 2')">7 × 6 = 40 + 2</button>
+          <button class="preset-chip" onclick="setEquation('y = 84 ÷ 2')">y = 84 ÷ 2</button>
+        </div>
+      </div>
+      
+      <!-- Visual Styling Theme -->
+      <div class="form-group">
+        <div class="section-title">Visual Styling Theme</div>
+        <label>Theme Style</label>
+        <div class="toggle-group" id="themeToggle">
+          <button class="toggle-btn" onclick="setTheme('bw')">B&W</button>
+          <button class="toggle-btn" onclick="setTheme('neon')">Neon Glow</button>
+          <button class="toggle-btn" onclick="setTheme('minimal')">Minimalist</button>
+          <button class="toggle-btn active" onclick="setTheme('gradient')">Chromatic</button>
+        </div>
+      </div>
+
+      <!-- Geometry Params -->
+      <div class="form-group">
+        <div class="section-title">Branch Ratios & Dimensions</div>
+        
+        <label for="scaleFactor">Vertical Scale Factor ($f$) <span class="val" id="scaleFactorVal">0.88</span></label>
+        <input type="range" id="scaleFactor" min="0.40" max="1.00" step="0.01" value="0.88">
+        
+        <label for="marginSize">Canvas Margin (px) <span class="val" id="marginSizeVal">20</span></label>
+        <input type="range" id="marginSize" min="5" max="80" step="1" value="20">
+      </div>
+
+      <!-- Branch Curves -->
+      <div class="form-group">
+        <div class="section-title">S-Curve Parameters</div>
+        
+        <label for="sCurveFactor">S-Curve Strength <span class="val" id="sCurveFactorVal">0.78</span></label>
+        <input type="range" id="sCurveFactor" min="0.10" max="1.50" step="0.02" value="0.78">
+        
+        <label for="departureAngle">Branch Separation Angle <span class="val" id="departureAngleVal">50°</span></label>
+        <input type="range" id="departureAngle" min="15" max="75" step="1" value="50">
+      </div>
+
+      <!-- Node Circle Sizes -->
+      <div class="form-group">
+        <div class="section-title">Node Circle Sizes</div>
+        
+        <label for="rRoot">Root Circle Radius (px) <span class="val" id="rRootVal">58</span></label>
+        <input type="range" id="rRoot" min="20" max="65" step="1" value="58">
+        
+        <label for="rL1">Level 1 Radius (px) <span class="val" id="rL1Val">45</span></label>
+        <input type="range" id="rL1" min="15" max="55" step="1" value="45">
+        
+        <label for="rL2">Level 2 Radius (px) <span class="val" id="rL2Val">36</span></label>
+        <input type="range" id="rL2" min="10" max="50" step="1" value="36">
+        
+        <label for="textScale">Text Scale Factor <span class="val" id="textScaleVal">1.56</span></label>
+        <input type="range" id="textScale" min="0.50" max="2.00" step="0.01" value="1.56">
+        
+        <label for="nodeStrokeWidth">Node Stroke Width (px) <span class="val" id="nodeStrokeWidthVal">5.6</span></label>
+        <input type="range" id="nodeStrokeWidth" min="0.0" max="10.0" step="0.1" value="5.6">
+        
+        <div class="presets-row" style="margin-top: 0.25rem;">
+          <button class="preset-chip" onclick="setCircleSizes(34, 26, 22)">Compact</button>
+          <button class="preset-chip" onclick="setCircleSizes(40, 32, 26)">Medium</button>
+          <button class="preset-chip" onclick="setCircleSizes(46, 38, 32)">Bold</button>
+          <button class="preset-chip" onclick="setCircleSizes(54, 46, 40)">Mega Bold</button>
+        </div>
+      </div>
+
+      <!-- Guides & Options -->
+      <div class="form-group">
+        <div class="section-title">Guides & Options</div>
+        <label style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; cursor: pointer; user-select: none; margin-bottom: 0.5rem;">
+          <input type="checkbox" id="showCircleGuide" checked style="width: 16px; height: 16px; accent-color: var(--primary-neon); cursor: pointer;">
+          Show Circle Crop Guide
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; cursor: pointer; user-select: none;">
+          <input type="checkbox" id="hideText" style="width: 16px; height: 16px; accent-color: var(--primary-neon); cursor: pointer;">
+          Hide Text (Textless Mode)
+        </label>
+      </div>
+
+    </div>
+    
+    <!-- RIGHT MAIN: PREVIEW & EXPORTS -->
+    <div class="preview-panel">
+      
+      <div class="svg-container" id="svgContainer">
+        <!-- SVG injected dynamically here -->
+      </div>
+      
+      <div class="actions-row">
+        <button class="btn btn-secondary" onclick="copySVG()">Copy SVG XML</button>
+        <button class="btn btn-secondary" onclick="copyParams()">Copy Parameters</button>
+        <button class="btn btn-secondary" onclick="downloadSVG()">Download SVG</button>
+        <button class="btn btn-primary" onclick="downloadPNG()">Download PNG</button>
+      </div>
+      
+      <div class="toast" id="toast">SVG Code copied!</div>
+    </div>
+    
+  </div>
+
+  <script>
+    // System Theme State
+    let activeTheme = 'gradient'; // 'bw', 'neon', 'minimal', 'gradient'
+    
+    // Core Elements
+    const eqInput = document.getElementById('eqInput');
+    const scaleFactorSlider = document.getElementById('scaleFactor');
+    const marginSizeSlider = document.getElementById('marginSize');
+    const sCurveFactorSlider = document.getElementById('sCurveFactor');
+    const departureAngleSlider = document.getElementById('departureAngle');
+    const rRootSlider = document.getElementById('rRoot');
+    const rL1Slider = document.getElementById('rL1');
+    const rL2Slider = document.getElementById('rL2');
+    const textScaleSlider = document.getElementById('textScale');
+    const nodeStrokeWidthSlider = document.getElementById('nodeStrokeWidth');
+    const svgContainer = document.getElementById('svgContainer');
+    const toast = document.getElementById('toast');
+
+    // Vector Math Helpers
+    function getNormal(v) {
+      const len = Math.sqrt(v.x * v.x + v.y * v.y);
+      const norm = len === 0 ? { x: 0, y: 0 } : { x: v.x / len, y: v.y / len };
+      return { x: -norm.y, y: norm.x };
+    }
+
+    // Parametric Tapering S-Curve Generator
+    function makeTaperedAngledSCurve(x1, y1, w1, angle1Deg, x2, y2, w2, angle2Deg, d1, d2) {
+      const steps = 60;
+      const leftPoints = [];
+      const rightPoints = [];
+      
+      const p1 = { x: x1, y: y1 };
+      const p2 = { x: x2, y: y2 };
+      
+      const theta1 = angle1Deg * Math.PI / 180;
+      const theta2 = angle2Deg * Math.PI / 180;
+      
+      const c1 = {
+        x: x1 + d1 * Math.cos(theta1),
+        y: y1 + d1 * Math.sin(theta1)
+      };
+      const c2 = {
+        x: x2 - d2 * Math.cos(theta2),
+        y: y2 - d2 * Math.sin(theta2)
+      };
+      
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        
+        const mt = 1 - t;
+        const mt2 = mt * mt;
+        const mt3 = mt2 * mt;
+        const t2 = t * t;
+        const t3 = t2 * t;
+        
+        const x = mt3 * p1.x + 3 * mt2 * t * c1.x + 3 * mt * t2 * c2.x + t3 * p2.x;
+        const y = mt3 * p1.y + 3 * mt2 * t * c1.y + 3 * mt * t2 * c2.y + t3 * p2.y;
+        
+        const dx = 3 * mt2 * (c1.x - p1.x) + 6 * mt * t * (c2.x - c1.x) + 3 * t2 * (p2.x - c2.x);
+        const dy = 3 * mt2 * (c1.y - p1.y) + 6 * mt * t * (c2.y - c1.y) + 3 * t2 * (p2.y - c2.y);
+        
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const tx = len === 0 ? 0 : dx / len;
+        const ty = len === 0 ? 0 : dy / len;
+        
+        const nx = -ty;
+        const ny = tx;
+        
+        const w = w1 + t * (w2 - w1);
+        
+        leftPoints.push({ x: x + (w / 2) * nx, y: y + (w / 2) * ny });
+        rightPoints.push({ x: x - (w / 2) * nx, y: y - (w / 2) * ny });
+      }
+      
+      let pathStr = `M ${leftPoints[0].x.toFixed(1)},${leftPoints[0].y.toFixed(1)}`;
+      for (let i = 1; i <= steps; i++) {
+        pathStr += ` L ${leftPoints[i].x.toFixed(1)},${leftPoints[i].y.toFixed(1)}`;
+      }
+      for (let i = steps; i >= 0; i--) {
+        pathStr += ` L ${rightPoints[i].x.toFixed(1)},${rightPoints[i].y.toFixed(1)}`;
+      }
+      pathStr += ' Z';
+      return pathStr;
+    }
+
+
+    // Simplified AST Expression Parser
+    function parseExpression(exprStr) {
+      // Clean string
+      const str = exprStr.replace(/\s+/g, '');
+      const opRegex = /([\+\-\*\/x×÷])/;
+      
+      function parseSide(sideStr) {
+        const parts = sideStr.split(opRegex);
+        if (parts.length === 3 && parts[0] !== '' && parts[2] !== '') {
+          let op = parts[1];
+          if (op === 'x' || op === '*') op = '×';
+          if (op === '/') op = '÷';
+          return {
+            type: 'operator',
+            label: op,
+            left: parseSide(parts[0]),
+            right: parseSide(parts[2])
+          };
+        } else {
+          return {
+            type: isVar(sideStr) ? 'variable' : 'leaf',
+            label: sideStr
+          };
+        }
+      }
+      
+      function isVar(s) {
+        return /^[a-zA-Z]$/.test(s);
+      }
+      
+      const eqParts = str.split('=');
+      if (eqParts.length === 2) {
+        return {
+          type: 'root',
+          label: '=',
+          left: parseSide(eqParts[0]),
+          right: parseSide(eqParts[1])
+        };
+      } else {
+        return {
+          type: 'root',
+          label: '=',
+          left: { type: 'variable', label: 'x' },
+          right: parseSide(str)
+        };
+      }
+    }
+
+    // Build the SVG code string programmatically
+    function buildSVG(showGuide = false) {
+      // Gather Param State
+      const expr = eqInput.value || "x = 6 × 7";
+      const f = parseFloat(scaleFactorSlider.value);
+      const showText = !document.getElementById('hideText').checked;
+      const margin = parseInt(marginSizeSlider.value);
+      const scurveFactor = parseFloat(sCurveFactorSlider.value);
+      const angleDev = parseInt(departureAngleSlider.value);
+      
+      const textScale = parseFloat(textScaleSlider.value);
+      const nodeStrokeWidth = parseFloat(nodeStrokeWidthSlider.value);
+      const rRoot = parseInt(rRootSlider.value);
+      const rL1 = parseInt(rL1Slider.value);
+      const rL2 = parseInt(rL2Slider.value);
+      
+      // Parse AST
+      const ast = parseExpression(expr);
+      
+      // Dynamic Geometry Solvers
+      const hasLHSChildren = ast.left.type === 'operator';
+      const hasRHSChildren = ast.right.type === 'operator';
+      
+      // Baseline proportions for relative sizing
+      const h0_base = 150;
+      const h1_base = f * h0_base;
+      const h2_base = f * h1_base;
+      
+      const d1_base = 100;
+      const d2_base = f * d1_base;
+      
+      // Generate Node List & Branch List in relative space
+      const nodes = [];
+      const branches = [];
+      
+      // Root '=' node at relative (0, 0)
+      nodes.push({ id: 'root', type: 'root', rx: 0, ry: 0, r: rRoot, label: ast.label });
+      
+      // Trunk base is at (0, h0_base) relative to root
+      const rxtrunkBase = 0;
+      const rytrunkBase = h0_base;
+      
+      // Left Branch (Level 1)
+      const rxL1_left = -d1_base;
+      const ryL1_left = -h1_base;
+      nodes.push({ id: 'l1_left', type: ast.left.type, rx: rxL1_left, ry: ryL1_left, r: rL1, label: ast.left.label });
+      
+      // Right Branch (Level 1)
+      const rxL1_right = d1_base;
+      const ryL1_right = -h1_base;
+      nodes.push({ id: 'l1_right', type: ast.right.type, rx: rxL1_right, ry: ryL1_right, r: rL1, label: ast.right.label });
+      
+      // Level 2 LHS (under left operator)
+      if (hasLHSChildren) {
+        const rxL2_left_left = rxL1_left - d2_base;
+        const ryL2_left_left = ryL1_left - h2_base;
+        const rxL2_left_right = rxL1_left + d2_base;
+        const ryL2_left_right = ryL1_left - h2_base;
+        
+        nodes.push({ id: 'l2_left_left', type: 'leaf', rx: rxL2_left_left, ry: ryL2_left_left, r: rL2, label: ast.left.left.label });
+        nodes.push({ id: 'l2_left_right', type: 'leaf', rx: rxL2_left_right, ry: ryL2_left_right, r: rL2, label: ast.left.right.label });
+      }
+      
+      // Level 2 RHS (under right operator)
+      if (hasRHSChildren) {
+        const rxL2_right_left = rxL1_right - d2_base;
+        const ryL2_right_left = ryL1_right - h2_base;
+        const rxL2_right_right = rxL1_right + d2_base;
+        const ryL2_right_right = ryL1_right - h2_base;
+        
+        nodes.push({ id: 'l2_right_left', type: 'leaf', rx: rxL2_right_left, ry: ryL2_right_left, r: rL2, label: ast.right.left.label });
+        nodes.push({ id: 'l2_right_right', type: 'leaf', rx: rxL2_right_right, ry: ryL2_right_right, r: rL2, label: ast.right.right.label });
+      }
+      
+      // Compute relative coordinates bounding box
+      let rxMin = Infinity, rxMax = -Infinity;
+      let ryMin = Infinity, ryMax = -Infinity;
+      
+      nodes.forEach(n => {
+        if (n.rx - n.r < rxMin) rxMin = n.rx - n.r;
+        if (n.rx + n.r > rxMax) rxMax = n.rx + n.r;
+        if (n.ry - n.r < ryMin) ryMin = n.ry - n.r;
+        if (n.ry + n.r > ryMax) ryMax = n.ry + n.r;
+      });
+      
+      if (rxtrunkBase < rxMin) rxMin = rxtrunkBase;
+      if (rxtrunkBase > rxMax) rxMax = rxtrunkBase;
+      if (rytrunkBase > ryMax) ryMax = rytrunkBase;
+      
+      // Solve optimal scale factor S and center (u, v) in relative space to fit inscribed circle of radius R_max
+      const R_max = 250 - margin;
+      
+      const items = [];
+      nodes.forEach(n => {
+        items.push({ rx: n.rx, ry: n.ry, r: n.r });
+      });
+      
+      function getScaleAt(uVal, vVal) {
+        let minS = Infinity;
+        
+        // Constrain nodes
+        for (const item of items) {
+          const dx = item.rx - uVal;
+          const dy = item.ry - vVal;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0.001) {
+            const sVal = (R_max - item.r) / dist;
+            if (sVal < minS) {
+              minS = sVal;
+            }
+          }
+        }
+        
+        // Constrain trunk base line segment (width rRoot centered at rxtrunkBase, at rytrunkBase)
+        const dx_rel = rxtrunkBase - uVal;
+        const dy_rel = rytrunkBase - vVal;
+        const dist_sq = dx_rel * dx_rel + dy_rel * dy_rel;
+        if (dist_sq > 0.001) {
+          const w_half = rRoot / 2;
+          const val = dist_sq * R_max * R_max - dy_rel * dy_rel * w_half * w_half;
+          if (val >= 0) {
+            const sVal = (-Math.abs(dx_rel) * w_half + Math.sqrt(val)) / dist_sq;
+            if (sVal < minS) {
+              minS = sVal;
+            }
+          }
+        }
+        
+        return minS;
+      }
+      
+      // Start with relative bounding box center
+      let u = (rxMin + rxMax) / 2;
+      let v = (ryMin + ryMax) / 2;
+      let S = getScaleAt(u, v);
+      
+      let step = Math.max(rxMax - rxMin, ryMax - ryMin) / 2;
+      if (step < 10) step = 50;
+      
+      const tolerance = 0.001;
+      while (step > tolerance) {
+        let improved = false;
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const testU = u + dx * step;
+            const testV = v + dy * step;
+            const testS = getScaleAt(testU, testV);
+            if (testS > S) {
+              S = testS;
+              u = testU;
+              v = testV;
+              improved = true;
+            }
+          }
+        }
+        if (!improved) {
+          step *= 0.5;
+        }
+      }
+      
+      // Map back to absolute canvas coordinates centered at (250, 250)
+      nodes.forEach(n => {
+        n.x = 250 + S * (n.rx - u);
+        n.y = 250 + S * (n.ry - v);
+      });
+      const xTrunkBase = 250 + S * (rxtrunkBase - u);
+      const yTrunkBase = 250 + S * (rytrunkBase - v);
+      
+      // Root absolute coordinate references
+      const rootNode = nodes.find(n => n.id === 'root');
+      const xRoot = rootNode.x;
+      const yRoot = rootNode.y;
+      
+      // Scale branch control point parameters by S
+      const dCtrl1 = S * h1_base * scurveFactor;
+      const dCtrl2 = S * h2_base * scurveFactor;
+      
+      // Build Branch paths list
+      const l1_left = nodes.find(n => n.id === 'l1_left');
+      const l1_right = nodes.find(n => n.id === 'l1_right');
+      const a1L = 180 + angleDev;
+      const a1R = -angleDev;
+      
+      // Trunk
+      branches.push({ type: 'trunk', fromNodeId: 'trunkBase', toNodeId: 'root', x1: xTrunkBase, y1: yTrunkBase, w1: Math.round(rRoot * 1.0), x2: xRoot, y2: yRoot, w2: Math.round(rRoot * 0.75) });
+      
+      // L1 Left
+      branches.push({ type: 'scurve', fromNodeId: 'root', toNodeId: 'l1_left', x1: xRoot, y1: yRoot, w1: Math.round(rL1 * 0.9), a1: a1L, x2: l1_left.x, y2: l1_left.y, w2: Math.round(rL1 * 0.55), a2: -90, d1: dCtrl1, d2: dCtrl1 });
+      // L1 Right
+      branches.push({ type: 'scurve', fromNodeId: 'root', toNodeId: 'l1_right', x1: xRoot, y1: yRoot, w1: Math.round(rL1 * 0.9), a1: a1R, x2: l1_right.x, y2: l1_right.y, w2: Math.round(rL1 * 0.55), a2: -90, d1: dCtrl1, d2: dCtrl1 });
+      
+      // L2 LHS
+      if (hasLHSChildren) {
+        const l2_left_left = nodes.find(n => n.id === 'l2_left_left');
+        const l2_left_right = nodes.find(n => n.id === 'l2_left_right');
+        branches.push({ type: 'scurve', fromNodeId: 'l1_left', toNodeId: 'l2_left_left', x1: l1_left.x, y1: l1_left.y, w1: Math.round(rL2 * 0.65), a1: a1L, x2: l2_left_left.x, y2: l2_left_left.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
+        branches.push({ type: 'scurve', fromNodeId: 'l1_left', toNodeId: 'l2_left_right', x1: l1_left.x, y1: l1_left.y, w1: Math.round(rL2 * 0.65), a1: a1R, x2: l2_left_right.x, y2: l2_left_right.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
+      }
+      
+      // L2 RHS
+      if (hasRHSChildren) {
+        const l2_right_left = nodes.find(n => n.id === 'l2_right_left');
+        const l2_right_right = nodes.find(n => n.id === 'l2_right_right');
+        branches.push({ type: 'scurve', fromNodeId: 'l1_right', toNodeId: 'l2_right_left', x1: l1_right.x, y1: l1_right.y, w1: Math.round(rL2 * 0.65), a1: a1L, x2: l2_right_left.x, y2: l2_right_left.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
+        branches.push({ type: 'scurve', fromNodeId: 'l1_right', toNodeId: 'l2_right_right', x1: l1_right.x, y1: l1_right.y, w1: Math.round(rL2 * 0.65), a1: a1R, x2: l2_right_right.x, y2: l2_right_right.y, w2: Math.round(rL2 * 0.35), a2: -90, d1: dCtrl2, d2: dCtrl2 });
+      }
+      
+      // Resolve Theme styles
+      let fillBg = "#0d0e12";
+      let branchColor = "#ffffff";
+      let nodeFill = "#ffffff";
+      let nodeStroke = "#0d0e12";
+      let textColor = "#0d0e12";
+      let filterDef = "";
+      let gradientDef = "";
+      
+      let canvasStroke = "rgba(255, 255, 255, 0.15)";
+      
+      if (activeTheme === 'neon') {
+        fillBg = "#0b0c10";
+        branchColor = "url(#branchGrad)";
+        nodeFill = "#0f111a";
+        nodeStroke = "#00ffff";
+        textColor = "#ffffff";
+        filterDef = `
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>`;
+        gradientDef = `
+    <linearGradient id="branchGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#8a2be2" />
+      <stop offset="55%" stop-color="#4169e1" />
+      <stop offset="100%" stop-color="#00ffff" />
+    </linearGradient>`;
+      } else if (activeTheme === 'minimal') {
+        fillBg = "#ffffff";
+        branchColor = "#1a1a1a";
+        nodeFill = "#ffffff";
+        nodeStroke = "#1a1a1a";
+        textColor = "#1a1a1a";
+        canvasStroke = "#e1e8ed";
+      } else if (activeTheme === 'gradient') {
+        fillBg = "#0b0c10";
+        branchColor = "#ffffff";
+        nodeFill = "#ffffff";
+        nodeStroke = "#0b0c10";
+        textColor = "#ffffff";
+        canvasStroke = "rgba(255, 255, 255, 0.1)";
+        
+        const nodeColors = {
+          'trunkBase': '#4f46e5', // Indigo
+          'root': '#7c3aed',      // Purple
+          'l1_left': '#06b6d4',   // Cyan
+          'l1_right': '#ec4899',  // Pink
+          'l2_left_left': '#10b981',  // Emerald
+          'l2_left_right': '#0d9488', // Teal
+          'l2_right_left': '#f59e0b', // Amber
+          'l2_right_right': '#ef4444' // Red
+        };
+        
+        branches.forEach((b, idx) => {
+          const fromColor = nodeColors[b.fromNodeId] || '#ffffff';
+          const toColor = nodeColors[b.toNodeId] || '#ffffff';
+          gradientDef += `
+    <linearGradient id="branchGrad_${idx}" x1="${b.x1}" y1="${b.y1}" x2="${b.x2}" y2="${b.y2}" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="${fromColor}" />
+      <stop offset="100%" stop-color="${toColor}" />
+    </linearGradient>`;
+        });
+      }
+      
+      // Generate SVG Markup
+      let svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>${filterDef}${gradientDef}</defs>
+  <!-- Background -->
+  <rect width="500" height="500" fill="${fillBg}" stroke="${canvasStroke}" stroke-width="2" />
+  
+  <g fill="none" stroke="none">
+    <!-- Branches -->
+    <g fill="${branchColor}" ${activeTheme === 'neon' ? 'filter="url(#glow)"' : ''} opacity="0.9">
+`;
+
+      const ctrlOffset1 = S * 30;
+      const ctrlOffset2 = S * 40;
+
+      branches.forEach((b, idx) => {
+        const fillAttr = activeTheme === 'gradient' ? `fill="url(#branchGrad_${idx})"` : '';
+        if (b.type === 'scurve') {
+          const d = makeTaperedAngledSCurve(b.x1, b.y1, b.w1, b.a1, b.x2, b.y2, b.w2, b.a2, b.d1, b.d2);
+          svgMarkup += `      <path d="${d}" ${fillAttr} />\n`;
+        } else if (b.type === 'trunk') {
+          svgMarkup += `      <path d="M ${b.x1 - b.w1/2},${b.y1} C ${b.x1 - b.w1/3},${b.y1 - ctrlOffset1} ${b.x2 - b.w2/3},${b.y2 + ctrlOffset1} ${b.x2 - b.w2/2},${b.y2} L ${b.x2 + b.w2/2},${b.y2} C ${b.x2 + b.w2/3},${b.y2 + ctrlOffset2} ${b.x1 + b.w1/3},${b.y1 - ctrlOffset1} ${b.x1 + b.w1/2},${b.y1} Z" ${fillAttr} />\n`;
+        }
+      });
+
+      svgMarkup += `    </g>
+    
+    <!-- Nodes -->
+    <g>
+`;
+
+      nodes.forEach(n => {
+        let fontStyle = '';
+        let fontFamily = 'system-ui, -apple-system, sans-serif';
+        let fontWeight = 'bold';
+        
+        if (n.type === 'variable') {
+          fontFamily = 'Georgia, "Times New Roman", serif';
+          fontStyle = 'font-style="italic"';
+          fontWeight = 'normal';
+        }
+        
+        const nodeColors = {
+          'root': '#7c3aed',
+          'l1_left': '#06b6d4',
+          'l1_right': '#ec4899',
+          'l2_left_left': '#10b981',
+          'l2_left_right': '#0d9488',
+          'l2_right_left': '#f59e0b',
+          'l2_right_right': '#ef4444'
+        };
+        
+        let strokeW = nodeStrokeWidth;
+        let filterStr = activeTheme === 'neon' ? 'filter="url(#glow)"' : '';
+        let currentNodeFill = nodeFill;
+        let currentNodeStroke = nodeStroke;
+        let currentTextColor = textColor;
+        
+        if (activeTheme === 'gradient') {
+          currentNodeFill = nodeColors[n.id] || '#ffffff';
+          currentNodeStroke = fillBg;
+          currentTextColor = '#ffffff';
+        }
+        
+        svgMarkup += `      <!-- Node ${n.label} -->
+      <circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${currentNodeFill}" stroke="${currentNodeStroke}" stroke-width="${strokeW}" ${filterStr} />\n`;
+        if (showText) {
+          svgMarkup += `      <text x="${n.x}" y="${n.y}" data-cx="${n.x}" data-cy="${n.y}" 
+            font-family="${fontFamily}" 
+            font-size="${n.r * textScale}" 
+            ${fontStyle}
+            font-weight="${fontWeight}" 
+            fill="${currentTextColor}" 
+            text-anchor="middle" 
+            dominant-baseline="alphabetic">${n.label}</text>\n`;
+        }
+      });
+
+      let guideMarkup = "";
+      if (showGuide) {
+        let xMin_abs = xTrunkBase - rRoot / 2;
+        let xMax_abs = xTrunkBase + rRoot / 2;
+        let yMin_abs = yTrunkBase;
+        let yMax_abs = yTrunkBase;
+        
+        nodes.forEach(n => {
+          if (n.x - n.r < xMin_abs) xMin_abs = n.x - n.r;
+          if (n.x + n.r > xMax_abs) xMax_abs = n.x + n.r;
+          if (n.y - n.r < yMin_abs) yMin_abs = n.y - n.r;
+          if (n.y + n.r > yMax_abs) yMax_abs = n.y + n.r;
+        });
+        
+        const bboxWidth = xMax_abs - xMin_abs;
+        const bboxHeight = yMax_abs - yMin_abs;
+        
+        guideMarkup = `
+  <!-- Bounding Box Guide (Dashed cyan) -->
+  <rect class="crop-guide" x="${xMin_abs}" y="${yMin_abs}" width="${bboxWidth}" height="${bboxHeight}" fill="none" stroke="#33ccff" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.65" />
+  
+  <!-- Circular Crop Guide (Maximum Inscribed Circle - Inset by 2px to prevent clipping) -->
+  <circle class="crop-guide" cx="250" cy="250" r="248" fill="none" stroke="#ff3366" stroke-width="2" stroke-dasharray="8,6" opacity="0.85" />\n`;
+      }
+
+      svgMarkup += `    </g>
+  </g>${guideMarkup}
+</svg>`;
+
+      return svgMarkup;
+    }
+
+    // Offscreen canvas for pixel-perfect bounding box rendering
+    const offscreenCanvas = document.createElement('canvas');
+    offscreenCanvas.width = 300;
+    offscreenCanvas.height = 300;
+    const offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+
+    function getGlyphPixelOffset(text, fontFamily, fontSize, fontStyle, fontWeight) {
+      const W = 300;
+      const H = 300;
+      offscreenCtx.clearRect(0, 0, W, H);
+      
+      // Match SVG font style exactly
+      offscreenCtx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+      offscreenCtx.fillStyle = '#000000';
+      offscreenCtx.textAlign = 'center';
+      offscreenCtx.textBaseline = 'alphabetic';
+      
+      const drawX = W / 2;
+      const drawY = H / 2;
+      offscreenCtx.fillText(text, drawX, drawY);
+      
+      const imgData = offscreenCtx.getImageData(0, 0, W, H);
+      const data = imgData.data;
+      
+      let minX = W, maxX = 0;
+      let minY = H, maxY = 0;
+      
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const alpha = data[(y * W + x) * 4 + 3];
+          if (alpha > 0) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      
+      if (maxX < minX || maxY < minY) {
+        return { dx: 0, dy: 0 };
+      }
+      
+      const visualCenterX = (minX + maxX) / 2;
+      const visualCenterY = (minY + maxY) / 2;
+      
+      return {
+        dx: drawX - visualCenterX,
+        dy: drawY - visualCenterY
+      };
+    }
+
+    // SVG text visual bounds center correction
+    function adjustTextCentering() {
+      const textElements = svgContainer.querySelectorAll('text');
+      textElements.forEach(textEl => {
+        const cx = parseFloat(textEl.getAttribute('data-cx'));
+        const cy = parseFloat(textEl.getAttribute('data-cy'));
+        if (isNaN(cx) || isNaN(cy)) return;
+        
+        // Extract computed style properties of the rendered text element
+        const style = window.getComputedStyle(textEl);
+        const fontFamily = style.fontFamily || 'sans-serif';
+        const fontSizeVal = parseFloat(style.fontSize) || 40;
+        const fontStyle = style.fontStyle || 'normal';
+        const fontWeight = style.fontWeight || 'bold';
+        const label = textEl.textContent;
+        
+        // Compute pixel offset of visual center relative to alignment baseline
+        const offset = getGlyphPixelOffset(label, fontFamily, fontSizeVal, fontStyle, fontWeight);
+        
+        // Shift text element coordinates to achieve pixel-perfect alignment
+        textEl.setAttribute('x', cx + offset.dx);
+        textEl.setAttribute('y', cy + offset.dy);
+      });
+    }
+
+    // Helper to get clean SVG code with centering adjustments and without crop guides
+    function getExportedSVGCode() {
+      const svgElement = svgContainer.querySelector('svg');
+      if (!svgElement) return buildSVG(false);
+      
+      const clone = svgElement.cloneNode(true);
+      // Remove all guide elements
+      clone.querySelectorAll('.crop-guide').forEach(g => g.remove());
+      // Remove diagnostic helper attributes
+      clone.querySelectorAll('text').forEach(t => {
+        t.removeAttribute('data-cx');
+        t.removeAttribute('data-cy');
+      });
+      return clone.outerHTML;
+    }
+
+    // Live update render trigger
+    function updatePreview() {
+      const showGuide = document.getElementById('showCircleGuide') ? document.getElementById('showCircleGuide').checked : false;
+      const svgCode = buildSVG(showGuide);
+      svgContainer.innerHTML = svgCode;
+      
+      // Adjust text bounds center offset using browser layout engine measurements
+      adjustTextCentering();
+      
+      // Update slider values texts
+      document.getElementById('scaleFactorVal').innerText = scaleFactorSlider.value;
+      document.getElementById('marginSizeVal').innerText = marginSizeSlider.value;
+      document.getElementById('sCurveFactorVal').innerText = sCurveFactorSlider.value;
+      document.getElementById('departureAngleVal').innerText = departureAngleSlider.value + '°';
+      document.getElementById('rRootVal').innerText = rRootSlider.value;
+      document.getElementById('rL1Val').innerText = rL1Slider.value;
+      document.getElementById('rL2Val').innerText = rL2Slider.value;
+      document.getElementById('textScaleVal').innerText = textScaleSlider.value;
+      document.getElementById('nodeStrokeWidthVal').innerText = nodeStrokeWidthSlider.value;
+    }
+
+    // Set presets helper
+    function setEquation(expr) {
+      eqInput.value = expr;
+      updatePreview();
+    }
+
+    // Direct helper to set sizes
+    function setCircleSizes(root, l1, l2) {
+      rRootSlider.value = root;
+      rL1Slider.value = l1;
+      rL2Slider.value = l2;
+      updatePreview();
+    }
+
+    function setTheme(theme) {
+      activeTheme = theme;
+      // Toggle button active class
+      const buttons = document.querySelectorAll('#themeToggle button');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      
+      const themeIndex = theme === 'bw' ? 0 : theme === 'neon' ? 1 : theme === 'minimal' ? 2 : 3;
+      if (buttons[themeIndex]) {
+        buttons[themeIndex].classList.add('active');
+      }
+      
+      updatePreview();
+    }
+
+    // Toast notice popup
+    function showToast(message) {
+      toast.innerText = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    // EXPORTS
+    function copySVG() {
+      const svgCode = getExportedSVGCode();
+      navigator.clipboard.writeText(svgCode).then(() => {
+        showToast("SVG XML copied to clipboard!");
+      }).catch(err => {
+        console.error("Clipboard copy failed:", err);
+      });
+    }
+
+    function copyParams() {
+      const params = {
+        equation: eqInput.value,
+        scaleFactor: parseFloat(scaleFactorSlider.value),
+        margin: parseInt(marginSizeSlider.value),
+        sCurveFactor: parseFloat(sCurveFactorSlider.value),
+        departureAngle: parseInt(departureAngleSlider.value),
+        rRoot: parseInt(rRootSlider.value),
+        rL1: parseInt(rL1Slider.value),
+        rL2: parseInt(rL2Slider.value),
+        textScale: parseFloat(textScaleSlider.value),
+        theme: activeTheme,
+        nodeStrokeWidth: parseFloat(nodeStrokeWidthSlider.value),
+        hideText: document.getElementById('hideText').checked
+      };
+      
+      const jsonStr = JSON.stringify(params, null, 2);
+      navigator.clipboard.writeText(jsonStr).then(() => {
+        showToast("Parameters JSON copied!");
+      }).catch(err => {
+        console.error("Failed to copy parameters:", err);
+      });
+    }
+
+    function downloadSVG() {
+      const svgCode = getExportedSVGCode();
+      const blob = new Blob([svgCode], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'algebranch_logo.svg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("SVG file download started!");
+    }
+
+    function downloadPNG() {
+      const svgCode = getExportedSVGCode();
+      const img = new Image();
+      const svgBlob = new Blob([svgCode], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1000; // Render at high res (2x)
+        canvas.height = 1000;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 1000, 1000);
+        
+        const pngUrl = canvas.toDataURL("image/png");
+        const a = document.createElement('a');
+        a.href = pngUrl;
+        a.download = 'algebranch_logo.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("High-Res PNG download started!");
+      };
+      
+      img.src = url;
+    }
+
+    // Setup input listeners
+    [eqInput, scaleFactorSlider, marginSizeSlider, sCurveFactorSlider, departureAngleSlider, rRootSlider, rL1Slider, rL2Slider, textScaleSlider, nodeStrokeWidthSlider].forEach(el => {
+      el.addEventListener('input', updatePreview);
+    });
+    document.getElementById('showCircleGuide').addEventListener('change', updatePreview);
+    document.getElementById('hideText').addEventListener('change', updatePreview);
+
+    // Parse URL params on load
+    const urlParams = new URLSearchParams(window.location.search);
+    const eqParam = urlParams.get('eq');
+    if (eqParam) {
+      eqInput.value = eqParam;
+    }
+    const themeParam = urlParams.get('theme');
+    if (themeParam && ['bw', 'neon', 'minimal', 'gradient'].includes(themeParam)) {
+      setTheme(themeParam);
+    }
+    const hideTextParam = urlParams.get('hidetext');
+    if (hideTextParam === 'true') {
+      document.getElementById('hideText').checked = true;
+    }
+    const scaleParam = urlParams.get('scale');
+    if (scaleParam) scaleFactorSlider.value = scaleParam;
+    const textScaleParam = urlParams.get('textscale');
+    if (textScaleParam) textScaleSlider.value = textScaleParam;
+    const nodeStrokeWidthParam = urlParams.get('strokewidth');
+    if (nodeStrokeWidthParam) nodeStrokeWidthSlider.value = nodeStrokeWidthParam;
+    const marginParam = urlParams.get('margin');
+    if (marginParam) marginSizeSlider.value = marginParam;
+    const scurveParam = urlParams.get('scurve');
+    if (scurveParam) sCurveFactorSlider.value = scurveParam;
+    const angleParam = urlParams.get('angle');
+    if (angleParam) departureAngleSlider.value = angleParam;
+
+    // Run first render on mount
+    updatePreview();
+  </script>
+</body>
+</html>

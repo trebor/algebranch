@@ -873,14 +873,14 @@ export default function Home() {
       {/* Top Header */}
       <header className="h-16 px-4 flex items-center justify-between select-none shrink-0 w-full z-30">
         <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-90 active:scale-98 transition-all">
+          <Link href="/" className="flex items-center gap-0 cursor-pointer hover:opacity-90 active:scale-98 transition-all">
             <Image
-              src="/logo.png"
+              src="/logo-textless.png"
               alt="Algebranch Logo"
-              width={36}
-              height={36}
+              width={53}
+              height={53}
               priority
-              className="h-9 w-9 object-contain rounded-full"
+              className="h-[53px] w-[53px] object-contain rounded-full"
             />
             <div>
               <h1 className="text-base font-bold text-white tracking-wide">Algebranch</h1>

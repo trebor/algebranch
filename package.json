@@ -18,7 +18,8 @@
     "lint": "npm run lint --workspace=ui",
     "type-check": "npm run type-check --workspace=math-engine && npm run type-check --workspace=ui",
     "prepare": "npm run build --workspace=math-engine",
-    "shoot": "node scripts/shoot.mjs"
+    "shoot": "node scripts/shoot.mjs",
+    "build-logos": "node scripts/build_logos.mjs"
   },
   "devDependencies": {
     "playwright": "1.60.0"

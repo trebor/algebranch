@@ -361,10 +361,10 @@
         <div class="section-title">Visual Styling Theme</div>
         <label>Theme Style</label>
         <div class="toggle-group" id="themeToggle">
-          <button class="toggle-btn active" onclick="setTheme('bw')">B&W</button>
+          <button class="toggle-btn" onclick="setTheme('bw')">B&W</button>
           <button class="toggle-btn" onclick="setTheme('neon')">Neon Glow</button>
           <button class="toggle-btn" onclick="setTheme('minimal')">Minimalist</button>
-          <button class="toggle-btn" onclick="setTheme('gradient')">Chromatic</button>
+          <button class="toggle-btn active" onclick="setTheme('gradient')">Chromatic</button>
         </div>
       </div>
 
@@ -372,8 +372,8 @@
       <div class="form-group">
         <div class="section-title">Branch Ratios & Dimensions</div>
         
-        <label for="scaleFactor">Vertical Scale Factor ($f$) <span class="val" id="scaleFactorVal">0.9</span></label>
-        <input type="range" id="scaleFactor" min="0.40" max="0.90" step="0.01" value="0.9">
+        <label for="scaleFactor">Vertical Scale Factor ($f$) <span class="val" id="scaleFactorVal">0.88</span></label>
+        <input type="range" id="scaleFactor" min="0.40" max="0.90" step="0.01" value="0.88">
         
         <label for="marginSize">Canvas Margin (px) <span class="val" id="marginSizeVal">20</span></label>
         <input type="range" id="marginSize" min="5" max="80" step="1" value="20">
@@ -386,8 +386,8 @@
         <label for="sCurveFactor">S-Curve Strength <span class="val" id="sCurveFactorVal">0.82</span></label>
         <input type="range" id="sCurveFactor" min="0.10" max="1.50" step="0.02" value="0.82">
         
-        <label for="departureAngle">Branch Separation Angle <span class="val" id="departureAngleVal">44°</span></label>
-        <input type="range" id="departureAngle" min="15" max="75" step="1" value="44">
+        <label for="departureAngle">Branch Separation Angle <span class="val" id="departureAngleVal">48°</span></label>
+        <input type="range" id="departureAngle" min="15" max="75" step="1" value="48">
       </div>
 
       <!-- Node Circle Sizes -->
@@ -414,12 +414,16 @@
         </div>
       </div>
 
-      <!-- Guides & Bounds -->
+      <!-- Guides & Options -->
       <div class="form-group">
-        <div class="section-title">Guides & Bounds</div>
-        <label style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; cursor: pointer; user-select: none;">
+        <div class="section-title">Guides & Options</div>
+        <label style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; cursor: pointer; user-select: none; margin-bottom: 0.5rem;">
           <input type="checkbox" id="showCircleGuide" checked style="width: 16px; height: 16px; accent-color: var(--primary-neon); cursor: pointer;">
           Show Circle Crop Guide
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; cursor: pointer; user-select: none;">
+          <input type="checkbox" id="hideText" style="width: 16px; height: 16px; accent-color: var(--primary-neon); cursor: pointer;">
+          Hide Text (Textless Mode)
         </label>
       </div>
 
@@ -446,7 +450,7 @@
 
   <script>
     // System Theme State
-    let activeTheme = 'bw'; // 'bw', 'neon', 'minimal', 'gradient'
+    let activeTheme = 'gradient'; // 'bw', 'neon', 'minimal', 'gradient'
     
     // Core Elements
     const eqInput = document.getElementById('eqInput');
@@ -582,6 +586,7 @@
       // Gather Param State
       const expr = eqInput.value || "x = 6 × 7";
       const f = parseFloat(scaleFactorSlider.value);
+      const showText = !document.getElementById('hideText').checked;
       const margin = parseInt(marginSizeSlider.value);
       const scurveFactor = parseFloat(sCurveFactorSlider.value);
       const angleDev = parseInt(departureAngleSlider.value);
@@ -916,8 +921,9 @@
         }
         
         svgMarkup += `      <!-- Node ${n.label} -->
-      <circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${currentNodeFill}" stroke="${currentNodeStroke}" stroke-width="${strokeW}" ${filterStr} />
-      <text x="${n.x}" y="${n.y}" data-cx="${n.x}" data-cy="${n.y}" 
+      <circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${currentNodeFill}" stroke="${currentNodeStroke}" stroke-width="${strokeW}" ${filterStr} />\n`;
+        if (showText) {
+          svgMarkup += `      <text x="${n.x}" y="${n.y}" data-cx="${n.x}" data-cy="${n.y}" 
             font-family="${fontFamily}" 
             font-size="${n.r * textScale}" 
             ${fontStyle}
@@ -925,6 +931,7 @@
             fill="${currentTextColor}" 
             text-anchor="middle" 
             dominant-baseline="alphabetic">${n.label}</text>\n`;
+        }
       });
 
       let guideMarkup = "";
@@ -1118,7 +1125,8 @@
         rL1: parseInt(rL1Slider.value),
         rL2: parseInt(rL2Slider.value),
         textScale: parseFloat(textScaleSlider.value),
-        theme: activeTheme
+        theme: activeTheme,
+        hideText: document.getElementById('hideText').checked
       };
       
       const jsonStr = JSON.stringify(params, null, 2);
@@ -1175,6 +1183,7 @@
       el.addEventListener('input', updatePreview);
     });
     document.getElementById('showCircleGuide').addEventListener('change', updatePreview);
+    document.getElementById('hideText').addEventListener('change', updatePreview);
 
     // Parse URL params on load
     const urlParams = new URLSearchParams(window.location.search);
@@ -1185,6 +1194,10 @@
     const themeParam = urlParams.get('theme');
     if (themeParam && ['bw', 'neon', 'minimal', 'gradient'].includes(themeParam)) {
       setTheme(themeParam);
+    }
+    const hideTextParam = urlParams.get('hidetext');
+    if (hideTextParam === 'true') {
+      document.getElementById('hideText').checked = true;
     }
     const scaleParam = urlParams.get('scale');
     if (scaleParam) scaleFactorSlider.value = scaleParam;

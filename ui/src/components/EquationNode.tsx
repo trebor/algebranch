@@ -185,6 +185,15 @@ interface EquationNodeProps {
    * max() rather than numeric Math.max (#121).
    */
   readonly minPaddingTop?: string;
+  /**
+   * Suppress the fixed-rem top reserve a handle-bearing node normally adds. Used
+   * when the node is rendered as a radical index (#198): the index is a tiny
+   * 0.55em annotation in the crook, and the fixed-rem reserve would dwarf it and
+   * shove it onto the radical arm. With the reserve off, the index sits at its
+   * natural content height (so a tall fraction/radical index isn't forced into a
+   * fixed slot either) and any handle badge floats over the top instead.
+   */
+  readonly suppressHandleReserve?: boolean;
 }
 
 /**
@@ -287,7 +296,7 @@ export const shouldPulseHandle = (params: {
   return params.isHovered || params.isStackMarked;
 };
 
-export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = false, minPaddingTop = '0px' }) => {
+export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = false, minPaddingTop = '0px', suppressHandleReserve = false }) => {
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
   const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
@@ -770,13 +779,23 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
           }
         }
         return (
-          <div className="flex items-stretch mx-[0.1em] relative">
-            <div className="relative w-[0.7em] select-none shrink-0 mr-[-1px]">
-              {showIndex && (
-                <div className="absolute right-full top-0 -mt-[0.2em] -mr-[0.3em] text-[0.55em] scale-90 z-10" style={getOpStyle()}>
-                  <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} />
+          <div className="flex items-stretch -ml-[0.1em] -mr-[0.2em] relative">
+            {showIndex && (
+              // The index is a normal flow item (not absolutely positioned) so the
+              // node box grows to contain it instead of spilling past the left edge
+              // (#198). It is bottom-anchored in a fixed 0.96em slot (items-end) so
+              // its glyph sits in the radical's crook at a stable height; the negative
+              // right margin nestles it against the rising stroke. suppressHandleReserve
+              // drops the fixed-rem handle band that would otherwise dwarf the tiny
+              // 0.55em index — so a handle-bearing index (e.g. a substitutable term)
+              // stays compact instead of ballooning out the top of the box.
+              <div className="relative self-start shrink-0 flex items-end h-[0.96em] -mr-[0.35em] translate-y-[0.05em] z-10">
+                <div className="text-[0.55em] scale-90" style={getOpStyle()}>
+                  <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} suppressHandleReserve />
                 </div>
-              )}
+              </div>
+            )}
+            <div className="relative w-[0.7em] select-none shrink-0 mr-[-1px]">
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
@@ -803,7 +822,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
       if (nameStr === 'sqrt') {
         return (
-          <div className="flex items-stretch mx-[0.1em] relative">
+          <div className="flex items-stretch -ml-[0.1em] -mr-[0.2em] relative">
             <div className="relative w-[0.7em] select-none shrink-0 mr-[-1px]">
               <svg
                 viewBox="0 0 12 100"
@@ -964,7 +983,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   // text shares the same top-boundary offset as its handle-bearing siblings (#30).
   // Handle nodes reserve the fixed rem band; combine with the (possibly em) parent
   // floor via CSS max() since the units may differ.
-  const ownPaddingTop = handleCount > 0 ? handleReserve(layout) : `${layout.nodePy}em`;
+  const ownPaddingTop = handleCount > 0 && !suppressHandleReserve ? handleReserve(layout) : `${layout.nodePy}em`;
   const paddingTop = cssMax(ownPaddingTop, minPaddingTop);
 
   const customStyle: React.CSSProperties = {

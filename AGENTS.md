@@ -87,10 +87,6 @@ PNGs land in `screenshots/` (gitignored) by default; never commit them. Caveats 
 - **Scale is viewport-dependent** — `useMathScale` (0.4–2.8×) keys off container size, so set `--width`/`--height` deliberately to test scale extremes; a captured layout is only valid for that viewport.
 - **The human owns the dev server** — this script *points at* `localhost:3000`; it does not (and must not) start the server.
 
-## Two-agent coordination
-
-When alternating between **Claude Code and Antigravity** on this repo, follow [orchestration.md](orchestration.md) — the coordination doctrine (routing, quota policy, restart triggers, hand-off schema, resync-on-return). Keep the live hand-off in `BATON.md` (git-ignored, status/transport only). Task state still lives in GitHub Issues; the baton never holds plans or checklists.
-
 ## Styling guardrails
 
 - **Use semantic styling tokens**: Do not hardcode raw Tailwind color classes (e.g. `bg-indigo-600`, `text-amber-400`, `text-white/40`, etc.) in TSX files. Instead, add/use centralized styling constants inside the `THEME_GLASS` object in [theme.ts](ui/src/constants/theme.ts).

@@ -216,6 +216,17 @@ async function main() {
       margin: 65
     });
 
+    // 6c. apple-icon.png (Chromatic, textless, 180x180, opaque — iOS home-screen
+    // icon; Safari ignores manifest icons, and Apple wants no transparency since
+    // iOS applies its own rounded-corner mask). App Router emits the
+    // <link rel="apple-touch-icon"> automatically from app/apple-icon.png.
+    await generateLogo({
+      outPath: join(appDir, 'apple-icon.png'),
+      size: 180,
+      theme: 'gradient',
+      hideText: true
+    });
+
     // 7. favicon.ico (Chromatic, textless, 32x32 Windows icon resource with solid black background and rounded corners)
     await generateLogo({
       outPath: join(appDir, 'favicon.ico'),

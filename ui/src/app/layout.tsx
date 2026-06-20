@@ -107,12 +107,16 @@ export default function RootLayout({
                 errDiv.style.paddingBottom = '10px';
                 errDiv.style.marginBottom = '10px';
                 
-                if (event.target && (event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK')) {
-                  var url = event.target.src || event.target.href;
-                  errDiv.innerText = 'RESOURCE FAILED TO LOAD: ' + url + '\\nTag: ' + event.target.tagName;
-                } else {
-                  errDiv.innerText = 'ERROR: ' + event.message + '\\nSource: ' + event.filename + ':' + event.lineno + ':' + event.colno + '\\nStack: ' + (event.error ? event.error.stack : 'N/A');
+                if (event.target && event.target.tagName) {
+                  if (event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK') {
+                    var url = event.target.src || event.target.href;
+                    errDiv.innerText = 'RESOURCE FAILED TO LOAD: ' + url + '\\nTag: ' + event.target.tagName;
+                    container.appendChild(errDiv);
+                  }
+                  return;
                 }
+                
+                errDiv.innerText = 'ERROR: ' + event.message + '\\nSource: ' + event.filename + ':' + event.lineno + ':' + event.colno + '\\nStack: ' + (event.error ? event.error.stack : 'N/A');
                 container.appendChild(errDiv);
               }, true);
 

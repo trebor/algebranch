@@ -89,6 +89,7 @@ export const AboutModal: React.FC = () => {
                   alt="Algebranch Logo"
                   width={115}
                   height={115}
+                  unoptimized
                   className="h-[115px] w-[115px] object-contain rounded-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.3)] shrink-0"
                 />
                 <div className="flex flex-col gap-2 min-w-0">

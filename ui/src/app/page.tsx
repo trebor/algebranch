@@ -68,6 +68,7 @@ import {
   previousGraphSizeAtom,
   isGraphViableAtom,
   settingsAtom,
+  pwaInstallPromptAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
@@ -206,6 +207,7 @@ export default function Home() {
   // During the tour the equals sign is locked except on global-op steps
   const equalsLocked = !!onboardingChapterId && !onboardingGlobalOp;
   const swapSides = useSetAtom(swapSidesAtom);
+  const setPwaInstallPrompt = useSetAtom(pwaInstallPromptAtom);
   const [graphSize, setGraphSize] = useAtom(graphSizeAtom);
   const previousGraphSize = useAtomValue(previousGraphSizeAtom);
   const isGraphViable = useAtomValue(isGraphViableAtom);
@@ -570,18 +572,17 @@ export default function Home() {
     }
   }, []);
 
-  // Suppress the browser's automatic PWA install promotion. The app meets
-  // installability criteria (manifest + service worker) but offers no real
-  // offline value yet, so the unsolicited prompt is just first-run noise.
-  // Calling preventDefault() silences the auto-offer while leaving manual
-  // "Add to Home Screen" intact. One-line revert when offline becomes useful.
+  // Capture the browser's PWA install promotion event. We do NOT preventDefault
+  // so the browser's native automatic promotion can still run when appropriate,
+  // but we stash the event in an atom so a manual "Install App" button can
+  // trigger it.
   React.useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
+      setPwaInstallPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);
+  }, [setPwaInstallPrompt]);
 
   React.useEffect(() => {
     if (!currentEq) return;
@@ -880,6 +881,7 @@ export default function Home() {
               width={53}
               height={53}
               priority
+              unoptimized
               className="h-[53px] w-[53px] object-contain rounded-full"
             />
             <div>

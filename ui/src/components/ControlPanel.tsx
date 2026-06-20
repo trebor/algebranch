@@ -106,7 +106,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
             iconSize={16}
             triggerClassName={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer text-white`}
             copiedClassName="text-emerald-400"
-            tooltip="Copy full derivation"
+            tooltip="Copy full derivation (C)"
             disabled={Object.keys(tree).length <= 1}
             trackAction="copy_derivation"
             trackCategory="history"
@@ -254,7 +254,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             iconSize={16}
             triggerClassName={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer text-white`}
             copiedClassName="text-emerald-400"
-            tooltip="Copy full derivation"
+            tooltip="Copy full derivation (C)"
             disabled={sortedNodes.length <= 1}
             trackAction="copy_derivation"
             trackCategory="history"

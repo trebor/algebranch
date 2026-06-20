@@ -25,7 +25,9 @@ import { BottomNav } from '../components/BottomNav';
 import { BottomSheet } from '../components/BottomSheet';
 import { RadialMenu } from '../components/RadialMenu';
 import { useIsMobile } from '../hooks/useBreakpoint';
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useKeyboardShortcuts, ShortcutConfig } from '../hooks/useKeyboardShortcuts';
+import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
+import { buildEquationUrl, buildWorkspaceUrl } from '../utils/feedbackUrl';
 import {
   currentEquationAtom,
   hoverPathAtom,
@@ -71,6 +73,13 @@ import {
   settingsAtom,
   pwaInstallPromptAtom,
   aboutModalOpenAtom,
+  closeTabAtom,
+  cycleActiveTabAtom,
+  equationInputModalOpenAtom,
+  shortcutsOverlayOpenAtom,
+  anyModalOpenAtom,
+  equationToFormat,
+  formatDerivation,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
@@ -211,6 +220,11 @@ export default function Home() {
   const swapSides = useSetAtom(swapSidesAtom);
   const setPwaInstallPrompt = useSetAtom(pwaInstallPromptAtom);
   const setAboutOpen = useSetAtom(aboutModalOpenAtom);
+  const closeTab = useSetAtom(closeTabAtom);
+  const cycleActiveTab = useSetAtom(cycleActiveTabAtom);
+  const setEquationInputModalOpen = useSetAtom(equationInputModalOpenAtom);
+  const setShortcutsOverlayOpen = useSetAtom(shortcutsOverlayOpenAtom);
+  const anyModalOpen = useAtomValue(anyModalOpenAtom);
   const [graphSize, setGraphSize] = useAtom(graphSizeAtom);
   const previousGraphSize = useAtomValue(previousGraphSizeAtom);
   const isGraphViable = useAtomValue(isGraphViableAtom);
@@ -668,8 +682,10 @@ export default function Home() {
     };
   }, [currentEq, sourcePath, syncMathState, clearMathState, setTargetPaths, setMathLoading]);
 
-  // Keyboard Shortcuts (Issue #17)
-  useKeyboardShortcuts([
+  // Keyboard Shortcuts (Issue #17, expanded in #126). Defined as a single
+  // source-of-truth array so the live handler and the `?` cheat-sheet overlay
+  // render from the same bindings and can't drift.
+  const shortcutBindings: ShortcutConfig[] = [
     {
       key: 'z',
       meta: true,
@@ -686,6 +702,7 @@ export default function Home() {
         }
       },
       description: 'Undo step',
+      category: 'History',
     },
     {
       key: 'z',
@@ -705,6 +722,7 @@ export default function Home() {
         }
       },
       description: 'Redo step',
+      category: 'History',
     },
     {
       key: 'y',
@@ -723,6 +741,8 @@ export default function Home() {
         }
       },
       description: 'Redo step (Ctrl+Y)',
+      category: 'History',
+      hidden: true,
     },
     {
       key: 'w',
@@ -738,7 +758,8 @@ export default function Home() {
           category: 'keyboard',
         });
       },
-      description: 'Toggle Workspace',
+      description: 'Toggle Workspace panel',
+      category: 'Panels',
     },
     {
       key: 'l',
@@ -755,6 +776,7 @@ export default function Home() {
         });
       },
       description: 'Toggle Equation Library',
+      category: 'Panels',
     },
     {
       key: 'h',
@@ -771,6 +793,7 @@ export default function Home() {
         });
       },
       description: 'Toggle History Sidebar',
+      category: 'Panels',
     },
     {
       key: 'escape',
@@ -784,6 +807,7 @@ export default function Home() {
         }
       },
       description: 'Deselect current selection',
+      category: 'Equation',
     },
     {
       key: 's',
@@ -797,6 +821,7 @@ export default function Home() {
         });
       },
       description: 'Swap equation sides',
+      category: 'Equation',
     },
     {
       key: 'g',
@@ -820,8 +845,174 @@ export default function Home() {
         });
       },
       description: 'Toggle variable relationship graph size',
+      category: 'Equation',
     },
-  ]);
+    {
+      // Bare `c` (no Cmd, so native Cmd/Ctrl+C text-copy is untouched) copies the
+      // whole workspace transcript — the active derivation path, root → current.
+      // The richer copy sits on the bare key to make sharing a full worked
+      // solution the default gesture; mirrors the "Copy full derivation" button.
+      key: 'c',
+      action: () => {
+        navigator.clipboard
+          .writeText(formatDerivation(tree, currentNodeId, 'plain'))
+          .then(() => {
+            setToast({ message: 'Derivation copied', key: Date.now() });
+            trackEvent({ action: 'shortcut_copy_derivation', category: 'keyboard' });
+          })
+          .catch((err) => console.error('Failed to copy derivation:', err));
+      },
+      description: 'Copy full derivation (text)',
+      category: 'Copy & Share',
+    },
+    {
+      // Shift+C copies just the current equation as plain text (the lighter copy).
+      key: 'c',
+      shift: true,
+      action: () => {
+        if (!currentEq) return;
+        navigator.clipboard
+          .writeText(equationToFormat(currentEq, 'plain'))
+          .then(() => {
+            setToast({ message: 'Equation copied', key: Date.now() });
+            trackEvent({ action: 'shortcut_copy_equation', category: 'keyboard' });
+          })
+          .catch((err) => console.error('Failed to copy equation:', err));
+      },
+      description: 'Copy equation (text)',
+      category: 'Copy & Share',
+    },
+    {
+      // Bare `s` copies a `?ws=` deep link that restores the entire workspace
+      // (full history tree + name) — the headline share, on the bare key to
+      // encourage passing whole workspaces around.
+      key: 's',
+      action: async () => {
+        try {
+          const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName);
+          const url = buildWorkspaceUrl(window.location.origin, compressed);
+          if (!url) return;
+          await navigator.clipboard.writeText(url);
+          setToast({ message: 'Workspace link copied', key: Date.now() });
+          trackEvent({ action: 'shortcut_share_workspace', category: 'keyboard' });
+        } catch (err) {
+          console.error('Failed to copy workspace link:', err);
+        }
+      },
+      description: 'Copy workspace share link',
+      category: 'Copy & Share',
+    },
+    {
+      // Shift+S copies the lighter `?eq=` link (reopens just the equation, not
+      // the derivation tree). Distinct from swap-sides (⌘⇧S — has Cmd).
+      key: 's',
+      shift: true,
+      action: () => {
+        if (!currentEq) return;
+        const url = buildEquationUrl(window.location.origin, equationToString(currentEq));
+        if (!url) return;
+        navigator.clipboard
+          .writeText(url)
+          .then(() => {
+            setToast({ message: 'Equation link copied', key: Date.now() });
+            trackEvent({ action: 'shortcut_share_equation', category: 'keyboard' });
+          })
+          .catch((err) => console.error('Failed to copy equation link:', err));
+      },
+      description: 'Copy equation share link',
+      category: 'Copy & Share',
+    },
+    {
+      key: 'n',
+      action: () => {
+        setEquationInputModalOpen(true);
+        trackEvent({
+          action: 'shortcut_new_workspace',
+          category: 'keyboard',
+        });
+      },
+      description: 'New workspace',
+      category: 'Workspaces',
+    },
+    {
+      // Cmd/Ctrl+Backspace (Delete is an alias below). We stay off the W key
+      // (every Cmd/Ctrl+W variant is browser-reserved and fires above the page),
+      // and require the modifier so an idle Backspace mash can't close workspaces
+      // by accident. The editable-target guard also keeps it from ever stealing a
+      // Backspace while typing. closeTabAtom resets the last tab rather than
+      // deleting it, so this is safe with a single workspace open.
+      key: 'backspace',
+      meta: true,
+      action: () => {
+        closeTab(activeTabId);
+        trackEvent({
+          action: 'shortcut_close_workspace',
+          category: 'keyboard',
+        });
+      },
+      description: 'Close workspace',
+      category: 'Workspaces',
+    },
+    {
+      // Delete alias for the close-workspace binding; hidden from the cheat-sheet
+      // so the list shows a single canonical row.
+      key: 'delete',
+      meta: true,
+      action: () => {
+        closeTab(activeTabId);
+        trackEvent({
+          action: 'shortcut_close_workspace',
+          category: 'keyboard',
+        });
+      },
+      description: 'Close workspace',
+      category: 'Workspaces',
+      hidden: true,
+    },
+    {
+      // Bare `]` / `[` (editor convention) — avoids the browser/OS tab-switch
+      // hijacks that plague Cmd/Ctrl+Alt+Arrow and Ctrl+Tab cross-platform.
+      key: ']',
+      action: () => {
+        cycleActiveTab(1);
+        trackEvent({
+          action: 'shortcut_next_workspace',
+          category: 'keyboard',
+        });
+      },
+      description: 'Next workspace',
+      category: 'Workspaces',
+    },
+    {
+      key: '[',
+      action: () => {
+        cycleActiveTab(-1);
+        trackEvent({
+          action: 'shortcut_prev_workspace',
+          category: 'keyboard',
+        });
+      },
+      description: 'Previous workspace',
+      category: 'Workspaces',
+    },
+    {
+      // `?` is produced with Shift on the keyboards we target, so match Shift
+      // here; the overlay shows the plain `?` glyph via keyLabel.
+      key: '?',
+      shift: true,
+      action: () => {
+        setShortcutsOverlayOpen(true);
+        trackEvent({
+          action: 'shortcut_open_cheatsheet',
+          category: 'keyboard',
+        });
+      },
+      description: 'Show keyboard shortcuts',
+      category: 'Help',
+      keyLabel: '?',
+    },
+  ];
+  useKeyboardShortcuts(shortcutBindings, { disabled: anyModalOpen });
 
   // Mobile swipe gestures logic
   React.useEffect(() => {
@@ -938,7 +1129,7 @@ export default function Home() {
             equationString={currentEq ? equationToString(currentEq) : ''}
             getCompressedWorkspace={() => serializeWorkspaceState(tree, currentNodeId, currentTabName)}
             triggerClassName={THEME_GLASS.HEADER_BUTTON}
-            tooltip="Create Share Link"
+            tooltip="Create share link (S, ⇧S)"
           />
           <Tooltip content="Submit Feedback or Report Bug" position="bottom" autoAlign={false}>
             <button
@@ -1332,6 +1523,7 @@ export default function Home() {
       <EquationInputModal />
       <SettingsModal />
       <AboutModal />
+      <ShortcutsOverlay shortcuts={shortcutBindings} />
 
       {/* Mobile-only Bottom navigation and Sheets */}
       {!onboardingChapterId && <BottomNav />}

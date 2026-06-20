@@ -530,6 +530,24 @@ export const DEFAULT_SETTINGS: UserSettings = {
 
 export const settingsModalOpenAtom = atom(false);
 export const aboutModalOpenAtom = atom(false);
+// Keyboard-shortcuts cheat-sheet overlay (#126), opened with `?`.
+export const shortcutsOverlayOpenAtom = atom(false);
+
+/**
+ * True when any blocking modal/overlay is open. Global keyboard shortcuts read
+ * this to suppress themselves so a bare-key binding (e.g. `g`, `?`) can't act on
+ * the obscured app behind a dialog. Keep this list in sync as modals are added.
+ */
+export const anyModalOpenAtom = atom<boolean>((get) =>
+  get(feedbackModalOpenAtom) ||
+  get(deleteConfirmationModalOpenAtom) ||
+  get(resetHistoryModalOpenAtom) ||
+  get(equationInputModalOpenAtom) ||
+  get(settingsModalOpenAtom) ||
+  get(aboutModalOpenAtom) ||
+  get(shortcutsOverlayOpenAtom)
+);
+
 export const pwaInstallPromptAtom = atom<unknown>(null);
 export const rawSettingsAtom = atom<UserSettings>(DEFAULT_SETTINGS);
 
@@ -1456,6 +1474,23 @@ export const closeTabAtom = atom(
     set(hoverReducePathAtom, null);
     set(hoverReduceIndexAtom, null);
     set(hoveredLoopTargetIdAtom, null);
+  }
+);
+
+/**
+ * Action: Switch the active workspace tab by a relative offset, wrapping around
+ * the ends. `+1` selects the next tab, `-1` the previous. No-op with one tab.
+ */
+export const cycleActiveTabAtom = atom(
+  null,
+  (get, set, delta: number) => {
+    const tabs = get(tabsAtom);
+    if (tabs.length <= 1) return;
+    const activeId = get(activeTabIdAtom);
+    const currentIndex = tabs.findIndex(t => t.id === activeId);
+    const safeIndex = currentIndex === -1 ? 0 : currentIndex;
+    const nextIndex = (safeIndex + delta + tabs.length) % tabs.length;
+    set(activeTabIdAtom, tabs[nextIndex].id);
   }
 );
 

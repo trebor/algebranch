@@ -73,6 +73,8 @@ export const THEME_GLASS = {
   LIST_ITEM_HOVER: 'hover:bg-indigo-600/20 transition-colors',
   ACTIVE_BADGE: 'bg-indigo-500/20 text-indigo-400 rounded-full border border-indigo-500/30',
   BADGE_MUTED: 'text-white/40 bg-white/5 rounded-full border border-white/5',
+  // Keycap chip for the keyboard-shortcuts cheat-sheet (#126).
+  SHORTCUT_KEYCAP: 'inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-lg border border-white/15 bg-white/5 text-white/90 text-xs font-semibold shadow-sm select-none',
   ACCENT_PLAY: 'p-1.5 rounded-lg bg-white/0 group-hover:bg-indigo-600/20 text-white/20 group-hover:text-indigo-400 border border-transparent group-hover:border-indigo-500/30 transform group-hover:scale-105 transition-all duration-200',
   
   // Library specific

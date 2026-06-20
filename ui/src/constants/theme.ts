@@ -68,6 +68,16 @@ export const THEME_GLASS = {
   OVERLAY_BG: 'bg-[#16142a] border border-white/10 rounded-xl shadow-2xl',
   OVERLAY_MOBILE: 'bg-[#110f22]/98 backdrop-blur-xl',
   
+  // Cookie Consent Banner
+  LINK: 'text-indigo-400 hover:text-indigo-300 transition-colors underline',
+  BANNER_TITLE: 'text-sm font-semibold text-white',
+  BANNER_TEXT: 'text-xs text-white/70 leading-relaxed',
+  
+  // General Typography Colors
+  TEXT_HEADING: 'text-white',
+  TEXT_BODY: 'text-zinc-300',
+  TEXT_ACCENT: 'text-indigo-400 hover:text-indigo-300 transition-colors',
+  
   // List items & groups
   LIST_ITEM_ACTIVE: 'text-indigo-300 bg-indigo-600/5 font-semibold',
   LIST_ITEM_HOVER: 'hover:bg-indigo-600/20 transition-colors',

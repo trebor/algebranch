@@ -7,6 +7,7 @@ import "./globals.css";
 import Script from "next/script";
 
 import { Provider as JotaiProvider } from "jotai";
+import { ConsentManager } from "../components/ConsentManager";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -153,6 +154,7 @@ export default function RootLayout({
         />
         <JotaiProvider>
           {children}
+          <ConsentManager />
         </JotaiProvider>
         {gaId && (
           <>
@@ -164,6 +166,12 @@ export default function RootLayout({
               {`
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
+                gtag('consent', 'default', {
+                  'analytics_storage': 'denied',
+                  'ad_storage': 'denied',
+                  'ad_user_data': 'denied',
+                  'ad_personalization': 'denied'
+                });
                 gtag('js', new Date());
                 gtag('config', '${gaId}', {
                   page_path: window.location.pathname,

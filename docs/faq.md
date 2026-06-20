@@ -3,7 +3,7 @@
 ### Is my work uploaded to a server?
 **No — the math you work on stays on your device.** Your workspace tabs, equation steps, and settings are saved inside your own web browser. The equations and derivations you create are never uploaded, and there is no account or login.
 
-We may collect anonymous, aggregated usage data—for example, which features get used—to understand how Algebranch is used and to improve it. That data never includes the content of your equations or steps.
+We may collect anonymous, aggregated usage data—for example, which features get used—to understand how Algebranch is used and to improve it. That data never includes the content of your equations or steps. For more details on what we collect and how to opt out of analytics tracking, please read our [Privacy Policy](https://algebranch.org/privacy).
 
 ---
 

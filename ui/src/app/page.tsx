@@ -92,6 +92,7 @@ import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
 import { trackEvent } from '../utils/analytics';
 import { fetchMathScan } from '../utils/mathScan';
 
+
 // Safe wrapper around window.localStorage to prevent DOMException / SecurityError crashes on mobile browsers (incognito, LAN HTTP, etc.)
 const safeLocalStorage = {
   getItem: (key: string): string | null => {

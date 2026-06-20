@@ -4,11 +4,13 @@
 'use client';
 
 import React from 'react';
-import { useAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
 import { X, Info, ExternalLink, Shield } from 'lucide-react';
 import { aboutModalOpenAtom } from '../store/equation';
+import { consentAtom } from '../store/consent';
 import { THEME_GLASS } from '../constants/theme';
 import {
   APP_VERSION,
@@ -19,6 +21,7 @@ import {
 
 export const AboutModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(aboutModalOpenAtom);
+  const setConsent = useSetAtom(consentAtom);
 
   // Escape key handler
   React.useEffect(() => {
@@ -152,7 +155,25 @@ export const AboutModal: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className={`flex justify-end gap-3 mt-5 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} pt-4 select-none shrink-0`}>
+            <div className={`flex justify-between items-center mt-5 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} pt-4 select-none shrink-0`}>
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/privacy"
+                  onClick={() => setIsOpen(false)}
+                  className={THEME_GLASS.LINK}
+                >
+                  Privacy Policy
+                </Link>
+                <button
+                  onClick={() => {
+                    setConsent('unset');
+                    setIsOpen(false);
+                  }}
+                  className={`${THEME_GLASS.LINK} bg-transparent border-none cursor-pointer`}
+                >
+                  Cookie Settings
+                </button>
+              </div>
               <button
                 onClick={handleClose}
                 className={`px-4 py-2 text-xs font-semibold ${THEME_GLASS.BUTTON_SECONDARY}`}

@@ -1,6 +1,7 @@
 import * as math from 'mathjs';
 import { parseEquation, equationToString, Equation, tryExpandPowerTerm, tryCombinePowerTerms } from '../src/index';
-import { areEquationsEquivalent, generateValidMoves } from '../src/validator';
+import { areEquationsEquivalent, generateValidMoves, hasValidMove } from '../src/validator';
+import { getAllPaths } from '../src/tree';
 import { autoSimplify, getSimplificationForPath } from '../src/simplify';
 
 describe('Math Engine Validator & Simplifier', () => {
@@ -566,6 +567,74 @@ describe('Math Engine Validator & Simplifier', () => {
     const eq6 = parseEquation('(sqrt(-383) - 7) / x = 24');
     expect(areEquationsEquivalent(eq5, eq6)).toBe(true);
   });
+});
+
+describe('hasValidMove — short-circuit existence check (#188)', () => {
+  // hasValidMove must agree exactly with "generateValidMoves produced ≥1 move"
+  // for every path, since it only short-circuits the existence query (it must not
+  // change which paths are considered active).
+  const equations = [
+    'x + 3 = 7',
+    'x = (-b - sqrt(b ^ 2 - 4 * a * c)) / (2 * a)',
+    '2 * x - 5 = 9',
+    'x / 4 + 1 = 3',
+    'x ^ 2 - 9 = 0',
+    'a * x + b = c',
+    '5 = 5',
+    'sqrt(x) = 4',
+  ];
+
+  for (const eqStr of equations) {
+    test(`agrees with generateValidMoves for every path of "${eqStr}"`, () => {
+      const eq = parseEquation(eqStr);
+      for (const path of getAllPaths(eq)) {
+        const full = Object.keys(generateValidMoves(eq, path)).length > 0;
+        expect(hasValidMove(eq, path)).toBe(full);
+      }
+    });
+  }
+
+  test('returns false for a node trapped inside a power/function (non-draggable)', () => {
+    const eq = parseEquation('x ^ 2 = 9');
+    // The exponent path is inside the power and cannot be dragged.
+    expect(hasValidMove(eq, 'lhs/1')).toBe(false);
+  });
+});
+
+describe('areEquationsEquivalent — reject pre-filter soundness (#188)', () => {
+  // The cheap reject-only pre-filter must never drop a genuinely equivalent pair.
+  // These pairs are equivalent yet have DIFFERENT gap functions (lhs - rhs), so a
+  // naive gap comparison would wrongly reject them — they pin the pre-filter's
+  // root-based soundness.
+  const equivalentPairs: [string, string][] = [
+    ['x = 3', '2 * x = 6'],
+    ['x = 3', '1000 * x = 3000'],
+    ['x + 2 = 5', 'x = 3'],
+    ['x / 4 = 2', 'x = 8'],
+    ['2 * x - 4 = 0', 'x = 2'],
+    ['x = 3', 'x / 5 = 3 / 5'],
+    ['x = (-b - sqrt(b ^ 2 - 4 * a * c)) / (2 * a)', 'x * (2 * a) = -b - sqrt(b ^ 2 - 4 * a * c)'],
+    ['3 * x + 6 = 12', 'x + 2 = 4'],
+  ];
+
+  for (const [a, b] of equivalentPairs) {
+    test(`keeps equivalent pair "${a}" <=> "${b}"`, () => {
+      expect(areEquationsEquivalent(parseEquation(a), parseEquation(b))).toBe(true);
+    });
+  }
+
+  const differentPairs: [string, string][] = [
+    ['x = 3', 'x = 4'],
+    ['x + 2 = 5', 'x + 2 = 6'],
+    ['2 * x = 6', 'x = 6'],
+    ['x = 3', 'x = -3'],
+  ];
+
+  for (const [a, b] of differentPairs) {
+    test(`rejects non-equivalent pair "${a}" vs "${b}"`, () => {
+      expect(areEquationsEquivalent(parseEquation(a), parseEquation(b))).toBe(false);
+    });
+  }
 });
 
 

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { Equation, SerializedEquation, getAllPaths, serializeEquation } from './tree';
-import { generateValidMoves } from './validator';
+import { generateValidMoves, hasValidMove } from './validator';
 import { getReducibleOptions } from './simplify';
 
 /**
@@ -41,7 +41,9 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
   const activePaths: string[] = [];
   for (const path of getAllPaths(eq)) {
     try {
-      if (Object.keys(generateValidMoves(eq, path)).length > 0) {
+      // Existence-only short-circuit: step 1 only needs "has ≥1 move", so this
+      // stops at the first valid move rather than building the full map (#188).
+      if (hasValidMove(eq, path)) {
         activePaths.push(path);
       }
     } catch {

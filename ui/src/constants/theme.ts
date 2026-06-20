@@ -172,6 +172,8 @@ export const THEME_GLASS = {
   MATH_NUMBER_STATIC: 'text-zinc-500',
   MATH_VAR_ACTIVE: 'text-sky-300',
   MATH_VAR_STATIC: 'text-zinc-500',
+  // Lowered, shrunk subscript for underscore-named symbols (#113): v_0 → v₀.
+  MATH_SUBSCRIPT: 'text-[0.65em] align-baseline relative top-[0.28em] ml-[0.03em] opacity-90',
   MATH_FN_ACTIVE: 'text-purple-300',
   MATH_FN_STATIC: 'text-zinc-500',
   MATH_FN_ROOT_ACTIVE: 'text-indigo-300',

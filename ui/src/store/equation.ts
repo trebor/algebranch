@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { atom } from 'jotai';
-import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation } from 'math-engine-client';
+import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation, compressString } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
 import { applyGlobalOp, GlobalOpParams, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
@@ -69,6 +69,22 @@ export const deserializeTree = (serialized: Record<string, SerializedHistoryNode
     };
   });
   return tree;
+};
+
+/**
+ * Serialize + compress the current workspace into the `?ws=` payload shared by
+ * the Share menu and the Feedback flow. Returns '' when there is nothing to
+ * share (no tree or no selected node), so callers can omit the link.
+ */
+export const serializeWorkspaceState = async (
+  tree: Record<string, HistoryNode> | null,
+  currentNodeId: string | null,
+  name: string,
+): Promise<string> => {
+  if (!tree || !currentNodeId) return '';
+  const serialized = serializeTree(tree);
+  const stateStr = JSON.stringify({ tree: serialized, currentNodeId, name });
+  return await compressString(stateStr);
 };
 
 export const getSessionLatestTimestamp = (tree: Record<string, HistoryNode> | Record<string, SerializedHistoryNode>): number => {

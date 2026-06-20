@@ -42,6 +42,7 @@ import {
   SavedSession,
   serializeTree,
   deserializeTree,
+  serializeWorkspaceState,
   INITIAL_EQUATION_STRING,
   leftSidebarOpenAtom,
   rightSidebarOpenAtom,
@@ -76,7 +77,7 @@ import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon, Info } from 'lucide-react';
-import { parseEquation, equationToString, compressString, decompressString } from 'math-engine-client';
+import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
 import { trackEvent } from '../utils/analytics';
@@ -935,12 +936,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <ShareMenu
             equationString={currentEq ? equationToString(currentEq) : ''}
-            getCompressedWorkspace={async () => {
-              if (!tree || !currentNodeId) return '';
-              const serialized = serializeTree(tree);
-              const stateStr = JSON.stringify({ tree: serialized, currentNodeId, name: currentTabName });
-              return await compressString(stateStr);
-            }}
+            getCompressedWorkspace={() => serializeWorkspaceState(tree, currentNodeId, currentTabName)}
             triggerClassName={THEME_GLASS.HEADER_BUTTON}
             tooltip="Create Share Link"
           />

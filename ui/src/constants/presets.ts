@@ -624,8 +624,8 @@ export const PRESET_LIST: Preset[] = [
   {
     id: 'physics_wave',
     label: 'Wave Speed Equation',
-    equation: 'v = f * L',
-    description: 'Wave velocity v as frequency f multiplied by wavelength L.',
+    equation: 'v = f * lambda',
+    description: 'Wave velocity v as frequency f multiplied by wavelength λ.',
     category: 'Formulas (Physics, Geometry & Science)',
   },
   {
@@ -638,8 +638,8 @@ export const PRESET_LIST: Preset[] = [
   {
     id: 'thermo_density',
     label: 'Density Formula',
-    equation: 'D = m / V',
-    description: 'Density D of a substance equal to its mass m divided by volume V.',
+    equation: 'rho = m / V',
+    description: 'Density ρ of a substance equal to its mass m divided by volume V.',
     category: 'Formulas (Physics, Geometry & Science)',
   },
   {

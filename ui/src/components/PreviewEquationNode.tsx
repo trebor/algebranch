@@ -8,7 +8,8 @@ import { useAtomValue } from 'jotai';
 import type * as math from 'mathjs';
 import { currentEquationAtom } from '../store/equation';
 import { Equation, getNodeByPath, getFunctionName, formatNumber } from 'math-engine-client';
-import { OPERATOR_DISPLAY, symbolToGlyph } from '../constants/mathSymbols';
+import { OPERATOR_DISPLAY, splitSubscript } from '../constants/mathSymbols';
+import { THEME_GLASS } from '../constants/theme';
 
 const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
   <svg
@@ -81,8 +82,13 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
 
     if (node.type === 'SymbolNode') {
       const symbolNode = node as math.SymbolNode;
-      const val = symbolToGlyph(symbolNode.name);
-      return <span className="italic font-serif text-sky-400/80 font-medium">{val}</span>;
+      const { head, sub } = splitSubscript(symbolNode.name);
+      return (
+        <span className="italic font-serif text-sky-400/80 font-medium">
+          {head}
+          {sub !== null && <sub className={THEME_GLASS.MATH_SUBSCRIPT}>{sub}</sub>}
+        </span>
+      );
     }
 
     if (node.type === 'ParenthesisNode') {

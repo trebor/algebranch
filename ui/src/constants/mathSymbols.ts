@@ -61,3 +61,23 @@ export const SYMBOL_DISPLAY: Record<string, string> = {
 // isn't a mapped Greek spelling. The single lookup point for every place a
 // SymbolNode name is shown (EquationNode, PreviewEquationNode, …).
 export const symbolToGlyph = (name: string): string => SYMBOL_DISPLAY[name] ?? name;
+
+// Display-time subscript split (#113): an underscore-bearing symbol name like
+// `v_0`, `F_net`, or `omega_0` renders as a head glyph plus a lowered subscript
+// (v₀, Fₙₑₜ, ω₀). Like the Greek map this is RENDER-TIME ONLY — the AST and
+// serialized name keep the ASCII spelling (`v_0`), so the parser, share-links,
+// and copy/export are untouched and the data layer needs nothing.
+//
+// Rules (per #113):
+//  - Split on the FIRST underscore only; everything after it is the verbatim
+//    subscript (`a_b_c` → head `a`, sub `b_c`). Identifier subscripts only —
+//    mathjs parses `x_(i+1)` as `x_ · (i+1)`, so expression subscripts never
+//    reach here as one symbol.
+//  - The head still goes through `symbolToGlyph`, so `omega_0` → ω head + `0`.
+//  - A trailing bare underscore (`x_`) carries no subscript: render it as the
+//    plain name rather than a dangling empty subscript.
+export const splitSubscript = (name: string): { head: string; sub: string | null } => {
+  const i = name.indexOf('_');
+  if (i === -1 || i === name.length - 1) return { head: symbolToGlyph(name), sub: null };
+  return { head: symbolToGlyph(name.slice(0, i)), sub: name.slice(i + 1) };
+};

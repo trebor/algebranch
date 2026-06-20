@@ -27,7 +27,7 @@ import {
   onboardingSubstitutionAtom,
   ReducibleActionInfo,
 } from '../store/equation';
-import { OPERATOR_DISPLAY, RELATION_DISPLAY, symbolToGlyph } from '../constants/mathSymbols';
+import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
@@ -590,10 +590,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
     if (node.type === 'SymbolNode') {
       const symbolNode = node as math.SymbolNode;
-      const val = symbolToGlyph(symbolNode.name);
+      const { head, sub } = splitSubscript(symbolNode.name);
       return (
         <span className={`italic font-serif ${isStatic ? THEME_GLASS.MATH_VAR_STATIC : THEME_GLASS.MATH_VAR_ACTIVE} font-medium`}>
-          {val}
+          {head}
+          {sub !== null && <sub className={THEME_GLASS.MATH_SUBSCRIPT}>{sub}</sub>}
         </span>
       );
     }

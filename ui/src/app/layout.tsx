@@ -21,8 +21,9 @@ const geistMono = Geist_Mono({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-zoom is intentionally left enabled (no maximumScale / userScalable
+  // restrictions): disabling it fails WCAG 2.1 SC 1.4.4 (Resize Text), and a
+  // math app especially needs users to be able to zoom small symbols (#213).
   viewportFit: "cover",
   themeColor: "#0a0a0a",
 };

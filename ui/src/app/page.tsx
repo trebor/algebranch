@@ -75,7 +75,7 @@ import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon, Info } from 'lucide-react';
 import { parseEquation, equationToString, compressString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -586,7 +586,9 @@ export default function Home() {
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, [setPwaInstallPrompt]);
 
-  // Open the About Modal automatically if launched via the OS shortcut with ?about=true
+  // Cold-start path: the app was launched (or navigated) to ?about=true — e.g. a
+  // first launch from the OS shortcut, or any browser that doesn't honor the
+  // manifest's launch_handler (Safari). Open the modal and scrub the param.
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -596,6 +598,30 @@ export default function Home() {
       const newUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, '', newUrl);
     }
+  }, [setAboutOpen]);
+
+  // Warm-launch path: with manifest `launch_handler.client_mode = focus-existing`,
+  // re-launching the OS "About" dock shortcut focuses this already-running window
+  // (instead of spawning a new instance) and delivers the target URL here via the
+  // Launch Handler API. We open the modal in place WITHOUT navigating, so the
+  // user's current equation/workspace is preserved. Chromium-only; other browsers
+  // fall back to the cold-start path above.
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const launchQueue = (window as unknown as {
+      launchQueue?: { setConsumer: (consumer: (params: { targetURL?: string }) => void) => void };
+    }).launchQueue;
+    if (!launchQueue) return;
+    launchQueue.setConsumer((launchParams) => {
+      if (!launchParams?.targetURL) return;
+      try {
+        if (new URL(launchParams.targetURL).searchParams.get('about') === 'true') {
+          setAboutOpen(true);
+        }
+      } catch {
+        // Malformed targetURL — ignore.
+      }
+    });
   }, [setAboutOpen]);
 
   React.useEffect(() => {
@@ -932,6 +958,16 @@ export default function Home() {
             >
               <MessageSquarePlus size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
               <span className="hidden sm:inline">Feedback</span>
+            </button>
+          </Tooltip>
+          <Tooltip content="About Algebranch" position="bottom" autoAlign={false}>
+            <button
+              onClick={() => setAboutOpen(true)}
+              className={THEME_GLASS.HEADER_BUTTON}
+              aria-label="About Algebranch"
+            >
+              <Info size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">About</span>
             </button>
           </Tooltip>
           <Tooltip content="Settings" position="bottom" autoAlign={false}>

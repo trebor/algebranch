@@ -12,6 +12,13 @@ We may collect anonymous, aggregated usage data—for example, which features ge
 
 ---
 
+### What math can't Algebranch do?
+Algebranch handles middle-school and high-school algebra, including linear equations, quadratic equations, factoring, and systems of equations. It does not currently support calculus, such as limits, derivatives, and integrals. It also does not support complex numbers, matrices, vectors, or unit conversions.
+
+For a detailed breakdown of what is supported and what is not, see the [Scope & Capabilities](scope.md) page.
+
+---
+
 ### Why doesn't Algebranch use drag-and-drop?
 We intentionally designed Algebranch with a **two-click selection model** (Click to Select → Click to Place) instead of dragging for several reasons:
 1.  **Accessibility**: Dragging requires sustained motor precision, which can be difficult for users with motor difficulties or who use assistive input. A two-click model reduces that physical friction.

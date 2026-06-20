@@ -14,8 +14,10 @@ import {
   pwaInstallPromptAtom,
   shortcutsOverlayOpenAtom,
 } from '../store/equation';
+import { consentAtom } from '../store/consent';
 import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
+import Link from 'next/link';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -28,6 +30,7 @@ export const SettingsModal: React.FC = () => {
   const setAboutOpen = useSetAtom(aboutModalOpenAtom);
   const setShortcutsOverlayOpen = useSetAtom(shortcutsOverlayOpenAtom);
   const [installPrompt, setInstallPrompt] = useAtom(pwaInstallPromptAtom);
+  const setConsent = useSetAtom(consentAtom);
 
   const handleInstallApp = async () => {
     if (!installPrompt) return;
@@ -192,6 +195,36 @@ export const SettingsModal: React.FC = () => {
                   </button>
                 </div>
               )}
+
+              <div className={THEME_GLASS.SETTING_ROW}>
+                <div className="flex flex-col gap-1 select-none">
+                  <span className="text-sm font-semibold text-white">
+                    Privacy & Cookies
+                  </span>
+                  <span className={`text-[11px] leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                    Review what anonymous analytics data we collect or update your cookie tracking preferences.
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1.5 shrink-0 self-center">
+                  <Link
+                    href="/privacy"
+                    onClick={() => setIsOpen(false)}
+                    className={`${THEME_GLASS.LINK} text-xs font-bold text-center no-underline`}
+                  >
+                    Privacy Policy
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConsent('unset');
+                      setIsOpen(false);
+                    }}
+                    className={`${THEME_GLASS.LINK} text-xs font-bold bg-transparent border-none cursor-pointer p-0 text-center`}
+                  >
+                    Cookie Settings
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Footer */}

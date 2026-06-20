@@ -43,7 +43,7 @@
  *   --base <url>       Base URL (default http://localhost:3000).
  *   --width <px>       Viewport width  (default 1440).
  *   --height <px>      Viewport height (default 900).
- *   --no-graph         Leave the graph closed (default is to open it).
+ *   --graph            Open the graph panel (default is to leave it closed).
  *   --settle <ms>      Extra wait after each navigation (default 900).
  */
 
@@ -57,7 +57,8 @@ function parseArgs(argv) {
     const tok = argv[i];
     if (!tok.startsWith('--')) continue;
     const key = tok.slice(2);
-    if (key === 'no-graph') {
+    // Boolean flags take no value.
+    if (key === 'graph' || key === 'open-graph') {
       args[key] = true;
     } else {
       args[key] = argv[i + 1];
@@ -73,7 +74,7 @@ const out = args.out ?? 'screenshots/hero.png';
 const width = Number(args.width ?? 1440);
 const height = Number(args.height ?? 900);
 const settle = Number(args.settle ?? 900);
-const openGraph = !args['no-graph'];
+const openGraph = Boolean(args.graph || args['open-graph']);
 
 let ws = args.ws;
 if (!ws && args['ws-file']) ws = (await readFile(args['ws-file'], 'utf8')).trim();

@@ -68,12 +68,14 @@ import {
   previousGraphSizeAtom,
   isGraphViableAtom,
   settingsAtom,
+  pwaInstallPromptAtom,
+  aboutModalOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon, Info } from 'lucide-react';
 import { parseEquation, equationToString, compressString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -206,6 +208,8 @@ export default function Home() {
   // During the tour the equals sign is locked except on global-op steps
   const equalsLocked = !!onboardingChapterId && !onboardingGlobalOp;
   const swapSides = useSetAtom(swapSidesAtom);
+  const setPwaInstallPrompt = useSetAtom(pwaInstallPromptAtom);
+  const setAboutOpen = useSetAtom(aboutModalOpenAtom);
   const [graphSize, setGraphSize] = useAtom(graphSizeAtom);
   const previousGraphSize = useAtomValue(previousGraphSizeAtom);
   const isGraphViable = useAtomValue(isGraphViableAtom);
@@ -570,18 +574,55 @@ export default function Home() {
     }
   }, []);
 
-  // Suppress the browser's automatic PWA install promotion. The app meets
-  // installability criteria (manifest + service worker) but offers no real
-  // offline value yet, so the unsolicited prompt is just first-run noise.
-  // Calling preventDefault() silences the auto-offer while leaving manual
-  // "Add to Home Screen" intact. One-line revert when offline becomes useful.
+  // Capture the browser's PWA install promotion event. We do NOT preventDefault
+  // so the browser's native automatic promotion can still run when appropriate,
+  // but we stash the event in an atom so a manual "Install App" button can
+  // trigger it.
   React.useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
+      setPwaInstallPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);
+  }, [setPwaInstallPrompt]);
+
+  // Cold-start path: the app was launched (or navigated) to ?about=true — e.g. a
+  // first launch from the OS shortcut, or any browser that doesn't honor the
+  // manifest's launch_handler (Safari). Open the modal and scrub the param.
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('about') === 'true') {
+      setAboutOpen(true);
+      // Clean up the URL parameter to keep the address bar clean
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [setAboutOpen]);
+
+  // Warm-launch path: with manifest `launch_handler.client_mode = focus-existing`,
+  // re-launching the OS "About" dock shortcut focuses this already-running window
+  // (instead of spawning a new instance) and delivers the target URL here via the
+  // Launch Handler API. We open the modal in place WITHOUT navigating, so the
+  // user's current equation/workspace is preserved. Chromium-only; other browsers
+  // fall back to the cold-start path above.
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const launchQueue = (window as unknown as {
+      launchQueue?: { setConsumer: (consumer: (params: { targetURL?: string }) => void) => void };
+    }).launchQueue;
+    if (!launchQueue) return;
+    launchQueue.setConsumer((launchParams) => {
+      if (!launchParams?.targetURL) return;
+      try {
+        if (new URL(launchParams.targetURL).searchParams.get('about') === 'true') {
+          setAboutOpen(true);
+        }
+      } catch {
+        // Malformed targetURL — ignore.
+      }
+    });
+  }, [setAboutOpen]);
 
   React.useEffect(() => {
     if (!currentEq) return;
@@ -880,6 +921,7 @@ export default function Home() {
               width={53}
               height={53}
               priority
+              unoptimized
               className="h-[53px] w-[53px] object-contain rounded-full"
             />
             <div>
@@ -916,6 +958,16 @@ export default function Home() {
             >
               <MessageSquarePlus size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
               <span className="hidden sm:inline">Feedback</span>
+            </button>
+          </Tooltip>
+          <Tooltip content="About Algebranch" position="bottom" autoAlign={false}>
+            <button
+              onClick={() => setAboutOpen(true)}
+              className={THEME_GLASS.HEADER_BUTTON}
+              aria-label="About Algebranch"
+            >
+              <Info size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">About</span>
             </button>
           </Tooltip>
           <Tooltip content="Settings" position="bottom" autoAlign={false}>

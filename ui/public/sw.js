@@ -1,10 +1,14 @@
-const CACHE_NAME = 'algebranch-cache-v2';
+const CACHE_NAME = 'algebranch-cache-v6';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
   '/logo.png',
+  '/logo-transparent.png',
+  '/logo-textless.png',
   '/icon-192.png',
-  '/icon-512.png'
+  '/icon-512.png',
+  '/icon-192-maskable.png',
+  '/icon-512-maskable.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -37,6 +41,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Detect navigation/document requests (HTML pages)
+  const isNavigation = event.request.mode === 'navigate' || 
+                       (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html'));
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -55,8 +63,10 @@ self.addEventListener('fetch', (event) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          // If not in cache and requesting HTML page, we could return index or a fallback,
-          // but for general chunks returning undefined/normal error is expected.
+          // If navigation request fails and isn't cached, fallback to the root HTML page '/'
+          if (isNavigation) {
+            return caches.match('/');
+          }
         });
       })
   );

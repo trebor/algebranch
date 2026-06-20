@@ -29,15 +29,15 @@ Pass the link to the script. To avoid shell-mangling a ~1.5 KB blob, write it to
 ```sh
 # dev server must be running
 printf '%s' '<paste the ?ws= link>' > screenshots/ws_url.txt
-npm run shoot:hero -- --ws-file screenshots/ws_url.txt --fact "x = sqrt(5)" --out docs/screenshots/hero.png
+npm run shoot:hero -- --ws-file screenshots/ws_url.txt --fact "x = sqrt(5)" --graph --out docs/screenshots/hero.png
 ```
 
 The script (`scripts/shoot-hero.mjs`, fully commented):
 
 1. Serializes an `x = sqrt(5)` fact tab, then loads your workspace, then **merges the fact tab into the workspace** via `localStorage` and reloads — so the teal substitution handles and the "Substitutions" strip appear.
-2. **Opens the graph** (the `g` shortcut; it always loads closed since graph state isn't in the share link).
+2. **Opens the graph** if `--graph` is passed (the `g` shortcut; it always loads closed since graph state isn't in the share link).
 3. Writes a 2× (retina) PNG.
 
-Drop `--fact` if you don't want substitution handles; pass `--no-graph` to leave the graph closed.
+Drop `--fact` if you don't want substitution handles; pass `--graph` to open the graph panel.
 
 > Keep `hero.png` reasonably sized (it ships in the repo). The current capture is ~380 KB at 1440×900 @2×.

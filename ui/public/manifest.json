@@ -2,23 +2,70 @@
   "name": "Algebranch",
   "short_name": "Algebranch",
   "description": "Interactive Algebra Derivation Tool",
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
   "orientation": "any",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "About Algebranch",
+      "short_name": "About",
+      "description": "About Algebranch, licenses, and third-party software",
+      "url": "/?about=true",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/wide.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Algebranch on desktop — interactive equation editor"
+    },
+    {
+      "src": "/screenshots/narrow.png",
+      "sizes": "640x960",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Algebranch on mobile — interactive equation editor"
     }
   ]
 }

@@ -6,19 +6,43 @@
 import React from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sliders, Info } from 'lucide-react';
+import { X, Sliders, Info, Download } from 'lucide-react';
 import {
   settingsModalOpenAtom,
   settingsAtom,
   aboutModalOpenAtom,
+  pwaInstallPromptAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 export const SettingsModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(settingsModalOpenAtom);
   const [settings, setSettings] = useAtom(settingsAtom);
   const setAboutOpen = useSetAtom(aboutModalOpenAtom);
+  const [installPrompt, setInstallPrompt] = useAtom(pwaInstallPromptAtom);
+
+  const handleInstallApp = async () => {
+    if (!installPrompt) return;
+    try {
+      const promptEvent = installPrompt as BeforeInstallPromptEvent;
+      await promptEvent.prompt();
+      const { outcome } = await promptEvent.userChoice;
+      trackEvent({
+        action: 'install_pwa',
+        category: 'settings',
+        label: outcome,
+      });
+      setInstallPrompt(null);
+    } catch (err) {
+      console.error('Failed to trigger PWA install prompt:', err);
+    }
+  };
 
   // Escape key handler
   React.useEffect(() => {
@@ -123,6 +147,27 @@ export const SettingsModal: React.FC = () => {
                   />
                 </button>
               </div>
+
+              {!!installPrompt && (
+                <div className={THEME_GLASS.SETTING_ROW}>
+                  <div className="flex flex-col gap-1 select-none">
+                    <span className="text-sm font-semibold text-white">
+                      Install Algebranch
+                    </span>
+                    <span className={`text-[11px] leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                      Install Algebranch to your device for offline use, standalone window, and faster startup.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleInstallApp}
+                    className={`px-3 py-2 text-xs font-bold ${THEME_GLASS.BUTTON_PRIMARY} flex items-center gap-1.5 shrink-0 self-center`}
+                  >
+                    <Download size={13} />
+                    <span>Install</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Footer */}

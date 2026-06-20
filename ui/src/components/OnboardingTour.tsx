@@ -355,6 +355,7 @@ export const OnboardingTour: React.FC = () => {
                 alt="Algebranch"
                 width={40}
                 height={40}
+                unoptimized
                 className="h-10 w-10 object-contain rounded-full shrink-0"
               />
               <div>

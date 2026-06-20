@@ -45,8 +45,8 @@ function pngToIco(pngBuffer, size) {
   return Buffer.concat([header, directory, pngBuffer]);
 }
 
-async function generateLogo({ outPath, size, theme, hideText, isFavicon = false, transparent = false }) {
-  console.log(`Generating logo -> ${outPath} (${size}x${size}, theme: ${theme}, hideText: ${hideText})...`);
+async function generateLogo({ outPath, size, theme, hideText, isFavicon = false, transparent = false, margin }) {
+  console.log(`Generating logo -> ${outPath} (${size}x${size}, theme: ${theme}, hideText: ${hideText}, margin: ${margin ?? 'default'})...`);
   
   const browser = await chromium.launch();
   try {
@@ -58,13 +58,16 @@ async function generateLogo({ outPath, size, theme, hideText, isFavicon = false,
     await page.goto(fileUrl);
     
     // Set theme and options in the page
-    await page.evaluate(({ theme, hideText, size, isFavicon, transparent }) => {
+    await page.evaluate(({ theme, hideText, size, isFavicon, transparent, margin }) => {
       // Set theme
       setTheme(theme);
       
       // Set checkbox values
       document.getElementById('showCircleGuide').checked = false;
       document.getElementById('hideText').checked = hideText;
+      if (margin !== undefined) {
+        document.getElementById('marginSize').value = margin;
+      }
       
       // Run update preview to apply settings
       updatePreview();
@@ -114,7 +117,7 @@ async function generateLogo({ outPath, size, theme, hideText, isFavicon = false,
         style.textContent = '* { background: transparent !important; }';
         document.head.appendChild(style);
       }
-    }, { theme, hideText, size, isFavicon, transparent });
+    }, { theme, hideText, size, isFavicon, transparent, margin });
     
     // Wait for rendering to settle
     await page.waitForTimeout(400);
@@ -187,10 +190,39 @@ async function main() {
       hideText: true
     });
 
+    // 5b. icon-192-maskable.png (Chromatic, textless, 192x192, custom margin for PWA maskable safe zone)
+    await generateLogo({
+      outPath: join(publicDir, 'icon-192-maskable.png'),
+      size: 192,
+      theme: 'gradient',
+      hideText: true,
+      margin: 65
+    });
+
     // 6. icon-512.png (Chromatic, textless, 512x512)
     await generateLogo({
       outPath: join(publicDir, 'icon-512.png'),
       size: 512,
+      theme: 'gradient',
+      hideText: true
+    });
+
+    // 6b. icon-512-maskable.png (Chromatic, textless, 512x512, custom margin for PWA maskable safe zone)
+    await generateLogo({
+      outPath: join(publicDir, 'icon-512-maskable.png'),
+      size: 512,
+      theme: 'gradient',
+      hideText: true,
+      margin: 65
+    });
+
+    // 6c. apple-icon.png (Chromatic, textless, 180x180, opaque — iOS home-screen
+    // icon; Safari ignores manifest icons, and Apple wants no transparency since
+    // iOS applies its own rounded-corner mask). App Router emits the
+    // <link rel="apple-touch-icon"> automatically from app/apple-icon.png.
+    await generateLogo({
+      outPath: join(appDir, 'apple-icon.png'),
+      size: 180,
       theme: 'gradient',
       hideText: true
     });

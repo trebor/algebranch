@@ -69,6 +69,7 @@ import {
   isGraphViableAtom,
   settingsAtom,
   pwaInstallPromptAtom,
+  aboutModalOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
@@ -208,6 +209,7 @@ export default function Home() {
   const equalsLocked = !!onboardingChapterId && !onboardingGlobalOp;
   const swapSides = useSetAtom(swapSidesAtom);
   const setPwaInstallPrompt = useSetAtom(pwaInstallPromptAtom);
+  const setAboutOpen = useSetAtom(aboutModalOpenAtom);
   const [graphSize, setGraphSize] = useAtom(graphSizeAtom);
   const previousGraphSize = useAtomValue(previousGraphSizeAtom);
   const isGraphViable = useAtomValue(isGraphViableAtom);
@@ -583,6 +585,18 @@ export default function Home() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, [setPwaInstallPrompt]);
+
+  // Open the About Modal automatically if launched via the OS shortcut with ?about=true
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('about') === 'true') {
+      setAboutOpen(true);
+      // Clean up the URL parameter to keep the address bar clean
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [setAboutOpen]);
 
   React.useEffect(() => {
     if (!currentEq) return;

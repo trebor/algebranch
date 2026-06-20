@@ -41,9 +41,9 @@ export const metadata: Metadata = {
     siteName: "Algebranch",
     images: [
       {
-        url: "/og-image.png",
-        width: 1024,
-        height: 1024,
+        url: "/social-preview.png",
+        width: 1280,
+        height: 640,
         alt: "Algebranch - Interactive Algebraic Steps",
       },
     ],
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Algebranch - Interactive Algebraic Steps",
     description: "An interactive step-by-step mathematical exploration and algebraic manipulation system.",
-    images: ["/og-image.png"],
+    images: ["/social-preview.png"],
   },
   appleWebApp: {
     capable: true,

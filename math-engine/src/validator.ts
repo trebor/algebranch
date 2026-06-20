@@ -423,6 +423,55 @@ export const areExpressionsValueEqual = (a: math.MathNode, b: math.MathNode): bo
   return validSamples >= 2;
 };
 
+// Sound reject-only pre-filter tuning (#188). A converged root of one equation
+// that misses the other by more than QUICK_REJECT_GAP is an unambiguous
+// solution-set mismatch — far looser than the authoritative 1e-5 check in the
+// full solver, so borderline/float-noise cases are NEVER fast-rejected here;
+// they fall through to the multi-run solver. Because this threshold is strictly
+// looser than the full check's, any pair this rejects the full check would also
+// reject — it can only short-circuit obvious non-equivalence, never drop a valid
+// move. Kept cheap: one scope, a handful of guesses, rejecting on the first
+// violating root rather than collecting every root first.
+const QUICK_REJECT_GAP = 1e-3;
+const QUICK_REJECT_GUESSES = [1.0, -1.0, 2.0];
+
+/**
+ * Cheap reject-only pre-check for equation equivalence (#188). Returns true only
+ * when a genuine (converged, finite, real-when-required) root of one side fails
+ * the other by more than {@link QUICK_REJECT_GAP} — a definitive non-equivalence
+ * witness. Returns false otherwise (inconclusive ⇒ defer to the full solver). It
+ * never reports equivalence and, by its looser threshold, never rejects a pair
+ * the authoritative check would accept.
+ */
+const quickRejectByRoot = (eq1: Equation, eq2: Equation, variables: string[]): boolean => {
+  try {
+    const scope: Record<string, number> = {};
+    variables.forEach((v) => {
+      scope[v] = Math.random() * (RANGE_MID_MAX - RANGE_MID_MIN) + RANGE_MID_MIN;
+    });
+
+    const sourceViolatesOther = (source: Equation, other: Equation): boolean => {
+      const isRealSrc = isEquationReal(source, scope);
+      for (const solveVar of variables) {
+        for (const guess of QUICK_REJECT_GUESSES) {
+          const root = solveForVariable(source.lhs, source.rhs, solveVar, { ...scope }, guess);
+          if (root === null || !isValFinite(root) || isValNaN(root)) continue;
+          if (isRealSrc && !isReal(root)) continue;
+          const localScope = { ...scope, [solveVar]: root };
+          const dOther = subV(evaluatePoint(other.lhs, localScope), evaluatePoint(other.rhs, localScope));
+          if (isValNaN(dOther) || !isValFinite(dOther)) continue;
+          if (absNum(dOther) > QUICK_REJECT_GAP) return true;
+        }
+      }
+      return false;
+    };
+
+    return sourceViolatesOther(eq1, eq2) || sourceViolatesOther(eq2, eq1);
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Tests if two equations are equivalent using point evaluation across multiple random midpoints.
  */
@@ -660,6 +709,12 @@ export const areEquationsEquivalent = (eq1: Equation, eq2: Equation): boolean =>
       }
     }
 
+    // Cheap reject-only pre-filter: skip the full multi-run Newton solve for
+    // candidates an obvious root-violation already rules out (#188).
+    if (quickRejectByRoot(eq1, eq2, variables)) {
+      return false;
+    }
+
     return areEquationsEquivalentPoint(eq1, eq2, variables);
   }
 
@@ -667,6 +722,9 @@ export const areEquationsEquivalent = (eq1: Equation, eq2: Equation): boolean =>
   // solution regions must agree at sampled points.
   const boundary1: Equation = { lhs: eq1.lhs, rhs: eq1.rhs, relation: '=' };
   const boundary2: Equation = { lhs: eq2.lhs, rhs: eq2.rhs, relation: '=' };
+  if (quickRejectByRoot(boundary1, boundary2, variables)) {
+    return false;
+  }
   if (!areEquationsEquivalentPoint(boundary1, boundary2, variables)) {
     return false;
   }
@@ -1171,10 +1229,20 @@ export const mapPathTempToOrig = (
 };
 
 /**
- * Generates all mathematically valid target equations for a selected node.
- * Maps destination path string to the resulting Equation.
+ * Shared core for {@link generateValidMoves} / {@link hasValidMove}.
+ *
+ * When `stopAtFirst` is true it returns as soon as the first valid move is found
+ * (the existence-only query used by `computeMathSync`'s active-path scan, #188);
+ * otherwise it builds the complete move map. The full-map path preserves the
+ * historical "last accepted op wins" value for a target path — only the
+ * existence path short-circuits, and which path is reported active is identical
+ * either way.
  */
-export const generateValidMoves = (originalEq: Equation, sourcePath: string): Record<string, Equation> => {
+const collectValidMoves = (
+  originalEq: Equation,
+  sourcePath: string,
+  stopAtFirst: boolean
+): Record<string, Equation> => {
   const moves: Record<string, Equation> = {};
 
   try {
@@ -1203,14 +1271,14 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
       ? [originalEq.relation as RelationOperator, flipRelation(originalEq.relation)]
       : ['='];
 
-    targetPaths.forEach((targetPath) => {
+    for (const targetPath of targetPaths) {
       if (excludedParents.has(targetPath)) {
-        return;
+        continue;
       }
 
       // Strictly exclude moving a node onto itself
       if (targetPath === sourcePath) {
-        return;
+        continue;
       }
 
       // If it's a cross-equals move, the target path must be the root of the destination side
@@ -1219,7 +1287,7 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
         (sourcePath.startsWith('rhs') && targetPath.startsWith('lhs'))
       );
       if (isCrossEquals && targetPath !== 'lhs' && targetPath !== 'rhs') {
-        return;
+        continue;
       }
 
       const targetNode = getNodeByPath(tempEq, targetPath);
@@ -1271,7 +1339,7 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
       // Declared as const to satisfy TypeScript operator union types
       const ops = ['+', '-', '*', '/'] as const;
 
-      ops.forEach((op) => {
+      for (const op of ops) {
         // Cast via never to satisfy very specific types of OperatorNodeMap in mathjs
         const nodeStandard = new mjs.OperatorNode(op as never, OP_TO_FN[op] as never, [targetNode, removedNode]);
         const eqStandard = replaceNodeAtPath(tempEq, targetPath, nodeStandard);
@@ -1286,6 +1354,7 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
           }
         }
         tryAddMove(eqStandard, eqStandardParam);
+        if (stopAtFirst && moves[targetPath] !== undefined) break;
 
         if (op === '-' || op === '/') {
           const nodeReverse = new mjs.OperatorNode(op as never, OP_TO_FN[op] as never, [removedNode, targetNode]);
@@ -1301,21 +1370,42 @@ export const generateValidMoves = (originalEq: Equation, sourcePath: string): Re
             }
           }
           tryAddMove(eqReverse, eqReverseParam);
+          if (stopAtFirst && moves[targetPath] !== undefined) break;
         }
-      });
+      }
 
-      // Direct replacement is only valid if we are overwriting a neutral constant (0 or 1)
-      if (isNeutralNode(targetNode)) {
+      // Direct replacement is only valid if we are overwriting a neutral constant (0 or 1).
+      // In the existence query, skip it once this target already has a move.
+      if ((!stopAtFirst || moves[targetPath] === undefined) && isNeutralNode(targetNode)) {
         const eqDirect = replaceNodeAtPath(tempEq, targetPath, removedNode);
         tryAddMove(eqDirect, null);
       }
-    });
+
+      if (stopAtFirst && Object.keys(moves).length > 0) {
+        return moves;
+      }
+    }
   } catch (err) {
     console.error('Error generating valid moves:', err);
   }
 
   return moves;
 };
+
+/**
+ * Generates all mathematically valid target equations for a selected node.
+ * Maps destination path string to the resulting Equation.
+ */
+export const generateValidMoves = (originalEq: Equation, sourcePath: string): Record<string, Equation> =>
+  collectValidMoves(originalEq, sourcePath, false);
+
+/**
+ * Existence-only counterpart to {@link generateValidMoves}: returns true as soon
+ * as one valid move is found, without building the full move map. Used by the
+ * active-path scan in `computeMathSync`, which only needs "has ≥1 move" (#188).
+ */
+export const hasValidMove = (originalEq: Equation, sourcePath: string): boolean =>
+  Object.keys(collectValidMoves(originalEq, sourcePath, true)).length > 0;
 
 /**
  * Represents the truth status of an equation.

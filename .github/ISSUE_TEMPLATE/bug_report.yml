@@ -38,27 +38,48 @@ body:
       placeholder: https://…/?eq=x%5E2-9%3D0
     validations:
       required: false
-  - type: dropdown
+  - type: input
     id: device
     attributes:
       label: Device type
-      options:
-        - Desktop
-        - Mobile
-        - Tablet
+      description: Auto-detected by the in-app feedback form.
+      placeholder: e.g. Desktop, Mobile, Tablet
     validations:
       required: false
   - type: input
-    id: environment
+    id: browser
     attributes:
-      label: Browser & OS
-      placeholder: e.g. Chrome 130 on macOS 15, Safari on iOS 18
+      label: Browser
+      placeholder: e.g. Chrome 130, Safari 18
+    validations:
+      required: false
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: e.g. macOS 15, iOS 18, Windows 11
+    validations:
+      required: false
+  - type: input
+    id: user-agent
+    attributes:
+      label: User agent
+      description: Auto-filled raw browser string — ground truth if the parsed fields above miss an edge case.
+      placeholder: Mozilla/5.0 …
+    validations:
+      required: false
+  - type: input
+    id: rating
+    attributes:
+      label: Experience rating
+      description: Your star rating from the in-app feedback form, if given.
+      placeholder: e.g. 4 stars
     validations:
       required: false
   - type: textarea
-    id: extra
+    id: screenshots
     attributes:
-      label: Screenshots or extra context
-      description: Drag images here, or add anything else that helps.
+      label: Screenshots
+      description: A picture of the glitch helps a lot — drag images right into this box.
     validations:
       required: false

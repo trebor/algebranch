@@ -30,6 +30,14 @@ body:
       description: Other approaches you thought about, and why they fall short.
     validations:
       required: false
+  - type: input
+    id: share-link
+    attributes:
+      label: Share link / equation
+      description: A `?ws=` workspace or `?eq=` equation link, if you want to attach one.
+      placeholder: https://…/?eq=x%5E2-9%3D0
+    validations:
+      required: false
   - type: dropdown
     id: area
     attributes:
@@ -42,5 +50,13 @@ body:
         - Graphing
         - Onboarding / docs
         - Other / not sure
+    validations:
+      required: false
+  - type: input
+    id: rating
+    attributes:
+      label: Experience rating
+      description: Your star rating from the in-app feedback form, if given.
+      placeholder: e.g. 4 stars
     validations:
       required: false

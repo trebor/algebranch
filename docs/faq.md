@@ -35,4 +35,4 @@ We intentionally designed Algebranch with a **two-click selection model** (Click
 ### Why is a certain move not allowed?
 If you click a term but the destination you want does not highlight in green, it usually means the move would break the equality of the equation or violate an algebraic rule (such as dividing by zero). Algebranch checks the available actions in real time and only offers the ones it can guarantee are valid, which helps you avoid algebraic errors.
 
-That said, if you are confident a move *is* valid and Algebranch isn't offering it, that may be a gap on our end rather than a real restriction. We would genuinely like to know — please tell us through the in-app **Feedback** button (Report a Bug) so we can take a look.
+That said, if you are confident a move *is* valid and Algebranch isn't offering it, that may be a gap on our end rather than a real restriction. We would genuinely like to know — use the in-app **Feedback** button (Report a Bug), which opens a pre-filled [GitHub issue](https://github.com/trebor/algebranch/issues) (including a link back to your exact workspace) so we can take a look.

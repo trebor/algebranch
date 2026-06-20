@@ -6,45 +6,60 @@
 import React from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MessageSquare, Bug, Lightbulb, Star, CheckCircle2, Paperclip } from 'lucide-react';
-import { feedbackModalOpenAtom, feedbackContextAtom, historyTreeAtom, HistoryNode, currentNodeIdAtom } from '../store/equation';
-import { equationToString } from 'math-engine-client';
+import { X, ShieldAlert, Bug, Lightbulb, Star, CheckCircle2, Layers, Variable, Ban } from 'lucide-react';
+import { feedbackModalOpenAtom, feedbackContextAtom, historyTreeAtom, HistoryNode, currentNodeIdAtom, currentTabNameAtom, serializeWorkspaceState } from '../store/equation';
+import { Equation, equationToString } from 'math-engine-client';
 import { trackEvent } from '../utils/analytics';
 import { THEME_GLASS } from '../constants/theme';
+import { RELATION_DISPLAY } from '../constants/mathSymbols';
+import { buildWorkspaceUrl, buildEquationUrl, buildGithubIssueUrl, parseUserAgent, ShareMode } from '../utils/feedbackUrl';
+import { WorkspaceTreeView } from './WorkspaceTreeView';
+import { PreviewEquationNode } from './PreviewEquationNode';
 
-type FeedbackType = 'bug' | 'feature' | 'other';
+type FeedbackType = 'bug' | 'feature';
 
-const formatHistoryTree = (tree: Record<string, HistoryNode>, currentNodeId: string | null): string => {
-  const root = tree["0"];
-  if (!root) return "Empty history";
+// Read-only render of a full equation (lhs <rel> rhs), reusing the workspace's
+// own equation renderer so the preview matches what the user sees in the app.
+const EquationPreviewRow: React.FC<{ eq: Equation }> = ({ eq }) => (
+  <div className="flex items-center justify-center gap-1.5 flex-nowrap text-2xl text-white w-max mx-auto">
+    <PreviewEquationNode path="lhs" customEquation={eq} />
+    <span className="font-mono px-1 select-none text-indigo-300">{RELATION_DISPLAY[eq.relation ?? '='] ?? '='}</span>
+    <PreviewEquationNode path="rhs" customEquation={eq} />
+  </div>
+);
 
-  // Build temporary indices map based on sorted timestamp
-  const sortedNodes = Object.values(tree).sort((a, b) => a.timestamp - b.timestamp);
-  const stepIndices = new Map<string, number>();
-  sortedNodes.forEach((n, idx) => stepIndices.set(n.id, idx));
+const SHARE_OPTIONS: { mode: ShareMode; label: string; Icon: React.ElementType }[] = [
+  { mode: 'workspace', label: 'Workspace', Icon: Layers },
+  { mode: 'equation', label: 'Equation', Icon: Variable },
+  { mode: 'none', label: 'Nothing', Icon: Ban },
+];
 
-  const formatNode = (nodeId: string, depth: number): string => {
-    const node = tree[nodeId];
-    if (!node) return "";
-    
-    const stepNum = stepIndices.get(nodeId) ?? 0;
-    const eqStr = equationToString(node.equation);
-    const indent = "  ".repeat(depth);
-    const isSelected = nodeId === currentNodeId ? " <- Current Selected Step" : "";
-    let line = `${indent}- Step ${stepNum} (${node.label}): ${eqStr}${isSelected}\n`;
-    
-    const children = node.childrenIds
-      .map(cid => tree[cid])
-      .filter(Boolean)
-      .sort((a, b) => a!.timestamp - b!.timestamp);
+const SHARE_HINT: Record<ShareMode, string> = {
+  workspace: 'Attaches a link that reloads this exact derivation only — not your other saved workspaces.',
+  equation: 'Attaches a link to just the current equation.',
+  none: 'No link is attached. Only your message and device info are sent.',
+};
 
-    for (const child of children) {
-      line += formatNode(child!.id, depth + 1);
-    }
-    return line;
-  };
+// Security reports must stay private — route them to GitHub's private advisory
+// form rather than a public issue (see SECURITY.md).
+const SECURITY_ADVISORY_URL = 'https://github.com/trebor/algebranch/security/advisories/new';
 
-  return formatNode("0", 0);
+// Flat, linear list of the steps the user took to reach the current equation
+// (root → active node). Orthogonal to the full workspace share: it captures the
+// path without the branches, so it's helpful even when the user shares nothing.
+const formatActivePathSteps = (tree: Record<string, HistoryNode>, currentNodeId: string | null): string => {
+  if (!currentNodeId || !tree[currentNodeId]) return '';
+
+  const path: HistoryNode[] = [];
+  let id: string | null = currentNodeId;
+  while (id !== null && tree[id]) {
+    path.unshift(tree[id]);
+    id = tree[id].parentId;
+  }
+
+  return path
+    .map((node, i) => `${i + 1}. (${node.label}) ${equationToString(node.equation)}`)
+    .join('\n');
 };
 
 export const FeedbackModal: React.FC = () => {
@@ -52,22 +67,31 @@ export const FeedbackModal: React.FC = () => {
   const context = useAtomValue(feedbackContextAtom);
   const tree = useAtomValue(historyTreeAtom);
   const currentNodeId = useAtomValue(currentNodeIdAtom);
-  
+  const currentTabName = useAtomValue(currentTabNameAtom);
+
   const [subject, setSubject] = React.useState('');
   const [message, setMessage] = React.useState('');
   const [rating, setRating] = React.useState<number>(0);
   const [hoveredRating, setHoveredRating] = React.useState<number>(0);
-  
+  const [shareMode, setShareMode] = React.useState<ShareMode>('workspace');
+
   const [isSuccess, setIsSuccess] = React.useState(false);
   const [successTypeLabel, setSuccessTypeLabel] = React.useState('');
+  const [successIsSecurity, setSuccessIsSecurity] = React.useState(false);
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
+
+  const activeEquation = currentNodeId ? tree[currentNodeId]?.equation ?? null : null;
+  const hasWorkspace = !!(currentNodeId && tree[currentNodeId]);
+  const canSubmit = subject.trim().length > 0 && message.trim().length > 0;
 
   const resetForm = React.useCallback(() => {
     setSubject('');
     setMessage('');
     setRating(0);
+    setShareMode('workspace');
     setIsSuccess(false);
     setSuccessTypeLabel('');
+    setSuccessIsSecurity(false);
     setErrorStr(null);
   }, []);
 
@@ -102,7 +126,7 @@ export const FeedbackModal: React.FC = () => {
     setTimeout(resetForm, 300);
   };
 
-  const handleSubmitType = (e: React.FormEvent, feedbackType: FeedbackType) => {
+  const handleSubmitType = async (e: React.FormEvent, feedbackType: FeedbackType) => {
     e.preventDefault();
     if (!subject.trim() || !message.trim()) {
       setErrorStr('Subject and message are required.');
@@ -111,30 +135,35 @@ export const FeedbackModal: React.FC = () => {
 
     try {
       const typeLabel = feedbackType === 'bug' ? 'Bug Report' : feedbackType === 'feature' ? 'Feature Request' : 'General/Other';
-      setSuccessTypeLabel(typeLabel);
-      
-      const formattedTree = formatHistoryTree(tree, currentNodeId);
-      const bodyText = `Feedback Type: ${typeLabel}
-Rating: ${rating > 0 ? `${rating}/5` : 'Not rated'}
 
-Message:
-${message.trim()}
+      // Resolve the single share link from the user's explicit choice: the full
+      // workspace (?ws=, #170), just the current equation (?eq=), or nothing.
+      let shareLink = '';
+      if (shareMode === 'workspace') {
+        const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName);
+        shareLink = buildWorkspaceUrl(window.location.origin, compressed);
+      } else if (shareMode === 'equation') {
+        shareLink = buildEquationUrl(window.location.origin, activeEquation ? equationToString(activeEquation) : '');
+      }
 
---------------------------------------
-App Context:
-${context || 'No specific context attached'}
+      const clientEnv = parseUserAgent(navigator.userAgent, window.innerWidth, navigator.maxTouchPoints);
 
---------------------------------------
-History Tree:
-${formattedTree}
-`;
+      const issueUrl = buildGithubIssueUrl({
+        type: feedbackType,
+        subject: subject.trim(),
+        message: message.trim(),
+        rating,
+        context,
+        steps: formatActivePathSteps(tree, currentNodeId),
+        shareLink,
+        device: clientEnv.device,
+        browser: clientEnv.browser,
+        os: clientEnv.os,
+        userAgent: navigator.userAgent,
+      });
 
-      const mailtoUrl = `mailto:feedback@algebranch.org?subject=${encodeURIComponent(
-        `[Algebranch Feedback] ${typeLabel}: ${subject.trim()}`
-      )}&body=${encodeURIComponent(bodyText)}`;
-
-      // Launch the email client in a new tab/window
-      window.open(mailtoUrl, '_blank');
+      // Open the pre-populated GitHub new-issue page in a new tab.
+      window.open(issueUrl, '_blank', 'noopener,noreferrer');
 
       trackEvent({
         action: 'submit_feedback',
@@ -142,11 +171,23 @@ ${formattedTree}
         label: feedbackType,
       });
 
-      // Show success step explaining that their mail client has been opened
+      setSuccessTypeLabel(typeLabel);
+      setSuccessIsSecurity(false);
+      // Show success step explaining that GitHub has been opened.
       setIsSuccess(true);
     } catch {
-      setErrorStr('Failed to open your mail client. Please try again.');
+      setErrorStr('Failed to open GitHub. Please try again.');
     }
+  };
+
+  // Security issues skip the public-issue flow entirely: open GitHub's private
+  // vulnerability advisory form so the report never lands in a public issue.
+  const handleSecurity = () => {
+    window.open(SECURITY_ADVISORY_URL, '_blank', 'noopener,noreferrer');
+    trackEvent({ action: 'submit_feedback', category: 'feedback', label: 'security' });
+    setSuccessTypeLabel('Security Report');
+    setSuccessIsSecurity(true);
+    setIsSuccess(true);
   };
 
   return (
@@ -207,9 +248,17 @@ ${formattedTree}
                   >
                     <CheckCircle2 className="w-16 h-16 text-emerald-400 mb-4" />
                   </motion.div>
-                  <h3 className="text-xl font-bold text-white">{successTypeLabel} Drafted!</h3>
+                  <h3 className="text-xl font-bold text-white">{successTypeLabel} {successIsSecurity ? 'Started' : 'Ready'}!</h3>
                   <p className="text-sm text-zinc-400 mt-2 max-w-sm">
-                    We&apos;ve opened your mail client with your feedback pre-written. Please press <strong>Send</strong> in your mail application to complete the submission.
+                    {successIsSecurity ? (
+                      <>
+                        We&apos;ve opened GitHub&apos;s <strong>private security advisory</strong> form in a new tab. Please describe the vulnerability there — security reports are kept private and must never be filed as public issues.
+                      </>
+                    ) : (
+                      <>
+                        We&apos;ve opened a new GitHub issue in a fresh tab with your feedback pre-filled. Review it and press <strong>Create</strong> on GitHub to post it publicly. A free GitHub account is required.
+                      </>
+                    )}
                   </p>
                   <button
                     onClick={handleClose}
@@ -221,21 +270,6 @@ ${formattedTree}
               ) : (
                 /* Form View */
                 <form className="flex flex-col gap-4">
-                  {/* Context Attachment Display */}
-                  {context && (
-                    <div className="flex items-center gap-2 p-2.5 rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-300 select-none">
-                      <Paperclip size={13} className="shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[9px] uppercase tracking-wider font-bold text-indigo-400">
-                          Including Context
-                        </div>
-                        <div className="text-[11px] font-mono truncate font-semibold">
-                          {context}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Subject Input */}
                   <div className="flex flex-col gap-1.5">
                     <label className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
@@ -261,9 +295,69 @@ ${formattedTree}
                       rows={5}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Explain your thoughts, steps to reproduce, or details about your request..."
+                      placeholder="Describe what happened, what you expected, and anything that seems off. (Your algebra steps are captured automatically.)"
                       className={`w-full p-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/80 transition-all font-medium resize-none ${THEME_GLASS.FIELD_SELECT}`}
                     />
+                  </div>
+
+                  {/* Share selector — the live preview sits ABOVE the choice so the
+                      user sees exactly what (if anything) a link would attach. */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
+                      What to attach
+                    </label>
+
+                    {/* Preview */}
+                    {shareMode === 'workspace' ? (
+                      hasWorkspace ? (
+                        <WorkspaceTreeView
+                          interactive={false}
+                          className={`max-h-40 overflow-auto relative ${THEME_GLASS.TREE_BG}`}
+                        />
+                      ) : (
+                        <div className={`h-20 flex items-center justify-center text-center px-4 ${THEME_GLASS.TREE_BG}`}>
+                          <span className={`text-[11px] ${THEME_GLASS.TEXT_MUTED}`}>No workspace to preview yet.</span>
+                        </div>
+                      )
+                    ) : shareMode === 'equation' ? (
+                      activeEquation ? (
+                        <div className={`max-h-40 overflow-auto p-4 flex items-center justify-center ${THEME_GLASS.TREE_BG}`}>
+                          <EquationPreviewRow eq={activeEquation} />
+                        </div>
+                      ) : (
+                        <div className={`h-20 flex items-center justify-center text-center px-4 ${THEME_GLASS.TREE_BG}`}>
+                          <span className={`text-[11px] ${THEME_GLASS.TEXT_MUTED}`}>No equation to preview yet.</span>
+                        </div>
+                      )
+                    ) : (
+                      <div className={`h-20 flex items-center justify-center text-center px-4 ${THEME_GLASS.TREE_BG}`}>
+                        <span className={`text-[11px] ${THEME_GLASS.TEXT_MUTED}`}>Nothing from your workspace will be attached.</span>
+                      </div>
+                    )}
+
+                    {/* Choice (horizontal segmented control) */}
+                    <div role="radiogroup" aria-label="What to attach" className="grid grid-cols-3 gap-2">
+                      {SHARE_OPTIONS.map(({ mode, label, Icon }) => {
+                        const active = shareMode === mode;
+                        const disabled = mode !== 'none' && !hasWorkspace;
+                        return (
+                          <button
+                            key={mode}
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            disabled={disabled}
+                            onClick={() => setShareMode(mode)}
+                            className={`flex items-center justify-center gap-1.5 px-2 py-2 h-9 text-[11px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed ${active ? THEME_GLASS.BUTTON_SECONDARY_ACCENT : THEME_GLASS.BUTTON_SECONDARY}`}
+                          >
+                            <Icon size={12} />
+                            <span>{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <p className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} leading-snug`}>{SHARE_HINT[shareMode]}</p>
                   </div>
 
                   {/* Rating Selector */}
@@ -317,29 +411,33 @@ ${formattedTree}
                     <div className="grid grid-cols-3 gap-2 flex-1 sm:flex-none">
                       <button
                         type="button"
-                        onClick={(e) => handleSubmitType(e, 'bug')}
-                        className={`flex items-center justify-center gap-1.5 px-3 py-2 h-9 text-xs font-bold text-center ${THEME_GLASS.BUTTON_DANGER_FILL}`}
+                        onClick={handleSecurity}
+                        disabled={!canSubmit}
+                        title="Report a security vulnerability privately"
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 h-9 text-xs font-bold text-center disabled:opacity-40 disabled:cursor-not-allowed ${THEME_GLASS.BUTTON_PRIMARY}`}
                       >
-                        <Bug size={12} />
-                        <span>Report Bug</span>
+                        <ShieldAlert size={12} />
+                        <span>Security</span>
                       </button>
-                      
+
                       <button
                         type="button"
-                        onClick={(e) => handleSubmitType(e, 'feature')}
-                        className={`flex items-center justify-center gap-1.5 px-3 py-2 h-9 text-xs font-bold text-center ${THEME_GLASS.BUTTON_WARNING_FILL}`}
+                        onClick={(e) => { void handleSubmitType(e, 'feature'); }}
+                        disabled={!canSubmit}
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 h-9 text-xs font-bold text-center disabled:opacity-40 disabled:cursor-not-allowed ${THEME_GLASS.BUTTON_WARNING_FILL}`}
                       >
                         <Lightbulb size={12} />
-                        <span>Idea</span>
+                        <span>Feature</span>
                       </button>
-                      
+
                       <button
                         type="button"
-                        onClick={(e) => handleSubmitType(e, 'other')}
-                        className={`flex items-center justify-center gap-1.5 px-3 py-2 h-9 text-xs font-bold text-center ${THEME_GLASS.BUTTON_PRIMARY}`}
+                        onClick={(e) => { void handleSubmitType(e, 'bug'); }}
+                        disabled={!canSubmit}
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 h-9 text-xs font-bold text-center disabled:opacity-40 disabled:cursor-not-allowed ${THEME_GLASS.BUTTON_DANGER_FILL}`}
                       >
-                        <MessageSquare size={12} />
-                        <span>Other</span>
+                        <Bug size={12} />
+                        <span>Bug</span>
                       </button>
                     </div>
                   </div>

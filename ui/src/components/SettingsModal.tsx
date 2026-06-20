@@ -6,12 +6,13 @@
 import React from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sliders, Info, Download } from 'lucide-react';
+import { X, Sliders, Info, Download, Keyboard } from 'lucide-react';
 import {
   settingsModalOpenAtom,
   settingsAtom,
   aboutModalOpenAtom,
   pwaInstallPromptAtom,
+  shortcutsOverlayOpenAtom,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
@@ -25,6 +26,7 @@ export const SettingsModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(settingsModalOpenAtom);
   const [settings, setSettings] = useAtom(settingsAtom);
   const setAboutOpen = useSetAtom(aboutModalOpenAtom);
+  const setShortcutsOverlayOpen = useSetAtom(shortcutsOverlayOpenAtom);
   const [installPrompt, setInstallPrompt] = useAtom(pwaInstallPromptAtom);
 
   const handleInstallApp = async () => {
@@ -145,6 +147,28 @@ export const SettingsModal: React.FC = () => {
                       settings.allowEvaluateToDecimal ? 'translate-x-5' : 'translate-x-0'
                     }`}
                   />
+                </button>
+              </div>
+
+              <div className={THEME_GLASS.SETTING_ROW}>
+                <div className="flex flex-col gap-1 select-none">
+                  <span className="text-sm font-semibold text-white">
+                    Keyboard Shortcuts
+                  </span>
+                  <span className={`text-[11px] leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                    View every shortcut for navigating history, workspaces, and panels. Press <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>?</kbd> any time.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShortcutsOverlayOpen(true);
+                    setIsOpen(false);
+                  }}
+                  className={`px-3 py-2 text-xs font-bold ${THEME_GLASS.BUTTON_SECONDARY} flex items-center gap-1.5 shrink-0 self-center`}
+                >
+                  <Keyboard size={13} />
+                  <span>View</span>
                 </button>
               </div>
 

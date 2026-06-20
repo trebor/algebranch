@@ -156,7 +156,7 @@ export const WorkspaceTabs: React.FC = () => {
                     </Tooltip>
                   )}
                   {/* Close tab button */}
-                  <Tooltip content="Close workspace tab" position="bottom" autoAlign={false}>
+                  <Tooltip content="Close workspace tab (⌘⌫)" position="bottom" autoAlign={false}>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -177,7 +177,7 @@ export const WorkspaceTabs: React.FC = () => {
       </div>
 
       {/* Plus Button to add tab - Pinned to the right */}
-      <Tooltip content="New workspace tab" position="bottom" autoAlign={false}>
+      <Tooltip content="New workspace tab (N)" position="bottom" autoAlign={false}>
         <button
           onClick={() => setIsInputModalOpen(true)}
           className="flex items-center justify-center p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white/40 hover:text-white transition-all cursor-pointer shrink-0"

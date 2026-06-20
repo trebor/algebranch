@@ -135,7 +135,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
             Define Equation
           </span>
           <div className="grid grid-cols-2 gap-2">
-            <Tooltip content="Enter your own equation in a new workspace" position="bottom" autoAlign={false} wrapperClassName="w-full">
+            <Tooltip content="Enter your own equation in a new workspace (N)" position="bottom" autoAlign={false} wrapperClassName="w-full">
               <button
                 type="button"
                 onClick={() => {

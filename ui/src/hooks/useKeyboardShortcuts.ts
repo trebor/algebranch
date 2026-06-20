@@ -4,6 +4,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { shouldIgnoreShortcut } from '../utils/keyboardShortcuts';
 
 /**
  * Describes a single keyboard shortcut binding.
@@ -19,35 +20,39 @@ export interface ShortcutConfig {
   alt?: boolean;
   /** Callback executed when the shortcut fires. */
   action: () => void;
-  /** Human-readable label (for a future shortcut-help overlay). */
+  /** Human-readable label (shown in the shortcuts cheat-sheet overlay). */
   description: string;
+  /** Grouping heading for the cheat-sheet overlay (e.g. `'Workspaces'`). */
+  category?: string;
+  /**
+   * Display override for the cheat-sheet, used when the literal modifier+key
+   * formatting would mislead — e.g. `?` is matched as `Shift`+`?` but should
+   * read simply as `?`. When set, the overlay shows this verbatim.
+   */
+  keyLabel?: string;
+  /** When `true`, the binding works but is omitted from the cheat-sheet. */
+  hidden?: boolean;
   /** Set to `false` to temporarily disable this shortcut. Defaults to `true`. */
   enabled?: boolean;
 }
 
-/** Tag names whose focus should suppress shortcut handling. */
-const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
-
-/**
- * Returns `true` when the currently focused element is an editable field
- * (input, textarea, select, or contenteditable) so we don't swallow
- * normal typing.
- */
-function isEditableTarget(event: KeyboardEvent): boolean {
-  const target = event.target as HTMLElement | null;
-  if (!target) return false;
-  if (IGNORED_TAGS.has(target.tagName)) return true;
-  if (target.isContentEditable) return true;
-  return false;
+/** Options controlling the shortcut listener as a whole. */
+export interface UseKeyboardShortcutsOptions {
+  /**
+   * When `true`, all shortcuts are suppressed — e.g. while a modal is open, so a
+   * bare-key binding can't act on the app obscured behind the dialog.
+   */
+  disabled?: boolean;
 }
 
 /**
  * Registers global keyboard shortcuts via a single `keydown` listener on
  * `document`. Shortcuts are automatically ignored when focus is inside an
- * input, textarea, select, or contenteditable element.
+ * input, textarea, select, or contenteditable element, or when `disabled` is
+ * set (see {@link UseKeyboardShortcutsOptions}).
  *
- * The hook stores the shortcuts array in a ref so the listener identity
- * remains stable across re-renders — no effect teardown/setup churn.
+ * The hook stores the shortcuts array and options in refs so the listener
+ * identity remains stable across re-renders — no effect teardown/setup churn.
  *
  * @example
  * ```tsx
@@ -55,21 +60,31 @@ function isEditableTarget(event: KeyboardEvent): boolean {
  *   { key: 'z', meta: true,              action: undo,  description: 'Undo' },
  *   { key: 'z', meta: true, shift: true,  action: redo,  description: 'Redo' },
  *   { key: 'b', meta: true,              action: bold,  description: 'Bold' },
- * ]);
+ * ], { disabled: isModalOpen });
  * ```
  */
-export function useKeyboardShortcuts(shortcuts: ShortcutConfig[]): void {
-  // Keep a mutable ref so the keydown handler always sees the latest
-  // shortcuts without needing to re-register the listener.
+export function useKeyboardShortcuts(
+  shortcuts: ShortcutConfig[],
+  options: UseKeyboardShortcutsOptions = {},
+): void {
+  // Keep mutable refs so the keydown handler always sees the latest shortcuts
+  // and options without needing to re-register the listener.
   const shortcutsRef = useRef<ShortcutConfig[]>(shortcuts);
+  const optionsRef = useRef<UseKeyboardShortcutsOptions>(options);
 
   useEffect(() => {
     shortcutsRef.current = shortcuts;
   }, [shortcuts]);
 
   useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
-      if (isEditableTarget(event)) return;
+      if (shouldIgnoreShortcut(event.target as HTMLElement | null, optionsRef.current.disabled ?? false)) {
+        return;
+      }
 
       const pressedKey = event.key.toLowerCase();
 

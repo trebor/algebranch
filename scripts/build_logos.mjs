@@ -45,7 +45,7 @@ function pngToIco(pngBuffer, size) {
   return Buffer.concat([header, directory, pngBuffer]);
 }
 
-async function generateLogo({ outPath, size, theme, hideText, isFavicon = false }) {
+async function generateLogo({ outPath, size, theme, hideText, isFavicon = false, transparent = false }) {
   console.log(`Generating logo -> ${outPath} (${size}x${size}, theme: ${theme}, hideText: ${hideText})...`);
   
   const browser = await chromium.launch();
@@ -58,7 +58,7 @@ async function generateLogo({ outPath, size, theme, hideText, isFavicon = false 
     await page.goto(fileUrl);
     
     // Set theme and options in the page
-    await page.evaluate(({ theme, hideText, size, isFavicon }) => {
+    await page.evaluate(({ theme, hideText, size, isFavicon, transparent }) => {
       // Set theme
       setTheme(theme);
       
@@ -97,13 +97,24 @@ async function generateLogo({ outPath, size, theme, hideText, isFavicon = false 
           bgRect.setAttribute('rx', '96');
           bgRect.setAttribute('ry', '96');
         }
-        
-        // Force other HTML elements to be transparent so the backdrop doesn't block alpha
+      }
+
+      // For the transparent variant, swap the live SVG for the transparent
+      // export: the fake background-coloured gap around each node becomes real
+      // transparency, and the opaque background rect is dropped.
+      if (transparent) {
+        container.innerHTML = getExportedSVGCode({ transparent: true });
+      }
+
+      // Both the favicon and the transparent logo need every element's
+      // background forced transparent, so nothing tints the alpha regions when
+      // the screenshot is taken with omitBackground.
+      if (isFavicon || transparent) {
         const style = document.createElement('style');
         style.textContent = '* { background: transparent !important; }';
         document.head.appendChild(style);
       }
-    }, { theme, hideText, size, isFavicon });
+    }, { theme, hideText, size, isFavicon, transparent });
     
     // Wait for rendering to settle
     await page.waitForTimeout(400);
@@ -117,6 +128,11 @@ async function generateLogo({ outPath, size, theme, hideText, isFavicon = false 
       const icoBuffer = pngToIco(pngBuffer, size);
       await writeFile(outPath, icoBuffer);
       console.log(`Successfully wrote ICO container to ${outPath}`);
+    } else if (transparent) {
+      // omitBackground keeps the screenshot backdrop transparent, preserving the
+      // logo's alpha (the SVG carries no background rect in this mode).
+      await locator.screenshot({ path: outPath, omitBackground: true });
+      console.log(`Successfully wrote transparent PNG to ${outPath}`);
     } else {
       await locator.screenshot({ path: outPath });
       console.log(`Successfully wrote PNG to ${outPath}`);
@@ -186,6 +202,15 @@ async function main() {
       theme: 'gradient',
       hideText: true,
       isFavicon: true
+    });
+
+    // 8. logo-transparent.png (Chromatic, with text, 512x512, true transparent gaps)
+    await generateLogo({
+      outPath: join(publicDir, 'logo-transparent.png'),
+      size: 512,
+      theme: 'gradient',
+      hideText: false,
+      transparent: true
     });
 
     console.log('All logo and icon assets built successfully!');

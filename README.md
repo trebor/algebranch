@@ -1,13 +1,19 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="ui/public/logo.png">
-    <img src="ui/public/logo-black.png" alt="Algebranch logo" width="140" height="140">
-  </picture>
+  <img src="ui/public/logo-transparent.png" alt="Algebranch logo" width="140" height="140">
 </p>
 
 # Algebranch: Interactive Algebraic Derivation System
 
+[![Try it live](https://img.shields.io/badge/Try_it_live-algebranch.org-6d28d9)](https://algebranch.org)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
+> **▶ [Try it live at algebranch.org](https://algebranch.org)** — it runs in your browser, or installs on your mobile device.
+
+<p align="center">
+  <img src="docs/screenshots/hero.png" alt="An Algebranch workspace: the equation (sin(x)+sin(x)+1)² = sqrt(x+4)² as movable pieces, a live graph of both sides, a branching history tree, and move/simplify/substitute handles" width="860">
+</p>
+
+<p align="center"><em>A workspace mid-derivation — the equation as movable pieces, a live graph of both sides, a branching history of every route tried, and handles to move, simplify, or substitute a term.</em></p>
 
 Algebranch is an interactive tool for working through algebra one step at a time. Most math software is a black box: you type in a problem and it hands back the answer. Algebranch is the opposite: equations are laid out as movable pieces, and **you** drive every step, rearranging the equation yourself while Algebranch works out each move and keeps the math correct. It is free and open-source.
 
@@ -37,7 +43,15 @@ The idea came from personal experience: as a dyslexic, I found the hardest part 
 3.  **Simplify or expand**: Click the amber handles to simplify or expand a term.
 4.  **Go back or branch**: Each step is saved on the history timeline. Click any earlier step to return to it or start a new branch from there.
 
-**Deep links**: Add `?eq=<equation>` to the URL to open a specific starting equation, for example `?eq=x^2-9=0`. The in-app share button builds these links for you.
+**Deep links**: Add `?eq=<equation>` to the URL to open a starting equation. The in-app share button builds these links. Try one live:
+
+| Example | Starting equation |
+| --- | --- |
+| [Solve a quadratic →](https://algebranch.org/?eq=x%5E2-9%3D0) | `x² − 9 = 0` |
+| [Factor a trinomial →](https://algebranch.org/?eq=x%5E2%2B5%2Ax%2B6%3D0) | `x² + 5x + 6 = 0` |
+| [Simplify a radical →](https://algebranch.org/?eq=sqrt%284%2A9%29%2Bx%3D12) | `√(4·9) + x = 12` |
+
+Or **[open the workspace →](https://algebranch.org)** to pick from the 80+ example library and build a multi-equation board. The share button captures the whole workspace as a `?ws=` link.
 
 ---
 

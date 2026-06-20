@@ -19,6 +19,7 @@
     "type-check": "npm run type-check --workspace=math-engine && npm run type-check --workspace=ui",
     "prepare": "npm run build --workspace=math-engine",
     "shoot": "node scripts/shoot.mjs",
+    "shoot:hero": "node scripts/shoot-hero.mjs",
     "build-logos": "node scripts/build_logos.mjs"
   },
   "devDependencies": {

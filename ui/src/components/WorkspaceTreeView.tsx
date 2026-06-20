@@ -302,21 +302,75 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
             if (loopAncestor && hoveredLoopTargetId === loopAncestor.id) {
               const ancestor = visualNodesMap[loopAncestor.id];
               if (ancestor) {
-                const startX = ancestor.x + ancestor.width / 2;
-                const startY = ancestor.y + cardHeight;
-                const endX = node.x + node.width / 2;
-                const endY = node.y;
+                let startX = 0;
+                let startY = 0;
+                let endX = 0;
+                let endY = 0;
+                let cp1x = 0;
+                let cp1y = 0;
+                let cp2x = 0;
+                let cp2y = 0;
 
-                const cp1y = startY + (endY - startY) * 0.45;
-                const cp2y = startY + (endY - startY) * 0.55;
-                const dStr = `M ${startX} ${startY} C ${startX} ${cp1y}, ${endX} ${cp2y}, ${endX} ${endY}`;
+                const isCollateral = Math.abs(ancestor.y - node.y) < 10;
+                const isAncestorAbove = ancestor.y < node.y;
+
+                if (isCollateral) {
+                  const inBetweenNodes = visualNodes.filter(n =>
+                    n.id !== ancestor.id &&
+                    n.id !== node.id &&
+                    Math.abs(n.y - ancestor.y) < 10 &&
+                    n.x > Math.min(ancestor.x, node.x) &&
+                    n.x < Math.max(ancestor.x, node.x)
+                  );
+                  const hasObstacle = inBetweenNodes.length > 0;
+                  const archOffset = hasObstacle ? 50 : 0;
+
+                  if (ancestor.x < node.x) {
+                    startX = node.x + (node.width - 44) / 2;
+                    startY = node.y + cardHeight / 2;
+                    endX = ancestor.x + ancestor.width;
+                    endY = ancestor.y + cardHeight / 2;
+                  } else {
+                    startX = node.x + (node.width + 44) / 2;
+                    startY = node.y + cardHeight / 2;
+                    endX = ancestor.x;
+                    endY = ancestor.y + cardHeight / 2;
+                  }
+
+                  cp1x = startX + (endX - startX) * 0.45;
+                  cp1y = startY - archOffset;
+                  cp2x = startX + (endX - startX) * 0.55;
+                  cp2y = endY - archOffset;
+                } else if (isAncestorAbove) {
+                  startX = node.x + node.width / 2;
+                  startY = node.y;
+                  endX = ancestor.x + ancestor.width / 2;
+                  endY = ancestor.y + cardHeight;
+
+                  cp1x = startX;
+                  cp1y = startY + (endY - startY) * 0.45;
+                  cp2x = endX;
+                  cp2y = startY + (endY - startY) * 0.55;
+                } else {
+                  startX = node.x + node.width / 2;
+                  startY = node.y + cardHeight;
+                  endX = ancestor.x + ancestor.width / 2;
+                  endY = ancestor.y;
+
+                  cp1x = startX;
+                  cp1y = startY + (endY - startY) * 0.45;
+                  cp2x = endX;
+                  cp2y = startY + (endY - startY) * 0.55;
+                }
+
+                const dStr = `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
 
                 return (
                   <path
                     key={`loop-${ancestor.id}-${node.id}`}
                     d={dStr}
                     fill="none"
-                    stroke="rgba(217, 70, 239, 0.85)"
+                    stroke={THEME_GLASS.LOOP_LINE_STROKE}
                     strokeWidth={2.5}
                     strokeDasharray={FLOW_DASH_ARRAY}
                     className="transition-all duration-300 animate-dash"

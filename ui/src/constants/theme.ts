@@ -90,6 +90,7 @@ export const THEME_GLASS = {
   TREE_NODE_BADGE_DEFAULT: 'bg-neutral-900 border-white/10 text-white/60',
   TREE_NODE_BADGE_ACTIVE: 'bg-indigo-600 border-indigo-400 text-indigo-100',
   TREE_NODE_BADGE_LOOP: 'bg-fuchsia-600 border-fuchsia-400 text-fuchsia-100',
+  LOOP_LINE_STROKE: 'rgba(217, 70, 239, 0.85)',
 
   TOOLTIP_DETAILS: 'bg-neutral-950/98 shadow-[0_0_30px_rgba(99,102,241,0.25)] border border-indigo-500/20',
 

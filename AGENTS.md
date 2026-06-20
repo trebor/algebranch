@@ -90,3 +90,7 @@ PNGs land in `screenshots/` (gitignored) by default; never commit them. Caveats 
 ## Styling guardrails
 
 - **Use semantic styling tokens**: Do not hardcode raw Tailwind color classes (e.g. `bg-indigo-600`, `text-amber-400`, `text-white/40`, etc.) in TSX files. Instead, add/use centralized styling constants inside the `THEME_GLASS` object in [theme.ts](ui/src/constants/theme.ts).
+
+## Coordination & Hand-offs
+
+- **Strictly human-triggered**: Handoff and pickup operations are human-triggered. Never perform or automate a handoff or pickup unless the user explicitly instructs you to do so. Do not auto-execute these processes on your own.

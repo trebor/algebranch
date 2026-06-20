@@ -62,6 +62,15 @@ export const SYMBOL_DISPLAY: Record<string, string> = {
 // SymbolNode name is shown (EquationNode, PreviewEquationNode, …).
 export const symbolToGlyph = (name: string): string => SYMBOL_DISPLAY[name] ?? name;
 
+// Reverse lookup for the Greek-name hover hint (#116): a symbol rendered as a
+// Greek glyph (θ) carries its ASCII spelling in the AST (`theta`), so surfacing
+// the name is just "is this whole name a mapped Greek spelling?". Returns the
+// name when it is (the tooltip text), else null — so plain variables (`x`) and
+// Greek-prefixed names (`theta1`, `omega_0`) get nothing, matching how
+// symbolToGlyph maps only exact whole-name matches.
+export const greekNameFor = (name: string): string | null =>
+  name in SYMBOL_DISPLAY ? name : null;
+
 // Display-time subscript split (#113): an underscore-bearing symbol name like
 // `v_0`, `F_net`, or `omega_0` renders as a head glyph plus a lowered subscript
 // (v₀, Fₙₑₜ, ω₀). Like the Greek map this is RENDER-TIME ONLY — the AST and

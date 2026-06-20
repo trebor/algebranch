@@ -27,7 +27,7 @@ import {
   onboardingSubstitutionAtom,
   ReducibleActionInfo,
 } from '../store/equation';
-import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript } from '../constants/mathSymbols';
+import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, greekNameFor } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
@@ -1343,6 +1343,20 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     </div>
   );
 
+  // Greek-name hover hint (#116): a symbol rendered as a Greek glyph (θ) keeps its
+  // ASCII spelling in the AST, so we can surface the name on hover for osmotic
+  // learning. A bare variable is almost always a *candidate* (it has move handles),
+  // so gating on "static" would hide this on nearly every symbol — instead fold the
+  // name into the Select-Term tooltip the node already shows, and fall back to a
+  // standalone tip on the rare truly-static symbol.
+  const greekName =
+    node.type === 'SymbolNode' ? greekNameFor((node as math.SymbolNode).name) : null;
+  const greekNameLabel = greekName ? (
+    <span className={`text-[11px] italic select-none ${THEME_GLASS.TEXT_MUTED_BRIGHT}`}>
+      {greekName}
+    </span>
+  ) : null;
+
   if (isTarget && targetPaths[path]) {
     const targetEquation = targetPaths[path];
     const targetTooltipContent = (
@@ -1374,6 +1388,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         <ScaledEquationFit className="max-w-[280px] sm:max-w-[340px]">
           <div className="text-[1.3em]"><PreviewEquationNode path={path} /></div>
         </ScaledEquationFit>
+        {greekNameLabel}
       </div>
     );
 
@@ -1384,6 +1399,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         visible={isHovered && hoverReducePath === null && openMenuType === null}
         className="max-w-[300px] sm:max-w-[360px]"
       >
+        {element}
+      </Tooltip>
+    );
+  }
+
+  // Truly-static Greek symbol (no move handles): no interaction tooltip wraps it,
+  // so give the name its own hover tip.
+  if (greekName) {
+    return (
+      <Tooltip content={greekName} position="top">
         {element}
       </Tooltip>
     );

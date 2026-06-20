@@ -477,6 +477,26 @@
       return { x: -norm.y, y: norm.x };
     }
 
+    // Andrew's monotone-chain convex hull. Takes [{x, y}, ...] and returns the
+    // hull vertices in order. Used only by the (diagnostic) crop guides.
+    function convexHull(points) {
+      const pts = points.slice().sort((a, b) => a.x - b.x || a.y - b.y);
+      if (pts.length <= 2) return pts;
+      const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+      const half = (src) => {
+        const out = [];
+        for (const p of src) {
+          while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], p) <= 0) out.pop();
+          out.push(p);
+        }
+        out.pop();
+        return out;
+      };
+      const lower = half(pts);
+      const upper = half(pts.slice().reverse());
+      return lower.concat(upper);
+    }
+
     // Parametric Tapering S-Curve Generator
     function makeTaperedAngledSCurve(x1, y1, w1, angle1Deg, x2, y2, w2, angle2Deg, d1, d2) {
       const steps = 60;
@@ -955,13 +975,33 @@
         
         const bboxWidth = xMax_abs - xMin_abs;
         const bboxHeight = yMax_abs - yMin_abs;
-        
+
+        // Wrap the outer silhouette of the node discs (sampled around each
+        // perimeter) plus the trunk base in a convex hull — the cluster the
+        // layout solver fits inside the crop circle.
+        const hullPts = [];
+        const HULL_SAMPLES = 24;
+        nodes.forEach(n => {
+          for (let i = 0; i < HULL_SAMPLES; i++) {
+            const a = (i / HULL_SAMPLES) * Math.PI * 2;
+            hullPts.push({ x: n.x + n.r * Math.cos(a), y: n.y + n.r * Math.sin(a) });
+          }
+        });
+        hullPts.push({ x: xTrunkBase - rRoot / 2, y: yTrunkBase });
+        hullPts.push({ x: xTrunkBase + rRoot / 2, y: yTrunkBase });
+        const hullPath = convexHull(hullPts)
+          .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+          .join(' ') + ' Z';
+
         guideMarkup = `
   <!-- Bounding Box Guide (Dashed cyan) -->
   <rect class="crop-guide" x="${xMin_abs}" y="${yMin_abs}" width="${bboxWidth}" height="${bboxHeight}" fill="none" stroke="#33ccff" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.65" />
-  
+
   <!-- Circular Crop Guide (Maximum Inscribed Circle - Inset by 2px to prevent clipping) -->
-  <circle class="crop-guide" cx="250" cy="250" r="248" fill="none" stroke="#ff3366" stroke-width="2" stroke-dasharray="8,6" opacity="0.85" />\n`;
+  <circle class="crop-guide" cx="250" cy="250" r="248" fill="none" stroke="#ff3366" stroke-width="2" stroke-dasharray="8,6" opacity="0.85" />
+
+  <!-- Convex Hull Guide (Dashed green) -->
+  <path class="crop-guide" d="${hullPath}" fill="none" stroke="#7CFC00" stroke-width="1.5" stroke-dasharray="5,4" opacity="0.8" />\n`;
       }
 
       svgMarkup += `    </g>

@@ -443,7 +443,8 @@
         <button class="btn btn-secondary" onclick="copySVG()">Copy SVG XML</button>
         <button class="btn btn-secondary" onclick="copyParams()">Copy Parameters</button>
         <button class="btn btn-secondary" onclick="downloadSVG()">Download SVG</button>
-        <button class="btn btn-primary" onclick="downloadPNG()">Download PNG</button>
+        <button class="btn btn-primary" onclick="downloadPNG(false)">PNG (Solid BG)</button>
+        <button class="btn btn-primary" onclick="downloadPNG(true)">PNG (Transparent)</button>
       </div>
       
       <div class="toast" id="toast">SVG Code copied!</div>
@@ -865,11 +866,11 @@
       let svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
   <defs>${filterDef}${gradientDef}</defs>
   <!-- Background -->
-  <rect width="500" height="500" fill="${fillBg}" stroke="${canvasStroke}" stroke-width="2" />
+  <rect class="bg-rect" width="500" height="500" fill="${fillBg}" stroke="${canvasStroke}" stroke-width="2" />
   
   <g fill="none" stroke="none">
     <!-- Branches -->
-    <g fill="${branchColor}" ${activeTheme === 'neon' ? 'filter="url(#glow)"' : ''} opacity="0.9">
+    <g class="branches" fill="${branchColor}" ${activeTheme === 'neon' ? 'filter="url(#glow)"' : ''} opacity="0.9">
 `;
 
       const ctrlOffset1 = S * 30;
@@ -1047,14 +1048,86 @@
       });
     }
 
+    // Normalize a colour string for equality checks (hex values come straight
+    // from the same theme variables, so a trim + lowercase is enough).
+    function normColor(c) {
+      return (c || '').trim().toLowerCase();
+    }
+
+    // Rebuild the fake background-coloured "gap" stroke as a genuine transparent
+    // gap, so a transparent export doesn't show an ugly dark ring around nodes.
+    // Only applies to fake-gap themes (node stroke == background colour); themes
+    // with a real visible ring (Neon, Minimalist) are left untouched.
+    function makeNodeGapsTransparent(clone) {
+      const bgRect = clone.querySelector('.bg-rect');
+      const bgFill = bgRect ? normColor(bgRect.getAttribute('fill')) : null;
+      if (!bgFill) return;
+
+      const fakeGap = [...clone.querySelectorAll('circle')]
+        .filter(c => !c.classList.contains('crop-guide'))
+        .filter(c => normColor(c.getAttribute('stroke')) === bgFill);
+      const branchGroup = clone.querySelector('g.branches');
+      const defs = clone.querySelector('defs');
+      if (!fakeGap.length || !branchGroup || !defs) return;
+
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const mask = document.createElementNS(SVG_NS, 'mask');
+      mask.setAttribute('id', 'nodeGapMask');
+      mask.setAttribute('maskUnits', 'userSpaceOnUse');
+      mask.setAttribute('x', '-50');
+      mask.setAttribute('y', '-50');
+      mask.setAttribute('width', '600');
+      mask.setAttribute('height', '600');
+
+      // White = keep the branch art; black discs = erase it around each node.
+      const keep = document.createElementNS(SVG_NS, 'rect');
+      keep.setAttribute('x', '-50');
+      keep.setAttribute('y', '-50');
+      keep.setAttribute('width', '600');
+      keep.setAttribute('height', '600');
+      keep.setAttribute('fill', 'white');
+      mask.appendChild(keep);
+
+      fakeGap.forEach(c => {
+        const r = parseFloat(c.getAttribute('r'));
+        const sw = parseFloat(c.getAttribute('stroke-width')) || 0;
+        // Erase the branch out to the stroke's old outer edge (r + sw/2).
+        const hole = document.createElementNS(SVG_NS, 'circle');
+        hole.setAttribute('cx', c.getAttribute('cx'));
+        hole.setAttribute('cy', c.getAttribute('cy'));
+        hole.setAttribute('r', (r + sw / 2).toFixed(2));
+        hole.setAttribute('fill', 'black');
+        mask.appendChild(hole);
+      });
+
+      defs.appendChild(mask);
+      branchGroup.setAttribute('mask', 'url(#nodeGapMask)');
+
+      // Drop the fake stroke and shrink each circle to the stroke's old inner
+      // edge (r - sw/2), so the visible colour matches the original render.
+      fakeGap.forEach(c => {
+        const r = parseFloat(c.getAttribute('r'));
+        const sw = parseFloat(c.getAttribute('stroke-width')) || 0;
+        c.setAttribute('r', Math.max(0, r - sw / 2).toFixed(2));
+        c.setAttribute('stroke', 'none');
+        c.setAttribute('stroke-width', '0');
+      });
+    }
+
     // Helper to get clean SVG code with centering adjustments and without crop guides
-    function getExportedSVGCode() {
+    function getExportedSVGCode({ transparent = false } = {}) {
       const svgElement = svgContainer.querySelector('svg');
       if (!svgElement) return buildSVG(false);
-      
+
       const clone = svgElement.cloneNode(true);
       // Remove all guide elements
       clone.querySelectorAll('.crop-guide').forEach(g => g.remove());
+      // For a transparent export, convert the fake background-coloured gap into
+      // real transparency, then drop the opaque background rect itself.
+      if (transparent) {
+        makeNodeGapsTransparent(clone);
+        clone.querySelectorAll('.bg-rect').forEach(r => r.remove());
+      }
       // Remove diagnostic helper attributes
       clone.querySelectorAll('text').forEach(t => {
         t.removeAttribute('data-cx');
@@ -1167,30 +1240,34 @@
       showToast("SVG file download started!");
     }
 
-    function downloadPNG() {
-      const svgCode = getExportedSVGCode();
+    function downloadPNG(transparent = false) {
+      const svgCode = getExportedSVGCode({ transparent });
       const img = new Image();
       const svgBlob = new Blob([svgCode], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(svgBlob);
-      
+
       img.onload = function() {
         const canvas = document.createElement('canvas');
         canvas.width = 1000; // Render at high res (2x)
         canvas.height = 1000;
         const ctx = canvas.getContext('2d');
+        // The canvas starts fully transparent; we only paint the SVG. With the
+        // background rect stripped (transparent mode) the PNG keeps its alpha,
+        // so it drops into any document without a baked-in dark square.
+        ctx.clearRect(0, 0, 1000, 1000);
         ctx.drawImage(img, 0, 0, 1000, 1000);
-        
+
         const pngUrl = canvas.toDataURL("image/png");
         const a = document.createElement('a');
         a.href = pngUrl;
-        a.download = 'algebranch_logo.png';
+        a.download = transparent ? 'algebranch_logo_transparent.png' : 'algebranch_logo.png';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showToast("High-Res PNG download started!");
+        showToast(transparent ? "Transparent PNG download started!" : "High-Res PNG download started!");
       };
-      
+
       img.src = url;
     }
 

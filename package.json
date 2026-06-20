@@ -15,7 +15,7 @@
     "dev:lan": "npx --workspace=ui next dev --webpack -H 0.0.0.0",
     "start:lan": "npx --workspace=ui next start -H 0.0.0.0",
     "build": "npm run build --workspace=math-engine && npm run build --workspace=ui",
-    "test": "npm run test --workspace=math-engine",
+    "test": "npm run test --workspace=math-engine && npm run test --workspace=ui",
     "lint": "npm run lint --workspace=ui",
     "type-check": "npm run type-check --workspace=math-engine && npm run type-check --workspace=ui",
     "prepare": "npm run build --workspace=math-engine",

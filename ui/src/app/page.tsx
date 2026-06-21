@@ -1161,7 +1161,7 @@ export default function Home() {
             equationString={currentEq ? equationToString(currentEq) : ''}
             getCompressedWorkspace={() => serializeWorkspaceState(tree, currentNodeId, currentTabName)}
             triggerClassName={THEME_GLASS.HEADER_BUTTON}
-            tooltip="Create share link (S, ⇧S)"
+            tooltip="Create share link"
           />
           <Tooltip content="Submit Feedback or Report Bug" position="bottom" autoAlign={false}>
             <button

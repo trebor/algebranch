@@ -11,19 +11,20 @@ import Link from 'next/link';
 
 export const ConsentBanner = () => {
   const [consent, setConsent] = useAtom(consentAtom);
-  const declineButtonRef = React.useRef<HTMLButtonElement>(null);
+  const acceptButtonRef = React.useRef<HTMLButtonElement>(null);
   const previouslyFocusedRef = React.useRef<HTMLElement | null>(null);
 
   // Non-blocking banner: the app stays usable, but move focus onto it when it
   // appears so keyboard / screen-reader users discover the consent choice. We
-  // land on the Decline button specifically — it shows a visible focus ring and
-  // telegraphs the privacy-safe default (matching Escape = decline). No focus
-  // trap; tabbing out into the app is intentional. On dismiss, restore focus to
-  // whatever held it before (e.g. a dialog the banner appeared over).
+  // land on the Accept button — the conventional primary action — while Escape
+  // (and dismissal) still imply Decline, so the privacy-safe choice is never
+  // implied by walking away. Decline stays equally present right beside it. No
+  // focus trap; tabbing out into the app is intentional. On dismiss, restore
+  // focus to whatever held it before (e.g. a dialog the banner appeared over).
   React.useEffect(() => {
     if (consent !== 'unset') return;
     previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-    declineButtonRef.current?.focus();
+    acceptButtonRef.current?.focus();
     return () => {
       previouslyFocusedRef.current?.focus?.();
     };
@@ -73,13 +74,13 @@ export const ConsentBanner = () => {
         </div>
         <div className="flex items-center justify-end gap-3">
           <button
-            ref={declineButtonRef}
             onClick={handleDecline}
             className={`${THEME_GLASS.BUTTON_SECONDARY} px-4 py-2 text-xs font-semibold`}
           >
             Decline
           </button>
           <button
+            ref={acceptButtonRef}
             onClick={handleAccept}
             className={`${THEME_GLASS.BUTTON_PRIMARY} px-4 py-2 text-xs font-semibold`}
           >

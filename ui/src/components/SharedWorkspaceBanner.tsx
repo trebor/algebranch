@@ -4,9 +4,10 @@
 'use client';
 
 import React from 'react';
-import { useAtom } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { Layers } from 'lucide-react';
 import { sharedWorkspaceBannerAtom } from '../store/sharedWorkspaceBanner';
+import { consentAtom } from '../store/consent';
 import { THEME_GLASS } from '../constants/theme';
 
 /**
@@ -19,15 +20,26 @@ import { THEME_GLASS } from '../constants/theme';
  */
 export const SharedWorkspaceBanner = () => {
   const [open, setOpen] = useAtom(sharedWorkspaceBannerAtom);
+  const consent = useAtomValue(consentAtom);
+  // Latest consent, read inside the focus effect without re-triggering it: we
+  // decide focus once when the banner opens, not again when consent resolves.
+  const consentRef = React.useRef(consent);
+  React.useEffect(() => {
+    consentRef.current = consent;
+  }, [consent]);
   const dismissButtonRef = React.useRef<HTMLButtonElement>(null);
-  const previouslyFocusedRef = React.useRef<HTMLElement | null>(null);
 
+  // On first run a ?ws= link can raise this banner *and* the cookie consent
+  // banner together. Consent owns focus then — so we only pull focus here once
+  // the consent choice is resolved (or was never pending). Avoids two banners
+  // fighting over the focus ring on load.
   React.useEffect(() => {
     if (!open) return;
-    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+    if (consentRef.current === 'unset') return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
     dismissButtonRef.current?.focus();
     return () => {
-      previouslyFocusedRef.current?.focus?.();
+      previouslyFocused?.focus?.();
     };
   }, [open]);
 

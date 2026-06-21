@@ -224,6 +224,25 @@ export const THEME_GLASS = {
   SHARE_MENU_ITEM_TITLE: 'text-xs font-semibold',
   SHARE_MENU_ITEM_DESC: 'text-[0.625rem] leading-snug text-white/45',
 
+  // Workspace switcher (#247): on short/landscape viewports the horizontal tab
+  // strip collapses into this pill + popover anchored top-left of the expression
+  // space. The trigger names the active workspace (Layers glyph + name + caret)
+  // so it reads as a breadcrumb; the popover folds in the full list (each row
+  // keeping rename/close) plus the New-workspace row that replaces the `+`.
+  WORKSPACE_SWITCHER_TRIGGER: 'inline-flex items-center gap-1.5 max-w-[60vw] pl-2.5 pr-2 py-1.5 rounded-xl border border-indigo-500/30 bg-white/10 text-white text-xs font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.25)] backdrop-blur-sm hover:bg-white/15 transition-all cursor-pointer select-none',
+  WORKSPACE_SWITCHER_TRIGGER_NAME: 'truncate tracking-wide',
+  WORKSPACE_SWITCHER_MENU: 'absolute left-0 top-full mt-1.5 z-50 w-64 max-w-[80vw] p-1 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-0.5 text-left',
+  WORKSPACE_SWITCHER_LIST: 'flex flex-col gap-0.5 max-h-[40dvh] overflow-y-auto scrollbar-thin',
+  WORKSPACE_SWITCHER_ROW: 'group flex items-center gap-1 rounded-lg pr-1 transition-colors',
+  WORKSPACE_SWITCHER_ROW_ACTIVE: 'bg-indigo-600/15',
+  WORKSPACE_SWITCHER_ROW_INACTIVE: 'hover:bg-white/5',
+  WORKSPACE_SWITCHER_ROW_MAIN: 'flex-1 flex items-center gap-2 min-w-0 px-2.5 py-1.5 rounded-lg text-left text-xs font-medium cursor-pointer select-none',
+  WORKSPACE_SWITCHER_ROW_NAME: 'truncate',
+  WORKSPACE_SWITCHER_ROW_ACTIONS: 'flex items-center gap-0.5 shrink-0',
+  WORKSPACE_SWITCHER_ROW_BTN: 'p-1 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer',
+  WORKSPACE_SWITCHER_EDIT_INPUT: 'flex-1 min-w-0 mx-1 my-0.5 bg-neutral-900 border border-indigo-500/50 rounded px-1.5 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500',
+  WORKSPACE_SWITCHER_NEW: 'flex items-center gap-2 w-full px-2.5 py-2 mt-0.5 border-t border-white/10 rounded-lg text-xs font-semibold text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none',
+
   EQUALS_MINI_PETAL_SWAP: 'text-amber-400 border-amber-500/20',
   EQUALS_MINI_PETAL_POWER: 'text-teal-400 border-teal-500/20',
   EQUALS_MINI_PETAL_ADD: 'text-indigo-400 border-indigo-500/20',

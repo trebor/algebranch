@@ -33,6 +33,13 @@
     height: 2.25rem; /* 36px */
     width: 2.25rem;
   }
+  /* The workspace tab strip collapses into a pill anchored top-left of the
+     expression space (#247); the canvas toast/loading badge shares that corner,
+     so drop it below the pill while this query matches. Unlayered, so it
+     overrides the Tailwind top-4 utility. */
+  .short-screen-toast-offset {
+    top: 3.5rem; /* 56px — clears the ~36px switcher pill + margin */
+  }
 }
 
 html {

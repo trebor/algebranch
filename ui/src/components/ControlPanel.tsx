@@ -120,6 +120,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
               onClick={handleUndo}
               disabled={!canUndo}
               className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+              aria-label="Undo step"
             >
               <ChevronLeft size={16} />
             </button>
@@ -129,6 +130,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
               onClick={handleRedo}
               disabled={!canRedo}
               className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+              aria-label="Redo step"
             >
               <ChevronRight size={16} />
             </button>
@@ -138,6 +140,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
               onClick={handleResetAll}
               disabled={Object.keys(tree).length <= 1}
               className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-red-400 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
+              aria-label="Reset history"
             >
               <RotateCcw size={16} />
             </button>
@@ -268,6 +271,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             disabled={!canUndo}
             className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer`}
             title="Undo (⌘Z)"
+            aria-label="Undo step"
           >
             <ChevronLeft size={16} />
           </button>
@@ -276,6 +280,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             disabled={!canRedo}
             className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer`}
             title="Redo (⌘⇧Z)"
+            aria-label="Redo step"
           >
             <ChevronRight size={16} />
           </button>
@@ -284,6 +289,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             disabled={sortedNodes.length <= 1}
             className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-red-400 hover:text-red-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer`}
             title="Reset All"
+            aria-label="Reset history"
           >
             <RotateCcw size={16} />
           </button>

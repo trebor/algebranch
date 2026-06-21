@@ -149,7 +149,8 @@ export const WorkspaceTabs: React.FC = () => {
                     <Tooltip content="Rename workspace" position="bottom" autoAlign={false}>
                       <button
                         onClick={(e) => handleStartEdit(e, tab)}
-                      className="hover:text-white p-0.5 rounded cursor-pointer transition-all duration-150 text-white/40"
+                        className="hover:text-white p-0.5 rounded cursor-pointer transition-all duration-150 text-white/40"
+                        aria-label="Rename workspace"
                       >
                         <Pencil size={9} />
                       </button>
@@ -165,6 +166,7 @@ export const WorkspaceTabs: React.FC = () => {
                       className={`p-0.5 rounded hover:bg-white/10 hover:text-white cursor-pointer transition-all duration-150 ${
                         isActive ? 'text-white/40' : 'text-white/20'
                       }`}
+                      aria-label="Close workspace tab"
                     >
                       <X size={10} />
                     </button>
@@ -181,6 +183,7 @@ export const WorkspaceTabs: React.FC = () => {
         <button
           onClick={() => setIsInputModalOpen(true)}
           className="flex items-center justify-center p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white/40 hover:text-white transition-all cursor-pointer shrink-0"
+          aria-label="New workspace tab"
         >
           <Plus size={13} />
         </button>

@@ -306,6 +306,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
             <button
               onClick={() => setIsMobileRecentsOpen(false)}
               className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} hover:bg-white/5 text-white/50 hover:text-white transition-colors cursor-pointer`}
+              aria-label="Close dialog"
             >
               <X size={16} />
             </button>

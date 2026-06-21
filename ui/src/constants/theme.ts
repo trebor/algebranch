@@ -43,16 +43,16 @@ export const THEME_GLASS = {
   PANEL_BORDER_SUBTLE: 'border-white/5',
   
   // Text & Colors
-  TEXT_MUTED: 'text-white/40',
-  TEXT_MUTED_EXTRA: 'text-white/30',
-  TEXT_MUTED_LIGHT: 'text-white/50',
-  TEXT_MUTED_BRIGHT: 'text-white/70',
+  TEXT_MUTED: 'text-white/55',
+  TEXT_MUTED_EXTRA: 'text-white/50',
+  TEXT_MUTED_LIGHT: 'text-white/60',
+  TEXT_MUTED_BRIGHT: 'text-white/75',
 
   // Buttons
   BUTTON_PRIMARY: 'bg-indigo-600/95 hover:bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-600/10 border border-indigo-400/20 active:scale-95 transition-all duration-150 cursor-pointer',
   BUTTON_SECONDARY: 'bg-neutral-900 border border-white/10 hover:bg-neutral-800 hover:border-white/20 text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer',
   BUTTON_SECONDARY_ACCENT: 'bg-indigo-900/40 hover:bg-indigo-800/50 border border-indigo-500/30 hover:border-indigo-400/40 text-indigo-200 hover:text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer',
-  BUTTON_SECONDARY_MUTED: 'bg-neutral-950 border border-white/5 rounded-xl text-white/30 transition-all duration-150 cursor-not-allowed',
+  BUTTON_SECONDARY_MUTED: 'bg-neutral-950 border border-white/5 rounded-xl text-white/40 transition-all duration-150 cursor-not-allowed',
   BUTTON_DANGER: 'bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 transition-all duration-150 cursor-pointer',
 
   // --- Settings modal: setting row + toggle switch (#67) ---
@@ -82,10 +82,10 @@ export const THEME_GLASS = {
   LIST_ITEM_ACTIVE: 'text-indigo-300 bg-indigo-600/5 font-semibold',
   LIST_ITEM_HOVER: 'hover:bg-indigo-600/20 transition-colors',
   ACTIVE_BADGE: 'bg-indigo-500/20 text-indigo-400 rounded-full border border-indigo-500/30',
-  BADGE_MUTED: 'text-white/40 bg-white/5 rounded-full border border-white/5',
+  BADGE_MUTED: 'text-white/55 bg-white/5 rounded-full border border-white/5',
   // Keycap chip for the keyboard-shortcuts cheat-sheet (#126).
   SHORTCUT_KEYCAP: 'inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-lg border border-white/15 bg-white/5 text-white/90 text-xs font-semibold shadow-sm select-none',
-  ACCENT_PLAY: 'p-1.5 rounded-lg bg-white/0 group-hover:bg-indigo-600/20 text-white/20 group-hover:text-indigo-400 border border-transparent group-hover:border-indigo-500/30 transform group-hover:scale-105 transition-all duration-200',
+  ACCENT_PLAY: 'p-1.5 rounded-lg bg-white/0 group-hover:bg-indigo-600/20 text-white/35 group-hover:text-indigo-400 border border-transparent group-hover:border-indigo-500/30 transform group-hover:scale-105 transition-all duration-200',
   
   // Library specific
   CATEGORY_HEADER: 'bg-neutral-950/60 border border-white/5 rounded-xl text-indigo-300 hover:text-indigo-200 hover:border-white/10 hover:bg-neutral-900/20 transition-all select-none cursor-pointer',
@@ -131,8 +131,8 @@ export const THEME_GLASS = {
   TOAST_ALERT: 'flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/25 bg-neutral-900/80 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]',
   TOAST_LOADING: 'flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/20 bg-neutral-900/60 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]',
   SPINNER: 'animate-spin rounded-full border-indigo-500/20 border-t-indigo-400 shrink-0',
-  ICON_BUTTON: 'p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-white/10 text-white/40 hover:text-white transition-all cursor-pointer shadow-md',
-  ICON_BUTTON_DANGER: 'p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-red-500/10 text-white/40 hover:text-red-400 hover:border-red-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-md',
+  ICON_BUTTON: 'p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-white/10 text-white/55 hover:text-white transition-all cursor-pointer shadow-md',
+  ICON_BUTTON_DANGER: 'p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-red-500/10 text-white/55 hover:text-red-400 hover:border-red-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-md',
   // Icon button in its "on" state (e.g. the graph toggle while the graph is open)
   ICON_BUTTON_ACTIVE: 'p-2 rounded-xl border border-indigo-400/30 bg-indigo-600/90 hover:bg-indigo-500 text-white transition-all cursor-pointer shadow-md',
   // Floating footer for the onboarding coach card / welcome modal: a slightly
@@ -193,7 +193,7 @@ export const THEME_GLASS = {
   MATH_OP_ACTIVE: 'text-indigo-400',
   MATH_OP_UNARY_ACTIVE: 'text-indigo-300/90',
   MATH_OP_STATIC: 'text-zinc-600',
-  MATH_OP_MUTED_ACTIVE: 'text-white/40',
+  MATH_OP_MUTED_ACTIVE: 'text-white/55',
   MATH_OP_MUTED_STATIC: 'text-zinc-600',
   MATH_BORDER_ACTIVE: 'border-white/20',
   MATH_BORDER_STATIC: 'border-zinc-700/30',
@@ -250,14 +250,14 @@ export const THEME_GLASS = {
   FIELD_INPUT: 'bg-neutral-900 border border-white/10 text-white placeholder-white/30 focus:outline-none transition-all font-mono rounded-lg',
   BUTTON_PRIMARY_SM: 'relative px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md cursor-pointer active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none',
   ALERT_DANGER_SM: 'text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-2 py-1 max-w-xs text-center',
-  TEXT_BUTTON_MUTED: 'text-[10px] text-white/40 hover:text-white/70 transition-colors cursor-pointer',
+  TEXT_BUTTON_MUTED: 'text-[10px] text-white/55 hover:text-white/70 transition-colors cursor-pointer',
 
   // --- Graphing specific ---
   GRAPH_AXIS: 'stroke-white/40',
   GRAPH_GRID_LINE: 'stroke-white/25',
   GRAPH_TICK_LINE: 'stroke-white/15',
   GRAPH_GUIDE_LINE: 'stroke-white/15',
-  GRAPH_TICK_TEXT: 'fill-white/40 text-[10px] font-mono select-none',
+  GRAPH_TICK_TEXT: 'fill-white/55 text-[10px] font-mono select-none',
   GRAPH_CURVE_LHS: 'stroke-indigo-400',
   GRAPH_CURVE_RHS: 'stroke-amber-400',
   GRAPH_SWATCH_LHS: 'bg-indigo-400',
@@ -266,7 +266,7 @@ export const THEME_GLASS = {
   GRAPH_INTERSECTION_DOT: 'fill-emerald-400 stroke-emerald-950',
   GRAPH_LEGEND_CHIP: 'text-xs font-mono px-2.5 py-1 rounded-lg border bg-neutral-950/80 border-white/10 select-none',
   PANEL_TAB_ACTIVE: 'text-indigo-300 border-b-2 border-indigo-500 font-semibold text-xs transition-all',
-  PANEL_TAB_IDLE: 'text-white/40 hover:text-white/70 text-xs transition-all border-b-2 border-transparent',
+  PANEL_TAB_IDLE: 'text-white/55 hover:text-white/70 text-xs transition-all border-b-2 border-transparent',
   GRAPH_TOOLTIP: 'absolute z-10 pointer-events-none flex flex-col gap-1 px-2.5 py-1.5 rounded-lg bg-neutral-950/90 border border-white/10 backdrop-blur-md text-[10px] font-mono shadow-xl text-white/95 leading-none',
   GRAPH_TOOLTIP_HEADER: 'flex items-center gap-1.5 text-white/50 border-b border-white/5 pb-1 mb-1 font-bold',
   GRAPH_TOOLTIP_ROW_ACTIVE: 'flex items-center gap-1.5 text-white font-bold opacity-100 scale-[1.02] origin-left transition-all duration-150',

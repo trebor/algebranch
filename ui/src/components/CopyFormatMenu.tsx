@@ -152,6 +152,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
       aria-haspopup="menu"
       aria-expanded={open}
       className={`${triggerClassName} ${copied && copiedClassName ? copiedClassName : ''}`}
+      aria-label={copied ? "Copied" : "Copy options"}
     >
       {copied ? <Check size={iconSize} /> : <Copy size={iconSize} />}
     </button>

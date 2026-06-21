@@ -281,6 +281,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                         : THEME_GLASS.RADIAL_PETAL_HOVER
                     }`}
                     onClick={() => handlePetalClick(petal)}
+                    aria-label={petal.tooltip || petal.label}
                   >
                     {petal.icon}
                     {isTourPetal && (
@@ -328,6 +329,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                           disabled={spinnerValue <= 2 || isTourActive}
                           onClick={() => setSpinnerValue((v) => Math.max(2, v - 1))}
                           className={THEME_GLASS.SPINNER_BTN}
+                          aria-label="Decrease value"
                         >
                           <Minus size={12} className="text-white" />
                         </button>
@@ -339,6 +341,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                           disabled={isTourActive}
                           onClick={() => setSpinnerValue((v) => v + 1)}
                           className={THEME_GLASS.SPINNER_BTN}
+                          aria-label="Increase value"
                         >
                           <Plus size={12} className="text-white" />
                         </button>

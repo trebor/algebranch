@@ -22,6 +22,7 @@ import { HotkeyHint } from '../components/HotkeyHint';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { WorkspaceSwitcher } from '../components/WorkspaceSwitcher';
 import { ShareMenu } from '../components/ShareMenu';
+import { HeaderOverflowMenu } from '../components/HeaderOverflowMenu';
 import { SharedWorkspaceBanner } from '../components/SharedWorkspaceBanner';
 import { sharedWorkspaceBannerAtom } from '../store/sharedWorkspaceBanner';
 import { FactsStrip } from '../components/FactsStrip';
@@ -93,7 +94,7 @@ import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, Settings as SettingsIcon, Info } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -1270,26 +1271,10 @@ export default function Home() {
               <span className="hidden sm:inline">Feedback</span>
             </button>
           </Tooltip>
-          <Tooltip content="About Algebranch" position="bottom" autoAlign={false}>
-            <button
-              onClick={() => setAboutOpen(true)}
-              className={THEME_GLASS.HEADER_BUTTON}
-              aria-label="About Algebranch"
-            >
-              <Info size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
-              <span className="hidden sm:inline">About</span>
-            </button>
-          </Tooltip>
-          <Tooltip content="Settings" position="bottom" autoAlign={false}>
-            <button
-              onClick={() => setSettingsModalOpen(true)}
-              className={THEME_GLASS.HEADER_BUTTON}
-              aria-label="Settings"
-            >
-              <SettingsIcon size={14} className="text-indigo-400 group-hover:rotate-45 transition-transform" />
-              <span className="hidden sm:inline">Settings</span>
-            </button>
-          </Tooltip>
+          <HeaderOverflowMenu
+            onOpenSettings={() => setSettingsModalOpen(true)}
+            onOpenAbout={() => setAboutOpen(true)}
+          />
         </div>
       </header>
 

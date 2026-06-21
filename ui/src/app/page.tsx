@@ -1375,7 +1375,7 @@ export default function Home() {
                   // to the nav's top edge so the expression centers in the visible
                   // space above it rather than sinking behind it (#247 follow-up).
                   // The canvas background still extends behind the nav as intended.
-                  : 'pb-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] lg:pb-8 overflow-auto'
+                  : 'pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] lg:pb-8 overflow-auto'
               }`}
             >
               {/* Collapsed workspace switcher — anchored top-left of the

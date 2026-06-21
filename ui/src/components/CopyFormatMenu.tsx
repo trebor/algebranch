@@ -4,16 +4,19 @@
 'use client';
 
 import React from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, ChevronDown } from 'lucide-react';
+import type { Equation } from 'math-engine-client';
 import { Tooltip } from './Tooltip';
+import { PreviewEquationNode } from './PreviewEquationNode';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
 import type { ExportFormat } from '../store/equation';
 
-// A copy button that opens a small popover to choose the export format (#46):
-// plain ASCII, LaTeX, or display-ready Unicode. Encapsulates clipboard write,
-// the transient "copied" check, analytics, and outside-click/Escape dismissal so
-// each copy site is a one-liner.
+// A copy split-button (#46, #243): the primary segment copies the default format
+// in one gesture, and a caret reveals the full Plain / Unicode / LaTeX menu.
+// Encapsulates clipboard write, the transient "copied" check, analytics, the
+// typeset header preview, and outside-click/Escape dismissal so each copy site
+// is a one-liner. Mirrors the ShareMenu split-button (#241).
 
 // Ordered simplest → most complex: plain ASCII, then pretty Unicode, then LaTeX markup.
 const FORMAT_OPTIONS: { format: ExportFormat; label: string }[] = [
@@ -22,21 +25,42 @@ const FORMAT_OPTIONS: { format: ExportFormat; label: string }[] = [
   { format: 'latex', label: 'LaTeX' },
 ];
 
+// Display-ready Unicode is what the cards render, so it's the least-surprising
+// thing a one-click primary copy hands you (#243).
+const DEFAULT_FORMAT: ExportFormat = 'unicode';
+
 const COPIED_TIMEOUT = 2000;
 // Grace before a click-opened menu closes after the cursor leaves it, so clipping
 // the edge doesn't dismiss it.
 const MENU_CLOSE_GRACE = 500;
 
+// Two sizes of the same split-button: roomy in the derivation toolbar, compact in
+// the per-step hover toolbar on a history card.
+const VARIANTS = {
+  panel: {
+    container: THEME_GLASS.COPY_SPLIT_PANEL,
+    primary: THEME_GLASS.COPY_SPLIT_PANEL_PRIMARY,
+    divider: THEME_GLASS.COPY_SPLIT_PANEL_DIVIDER,
+    caret: THEME_GLASS.COPY_SPLIT_PANEL_CARET,
+    caretSize: 12,
+  },
+  tree: {
+    container: THEME_GLASS.COPY_SPLIT_TREE,
+    primary: THEME_GLASS.COPY_SPLIT_TREE_PRIMARY,
+    divider: THEME_GLASS.COPY_SPLIT_TREE_DIVIDER,
+    caret: THEME_GLASS.COPY_SPLIT_TREE_CARET,
+    caretSize: 9,
+  },
+} as const;
+
 interface CopyFormatMenuProps {
   /** Returns the text to copy for the chosen format. */
   getText: (format: ExportFormat) => string;
-  /** Lucide icon pixel size (matches the surrounding affordance). */
+  /** Lucide icon pixel size for the primary copy glyph. */
   iconSize?: number;
-  /** Class names for the trigger button (varies per call site). */
-  triggerClassName: string;
-  /** Class applied to the trigger while showing the copied state. */
-  copiedClassName?: string;
-  /** Tooltip content for the trigger. Omit to skip the tooltip (e.g. when the menu's own header already names the action). */
+  /** Size preset selecting the centralized split-button tokens. */
+  variant: keyof typeof VARIANTS;
+  /** Tooltip content for the primary copy button. Omit to skip the tooltip. */
   tooltip?: React.ReactNode;
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
   disabled?: boolean;
@@ -48,8 +72,8 @@ interface CopyFormatMenuProps {
   stopPropagation?: boolean;
   /** Menu header naming the slice being copied, e.g. "7 steps" or "This step" (#46). */
   scopeLabel?: string;
-  /** Secondary header line, e.g. the endpoint equation that defines the path (#46). */
-  scopeDetail?: string;
+  /** Equation to render typeset in the menu header — names *which* equation is copied (#243). */
+  scopeEquation?: Equation;
   /**
    * Fired while the trigger is hovered or the menu is open (#46), so a caller can
    * illuminate the export path in the tree. Kept as a callback to keep this
@@ -61,8 +85,7 @@ interface CopyFormatMenuProps {
 export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   getText,
   iconSize = 16,
-  triggerClassName,
-  copiedClassName,
+  variant,
   tooltip,
   tooltipPosition,
   disabled,
@@ -71,7 +94,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   trackLabel,
   stopPropagation,
   scopeLabel,
-  scopeDetail,
+  scopeEquation,
   onPreviewChange,
 }) => {
   const [open, setOpen] = React.useState(false);
@@ -79,6 +102,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   const [hovered, setHovered] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const v = VARIANTS[variant];
 
   const clearCloseTimer = () => {
     if (closeTimer.current) {
@@ -126,8 +150,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
     closeTimer.current = setTimeout(() => setOpen(false), MENU_CLOSE_GRACE);
   };
 
-  const handleSelect = (e: React.MouseEvent, format: ExportFormat) => {
-    if (stopPropagation) e.stopPropagation();
+  const copy = (format: ExportFormat) => {
     // Close the menu and drop the hover/preview so the path animation stops on copy.
     clearCloseTimer();
     setOpen(false);
@@ -139,20 +162,28 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
     });
   };
 
-  const handleTriggerClick = (e: React.MouseEvent) => {
+  const handleSelect = (e: React.MouseEvent, format: ExportFormat) => {
     if (stopPropagation) e.stopPropagation();
-    setOpen((v) => !v);
+    copy(format);
   };
 
-  const trigger = (
+  const handlePrimaryClick = (e: React.MouseEvent) => {
+    if (stopPropagation) e.stopPropagation();
+    copy(DEFAULT_FORMAT);
+  };
+
+  const handleCaretClick = (e: React.MouseEvent) => {
+    if (stopPropagation) e.stopPropagation();
+    setOpen((value) => !value);
+  };
+
+  const primaryButton = (
     <button
       type="button"
-      onClick={handleTriggerClick}
+      onClick={handlePrimaryClick}
       disabled={disabled}
-      aria-haspopup="menu"
-      aria-expanded={open}
-      className={`${triggerClassName} ${copied && copiedClassName ? copiedClassName : ''}`}
-      aria-label={copied ? "Copied" : "Copy options"}
+      className={v.primary}
+      aria-label={copied ? 'Copied' : 'Copy equation'}
     >
       {copied ? <Check size={iconSize} /> : <Copy size={iconSize} />}
     </button>
@@ -165,21 +196,43 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {tooltip ? (
-        // Suppress the hover tooltip once the menu is open, so it isn't shown
-        // doubled-up over the menu — the menu's own header takes over from there.
-        <Tooltip content={tooltip} position={tooltipPosition} visible={open ? false : undefined}>
-          {trigger}
-        </Tooltip>
-      ) : (
-        trigger
-      )}
+      <div className={`${v.container} ${copied ? THEME_GLASS.COPY_SPLIT_COPIED : ''}`}>
+        {tooltip ? (
+          // Suppress the hover tooltip once the menu is open, so it isn't shown
+          // doubled-up over the menu — the menu's own header takes over from there.
+          <Tooltip content={tooltip} position={tooltipPosition} visible={open ? false : undefined}>
+            {primaryButton}
+          </Tooltip>
+        ) : (
+          primaryButton
+        )}
+        <span aria-hidden="true" className={v.divider} />
+        <button
+          type="button"
+          onClick={handleCaretClick}
+          disabled={disabled}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label="Copy format options"
+          className={v.caret}
+        >
+          <ChevronDown size={v.caretSize} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
       {open && (
         <div role="menu" className={THEME_GLASS.COPY_MENU}>
-          {(scopeLabel || scopeDetail) && (
+          {(scopeLabel || scopeEquation) && (
             <div className={THEME_GLASS.COPY_MENU_HEADER}>
               {scopeLabel && <span className={THEME_GLASS.COPY_MENU_HEADER_LABEL}>{scopeLabel}</span>}
-              {scopeDetail && <span className={THEME_GLASS.COPY_MENU_HEADER_EXPR}>{scopeDetail}</span>}
+              {scopeEquation && (
+                <div className={THEME_GLASS.COPY_MENU_HEADER_PREVIEW}>
+                  <div className={THEME_GLASS.COPY_MENU_HEADER_PREVIEW_ROW}>
+                    <PreviewEquationNode path="lhs" customEquation={scopeEquation} />
+                    <span className={THEME_GLASS.COPY_MENU_HEADER_PREVIEW_SEP}>=</span>
+                    <PreviewEquationNode path="rhs" customEquation={scopeEquation} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {FORMAT_OPTIONS.map(({ format, label }) => (

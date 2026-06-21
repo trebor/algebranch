@@ -197,17 +197,16 @@ export const getActivePathIds = (
 
 /**
  * Scope summary for a full-derivation export (#46, option B): how many steps it
- * spans and the plain-text endpoint equation that defines the path. Surfaced in
- * the copy menu so the exported slice is named, not guessed.
+ * spans and the endpoint equation that defines the path. The copy menu renders
+ * the endpoint typeset (#243), so this returns the `Equation`, not a string.
  */
 export const getDerivationScope = (
   tree: Record<string, HistoryNode>,
   currentNodeId: string,
-): { stepCount: number; endpoint: string } => {
+): { stepCount: number; endpoint: Equation | undefined } => {
   const stepCount = getActivePathIds(tree, currentNodeId).size;
   const node = tree[currentNodeId];
-  // Render the endpoint in display glyphs (x² − 9/4 = √5), not ASCII source.
-  return { stepCount, endpoint: node ? equationToUnicode(node.equation) : '' };
+  return { stepCount, endpoint: node?.equation };
 };
 
 export interface VisualTreeNode extends HistoryNode {

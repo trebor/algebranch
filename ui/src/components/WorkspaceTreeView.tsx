@@ -578,22 +578,23 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                 {/* Hover Actions Toolbar — omitted in read-only preview mode
                     (e.g. the Feedback modal), where copying a step isn't useful. */}
                 {interactive && (
-                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 contextual-actions z-20">
+                  // Rests clearly visible (not at the faint contextual-actions
+                  // opacity) and brightens to full on node hover (#243).
+                  <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center opacity-70 group-hover/node:opacity-100 transition-opacity duration-300 z-20">
                     {/* The `C E` hotkey copies the *current* step only, so the
                         keycap hint would mislead on any other node — show the
                         plain label there. */}
                     <CopyFormatMenu
                       getText={(format) => equationToFormat(node.equation, format)}
-                      iconSize={10}
-                      triggerClassName={`p-1 rounded-md border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-neutral-950 ${THEME_GLASS.TEXT_MUTED} hover:text-white hover:bg-white/10 hover:border-white/15 cursor-pointer`}
-                      copiedClassName="text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10 opacity-100"
+                      iconSize={11}
+                      variant="tree"
                       tooltip={isCurrent ? <HotkeyHint label="Copy equation" sequence={['C', 'E']} /> : 'Copy equation'}
                       tooltipPosition="top"
                       trackAction="copy_step"
                       trackCategory="history"
                       trackLabel={node.id}
                       scopeLabel="This step"
-                      scopeDetail={equationToFormat(node.equation, 'unicode')}
+                      scopeEquation={node.equation}
                       stopPropagation
                     />
                   </div>

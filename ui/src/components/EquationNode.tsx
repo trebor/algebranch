@@ -36,6 +36,8 @@ import { ArrowLeftRight, Zap, Split, RefreshCw, Replace, TriangleAlert } from 'l
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
 import { useMathScale } from '../hooks/useMathScale';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { shouldPulseHandle } from './handlePulse';
 
 interface UnifiedStackOption {
   id: string;
@@ -280,21 +282,6 @@ const cssMax = (...lengths: string[]): string => {
   return unique.length === 1 ? unique[0] : `max(${unique.join(', ')})`;
 };
 
-/**
- * Whether a handle should pulse (animate-ping). All handles stay visible for
- * discoverability, but only the hovered node's handles pulse — quieting the
- * always-on noise and tying the glow to "what you're pointing at" (#121). The
- * onboarding tour forces its marked handle to pulse regardless of hover. A node
- * selected as a transposition source (sourcePath) suppresses pulsing entirely.
- */
-export const shouldPulseHandle = (params: {
-  sourcePath: string | null;
-  isHovered: boolean;
-  isStackMarked: boolean;
-}): boolean => {
-  if (params.sourcePath) return false;
-  return params.isHovered || params.isStackMarked;
-};
 
 export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = false, minPaddingTop = '0px', suppressHandleReserve = false }) => {
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
@@ -308,6 +295,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const currentEq = useAtomValue(currentEquationAtom);
   const candidatePaths = useAtomValue(candidatePathsAtom);
   const toggleRootSign = useSetAtom(toggleRootSignAtom);
+  // Honor prefers-reduced-motion (#145): suppress the decorative handle pulse.
+  const reducedMotion = useReducedMotion();
   const isOnboardingActive = !!useAtomValue(onboardingChapterIdAtom);
   const onboardingHighlightPath = useAtomValue(onboardingHighlightPathAtom);
   const onboardingTargetPath = useAtomValue(onboardingTargetPathAtom);
@@ -1073,7 +1062,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
             // Only the hovered node's handles pulse (#121); the onboarding tour
             // still forces its marked handle to pulse so the step reads.
-            const pulse = shouldPulseHandle({ sourcePath, isHovered, isStackMarked });
+            const pulse = shouldPulseHandle({ sourcePath, isHovered, isStackMarked, reducedMotion: !!reducedMotion });
 
             // Handles rest at full opacity for discoverability (the hue codes the
             // action type); only the pulse (animate-ping) is hover-gated, so the

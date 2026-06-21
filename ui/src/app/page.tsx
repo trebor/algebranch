@@ -1216,7 +1216,7 @@ export default function Home() {
       <div className="absolute bottom-10 left-1/4 w-96 h-96 bg-sky-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
 
       {/* Top Header */}
-      <header className="h-16 px-4 flex items-center justify-between select-none shrink-0 w-full z-30">
+      <header className="h-[var(--header-height)] px-4 flex items-center justify-between select-none shrink-0 w-full z-30">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-0 cursor-pointer hover:opacity-90 active:scale-98 transition-all">
             <Image
@@ -1226,11 +1226,11 @@ export default function Home() {
               height={53}
               priority
               unoptimized
-              className="h-[53px] w-[53px] object-contain rounded-full"
+              className="header-logo h-[53px] w-[53px] object-contain rounded-full"
             />
             <div>
               <h1 className="text-base font-bold text-white tracking-wide">Algebranch</h1>
-              <p className="text-xs text-indigo-300 font-semibold tracking-wider">
+              <p className="short-screen-hide text-xs text-indigo-300 font-semibold tracking-wider">
                 Interactive Algebra
               </p>
             </div>
@@ -1297,7 +1297,7 @@ export default function Home() {
             setLeftSidebarOpen(false);
             setRightSidebarOpen(false);
           }}
-          className={`fixed top-16 left-0 right-0 bottom-0 bg-neutral-950/60 backdrop-blur-sm z-35 lg:hidden transition-all duration-300 ${
+          className={`fixed top-[var(--header-height)] left-0 right-0 bottom-0 bg-neutral-950/60 backdrop-blur-sm z-35 lg:hidden transition-all duration-300 ${
             (isHydrated && (leftSidebarOpen || rightSidebarOpen))
               ? 'opacity-100 pointer-events-auto'
               : 'opacity-0 pointer-events-none'
@@ -1626,7 +1626,7 @@ export default function Home() {
         </div>
 
         <div className="hidden lg:block shrink-0">
-          <div className={`flex flex-col fixed top-16 bottom-0 right-0 z-38 transform transition-all duration-300 ease-in-out ${
+          <div className={`flex flex-col fixed top-[var(--header-height)] bottom-0 right-0 z-38 transform transition-all duration-300 ease-in-out ${
             rightSidebarOpen 
               ? 'w-80 translate-x-0 opacity-100' 
               : 'w-80 translate-x-full opacity-100 max-lg:pointer-events-none'

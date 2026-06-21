@@ -9,6 +9,30 @@
      rem-based piece of chrome scales together while the auto-fitting equation
      canvas (useMathScale) stays put. */
   --chrome-scale: 1;
+  /* Header height (#218). The fixed header and the sidebars/overlays that hang
+     off its bottom edge all read this var, so a short-screen override (below)
+     compacts every offset in one place. Default 4rem (64px). */
+  --header-height: 4rem;
+}
+
+/* Short, narrow viewports — mobile landscape and similar (#218). The 64px
+   header eats 15–20% of a ~360–420px-tall viewport, starving the math
+   workspace. Shrink the header and hide secondary brand chrome to reclaim it;
+   the sidebars/overlays follow automatically via --header-height. */
+@media (max-height: 500px) and (max-width: 1024px) {
+  :root {
+    --header-height: 3rem; /* 48px */
+  }
+  /* Secondary header chrome (subtitle) collapses to free vertical space. */
+  .short-screen-hide {
+    display: none;
+  }
+  /* Logo shrinks to fit the 48px header (unlayered, so it overrides the
+     Tailwind h-/w- utilities only while this query matches). */
+  .header-logo {
+    height: 2.25rem; /* 36px */
+    width: 2.25rem;
+  }
 }
 
 html {

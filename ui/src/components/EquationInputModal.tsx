@@ -326,7 +326,7 @@ export const EquationInputModal: React.FC = () => {
                   {/* Preview state (Valid Equation) */}
                   {parsedEq && !errorStr && (
                     <div className="flex flex-col items-center gap-3 w-full animate-[fadeIn_0.15s_ease-out]">
-                      <span className="text-[9px] uppercase tracking-wider text-emerald-400 font-semibold select-none flex items-center gap-1">
+                      <span className="text-[0.5625rem] tracking-wider text-emerald-400 font-semibold select-none flex items-center gap-1">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
                         Valid Equation
                       </span>
@@ -347,7 +347,7 @@ export const EquationInputModal: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-white/40 border-t border-white/5 pt-3 select-none shrink-0">
+              <div className="flex items-center justify-between text-xs text-white/40 border-t border-white/5 pt-3 select-none shrink-0">
                 <a
                   href="https://mathjs.org/docs/expressions/syntax.html"
                   target="_blank"

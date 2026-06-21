@@ -6,6 +6,7 @@
 import React from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { Tooltip } from './Tooltip';
+import { HotkeyHint } from './HotkeyHint';
 import { CopyFormatMenu } from './CopyFormatMenu';
 import { WorkspaceTreeView } from './WorkspaceTreeView';
 import { equationToString } from 'math-engine-client';
@@ -91,7 +92,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
     }`}>
       {/* Sidebar Header with Timeline Actions */}
       <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER} pb-4 shrink-0`}>
-        <Tooltip content="Toggle Sidebar (H)" position="left" autoAlign={false}>
+        <Tooltip content={<HotkeyHint label="Toggle Sidebar" keys="H" />} position="left" autoAlign={false}>
           <h2 
             onClick={() => setRightSidebarOpen(false)}
             className="text-base lg:text-lg font-semibold lg:font-bold text-white flex items-center gap-2 select-none cursor-pointer hover:text-indigo-200 transition-colors"
@@ -106,7 +107,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
             iconSize={16}
             triggerClassName={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer text-white`}
             copiedClassName="text-emerald-400"
-            tooltip="Copy full derivation (C)"
+            tooltip={<HotkeyHint label="Copy full derivation" sequence={['C', 'D']} />}
             disabled={Object.keys(tree).length <= 1}
             trackAction="copy_derivation"
             trackCategory="history"
@@ -115,7 +116,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
             scopeDetail={exportScope.endpoint}
             onPreviewChange={setExportPreview}
           />
-          <Tooltip content="Undo step (⌘Z)">
+          <Tooltip content={<HotkeyHint label="Undo step" keys="⌘Z" />}>
             <button
               onClick={handleUndo}
               disabled={!canUndo}
@@ -125,7 +126,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
               <ChevronLeft size={16} />
             </button>
           </Tooltip>
-          <Tooltip content="Redo step (⌘⇧Z)">
+          <Tooltip content={<HotkeyHint label="Redo step" keys="⌘⇧Z" />}>
             <button
               onClick={handleRedo}
               disabled={!canRedo}
@@ -257,7 +258,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             iconSize={16}
             triggerClassName={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer text-white`}
             copiedClassName="text-emerald-400"
-            tooltip="Copy full derivation (C)"
+            tooltip={<HotkeyHint label="Copy full derivation" sequence={['C', 'D']} />}
             disabled={sortedNodes.length <= 1}
             trackAction="copy_derivation"
             trackCategory="history"
@@ -312,7 +313,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             >
               {/* Left timeline badge/dot */}
               <div
-                className={`absolute -left-[25px] top-0.5 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center text-[8px] font-bold transition-all duration-300 ${
+                className={`absolute -left-[25px] top-0.5 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center text-[0.5rem] font-bold transition-all duration-300 ${
                   isCurrent
                     ? THEME_GLASS.TIMELINE_BADGE_ACTIVE
                     : THEME_GLASS.TIMELINE_BADGE_DEFAULT
@@ -329,12 +330,12 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
                     : THEME_GLASS.TIMELINE_CARD_DEFAULT
                 }`}
               >
-                <div className={`flex items-center justify-between text-[10px] ${THEME_GLASS.TEXT_MUTED} font-semibold uppercase tracking-wider`}>
+                <div className={`flex items-center justify-between text-xs ${THEME_GLASS.TEXT_MUTED} font-semibold tracking-wider`}>
                   <span className={isCurrent ? 'text-indigo-400 font-bold' : ''}>
                     {node.label}
                   </span>
                   {isBranch && parentIndex !== null && (
-                    <span className="text-amber-400/80 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-500/10 font-sans tracking-normal uppercase text-[8px]">
+                    <span className="text-amber-400/80 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-500/10 font-sans tracking-normal text-[0.5rem]">
                       Branch from step {parentIndex}
                     </span>
                   )}

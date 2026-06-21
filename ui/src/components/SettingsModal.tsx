@@ -13,6 +13,8 @@ import {
   aboutModalOpenAtom,
   pwaInstallPromptAtom,
   shortcutsOverlayOpenAtom,
+  TEXT_SIZE_OPTIONS,
+  clampChromeScale,
 } from '../store/equation';
 import { consentAtom } from '../store/consent';
 import { THEME_GLASS } from '../constants/theme';
@@ -56,6 +58,17 @@ export const SettingsModal: React.FC = () => {
 
   // Focus trap + scroll lock + Escape-to-close + focus restore.
   const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose: handleClose });
+
+  const activeChromeScale = clampChromeScale(settings.chromeScale);
+
+  const handleSelectTextSize = (scale: number) => {
+    setSettings((prev) => ({ ...prev, chromeScale: scale }));
+    trackEvent({
+      action: 'set_text_size',
+      category: 'settings',
+      label: String(scale),
+    });
+  };
 
   const handleToggleEvaluateToDecimal = () => {
     const newVal = !settings.allowEvaluateToDecimal;
@@ -115,12 +128,49 @@ export const SettingsModal: React.FC = () => {
 
             {/* Settings Content */}
             <div className="flex flex-col gap-5 overflow-y-auto pr-1">
+              <div className={THEME_GLASS.SETTING_ROW_STACKED}>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold text-white">
+                    Interface text size
+                  </span>
+                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                    Enlarge menus, tooltips, and labels. The equation stays as it is — use your browser&rsquo;s zoom to enlarge everything.
+                  </span>
+                </div>
+                <div
+                  role="radiogroup"
+                  aria-label="Interface text size"
+                  className={`${THEME_GLASS.SEGMENT_GROUP} w-full`}
+                >
+                  {TEXT_SIZE_OPTIONS.map((opt) => {
+                    const isActive = activeChromeScale === opt.scale;
+                    return (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        role="radio"
+                        aria-checked={isActive}
+                        aria-label={opt.label}
+                        onClick={() => handleSelectTextSize(opt.scale)}
+                        className={`${THEME_GLASS.SEGMENT_BTN} flex-1 ${
+                          isActive
+                            ? THEME_GLASS.SEGMENT_BTN_ACTIVE
+                            : THEME_GLASS.SEGMENT_BTN_IDLE
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1 select-none">
+                <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-white">
                     Evaluate to Decimal
                   </span>
-                  <span className={`text-[11px] leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
                     Allow simplifying constant subtrees to decimal floats (e.g. 3/4 → 0.75). Turn off to keep responses in exact fractional forms.
                   </span>
                 </div>
@@ -145,11 +195,11 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1 select-none">
+                <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-white">
                     Keyboard Shortcuts
                   </span>
-                  <span className={`text-[11px] leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
                     View every shortcut for navigating history, workspaces, and panels. Press <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>?</kbd> any time.
                   </span>
                 </div>
@@ -168,11 +218,11 @@ export const SettingsModal: React.FC = () => {
 
               {!!installPrompt && (
                 <div className={THEME_GLASS.SETTING_ROW}>
-                  <div className="flex flex-col gap-1 select-none">
+                  <div className="flex flex-col gap-1">
                     <span className="text-sm font-semibold text-white">
                       Install Algebranch
                     </span>
-                    <span className={`text-[11px] leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                    <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
                       Install Algebranch to your device for offline use, standalone window, and faster startup.
                     </span>
                   </div>
@@ -188,11 +238,11 @@ export const SettingsModal: React.FC = () => {
               )}
 
               <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1 select-none">
+                <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-white">
                     Privacy & Cookies
                   </span>
-                  <span className={`text-[11px] leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
                     Review what anonymous analytics data we collect or update your cookie tracking preferences.
                   </span>
                 </div>

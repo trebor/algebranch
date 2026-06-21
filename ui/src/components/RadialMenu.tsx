@@ -43,7 +43,7 @@ interface RadialPetal {
 }
 
 const PETALS: RadialPetal[] = [
-  { icon: <ArrowLeftRight size={18} />, label: '↔', tooltip: 'Swap left and right sides (⌘⇧S)', action: { type: 'swap' }, color: 'text-amber-400' },
+  { icon: <ArrowLeftRight size={18} />, label: '↔', tooltip: 'Swap left and right sides', action: { type: 'swap' }, color: 'text-amber-400' },
   { icon: <span className="text-sm font-bold">xⁿ</span>, label: 'xⁿ', tooltip: 'Raise both sides to nth power', action: { type: 'power', power: 2 }, color: 'text-teal-400' },
   { icon: <Plus size={18} />, label: '+', tooltip: 'Add term to both sides', action: { type: 'add' }, color: 'text-indigo-400' },
   { icon: <Minus size={18} />, label: '−', tooltip: 'Subtract term from both sides', action: { type: 'sub' }, color: 'text-violet-400' },

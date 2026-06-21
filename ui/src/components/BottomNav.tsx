@@ -68,7 +68,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<Undo2 size={24} />}
           label="Undo"
-          tooltip="Undo step (⌘Z)"
+          tooltip="Undo step"
           disabled={!canUndo}
           onClick={handleUndo}
         />
@@ -77,7 +77,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<LayoutGrid size={24} />}
           label="Workspace"
-          tooltip="Workspace (W)"
+          tooltip="Workspace"
           active={activeBottomSheet === 'workspace'}
           onClick={handleToggleWorkspace}
         />
@@ -86,7 +86,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<Library size={24} />}
           label="Library"
-          tooltip="Equation Library (L)"
+          tooltip="Equation Library"
           active={activeBottomSheet === 'library'}
           onClick={handleToggleLibrary}
         />
@@ -95,7 +95,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<GitFork size={24} className="rotate-180" />}
           label="History"
-          tooltip="History (H)"
+          tooltip="History"
           active={activeBottomSheet === 'history'}
           onClick={handleToggleHistory}
         />
@@ -104,7 +104,7 @@ export const BottomNav: React.FC = () => {
         <NavButton
           icon={<Redo2 size={24} />}
           label="Redo"
-          tooltip="Redo step (⌘⇧Z)"
+          tooltip="Redo step"
           disabled={!canRedo}
           onClick={handleRedo}
         />
@@ -145,7 +145,7 @@ const NavButton: React.FC<NavButtonProps> = ({
         `}
       >
         {icon}
-        <span className="text-[10px] mt-0.5">{label}</span>
+        <span className="text-xs mt-0.5">{label}</span>
       </button>
     </Tooltip>
   );

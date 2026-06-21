@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 import { useAtomValue, useSetAtom, useAtom } from 'jotai';
 import { useIsHydrated } from '../hooks/useIsHydrated';
 import { Tooltip } from './Tooltip';
+import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
 import { Equation, parseEquation, ensureNodeIds, deserializeEquation } from 'math-engine-client';
 import {
@@ -133,7 +134,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
     <div className="shrink-0 flex flex-col gap-3">
       {/* Header (Desktop Only) */}
       <div className={`hidden xl:flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
-        <Tooltip content="Toggle Workspace (W)" position="right" autoAlign={false}>
+        <Tooltip content={<HotkeyHint label="Toggle Workspace" keys="W" />} position="right" autoAlign={false}>
           <h2 
             onClick={() => setLeftSidebarOpen(false)}
             className="text-lg font-bold text-white flex items-center gap-2 select-none cursor-pointer hover:text-indigo-200 transition-colors"
@@ -147,18 +148,18 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
       {/* Recessed Content Box */}
       <div className={`p-4 flex flex-col gap-4 ${THEME_GLASS.TREE_BG}`}>
         <div className="flex flex-col gap-1.5 shrink-0">
-          <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
+          <span className={`text-xs ${THEME_GLASS.TEXT_MUTED} tracking-wider font-semibold select-none`}>
             Define Equation
           </span>
           <div className="grid grid-cols-2 gap-2">
-            <Tooltip content="Enter your own equation in a new workspace (N)" position="bottom" autoAlign={false} wrapperClassName="w-full">
+            <Tooltip content={<HotkeyHint label="Enter your own equation in a new workspace" keys="N" />} position="bottom" autoAlign={false} wrapperClassName="w-full">
               <button
                 type="button"
                 onClick={() => {
                   setIsInputModalOpen(true);
                   onCloseMobile?.();
                 }}
-                className={`w-full h-9 px-3 text-[11px] font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_PRIMARY}`}
+                className={`w-full h-9 px-3 text-xs font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_PRIMARY}`}
               >
                 <PenTool size={12} />
                 <span>New</span>
@@ -171,7 +172,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                   setOnboardingShowDirectory(true);
                   onCloseMobile?.();
                 }}
-                className={`w-full h-9 px-3 text-[11px] font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_SECONDARY}`}
+                className={`w-full h-9 px-3 text-xs font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_SECONDARY}`}
               >
                 <BookOpen size={12} className="text-indigo-400" />
                 <span>Tutorial</span>
@@ -182,7 +183,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
 
         {/* Recents Dropdown Selector Section */}
         <div className={`flex flex-col gap-1.5 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} pt-3 shrink-0`}>
-          <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
+          <span className={`text-xs ${THEME_GLASS.TEXT_MUTED} tracking-wider font-semibold select-none`}>
             Saved Workspaces
           </span>
           <div className="relative w-full">
@@ -263,7 +264,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                                 <span className="truncate font-mono flex-1">
                                   {session.name}
                                 </span>
-                                <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED_EXTRA} whitespace-nowrap font-sans shrink-0 flex items-center gap-1.5`}>
+                                <span className={`text-xs ${THEME_GLASS.TEXT_MUTED_EXTRA} whitespace-nowrap font-sans shrink-0 flex items-center gap-1.5`}>
                                   <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
                                   <span>·</span>
                                   <span>{formatTimestamp(session.timestamp)}</span>
@@ -301,7 +302,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                 <FolderGit2 className="text-indigo-400" size={16} />
                 <span>Select Workspace</span>
               </h2>
-              <p className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} mt-1 uppercase tracking-wider font-semibold`}>Explore and select a recent workspace</p>
+              <p className={`text-xs ${THEME_GLASS.TEXT_MUTED} mt-1 tracking-wider font-semibold`}>Explore and select a recent workspace</p>
             </div>
             <button
               onClick={() => setIsMobileRecentsOpen(false)}
@@ -345,7 +346,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                       <div className="font-mono text-xs truncate text-indigo-50">
                         {session.name}
                       </div>
-                      <div className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} mt-1 flex items-center gap-1.5 font-sans`}>
+                      <div className={`text-xs ${THEME_GLASS.TEXT_MUTED} mt-1 flex items-center gap-1.5 font-sans`}>
                         <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
                         <span>·</span>
                         <span>{formatTimestamp(session.timestamp)}</span>
@@ -353,7 +354,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                     </div>
                     <div className="shrink-0 flex items-center gap-2">
                       {isActive ? (
-                        <span className={`text-[9px] font-sans font-bold uppercase tracking-wider px-2.5 py-0.5 ${THEME_GLASS.ACTIVE_BADGE}`}>
+                        <span className={`text-[0.5625rem] font-sans font-bold tracking-wider px-2.5 py-0.5 ${THEME_GLASS.ACTIVE_BADGE}`}>
                           Active
                         </span>
                       ) : (
@@ -441,7 +442,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
       {/* Header */}
       {showHeader && (
         <div className={`hidden xl:flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
-          <Tooltip content="Toggle Equation Library (L)" position="right" autoAlign={false}>
+          <Tooltip content={<HotkeyHint label="Toggle Equation Library" keys="L" />} position="right" autoAlign={false}>
             <h2 
               onClick={() => setLeftSidebarOpen(false)}
               className="text-lg font-bold text-white flex items-center gap-2 select-none cursor-pointer hover:text-indigo-200 transition-colors"
@@ -454,7 +455,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
       )}
 
       {errorStr && (
-        <div className={`flex items-start gap-2 text-[10px] p-2 animate-[fadeIn_0.2s_ease-out] shrink-0 ${THEME_GLASS.BUTTON_DANGER}`}>
+        <div className={`flex items-start gap-2 text-xs p-2 animate-[fadeIn_0.2s_ease-out] shrink-0 ${THEME_GLASS.BUTTON_DANGER}`}>
           <ShieldAlert size={12} className="shrink-0 mt-0.5" />
           <span className="break-all">{errorStr}</span>
         </div>
@@ -505,7 +506,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
               {/* Category Header */}
               <button
                 onClick={() => toggleCategory(group.category)}
-                className={`w-full flex items-center justify-between py-2 px-3 text-[10px] font-bold uppercase tracking-wider ${THEME_GLASS.CATEGORY_HEADER}`}
+                className={`w-full flex items-center justify-between py-2 px-3 text-xs font-bold tracking-wider ${THEME_GLASS.CATEGORY_HEADER}`}
               >
                 <div className="flex items-center gap-2">
                   <span className={THEME_GLASS.TEXT_MUTED}>
@@ -516,7 +517,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
                     <span>{group.category}</span>
                   </div>
                 </div>
-                <span className={`text-[9px] font-sans font-semibold px-2 py-0.5 group-hover:text-white ${THEME_GLASS.BADGE_MUTED}`}>
+                <span className={`text-[0.5625rem] font-sans font-semibold px-2 py-0.5 group-hover:text-white ${THEME_GLASS.BADGE_MUTED}`}>
                   {group.presets.length}
                 </span>
               </button>
@@ -546,7 +547,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
                           <div className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">
                             {preset.label}
                           </div>
-                          <div className="text-[11px] font-mono text-zinc-500 group-hover:text-indigo-200/80 transition-colors mt-0.5 truncate">
+                          <div className="text-xs font-mono text-zinc-500 group-hover:text-indigo-200/80 transition-colors mt-0.5 truncate">
                             {preset.equation}
                           </div>
                         </div>

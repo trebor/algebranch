@@ -395,7 +395,7 @@ export const GraphPanel: React.FC = () => {
               }}
             >
               <div className={THEME_GLASS.GRAPH_TOOLTIP_HEADER}>
-                <span className={`${THEME_GLASS.TEXT_MUTED} font-sans text-[11px] mr-1 select-none`}>↔</span>
+                <span className={`${THEME_GLASS.TEXT_MUTED} font-sans text-xs mr-1 select-none`}>↔</span>
                 <span>{formatNumber(mousePos.x)}</span>
               </div>
               {lhsVal !== null && (
@@ -517,7 +517,7 @@ export const GraphPanel: React.FC = () => {
                     x={sx}
                     y={H - padding.bottom - 8}
                     textAnchor="middle"
-                    className={`${THEME_GLASS.GRAPH_TICK_TEXT} fill-white/50 text-[9px]`}
+                    className={`${THEME_GLASS.GRAPH_TICK_TEXT} fill-white/50 text-[0.5625rem]`}
                     style={{
                       paintOrder: 'stroke fill',
                       stroke: GRAPH_BACKGROUND_COLOR,
@@ -554,7 +554,7 @@ export const GraphPanel: React.FC = () => {
                     y={sy}
                     textAnchor="start"
                     dominantBaseline="central"
-                    className={`${THEME_GLASS.GRAPH_TICK_TEXT} fill-white/50 text-[9px]`}
+                    className={`${THEME_GLASS.GRAPH_TICK_TEXT} fill-white/50 text-[0.5625rem]`}
                     style={{
                       paintOrder: 'stroke fill',
                       stroke: GRAPH_BACKGROUND_COLOR,

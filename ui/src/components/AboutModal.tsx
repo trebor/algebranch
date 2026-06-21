@@ -96,7 +96,7 @@ export const AboutModal: React.FC = () => {
                   <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
                     An interactive, pedagogical workspace for step-by-step algebraic derivations, equation transpositions, and visual mathematical exploration.
                   </p>
-                  <p className="text-[11px] text-zinc-400">
+                  <p className="text-xs text-zinc-400">
                     {COPYRIGHT_NOTICE} · Released under the GNU General Public License (GPLv3).
                   </p>
                 </div>
@@ -104,18 +104,18 @@ export const AboutModal: React.FC = () => {
 
               {/* GPLv3 License text area */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-white/60 font-semibold flex items-center gap-1.5 select-none">
+                <span className="text-xs text-white/60 font-semibold flex items-center gap-1.5">
                   <Shield size={12} className="text-indigo-400" />
                   GNU General Public License (GPLv3)
                 </span>
-                <div className="max-h-36 overflow-y-auto font-mono text-[10px] bg-neutral-950/60 p-3 rounded-xl border border-white/5 text-zinc-400 leading-normal scrollbar-thin">
+                <div className="max-h-36 overflow-y-auto font-mono text-xs bg-neutral-950/60 p-3 rounded-xl border border-white/5 text-zinc-400 leading-normal scrollbar-thin">
                   <pre className="whitespace-pre-wrap font-mono">{GPL_LICENSE_TEXT}</pre>
                 </div>
               </div>
 
               {/* Third-Party OSS Attributions */}
               <div className="flex flex-col gap-2.5">
-                <span className="text-xs text-white/60 font-semibold select-none">
+                <span className="text-xs text-white/60 font-semibold">
                   Third-Party Open Source Software
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -126,7 +126,7 @@ export const AboutModal: React.FC = () => {
                     >
                       <div className="flex flex-col gap-0.5 min-w-0">
                         <span className="text-xs font-bold text-white truncate">{item.name}</span>
-                        <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} font-semibold`}>
+                        <span className={`text-xs ${THEME_GLASS.TEXT_MUTED} font-semibold`}>
                           {item.license} License
                         </span>
                       </div>

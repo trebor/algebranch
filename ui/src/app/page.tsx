@@ -18,6 +18,7 @@ import { SettingsModal } from '../components/SettingsModal';
 import { AboutModal } from '../components/AboutModal';
 import { OnboardingTour } from '../components/OnboardingTour';
 import { Tooltip } from '../components/Tooltip';
+import { HotkeyHint } from '../components/HotkeyHint';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { ShareMenu } from '../components/ShareMenu';
 import { FactsStrip } from '../components/FactsStrip';
@@ -71,6 +72,8 @@ import {
   previousGraphSizeAtom,
   isGraphViableAtom,
   settingsAtom,
+  TEXT_SIZE_OPTIONS,
+  cycleChromeScale,
   pwaInstallPromptAtom,
   aboutModalOpenAtom,
   closeTabAtom,
@@ -807,13 +810,13 @@ export default function Home() {
           });
         }
       },
-      description: 'Deselect current selection',
+      description: 'Clear selection',
       category: 'Equation',
     },
     {
+      // Bare `s` swaps the two sides of the equation — reclaimed from the old
+      // ⌘⇧S now that copy/share live under the `C` leader.
       key: 's',
-      meta: true,
-      shift: true,
       action: () => {
         swapSides();
         trackEvent({
@@ -849,11 +852,40 @@ export default function Home() {
       category: 'Equation',
     },
     {
-      // Bare `c` (no Cmd, so native Cmd/Ctrl+C text-copy is untouched) copies the
-      // whole workspace transcript — the active derivation path, root → current.
-      // The richer copy sits on the bare key to make sharing a full worked
-      // solution the default gesture; mirrors the "Copy full derivation" button.
-      key: 'c',
+      // Bare `t` grows the interface text-size knob (#239) one step and wraps
+      // from the largest back to the smallest; Shift+T goes the other way. The
+      // wrap lets a user who overshoots keep tapping the same key to come back
+      // around. A toast confirms the change, since the steps are subtle.
+      key: 't',
+      action: () => {
+        const nextScale = cycleChromeScale(settings.chromeScale, 1);
+        const label = TEXT_SIZE_OPTIONS.find((o) => o.scale === nextScale)?.label ?? '';
+        setSettings((prev) => ({ ...prev, chromeScale: nextScale }));
+        setToast({ message: `Interface text size: ${label}`, key: Date.now() });
+        trackEvent({ action: 'shortcut_text_size_larger', category: 'keyboard', label });
+      },
+      description: 'Larger interface text',
+      category: 'Accessibility',
+    },
+    {
+      key: 't',
+      shift: true,
+      action: () => {
+        const nextScale = cycleChromeScale(settings.chromeScale, -1);
+        const label = TEXT_SIZE_OPTIONS.find((o) => o.scale === nextScale)?.label ?? '';
+        setSettings((prev) => ({ ...prev, chromeScale: nextScale }));
+        setToast({ message: `Interface text size: ${label}`, key: Date.now() });
+        trackEvent({ action: 'shortcut_text_size_smaller', category: 'keyboard', label });
+      },
+      description: 'Smaller interface text',
+      category: 'Accessibility',
+    },
+    {
+      // Copy/share family under the `C` leader (#239). `C D` copies the whole
+      // workspace transcript — the active derivation path, root → current.
+      // Leader keys are bare, so native Cmd/Ctrl+C text-copy is untouched.
+      leader: 'c',
+      key: 'd',
       action: () => {
         navigator.clipboard
           .writeText(formatDerivation(tree, currentNodeId, 'plain'))
@@ -863,13 +895,13 @@ export default function Home() {
           })
           .catch((err) => console.error('Failed to copy derivation:', err));
       },
-      description: 'Copy full derivation (text)',
+      description: 'Copy full derivation as text',
       category: 'Copy & Share',
     },
     {
-      // Shift+C copies just the current equation as plain text (the lighter copy).
-      key: 'c',
-      shift: true,
+      // `C E` copies just the current equation as plain text.
+      leader: 'c',
+      key: 'e',
       action: () => {
         if (!currentEq) return;
         navigator.clipboard
@@ -880,14 +912,14 @@ export default function Home() {
           })
           .catch((err) => console.error('Failed to copy equation:', err));
       },
-      description: 'Copy equation (text)',
+      description: 'Copy equation as text',
       category: 'Copy & Share',
     },
     {
-      // Bare `s` copies a `?ws=` deep link that restores the entire workspace
-      // (full history tree + name) — the headline share, on the bare key to
-      // encourage passing whole workspaces around.
-      key: 's',
+      // `C W` copies a `?ws=` deep link that restores the entire workspace
+      // (full history tree + name).
+      leader: 'c',
+      key: 'w',
       action: async () => {
         try {
           const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName);
@@ -904,10 +936,10 @@ export default function Home() {
       category: 'Copy & Share',
     },
     {
-      // Shift+S copies the lighter `?eq=` link (reopens just the equation, not
-      // the derivation tree). Distinct from swap-sides (⌘⇧S — has Cmd).
-      key: 's',
-      shift: true,
+      // `C L` copies the lighter `?eq=` link (reopens just the equation, not
+      // the derivation tree).
+      leader: 'c',
+      key: 'l',
       action: () => {
         if (!currentEq) return;
         const url = buildEquationUrl(window.location.origin, equationToString(currentEq));
@@ -1012,8 +1044,80 @@ export default function Home() {
       category: 'Help',
       keyLabel: '?',
     },
+    {
+      key: 'a',
+      action: () => {
+        setAboutOpen(true);
+        trackEvent({ action: 'shortcut_open_about', category: 'keyboard' });
+      },
+      description: 'About Algebranch',
+      category: 'Help',
+    },
+    {
+      key: 'f',
+      action: () => {
+        // Mirror the header Feedback button: seed the form with the active
+        // equation as context when there is one.
+        setFeedbackContext(currentEq ? `Active Equation: ${equationToString(currentEq)}` : null);
+        setFeedbackModalOpen(true);
+        trackEvent({ action: 'shortcut_open_feedback', category: 'keyboard' });
+      },
+      description: 'Send feedback',
+      category: 'Help',
+    },
+    {
+      // Open the global equals menu (apply an operation to both sides) — the same
+      // action as clicking the = sign. Skip when there's no equation or the sign
+      // is locked.
+      key: '=',
+      action: () => {
+        if (!currentEq || equalsLocked) return;
+        dismissEqualsHint();
+        setRadialMenuOpen(!radialMenuOpen);
+        trackEvent({ action: 'shortcut_toggle_equals_menu', category: 'keyboard' });
+      },
+      description: 'Apply an operation to both sides',
+      category: 'Equation',
+      keyLabel: '=',
+    },
+    {
+      // Settings on bare `,`, echoing the universal ⌘, convention in the app's
+      // naked-key scheme.
+      key: ',',
+      action: () => {
+        setSettingsModalOpen(true);
+        trackEvent({ action: 'shortcut_open_settings', category: 'keyboard' });
+      },
+      description: 'Settings',
+      category: 'Help',
+      keyLabel: ',',
+    },
+    {
+      // ⌘, alias for muscle memory; hidden so the cheat-sheet shows the bare key.
+      key: ',',
+      meta: true,
+      action: () => {
+        setSettingsModalOpen(true);
+        trackEvent({ action: 'shortcut_open_settings', category: 'keyboard' });
+      },
+      description: 'Settings',
+      category: 'Help',
+      hidden: true,
+    },
   ];
-  useKeyboardShortcuts(shortcutBindings, { disabled: anyModalOpen });
+  useKeyboardShortcuts(shortcutBindings, {
+    disabled: anyModalOpen,
+    // Surface what follows an armed leader, so the sequence is discoverable in
+    // the moment (not only via the ? cheat-sheet).
+    onPendingLeader: (leader) => {
+      if (leader === 'c') {
+        setToast({
+          message: 'Copy / share — D derivation · E equation · L link · W workspace',
+          key: Date.now(),
+        });
+      }
+    },
+  });
 
   // Mobile swipe gestures logic
   React.useEffect(() => {
@@ -1119,7 +1223,7 @@ export default function Home() {
             />
             <div>
               <h1 className="text-base font-bold text-white tracking-wide">Algebranch</h1>
-              <p className="text-[10px] text-indigo-300 font-semibold tracking-wider uppercase">
+              <p className="text-xs text-indigo-300 font-semibold tracking-wider">
                 Interactive Algebra
               </p>
             </div>
@@ -1130,7 +1234,7 @@ export default function Home() {
             equationString={currentEq ? equationToString(currentEq) : ''}
             getCompressedWorkspace={() => serializeWorkspaceState(tree, currentNodeId, currentTabName)}
             triggerClassName={THEME_GLASS.HEADER_BUTTON}
-            tooltip="Create share link (S, ⇧S)"
+            tooltip="Create share link"
           />
           <Tooltip content="Submit Feedback or Report Bug" position="bottom" autoAlign={false}>
             <button
@@ -1197,10 +1301,10 @@ export default function Home() {
         {/* Left Sidebar Edge Handle (Desktop Only) */}
         <div className="hidden lg:block">
           <Tooltip 
-            content={leftSidebarOpen ? "Hide Left Sidebar (W / L)" : "Show Left Sidebar (W / L)"} 
+            content={<HotkeyHint label={leftSidebarOpen ? "Hide Left Sidebar" : "Show Left Sidebar"} keys={['W', 'L']} />}
             position="right"
             wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
-              leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'
+              leftSidebarOpen ? 'left-[21.5rem] -translate-x-1/2' : 'left-[0.5rem] -translate-x-1/2'
             }`}
           >
             <button
@@ -1265,7 +1369,7 @@ export default function Home() {
                       open so it can always be closed. Replaces the old oversized
                       floating "Graph" pill. */}
                   {(isGraphViable || graphSize !== 'hidden') && (
-                    <Tooltip content={graphSize === 'hidden' ? 'Show graph (G)' : 'Hide graph (G)'} position="left">
+                    <Tooltip content={<HotkeyHint label={graphSize === 'hidden' ? 'Show graph' : 'Hide graph'} keys="G" />} position="left">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1446,7 +1550,7 @@ export default function Home() {
               >
                 {/* Graph resize/close controls sitting in the top-right corner of the header */}
                 <div className="absolute right-4 top-1.5 z-35 select-none flex items-center bg-neutral-900 border border-white/10 rounded-full px-1.5 py-0.5 shadow-md">
-                  <Tooltip content="Expand graph (2/3) (G)" position="top" autoAlign={false}>
+                  <Tooltip content={<HotkeyHint label="Expand graph (2/3)" keys="G" />} position="top" autoAlign={false}>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1462,7 +1566,7 @@ export default function Home() {
                     </button>
                   </Tooltip>
                   <div className="w-[1px] h-3 bg-white/10 mx-0.5" />
-                  <Tooltip content={graphSize === 'expand' ? "Shrink graph (1/3) (G)" : "Hide graph (G)"} position="top" autoAlign={false}>
+                  <Tooltip content={<HotkeyHint label={graphSize === 'expand' ? "Shrink graph (1/3)" : "Hide graph"} keys="G" />} position="top" autoAlign={false}>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1493,10 +1597,10 @@ export default function Home() {
         {/* Right Sidebar Edge Handle (Desktop Only) */}
         <div className="hidden lg:block">
           <Tooltip 
-            content={rightSidebarOpen ? "Hide History Sidebar (H)" : "Show History Sidebar (H)"} 
+            content={<HotkeyHint label={rightSidebarOpen ? "Hide History Sidebar" : "Show History Sidebar"} keys="H" />}
             position="left"
             wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
-              rightSidebarOpen ? 'right-[344px] translate-x-1/2' : 'right-[8px] translate-x-1/2'
+              rightSidebarOpen ? 'right-[21.5rem] translate-x-1/2' : 'right-[0.5rem] translate-x-1/2'
             }`}
           >
             <button

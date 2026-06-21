@@ -8,6 +8,7 @@ import Script from "next/script";
 
 import { Provider as JotaiProvider } from "jotai";
 import { ReducedMotionProvider } from "../components/ReducedMotionProvider";
+import { ChromeScaleProvider } from "../components/ChromeScaleProvider";
 import { ConsentManager } from "../components/ConsentManager";
 
 const geistSans = Geist({
@@ -158,8 +159,13 @@ export default function RootLayout({
               framer-motion animation (#145); CSS animations are handled by the
               media query in globals.css. */}
           <ReducedMotionProvider>
-            {children}
-            <ConsentManager />
+            {/* Apply the accessibility text-size knob to the root rem (#239)
+                so all rem-based chrome scales without touching the equation
+                canvas. */}
+            <ChromeScaleProvider>
+              {children}
+              <ConsentManager />
+            </ChromeScaleProvider>
           </ReducedMotionProvider>
         </JotaiProvider>
         {gaId && (

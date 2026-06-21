@@ -216,7 +216,7 @@ export const FeedbackModal: React.FC = () => {
             <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER_SUBTLE} pb-4 mb-4 select-none`}>
               <div>
                 <h2 id="feedback-modal-title" className="text-lg font-bold text-white tracking-wide">Share Feedback</h2>
-                <p className="text-xs text-indigo-300 font-semibold tracking-wider uppercase mt-0.5">
+                <p className="text-xs text-indigo-300 font-semibold tracking-wider mt-0.5">
                   Help us improve Algebranch
                 </p>
               </div>
@@ -269,7 +269,7 @@ export const FeedbackModal: React.FC = () => {
                 <form className="flex flex-col gap-4">
                   {/* Subject Input */}
                   <div className="flex flex-col gap-1.5">
-                    <label className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
+                    <label className={`text-xs ${THEME_GLASS.TEXT_MUTED} tracking-wider font-semibold select-none`}>
                       Subject
                     </label>
                     <input
@@ -285,7 +285,7 @@ export const FeedbackModal: React.FC = () => {
 
                   {/* Message Input */}
                   <div className="flex flex-col gap-1.5">
-                    <label className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
+                    <label className={`text-xs ${THEME_GLASS.TEXT_MUTED} tracking-wider font-semibold select-none`}>
                       Description & Details
                     </label>
                     <textarea
@@ -301,7 +301,7 @@ export const FeedbackModal: React.FC = () => {
                   {/* Share selector — the live preview sits ABOVE the choice so the
                       user sees exactly what (if anything) a link would attach. */}
                   <div className="flex flex-col gap-1.5">
-                    <label className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
+                    <label className={`text-xs ${THEME_GLASS.TEXT_MUTED} tracking-wider font-semibold select-none`}>
                       What to attach
                     </label>
 
@@ -314,7 +314,7 @@ export const FeedbackModal: React.FC = () => {
                         />
                       ) : (
                         <div className={`h-20 flex items-center justify-center text-center px-4 ${THEME_GLASS.TREE_BG}`}>
-                          <span className={`text-[11px] ${THEME_GLASS.TEXT_MUTED}`}>No workspace to preview yet.</span>
+                          <span className={`text-xs ${THEME_GLASS.TEXT_MUTED}`}>No workspace to preview yet.</span>
                         </div>
                       )
                     ) : shareMode === 'equation' ? (
@@ -324,12 +324,12 @@ export const FeedbackModal: React.FC = () => {
                         </div>
                       ) : (
                         <div className={`h-20 flex items-center justify-center text-center px-4 ${THEME_GLASS.TREE_BG}`}>
-                          <span className={`text-[11px] ${THEME_GLASS.TEXT_MUTED}`}>No equation to preview yet.</span>
+                          <span className={`text-xs ${THEME_GLASS.TEXT_MUTED}`}>No equation to preview yet.</span>
                         </div>
                       )
                     ) : (
                       <div className={`h-20 flex items-center justify-center text-center px-4 ${THEME_GLASS.TREE_BG}`}>
-                        <span className={`text-[11px] ${THEME_GLASS.TEXT_MUTED}`}>Nothing from your workspace will be attached.</span>
+                        <span className={`text-xs ${THEME_GLASS.TEXT_MUTED}`}>Nothing from your workspace will be attached.</span>
                       </div>
                     )}
 
@@ -346,7 +346,7 @@ export const FeedbackModal: React.FC = () => {
                             aria-checked={active}
                             disabled={disabled}
                             onClick={() => setShareMode(mode)}
-                            className={`flex items-center justify-center gap-1.5 px-2 py-2 h-9 text-[11px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed ${active ? THEME_GLASS.BUTTON_SECONDARY_ACCENT : THEME_GLASS.BUTTON_SECONDARY}`}
+                            className={`flex items-center justify-center gap-1.5 px-2 py-2 h-9 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed ${active ? THEME_GLASS.BUTTON_SECONDARY_ACCENT : THEME_GLASS.BUTTON_SECONDARY}`}
                           >
                             <Icon size={12} />
                             <span>{label}</span>
@@ -355,12 +355,12 @@ export const FeedbackModal: React.FC = () => {
                       })}
                     </div>
 
-                    <p className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} leading-snug`}>{SHARE_HINT[shareMode]}</p>
+                    <p className={`text-xs ${THEME_GLASS.TEXT_MUTED} leading-snug`}>{SHARE_HINT[shareMode]}</p>
                   </div>
 
                   {/* Rating Selector */}
                   <div className="flex flex-col gap-1.5">
-                    <label className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} uppercase tracking-wider font-semibold select-none`}>
+                    <label className={`text-xs ${THEME_GLASS.TEXT_MUTED} tracking-wider font-semibold select-none`}>
                       Rate Your Experience (Optional)
                     </label>
                     <div className="flex items-center gap-1">
@@ -391,7 +391,7 @@ export const FeedbackModal: React.FC = () => {
                   </div>
 
                   {errorStr && (
-                    <div className={`flex items-start gap-2 text-[10px] p-2.5 animate-[fadeIn_0.2s_ease-out] ${THEME_GLASS.BUTTON_DANGER}`}>
+                    <div className={`flex items-start gap-2 text-xs p-2.5 animate-[fadeIn_0.2s_ease-out] ${THEME_GLASS.BUTTON_DANGER}`}>
                       <X size={13} className="shrink-0 mt-0.5" />
                       <span>{errorStr}</span>
                     </div>

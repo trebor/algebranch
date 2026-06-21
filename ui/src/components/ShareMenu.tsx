@@ -6,6 +6,7 @@
 import React from 'react';
 import { Share2, Check, Variable, Layers } from 'lucide-react';
 import { Tooltip } from './Tooltip';
+import { HotkeyHint } from './HotkeyHint';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
 
@@ -160,24 +161,38 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
           <div className={THEME_GLASS.COPY_MENU_HEADER}>
             <span className={THEME_GLASS.COPY_MENU_HEADER_LABEL}>Create Share Link</span>
           </div>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handleShareEquation}
-            className={`${THEME_GLASS.COPY_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
+          <Tooltip
+            content={<HotkeyHint label="Copy equation link" sequence={['C', 'L']} />}
+            position="left"
+            autoAlign={false}
+            wrapperClassName="w-full"
           >
-            <span>Share Equation</span>
-            <Variable size={12} className="text-indigo-400/70" />
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handleShareWorkspace}
-            className={`${THEME_GLASS.COPY_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleShareEquation}
+              className={`${THEME_GLASS.COPY_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
+            >
+              <span>Share Equation</span>
+              <Variable size={12} className="text-indigo-400/70" />
+            </button>
+          </Tooltip>
+          <Tooltip
+            content={<HotkeyHint label="Copy workspace link" sequence={['C', 'W']} />}
+            position="left"
+            autoAlign={false}
+            wrapperClassName="w-full"
           >
-            <span>Share Workspace</span>
-            <Layers size={12} className="text-indigo-400/70" />
-          </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleShareWorkspace}
+              className={`${THEME_GLASS.COPY_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
+            >
+              <span>Share Workspace</span>
+              <Layers size={12} className="text-indigo-400/70" />
+            </button>
+          </Tooltip>
         </div>
       )}
     </div>

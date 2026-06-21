@@ -62,9 +62,15 @@ export const THEME_GLASS = {
   TOGGLE_TRACK_OFF: 'bg-white/10',
   TOGGLE_KNOB: 'w-4 h-4 bg-white rounded-full transition-transform absolute left-1 top-1',
 
-  // Segmented radio group (e.g. the text-size control, #239).
-  SEGMENT_GROUP: 'inline-flex shrink-0 self-center rounded-xl border border-white/10 bg-neutral-950/60 p-0.5 gap-0.5',
-  SEGMENT_BTN: 'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
+  // Stacked variant of SETTING_ROW: label/description on top, a full-width
+  // control beneath. Used where a control (e.g. the segmented text-size picker,
+  // #239) needs the row's full width rather than sitting to the right.
+  SETTING_ROW_STACKED: 'flex flex-col gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/5',
+
+  // Segmented radio group (e.g. the text-size control, #239). Layout-neutral:
+  // the call site adds `w-full` and `flex-1` buttons for a full-width row.
+  SEGMENT_GROUP: 'flex rounded-xl border border-white/10 bg-neutral-950/60 p-0.5 gap-0.5',
+  SEGMENT_BTN: 'px-2.5 py-1 rounded-lg text-xs font-semibold text-center transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
   SEGMENT_BTN_ACTIVE: 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20',
   SEGMENT_BTN_IDLE: 'text-white/55 hover:text-white hover:bg-white/5',
 

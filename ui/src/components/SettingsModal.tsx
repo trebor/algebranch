@@ -128,19 +128,19 @@ export const SettingsModal: React.FC = () => {
 
             {/* Settings Content */}
             <div className="flex flex-col gap-5 overflow-y-auto pr-1">
-              <div className={THEME_GLASS.SETTING_ROW}>
+              <div className={THEME_GLASS.SETTING_ROW_STACKED}>
                 <div className="flex flex-col gap-1 select-none">
                   <span className="text-sm font-semibold text-white">
-                    Text size
+                    Interface text size
                   </span>
                   <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                    Make menus, tooltips, and labels larger for easier reading. The equation canvas resizes to fit on its own and is left untouched.
+                    Enlarge menus, tooltips, and labels. The equation stays as it is — use your browser&rsquo;s zoom to enlarge everything.
                   </span>
                 </div>
                 <div
                   role="radiogroup"
-                  aria-label="Text size"
-                  className={THEME_GLASS.SEGMENT_GROUP}
+                  aria-label="Interface text size"
+                  className={`${THEME_GLASS.SEGMENT_GROUP} w-full`}
                 >
                   {TEXT_SIZE_OPTIONS.map((opt) => {
                     const isActive = activeChromeScale === opt.scale;
@@ -152,7 +152,7 @@ export const SettingsModal: React.FC = () => {
                         aria-checked={isActive}
                         aria-label={opt.label}
                         onClick={() => handleSelectTextSize(opt.scale)}
-                        className={`${THEME_GLASS.SEGMENT_BTN} ${
+                        className={`${THEME_GLASS.SEGMENT_BTN} flex-1 ${
                           isActive
                             ? THEME_GLASS.SEGMENT_BTN_ACTIVE
                             : THEME_GLASS.SEGMENT_BTN_IDLE

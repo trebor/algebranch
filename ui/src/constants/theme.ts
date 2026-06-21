@@ -193,7 +193,7 @@ export const THEME_GLASS = {
   // Share scope menu (#241): wider than COPY_MENU so each row can carry a
   // selling subtitle describing what the link restores.
   SHARE_MENU: 'absolute right-0 top-full mt-1.5 z-50 w-64 p-1 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-0.5 text-left',
-  SHARE_MENU_ITEM: 'flex items-start gap-2.5 w-full px-2.5 py-2 rounded-lg text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none',
+  SHARE_MENU_ITEM: 'flex items-start gap-2.5 w-full px-2.5 py-2 rounded-lg text-left text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none',
   // The headline row (workspace): tinted so it reads as the recommended action.
   SHARE_MENU_ITEM_PRIMARY: 'bg-indigo-600/10 hover:bg-indigo-600/25 text-white',
   SHARE_MENU_ITEM_TITLE: 'text-xs font-semibold',

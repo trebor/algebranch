@@ -571,7 +571,7 @@ export const Sidebar: React.FC = () => {
   const leftSidebarOpen = useAtomValue(leftSidebarOpenAtom);
 
   return (
-    <div className={`flex flex-col gap-4 fixed top-16 bottom-0 left-0 z-38 transform transition-all duration-300 ease-in-out ${
+    <div className={`flex flex-col gap-4 fixed top-[var(--header-height)] bottom-0 left-0 z-38 transform transition-all duration-300 ease-in-out ${
       leftSidebarOpen
         ? 'w-80 p-4 translate-x-0 opacity-100'
         : 'w-80 p-4 -translate-x-full opacity-100 max-lg:pointer-events-none'

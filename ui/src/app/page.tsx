@@ -21,6 +21,8 @@ import { Tooltip } from '../components/Tooltip';
 import { HotkeyHint } from '../components/HotkeyHint';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { ShareMenu } from '../components/ShareMenu';
+import { SharedWorkspaceBanner } from '../components/SharedWorkspaceBanner';
+import { sharedWorkspaceBannerAtom } from '../store/sharedWorkspaceBanner';
 import { FactsStrip } from '../components/FactsStrip';
 import { BottomNav } from '../components/BottomNav';
 import { BottomSheet } from '../components/BottomSheet';
@@ -46,6 +48,7 @@ import {
   serializeTree,
   deserializeTree,
   serializeWorkspaceState,
+  getActivePathIds,
   INITIAL_EQUATION_STRING,
   leftSidebarOpenAtom,
   rightSidebarOpenAtom,
@@ -208,6 +211,7 @@ export default function Home() {
   const setAppHydrated = useSetAtom(appHydratedAtom);
   const createNewSession = useSetAtom(createNewSessionAtom);
   const createSessionFromState = useSetAtom(createSessionFromStateAtom);
+  const setSharedWorkspaceBanner = useSetAtom(sharedWorkspaceBannerAtom);
   const setDeleteConfirmationModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
   const currentTabName = useAtomValue(currentTabNameAtom);
   const addTab = useSetAtom(addTabAtom);
@@ -387,6 +391,9 @@ export default function Home() {
             const decompressed = await decompressString(cleanStateStr);
             const { tree, currentNodeId, name } = JSON.parse(decompressed);
             createSessionFromState({ tree, currentNodeId, name });
+            // Recipient loop (#241): the link restored someone's full derivation —
+            // acknowledge it and teach the share feature at this primed moment.
+            setSharedWorkspaceBanner(true);
             // Clear query parameter from the URL to prevent duplicate tabs on page refresh
             window.history.replaceState(null, '', window.location.pathname);
           } catch (err) {
@@ -496,7 +503,7 @@ export default function Home() {
     };
 
     initialize();
-  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession, createSessionFromState, setAppHydrated]);
+  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession, createSessionFromState, setSharedWorkspaceBanner, setAppHydrated]);
 
   // Save derivation steps to local storage and update address bar URL reactively
   React.useEffect(() => {
@@ -1233,8 +1240,12 @@ export default function Home() {
           <ShareMenu
             equationString={currentEq ? equationToString(currentEq) : ''}
             getCompressedWorkspace={() => serializeWorkspaceState(tree, currentNodeId, currentTabName)}
-            triggerClassName={THEME_GLASS.HEADER_BUTTON}
-            tooltip="Create share link"
+            derivationStepCount={
+              tree && currentNodeId && tree[currentNodeId]
+                ? getActivePathIds(tree, currentNodeId).size - 1
+                : 0
+            }
+            tooltip="Share this worked solution"
           />
           <Tooltip content="Submit Feedback or Report Bug" position="bottom" autoAlign={false}>
             <button
@@ -1591,6 +1602,7 @@ export default function Home() {
             )}
 
             <OnboardingTour />
+            <SharedWorkspaceBanner />
           </div>
         </main>
 

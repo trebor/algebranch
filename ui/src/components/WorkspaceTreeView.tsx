@@ -469,7 +469,11 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
               key={node.id}
               position="right"
               delay={300} // Snappy but deliberate 300ms hover delay to prevent jitter
-              wrapperClassName="z-10 absolute"
+              // Each node wrapper is its own stacking context (z-10), so the copy
+              // dropdown's z-50 only outranks content *within* this node — later
+              // sibling nodes (steps below) would paint over it. Lift the active
+              // node above its siblings while hovered/focused so its menu floats free.
+              wrapperClassName="z-10 absolute hover:z-30 focus-within:z-30"
               style={{
                 left: `${node.x}px`,
                 top: `${node.y}px`,
@@ -575,12 +579,15 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                     (e.g. the Feedback modal), where copying a step isn't useful. */}
                 {interactive && (
                   <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 contextual-actions z-20">
+                    {/* The `C E` hotkey copies the *current* step only, so the
+                        keycap hint would mislead on any other node — show the
+                        plain label there. */}
                     <CopyFormatMenu
                       getText={(format) => equationToFormat(node.equation, format)}
                       iconSize={10}
                       triggerClassName={`p-1 rounded-md border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-neutral-950 ${THEME_GLASS.TEXT_MUTED} hover:text-white hover:bg-white/10 hover:border-white/15 cursor-pointer`}
                       copiedClassName="text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10 opacity-100"
-                      tooltip={<HotkeyHint label="Copy equation" sequence={['C', 'E']} />}
+                      tooltip={isCurrent ? <HotkeyHint label="Copy equation" sequence={['C', 'E']} /> : 'Copy equation'}
                       tooltipPosition="top"
                       trackAction="copy_step"
                       trackCategory="history"

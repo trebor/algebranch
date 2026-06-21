@@ -63,7 +63,7 @@ export const BottomNav: React.FC = () => {
     <nav
       className="fixed bottom-0 left-0 right-0 z-55 lg:hidden bg-[#110f22]/90 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="flex items-end justify-around h-14 px-2">
+      <div className="bottom-nav-row flex items-end justify-around h-[var(--bottom-nav-height)] px-2">
         {/* Undo */}
         <NavButton
           icon={<Undo2 size={24} />}
@@ -138,6 +138,7 @@ const NavButton: React.FC<NavButtonProps> = ({
       <button
         onClick={onClick}
         disabled={disabled}
+        aria-label={label}
         className={`
           flex flex-col items-center justify-center w-full py-1.5 transition-colors
           ${disabled ? 'opacity-30 pointer-events-none' : ''}
@@ -145,7 +146,9 @@ const NavButton: React.FC<NavButtonProps> = ({
         `}
       >
         {icon}
-        <span className="text-xs mt-0.5">{label}</span>
+        {/* Hidden on short/landscape viewports (#247) so the nav collapses to an
+            icon-only strip; the icon's own tooltip still names each action. */}
+        <span className="text-xs mt-0.5 short-screen-hide">{label}</span>
       </button>
     </Tooltip>
   );

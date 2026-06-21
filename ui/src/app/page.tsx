@@ -20,6 +20,7 @@ import { OnboardingTour } from '../components/OnboardingTour';
 import { Tooltip } from '../components/Tooltip';
 import { HotkeyHint } from '../components/HotkeyHint';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
+import { WorkspaceSwitcher } from '../components/WorkspaceSwitcher';
 import { ShareMenu } from '../components/ShareMenu';
 import { SharedWorkspaceBanner } from '../components/SharedWorkspaceBanner';
 import { sharedWorkspaceBannerAtom } from '../store/sharedWorkspaceBanner';
@@ -28,6 +29,7 @@ import { BottomNav } from '../components/BottomNav';
 import { BottomSheet } from '../components/BottomSheet';
 import { RadialMenu } from '../components/RadialMenu';
 import { useIsMobile } from '../hooks/useBreakpoint';
+import { useIsShortScreen } from '../hooks/useIsShortScreen';
 import { useKeyboardShortcuts, ShortcutConfig } from '../hooks/useKeyboardShortcuts';
 import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
 import { buildEquationUrl, buildWorkspaceUrl } from '../utils/feedbackUrl';
@@ -237,6 +239,10 @@ export default function Home() {
   const previousGraphSize = useAtomValue(previousGraphSizeAtom);
   const isGraphViable = useAtomValue(isGraphViableAtom);
   const isMobile = useIsMobile();
+  // Short/landscape viewports collapse the horizontal tab strip into the compact
+  // WorkspaceSwitcher anchored top-left of the canvas, reclaiming the tab band
+  // (#247). Only one variant mounts, so the tab state is never duplicated.
+  const isShortScreen = useIsShortScreen();
   const equalsRef = React.useRef<HTMLSpanElement>(null);
   const equalsPopoverRef = React.useRef<HTMLDivElement>(null);
   const lastEqStrRef = React.useRef<string | null>(null);
@@ -1330,21 +1336,26 @@ export default function Home() {
 
         {/* Main workspace section */}
         <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden gap-3">
-          {isHydrated ? (
-            // Keep the tab bar visible during the tutorial (incl. mobile) so a
-            // user is never stranded in a tutorial workspace with no way to
-            // reach other (non-tutorial) workspaces — a permanent escape hatch.
-            <div className="shrink-0">
-              <WorkspaceTabs />
-            </div>
-          ) : (
-            <div className="shrink-0">
-              <div className="w-full flex items-center justify-between bg-transparent px-0 max-lg:px-3 pt-2 pb-0 gap-4 shrink-0 select-none">
-                <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
-                  <div className="h-[30px] w-32 bg-white/5 border border-white/5 animate-pulse rounded-xl" />
+          {/* Short/landscape viewports drop the in-flow tab band entirely; the
+              WorkspaceSwitcher (rendered inside the canvas below) takes over so
+              the scarce vertical axis goes to the math (#247). The strip still
+              stays reachable mid-tutorial as a permanent escape hatch on roomy
+              viewports — and the switcher preserves that escape hatch on short
+              ones, since it is never gated behind onboarding state. */}
+          {!isShortScreen && (
+            isHydrated ? (
+              <div className="shrink-0">
+                <WorkspaceTabs />
+              </div>
+            ) : (
+              <div className="shrink-0">
+                <div className="w-full flex items-center justify-between bg-transparent px-0 max-lg:px-3 pt-2 pb-0 gap-4 shrink-0 select-none">
+                  <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+                    <div className="h-[30px] w-32 bg-white/5 border border-white/5 animate-pulse rounded-xl" />
+                  </div>
                 </div>
               </div>
-            </div>
+            )
           )}
           <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL} overflow-hidden max-lg:border-x-0 max-lg:rounded-none`}>
 
@@ -1356,18 +1367,34 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className={`active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full px-2 pt-16 pb-4 sm:p-4 lg:p-8 text-base font-light cursor-default relative group/canvas ${
-                onboardingChapterId ? 'overflow-auto lg:overflow-hidden' : 'overflow-auto'
+              className={`active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full px-2 pt-16 sm:px-4 sm:pt-4 lg:px-8 lg:pt-8 text-base font-light cursor-default relative group/canvas ${
+                onboardingChapterId
+                  ? 'pb-4 lg:pb-8 overflow-auto lg:overflow-hidden'
+                  // The fixed BottomNav (h-14 + safe-area, lg:hidden) overlays the
+                  // canvas bottom on phones/tablets; pad the centering region down
+                  // to the nav's top edge so the expression centers in the visible
+                  // space above it rather than sinking behind it (#247 follow-up).
+                  // The canvas background still extends behind the nav as intended.
+                  : 'pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] lg:pb-8 overflow-auto'
               }`}
             >
+              {/* Collapsed workspace switcher — anchored top-left of the
+                  expression space on short/landscape viewports, replacing the
+                  reclaimed tab band (#247). Gated on hydration so it reads the
+                  real, persisted tabs rather than the SSR fallback. */}
+              {isShortScreen && isHydrated && (
+                <div className="absolute top-3 left-3 z-40">
+                  <WorkspaceSwitcher />
+                </div>
+              )}
               {/* Calculating Math Engine Spinner / Toast Notification */}
               {toast ? (
-                <div key={`toast-${toast.key}`} className={`absolute top-4 left-4 z-30 ${THEME_GLASS.TOAST_ALERT}`}>
+                <div key={`toast-${toast.key}`} className={`absolute top-4 left-4 z-30 short-screen-toast-offset ${THEME_GLASS.TOAST_ALERT}`}>
                   <Check size={12} className="text-emerald-400 shrink-0" />
                   <span>{toast.message}</span>
                 </div>
               ) : isMathLoading ? (
-                <div className={`absolute top-4 left-4 z-30 ${THEME_GLASS.TOAST_LOADING}`}>
+                <div className={`absolute top-4 left-4 z-30 short-screen-toast-offset ${THEME_GLASS.TOAST_LOADING}`}>
                   <div className={`h-3 w-3 border-2 ${THEME_GLASS.SPINNER}`} />
                   <span>Calculating...</span>
                 </div>

@@ -13,6 +13,12 @@
      off its bottom edge all read this var, so a short-screen override (below)
      compacts every offset in one place. Default 4rem (64px). */
   --header-height: 4rem;
+  /* Bottom-nav row height (#247). The fixed mobile BottomNav reads this, and the
+     canvas pads its centering region down by it so the expression sits above the
+     nav, not behind it. A short-screen override (below) shrinks the nav once its
+     labels are hidden, and the canvas padding follows in one place. Default
+     3.5rem (56px), matching the original h-14. */
+  --bottom-nav-height: 3.5rem;
 }
 
 /* Short, narrow viewports — mobile landscape and similar (#218). The 64px
@@ -22,6 +28,9 @@
 @media (max-height: 500px) and (max-width: 1024px) {
   :root {
     --header-height: 3rem; /* 48px */
+    /* Labels are hidden on short screens (.short-screen-hide), so the bottom nav
+       can shrink to an icon-only strip and hand those pixels to the expression. */
+    --bottom-nav-height: 2.75rem; /* 44px */
   }
   /* Secondary header chrome (subtitle) collapses to free vertical space. */
   .short-screen-hide {
@@ -32,6 +41,30 @@
   .header-logo {
     height: 2.25rem; /* 36px */
     width: 2.25rem;
+  }
+  /* The workspace tab strip collapses into a pill anchored top-left of the
+     expression space (#247); the canvas toast/loading badge shares that corner,
+     so drop it below the pill while this query matches. Unlayered, so it
+     overrides the Tailwind top-4 utility. */
+  .short-screen-toast-offset {
+    top: 3.5rem; /* 56px — clears the ~36px switcher pill + margin */
+  }
+  /* With the labels gone the bottom-nav buttons are icon-only, so the row's
+     items-end alignment leaves the icons hugging the bottom edge with all the
+     slack stacked on top. Center them in the row instead so the top/bottom space
+     is balanced and the icons lift off the screen edge (#247). */
+  .bottom-nav-row {
+    align-items: center;
+  }
+  /* Vertical real estate is critical here, and the auto-scaled expression ends up
+     small — so the canvas's generous top/bottom padding reads as too much empty
+     space. Trim it to just what the overlays need: the top clears the top-left
+     switcher pill (+ top-right action buttons), the bottom clears the icon-only
+     nav with a hair of gap. Unlayered, so it overrides the Tailwind pt-*/pb-*
+     utilities only while this query matches (#247). */
+  .active-workspace-canvas {
+    padding-top: 3rem; /* 48px — clears the switcher pill at top-3 */
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 0.25rem);
   }
 }
 

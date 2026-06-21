@@ -145,7 +145,7 @@ const NavButton: React.FC<NavButtonProps> = ({
         `}
       >
         {icon}
-        <span className="text-[10px] mt-0.5">{label}</span>
+        <span className="text-xs mt-0.5">{label}</span>
       </button>
     </Tooltip>
   );

@@ -35,7 +35,7 @@ export const FactsStrip: React.FC = () => {
     <div className={`flex items-center gap-2 px-3 pb-2 pt-1 select-none shrink-0 min-w-0 ${
       inTour ? '' : graphSize === 'hidden' ? 'max-lg:mb-[calc(3.5rem+env(safe-area-inset-bottom))]' : ''
     }`}>
-      <span className={`shrink-0 text-[9px] uppercase tracking-wider font-semibold ${THEME_GLASS.TEXT_MUTED}`}>
+      <span className={`shrink-0 text-[0.5625rem] tracking-wider font-semibold ${THEME_GLASS.TEXT_MUTED}`}>
         Substitutions
       </span>
       <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none min-w-0 py-0.5">

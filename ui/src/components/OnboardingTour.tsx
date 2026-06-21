@@ -394,7 +394,7 @@ export const OnboardingTour: React.FC = () => {
               />
               <div>
                 <h3 id="onboarding-prompt-title" className="font-bold text-white text-base lg:text-lg">Welcome to Algebranch!</h3>
-                <p className="text-[10px] text-indigo-300/60 font-medium">Interactive Algebra Tour</p>
+                <p className="text-xs text-indigo-300/60 font-medium">Interactive Algebra Tour</p>
               </div>
             </div>
             <button
@@ -448,12 +448,12 @@ export const OnboardingTour: React.FC = () => {
                             {chapter.title}
                           </p>
                           {hasProgress && (
-                            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+                            <span className="text-[0.5rem] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 tracking-wider">
                               Resume Step {savedStep + 1}
                             </span>
                           )}
                         </div>
-                        <p className={`text-[10px] ${THEME_GLASS.TEXT_MUTED_LIGHT} truncate mt-0.5`}>
+                        <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_LIGHT} truncate mt-0.5`}>
                           {chapter.description}
                         </p>
                       </div>
@@ -525,7 +525,7 @@ export const OnboardingTour: React.FC = () => {
               </motion.div>
 
               <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-bold tracking-wider uppercase text-emerald-400/80">
+                <span className="text-xs font-bold tracking-wider text-emerald-400/80">
                   Chapter Complete — {activeChapter.title}
                 </span>
                 <h3 id="chapter-complete-title" className="font-bold text-white text-base lg:text-lg">{activeStep.title}</h3>
@@ -556,7 +556,7 @@ export const OnboardingTour: React.FC = () => {
                 <div className="flex items-center justify-between gap-2.5 w-full">
                   <button
                     onClick={handleAllChapters}
-                    className={`flex-1 h-8 px-2 text-[11px] font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
+                    className={`flex-1 h-8 px-2 text-xs font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
                   >
                     <BookOpen size={12} className="shrink-0" />
                     <span>All Chapters</span>
@@ -564,7 +564,7 @@ export const OnboardingTour: React.FC = () => {
                   {nextChapter && (
                     <button
                       onClick={handleFinishTour}
-                      className={`flex-1 h-8 px-2 text-[11px] font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
+                      className={`flex-1 h-8 px-2 text-xs font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
                     >
                       <Play size={12} className="shrink-0" />
                       <span>Explore Freely</span>
@@ -598,11 +598,11 @@ export const OnboardingTour: React.FC = () => {
               aria-label="Chapters menu"
             >
               <BookOpen size={13} className="group-hover/title:scale-110 transition-transform" />
-              <span className="text-[10px] font-bold tracking-wider uppercase hover:underline">{activeChapter.title}</span>
+              <span className="text-xs font-bold tracking-wider hover:underline">{activeChapter.title}</span>
             </button>
             <button
               onClick={() => setStep(null)}
-              className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${THEME_GLASS.PANEL_BORDER} ${THEME_GLASS.TEXT_MUTED_BRIGHT} hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-1`}
+              className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${THEME_GLASS.PANEL_BORDER} ${THEME_GLASS.TEXT_MUTED_BRIGHT} hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-1`}
               aria-label="Exit tutorial"
             >
               <span>Exit Tutorial</span>
@@ -618,7 +618,7 @@ export const OnboardingTour: React.FC = () => {
               {/* Title & Desc */}
               <div className="flex flex-col gap-1">
                 <h4 className="text-xs font-bold text-white">{activeStep.title}</h4>
-                <p className={`text-[11px] ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed mt-0.5`}>
+                <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed mt-0.5`}>
                   {activeStep.description}
                 </p>
               </div>
@@ -627,34 +627,34 @@ export const OnboardingTour: React.FC = () => {
               {activeStep.legend === 'nodeTypes' && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
                   <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-sky-300 font-serif italic font-medium text-[10px]`}>x</span>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-sky-300 font-serif italic font-medium text-xs`}>x</span>
                     <div className="flex flex-col">
-                      <span className="font-bold text-white/90 text-[9px] leading-tight">Variable</span>
-                      <span className="text-sky-300/80 text-[7px] leading-none">The unknown to find</span>
+                      <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Variable</span>
+                      <span className="text-sky-300/80 text-[0.4375rem] leading-none">The unknown to find</span>
                     </div>
                   </div>
 
                   <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-yellow-400/90 font-semibold text-[10px]`}>3</span>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-yellow-400/90 font-semibold text-xs`}>3</span>
                     <div className="flex flex-col">
-                      <span className="font-bold text-white/90 text-[9px] leading-tight">Constant</span>
-                      <span className="text-yellow-400/85 text-[7px] leading-none">A known number</span>
+                      <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Constant</span>
+                      <span className="text-yellow-400/85 text-[0.4375rem] leading-none">A known number</span>
                     </div>
                   </div>
 
                   <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-white/90 font-bold text-[10px]`}>+</span>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-white/90 font-bold text-xs`}>+</span>
                     <div className="flex flex-col">
-                      <span className="font-bold text-white/90 text-[9px] leading-tight">Operator</span>
-                      <span className={`${THEME_GLASS.TEXT_MUTED} text-[7px] leading-none`}>Combines terms</span>
+                      <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Operator</span>
+                      <span className={`${THEME_GLASS.TEXT_MUTED} text-[0.4375rem] leading-none`}>Combines terms</span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-zinc-900/60 border border-zinc-800/40 text-zinc-500">
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_LOCKED} text-[10px]`}>4</span>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_LOCKED} text-xs`}>4</span>
                     <div className="flex flex-col">
-                      <span className="font-bold text-zinc-400 text-[9px] leading-tight font-medium">Immobile</span>
-                      <span className="text-zinc-500/80 text-[7px] leading-none font-sans">Locked in place</span>
+                      <span className="font-bold text-zinc-400 text-[0.5625rem] leading-tight font-medium">Immobile</span>
+                      <span className="text-zinc-500/80 text-[0.4375rem] leading-none font-sans">Locked in place</span>
                     </div>
                   </div>
                 </div>
@@ -664,18 +664,18 @@ export const OnboardingTour: React.FC = () => {
               {activeStep.legend === 'sourceTarget' && (
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_SOURCE} text-[10px]`}>4</span>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_SOURCE} text-xs`}>4</span>
                     <div className="flex flex-col">
-                      <span className="font-bold text-white/90 text-[9px] leading-tight">Source</span>
-                      <span className="text-indigo-300/80 text-[7px] leading-none">The term you picked up</span>
+                      <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Source</span>
+                      <span className="text-indigo-300/80 text-[0.4375rem] leading-none">The term you picked up</span>
                     </div>
                   </div>
 
                   <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_TARGET} text-[10px]`}>11</span>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_TARGET} text-xs`}>11</span>
                     <div className="flex flex-col">
-                      <span className="font-bold text-white/90 text-[9px] leading-tight">Target</span>
-                      <span className="text-emerald-300/80 text-[7px] leading-none">Tap to drop it there</span>
+                      <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Target</span>
+                      <span className="text-emerald-300/80 text-[0.4375rem] leading-none">Tap to drop it there</span>
                     </div>
                   </div>
                 </div>
@@ -688,7 +688,7 @@ export const OnboardingTour: React.FC = () => {
               scroll container so it goes true full-bleed regardless of scrollbars. */}
           <div className={`w-full shrink-0 ${THEME_GLASS.TOUR_FOOTER}`}>
             <div className="max-w-2xl mx-auto w-full px-4 py-3 sm:px-6 flex items-center justify-between">
-              <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} font-bold`}>
+              <span className={`text-xs ${THEME_GLASS.TEXT_MUTED} font-bold`}>
                 Step {stepIndex + 1} of {activeChapter.steps.length}
               </span>
 
@@ -696,7 +696,7 @@ export const OnboardingTour: React.FC = () => {
                 {stepIndex > 0 && (
                   <button
                     onClick={() => setStep(stepIndex - 1)}
-                    className={`h-7 px-2.5 text-[10px] font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_SECONDARY}`}
+                    className={`h-7 px-2.5 text-xs font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_SECONDARY}`}
                   >
                     <ArrowLeft size={10} />
                     <span>Back</span>
@@ -706,7 +706,7 @@ export const OnboardingTour: React.FC = () => {
                 <button
                   ref={stepNextButtonRef}
                   onClick={() => setStep(isLastStep ? null : stepIndex + 1)}
-                  className={`h-7 px-3 text-[10px] font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_PRIMARY}`}
+                  className={`h-7 px-3 text-xs font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_PRIMARY}`}
                 >
                   <span>{isLastStep ? 'Finish' : 'Next'}</span>
                   {isLastStep ? <CheckCircle2 size={10} /> : <ArrowRight size={10} />}

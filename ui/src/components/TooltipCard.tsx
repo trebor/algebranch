@@ -8,7 +8,7 @@ import { PreviewEquationNode } from './PreviewEquationNode';
 import { THEME_GLASS } from '../constants/theme';
 
 export interface TooltipCardProps {
-  /** Small uppercase category/kind label at the top-left. */
+  /** Small category/kind label at the top-left. */
   readonly eyebrow?: React.ReactNode;
   /** Small muted detail at the top-right (e.g. "Step 3"). */
   readonly meta?: React.ReactNode;
@@ -47,7 +47,7 @@ export const TooltipCard: React.FC<TooltipCardProps> = ({
     {(eyebrow || meta) && (
       <div className={`flex items-center justify-between gap-8 border-b ${THEME_GLASS.PANEL_BORDER_SUBTLE} pb-1.5`}>
         {eyebrow ? <span className={THEME_GLASS.TOOLTIP_EYEBROW}>{eyebrow}</span> : <span />}
-        {meta && <span className={`${THEME_GLASS.TEXT_MUTED_EXTRA} text-[9px] font-medium`}>{meta}</span>}
+        {meta && <span className={`${THEME_GLASS.TEXT_MUTED_EXTRA} text-[0.5625rem] font-medium`}>{meta}</span>}
       </div>
     )}
     {title && <span className={THEME_GLASS.TOOLTIP_TITLE}>{title}</span>}
@@ -70,7 +70,7 @@ export const TooltipCard: React.FC<TooltipCardProps> = ({
       <span className={THEME_GLASS.TOOLTIP_RAW_EQ}>{rawEquation}</span>
     ) : null}
     {footer && (
-      <div className={`${THEME_GLASS.TEXT_MUTED} text-[10px] flex items-center justify-between gap-4 pt-0.5`}>
+      <div className={`${THEME_GLASS.TEXT_MUTED} text-xs flex items-center justify-between gap-4 pt-0.5`}>
         {footer}
       </div>
     )}

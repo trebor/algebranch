@@ -3,6 +3,19 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Accessibility text-size knob (#239). ChromeScaleProvider overwrites this
+     from the persisted setting; 1 = honor the browser/OS font-size preference
+     unchanged. The `html` rule below multiplies the root rem by it, so every
+     rem-based piece of chrome scales together while the auto-fitting equation
+     canvas (useMathScale) stays put. */
+  --chrome-scale: 1;
+}
+
+html {
+  /* `100%` inherits the browser/OS default font-size (so user preferences are
+     honored); the multiplier is our in-app chrome scale. Sizing chrome in rem
+     therefore tracks both. */
+  font-size: calc(100% * var(--chrome-scale));
 }
 
 @theme inline {
@@ -23,6 +36,12 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  /* Dyslexia-friendly reading defaults (#239, WCAG 1.4.12): a roomy default
+     line-height and consistent left alignment for prose/labels. Components that
+     need tighter leading opt in with `leading-*`; nothing in reading contexts
+     should be justified. */
+  line-height: 1.5;
+  text-align: left;
 }
 
 /* Onboarding tutorial: gentle breathe for the white annotation circle marking the next-click element */

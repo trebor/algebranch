@@ -49,7 +49,7 @@ export default function PrivacyPage() {
 
           <div className={`flex flex-col gap-6 text-sm ${THEME_GLASS.TEXT_BODY} leading-relaxed`}>
             <section className="flex flex-col gap-2">
-              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} uppercase tracking-wider`}>
+              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} tracking-wider`}>
                 1. Overview
               </h2>
               <p>
@@ -58,7 +58,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="flex flex-col gap-2">
-              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} uppercase tracking-wider`}>
+              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} tracking-wider`}>
                 2. Analytics & Cookies
               </h2>
               <p>
@@ -67,7 +67,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="flex flex-col gap-2">
-              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} uppercase tracking-wider`}>
+              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} tracking-wider`}>
                 3. What We Collect (and What We Don&apos;t)
               </h2>
               <p>
@@ -79,7 +79,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="flex flex-col gap-2">
-              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} uppercase tracking-wider`}>
+              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} tracking-wider`}>
                 4. Consent Control
               </h2>
               <p>
@@ -95,7 +95,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="flex flex-col gap-2">
-              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} uppercase tracking-wider`}>
+              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} tracking-wider`}>
                 5. Contact
               </h2>
               <p>

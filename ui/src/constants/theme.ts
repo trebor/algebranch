@@ -62,6 +62,12 @@ export const THEME_GLASS = {
   TOGGLE_TRACK_OFF: 'bg-white/10',
   TOGGLE_KNOB: 'w-4 h-4 bg-white rounded-full transition-transform absolute left-1 top-1',
 
+  // Segmented radio group (e.g. the text-size control, #239).
+  SEGMENT_GROUP: 'inline-flex shrink-0 self-center rounded-xl border border-white/10 bg-neutral-950/60 p-0.5 gap-0.5',
+  SEGMENT_BTN: 'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
+  SEGMENT_BTN_ACTIVE: 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20',
+  SEGMENT_BTN_IDLE: 'text-white/55 hover:text-white hover:bg-white/5',
+
 
   // Controls & Popovers
   FIELD_SELECT: 'bg-neutral-950/80 border border-white/5 hover:border-white/10 text-indigo-100 hover:text-white focus:outline-none focus:border-indigo-500/80 transition-all duration-150 font-mono cursor-pointer rounded-xl',
@@ -107,9 +113,9 @@ export const THEME_GLASS = {
   TOOLTIP_DETAILS: 'bg-neutral-950/98 shadow-[0_0_30px_rgba(99,102,241,0.25)] border border-indigo-500/20',
 
   // --- Unified tooltip card (workspaces, tabs, library, history) ---
-  TOOLTIP_EYEBROW: 'text-[10px] text-indigo-400 font-bold tracking-wider uppercase select-none',
+  TOOLTIP_EYEBROW: 'text-xs text-indigo-400 font-bold tracking-wider select-none',
   TOOLTIP_TITLE: 'text-xs font-bold text-white break-words',
-  TOOLTIP_DESC: 'text-[11px] text-zinc-300 leading-snug',
+  TOOLTIP_DESC: 'text-xs text-zinc-300 leading-snug',
   TOOLTIP_EQUATION: 'text-base sm:text-lg font-semibold text-indigo-100',
   TOOLTIP_EQ_SEP: 'font-mono text-indigo-400 select-none',
   TOOLTIP_RAW_EQ: 'font-mono text-xs text-indigo-300 break-words',
@@ -146,22 +152,22 @@ export const THEME_GLASS = {
   TOUR_CARD: 'w-full shrink-0 border-t border-white/10 bg-neutral-950/95 rounded-b-2xl z-40 overflow-hidden flex flex-col max-h-[38dvh] sm:max-h-none shadow-lg',
   EQUALS_SIGN: 'relative text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black transition-all',
   EQUALS_SIGN_INTERACTIVE: 'cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95',
-  EQUALS_BADGE: 'absolute -top-2 -right-2 w-5 h-5 rounded-full bg-indigo-600 border border-indigo-400 flex items-center justify-center text-[11px] leading-none text-white font-bold select-none cursor-pointer shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse z-20',
+  EQUALS_BADGE: 'absolute -top-2 -right-2 w-5 h-5 rounded-full bg-indigo-600 border border-indigo-400 flex items-center justify-center text-xs leading-none text-white font-bold select-none cursor-pointer shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse z-20',
   // Positioning is supplied at render time: the popover is portaled to <body>
   // with fixed coords (see page.tsx) so it escapes the overflow-clipping /
   // scaled equation ancestors that previously hid it behind content (#172).
   EQUALS_POPOVER: 'w-48 p-3 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-1.5 text-left',
-  EQUALS_POPOVER_TITLE: 'text-[9px] font-bold text-indigo-400 uppercase tracking-wider select-none',
-  EQUALS_POPOVER_DESC: 'text-[10.5px] leading-snug text-white/70',
-  EQUALS_POPOVER_BTN: 'mt-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-[9px] font-bold rounded-lg self-end transition-all cursor-pointer shadow-md shadow-indigo-600/20 border border-indigo-400/20',
+  EQUALS_POPOVER_TITLE: 'text-[0.5625rem] font-bold text-indigo-400 tracking-wider select-none',
+  EQUALS_POPOVER_DESC: 'text-xs leading-snug text-white/70',
+  EQUALS_POPOVER_BTN: 'mt-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-[0.5625rem] font-bold rounded-lg self-end transition-all cursor-pointer shadow-md shadow-indigo-600/20 border border-indigo-400/20',
   // Copy-as-format menu (#46): popover offering Plain / LaTeX / Unicode export.
   COPY_MENU: 'absolute right-0 top-full mt-1.5 z-50 w-44 p-1 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-0.5 text-left',
-  COPY_MENU_ITEM: 'flex items-center justify-between gap-2 w-full px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none',
+  COPY_MENU_ITEM: 'flex items-center justify-between gap-2 w-full px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none',
   // Header naming the export scope (#46, option B): an eyebrow label over the
   // nicely-rendered destination expression, so it's clear what will be copied.
   COPY_MENU_HEADER: 'flex flex-col gap-0.5 px-2.5 pt-1.5 pb-2 mb-0.5 border-b border-white/10 select-none',
-  COPY_MENU_HEADER_LABEL: 'text-[9px] font-bold uppercase tracking-wider text-indigo-400/80',
-  COPY_MENU_HEADER_EXPR: 'block truncate text-[12px] text-indigo-50',
+  COPY_MENU_HEADER_LABEL: 'text-[0.5625rem] font-bold tracking-wider text-indigo-400/80',
+  COPY_MENU_HEADER_EXPR: 'block truncate text-xs text-indigo-50',
   // Off-path node while an export-scope preview is active (#46): faded so the
   // root -> selected path reads as the slice being copied.
   COPY_PREVIEW_DIMMED: 'opacity-25 transition-opacity duration-200',
@@ -173,8 +179,8 @@ export const THEME_GLASS = {
   EQUALS_MINI_PETAL_MUL: 'text-rose-400 border-rose-500/20',
   EQUALS_MINI_PETAL_DIV: 'text-pink-400 border-pink-500/20',
   EQUALS_MINI_PETAL_ROOT: 'text-emerald-400 border-emerald-500/20',
-  EQUALS_MINI_CENTER: 'w-5 h-5 rounded-full bg-indigo-600/30 border border-indigo-400/50 flex items-center justify-center text-[9px] font-bold text-indigo-300 shadow-md',
-  EQUALS_MINI_PETAL_BASE: 'w-3.5 h-3.5 rounded-full bg-neutral-900 border border-white/10 text-[6.5px] font-bold flex items-center justify-center shadow-sm',
+  EQUALS_MINI_CENTER: 'w-5 h-5 rounded-full bg-indigo-600/30 border border-indigo-400/50 flex items-center justify-center text-[0.5625rem] font-bold text-indigo-300 shadow-md',
+  EQUALS_MINI_PETAL_BASE: 'w-3.5 h-3.5 rounded-full bg-neutral-900 border border-white/10 text-[0.40625rem] font-bold flex items-center justify-center shadow-sm',
   PREVIEW_EQUALS_ACTIVE: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5',
   PREVIEW_EQUALS_INACTIVE: 'text-zinc-600 border-zinc-500/10 bg-zinc-500/5',
   BANNER_DANGER: 'mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-400 max-w-xs text-center break-all shadow-lg',
@@ -214,7 +220,7 @@ export const THEME_GLASS = {
   PING_SUBSTITUTE: 'bg-teal-400/40',
 
   // --- Substitution (#3): facts strip + history-tree badge ---
-  FACT_CHIP: 'flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300/90 text-[10px] font-semibold select-none shrink-0 whitespace-nowrap',
+  FACT_CHIP: 'flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300/90 text-xs font-semibold select-none shrink-0 whitespace-nowrap',
   FACT_CHIP_ICON: 'flex items-center justify-center h-4 w-4 rounded-full bg-teal-500/80 text-white shrink-0',
   FACT_CHIP_SOURCE: 'text-teal-300/50 font-medium',
   TREE_NODE_BADGE_SUBSTITUTE: 'bg-teal-600 border-teal-400 text-teal-50',
@@ -223,7 +229,7 @@ export const THEME_GLASS = {
   // --- Domain restrictions (#63): history-tree badge + Step Details row ---
   // Amber "caveat" treatment so an assumed ≠0 restriction can't slip by unseen.
   TREE_NODE_BADGE_RESTRICTION: 'bg-amber-600 border-amber-400 text-amber-50',
-  TOOLTIP_ASSUMPTION: 'flex items-center gap-1.5 text-[11px] font-semibold leading-snug text-amber-300 rounded-md border border-amber-400/30 bg-amber-500/10 px-1.5 py-1',
+  TOOLTIP_ASSUMPTION: 'flex items-center gap-1.5 text-xs font-semibold leading-snug text-amber-300 rounded-md border border-amber-400/30 bg-amber-500/10 px-1.5 py-1',
   TOOLTIP_ASSUMPTION_ICON: 'shrink-0 text-amber-400',
   TREE_NODE_BADGE_CONTRADICTION: 'bg-red-600 border-red-400 text-red-50',
   TREE_NODE_BADGE_IDENTITY: 'bg-emerald-600 border-emerald-400 text-emerald-50',
@@ -249,15 +255,15 @@ export const THEME_GLASS = {
   SPINNER_BTN: 'w-6 h-6 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all cursor-pointer',
   FIELD_INPUT: 'bg-neutral-900 border border-white/10 text-white placeholder-white/30 focus:outline-none transition-all font-mono rounded-lg',
   BUTTON_PRIMARY_SM: 'relative px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md cursor-pointer active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none',
-  ALERT_DANGER_SM: 'text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-2 py-1 max-w-xs text-center',
-  TEXT_BUTTON_MUTED: 'text-[10px] text-white/55 hover:text-white/70 transition-colors cursor-pointer',
+  ALERT_DANGER_SM: 'text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-2 py-1 max-w-xs text-center',
+  TEXT_BUTTON_MUTED: 'text-xs text-white/55 hover:text-white/70 transition-colors cursor-pointer',
 
   // --- Graphing specific ---
   GRAPH_AXIS: 'stroke-white/40',
   GRAPH_GRID_LINE: 'stroke-white/25',
   GRAPH_TICK_LINE: 'stroke-white/15',
   GRAPH_GUIDE_LINE: 'stroke-white/15',
-  GRAPH_TICK_TEXT: 'fill-white/55 text-[10px] font-mono select-none',
+  GRAPH_TICK_TEXT: 'fill-white/55 text-xs font-mono select-none',
   GRAPH_CURVE_LHS: 'stroke-indigo-400',
   GRAPH_CURVE_RHS: 'stroke-amber-400',
   GRAPH_SWATCH_LHS: 'bg-indigo-400',
@@ -267,7 +273,7 @@ export const THEME_GLASS = {
   GRAPH_LEGEND_CHIP: 'text-xs font-mono px-2.5 py-1 rounded-lg border bg-neutral-950/80 border-white/10 select-none',
   PANEL_TAB_ACTIVE: 'text-indigo-300 border-b-2 border-indigo-500 font-semibold text-xs transition-all',
   PANEL_TAB_IDLE: 'text-white/55 hover:text-white/70 text-xs transition-all border-b-2 border-transparent',
-  GRAPH_TOOLTIP: 'absolute z-10 pointer-events-none flex flex-col gap-1 px-2.5 py-1.5 rounded-lg bg-neutral-950/90 border border-white/10 backdrop-blur-md text-[10px] font-mono shadow-xl text-white/95 leading-none',
+  GRAPH_TOOLTIP: 'absolute z-10 pointer-events-none flex flex-col gap-1 px-2.5 py-1.5 rounded-lg bg-neutral-950/90 border border-white/10 backdrop-blur-md text-xs font-mono shadow-xl text-white/95 leading-none',
   GRAPH_TOOLTIP_HEADER: 'flex items-center gap-1.5 text-white/50 border-b border-white/5 pb-1 mb-1 font-bold',
   GRAPH_TOOLTIP_ROW_ACTIVE: 'flex items-center gap-1.5 text-white font-bold opacity-100 scale-[1.02] origin-left transition-all duration-150',
   GRAPH_TOOLTIP_ROW_INACTIVE: 'flex items-center gap-1.5 text-white/40 opacity-35 scale-95 origin-left transition-all duration-150',

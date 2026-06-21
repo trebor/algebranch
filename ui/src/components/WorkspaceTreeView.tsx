@@ -424,14 +424,14 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                 className="w-56 p-3 z-50 text-left lowercase-none normal-case flex flex-col gap-1.5 pointer-events-auto"
                 content={
                   <div className="flex flex-col gap-0.5 text-fuchsia-300 font-semibold p-1">
-                    <div className="flex items-center gap-1 uppercase tracking-wider text-[8px] font-bold text-fuchsia-400">
+                    <div className="flex items-center gap-1 tracking-wider text-[0.5rem] font-bold text-fuchsia-400">
                       <Infinity size={10} />
                       <span>Loop Detected</span>
                     </div>
-                    <div className="text-[10px] lowercase-none normal-case leading-tight">
+                    <div className="text-xs lowercase-none normal-case leading-tight">
                       This action leads back to <strong>Step {loopAncestor.stepIndex} ({loopAncestor.label})</strong>.
                     </div>
-                    <div className={`text-[9px] ${THEME_GLASS.TEXT_MUTED} mt-1 italic`}>
+                    <div className={`text-[0.5625rem] ${THEME_GLASS.TEXT_MUTED} mt-1 italic`}>
                       Click to select and return to Step {loopAncestor.stepIndex}.
                     </div>
                   </div>
@@ -448,7 +448,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                   } ${interactive ? '' : 'cursor-default'}`}
                 >
                   {/* Step index badge on top-left */}
-                  <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
+                  <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center font-bold shadow transition-all duration-300 ${
                     isLoopHighlight
                       ? THEME_GLASS.TREE_NODE_BADGE_LOOP
                       : 'bg-fuchsia-950 border-fuchsia-500/30 text-fuchsia-400'
@@ -504,7 +504,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                 } ${exportPreviewActive && !isActive ? THEME_GLASS.COPY_PREVIEW_DIMMED : ''} ${interactive ? '' : 'cursor-default'}`}
               >
                 {/* Step index badge on top-left */}
-                <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[8px] flex items-center justify-center font-bold shadow transition-all duration-300 ${
+                <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center font-bold shadow transition-all duration-300 ${
                   isLoopHighlight
                     ? THEME_GLASS.TREE_NODE_BADGE_LOOP
                     : isCurrent
@@ -523,7 +523,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                     className="w-max max-w-[240px] text-center text-sm"
                     wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[substituteSlot]} -right-1.5`}
                   >
-                    <span className={`h-4 w-4 rounded-full border text-[8px] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_SUBSTITUTE}`}>
+                    <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_SUBSTITUTE}`}>
                       <Replace size={9} />
                     </span>
                   </Tooltip>
@@ -540,7 +540,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                     className="w-max max-w-[240px] text-center text-sm"
                     wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[restrictionSlot]} -right-1.5`}
                   >
-                    <span className={`h-4 w-4 rounded-full border text-[8px] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_RESTRICTION}`}>
+                    <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_RESTRICTION}`}>
                       <TriangleAlert size={9} />
                     </span>
                   </Tooltip>
@@ -559,14 +559,14 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                     className="w-max max-w-[240px] text-center text-sm"
                     wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[statusSlot]} -right-1.5`}
                   >
-                    <span className={`h-4 w-4 rounded-full border text-[8px] flex items-center justify-center shadow transition-all duration-300 ${isContradiction ? THEME_GLASS.TREE_NODE_BADGE_CONTRADICTION : THEME_GLASS.TREE_NODE_BADGE_IDENTITY}`}>
+                    <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${isContradiction ? THEME_GLASS.TREE_NODE_BADGE_CONTRADICTION : THEME_GLASS.TREE_NODE_BADGE_IDENTITY}`}>
                       {isContradiction ? <CircleSlash size={9} /> : <Check size={9} />}
                     </span>
                   </Tooltip>
                 )}
 
                 {/* Truncated Equation Label */}
-                <span className={`text-[11px] font-mono truncate max-w-full text-indigo-50 font-semibold text-center ${interactive ? 'pl-2 pr-12' : 'px-2'}`}>
+                <span className={`text-xs font-mono truncate max-w-full text-indigo-50 font-semibold text-center ${interactive ? 'pl-2 pr-12' : 'px-2'}`}>
                   {equationToString(node.equation)}
                 </span>
 

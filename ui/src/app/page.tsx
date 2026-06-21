@@ -1119,7 +1119,7 @@ export default function Home() {
             />
             <div>
               <h1 className="text-base font-bold text-white tracking-wide">Algebranch</h1>
-              <p className="text-[10px] text-indigo-300 font-semibold tracking-wider uppercase">
+              <p className="text-xs text-indigo-300 font-semibold tracking-wider">
                 Interactive Algebra
               </p>
             </div>

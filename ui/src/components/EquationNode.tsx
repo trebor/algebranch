@@ -1117,9 +1117,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             if (single) {
               const singleTooltip = (
                 <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
-                  <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">{single.label}</span>
+                  <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">{single.label}</span>
                   {single.subLabel && (
-                    <span className={`text-[10px] ${THEME_GLASS.TEXT_MUTED} select-none`}>{single.subLabel}</span>
+                    <span className={`text-xs ${THEME_GLASS.TEXT_MUTED} select-none`}>{single.subLabel}</span>
                   )}
                   {single.assumptions && single.assumptions.length > 0 && (
                     <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} select-none`}>
@@ -1225,7 +1225,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               ? stack.options[hoveredOption.index]
               : null;
             const headerEl = (
-              <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-85 px-1.5">
+              <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-85 px-1.5">
                 {stack.options.length} {config.pluralLabel} Available
               </span>
             );
@@ -1256,7 +1256,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                     }}
                   >
                     <span className={`block truncate leading-snug ${optionLabelClass}`}>{opt.label}</span>
-                    {opt.subLabel && <span className={`text-[10px] leading-snug ${THEME_GLASS.TEXT_MUTED}`}>{opt.subLabel}</span>}
+                    {opt.subLabel && <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED}`}>{opt.subLabel}</span>}
                     {opt.assumptions && opt.assumptions.length > 0 && (
                       <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} mt-0.5`}>
                         <TriangleAlert size={11} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
@@ -1343,7 +1343,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const greekName =
     node.type === 'SymbolNode' ? greekNameFor((node as math.SymbolNode).name) : null;
   const greekNameLabel = greekName ? (
-    <span className={`text-[11px] italic select-none ${THEME_GLASS.TEXT_MUTED_BRIGHT}`}>
+    <span className={`text-xs italic select-none ${THEME_GLASS.TEXT_MUTED_BRIGHT}`}>
       {greekName}
     </span>
   ) : null;
@@ -1352,7 +1352,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     const targetEquation = targetPaths[path];
     const targetTooltipContent = (
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
-        <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">Preview Move</span>
+        <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">Preview Move</span>
         <div className="w-full border-t border-white/10 my-1" />
         <ScaledEquationFit measureEq={targetEquation} className="max-w-[280px] sm:max-w-[340px]">
           {renderEquationPreviewRow(targetEquation, false)}
@@ -1374,7 +1374,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   if (!sourcePath && isCandidate) {
     const candidateTooltipContent = (
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
-        <span className="font-semibold text-zinc-100 text-xs uppercase tracking-wider select-none opacity-80">Select Term</span>
+        <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">Select Term</span>
         <div className="w-full border-t border-white/10 my-1" />
         <ScaledEquationFit className="max-w-[280px] sm:max-w-[340px]">
           <div className="text-[1.3em]"><PreviewEquationNode path={path} /></div>

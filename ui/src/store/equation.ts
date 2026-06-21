@@ -521,11 +521,47 @@ export const reduciblePathsAtom = atom<Record<string, ReducibleActionInfo[]>>({}
 export interface UserSettings {
   allowEvaluateToDecimal: boolean;
   seenEqualsHint: boolean;
+  /**
+   * Accessibility text-size knob (#239). Multiplies the root rem so all
+   * rem-based chrome (menus, tooltips, labels, badges) scales up for readability
+   * without touching the auto-fitting equation canvas. 1 = browser default.
+   */
+  chromeScale: number;
+}
+
+/** No-op chrome scale: honor the browser/OS font-size preference unchanged. */
+export const CHROME_SCALE_DEFAULT = 1;
+
+/**
+ * Discrete steps for the in-app text-size control (#239), ascending. Kept
+ * discrete (not a free slider) so the choice maps to predictable, tested layout
+ * snapshots and reads as an accessible radio group. Labels are sentence case.
+ */
+export const TEXT_SIZE_OPTIONS = [
+  { label: 'Default', scale: CHROME_SCALE_DEFAULT },
+  { label: 'Large', scale: 1.15 },
+  { label: 'Larger', scale: 1.3 },
+  { label: 'Largest', scale: 1.5 },
+] as const;
+
+/**
+ * Coerce any persisted/incoming chrome scale to a safe in-range number. Guards
+ * against junk from older builds or hand-edited localStorage and clamps to the
+ * supported range so the root rem can never be driven to an unusable extreme.
+ */
+export function clampChromeScale(value: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return CHROME_SCALE_DEFAULT;
+  }
+  const min = TEXT_SIZE_OPTIONS[0].scale;
+  const max = TEXT_SIZE_OPTIONS[TEXT_SIZE_OPTIONS.length - 1].scale;
+  return Math.max(min, Math.min(max, value));
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
   allowEvaluateToDecimal: true,
   seenEqualsHint: false,
+  chromeScale: CHROME_SCALE_DEFAULT,
 };
 
 export const settingsModalOpenAtom = atom(false);
@@ -1534,10 +1570,11 @@ export const hydrateWorkspaceTabsAtom = atom(
       if (savedSettings) {
         try {
           const parsed = JSON.parse(savedSettings);
-          set(rawSettingsAtom, {
-            ...DEFAULT_SETTINGS,
-            ...parsed
-          });
+          const merged = { ...DEFAULT_SETTINGS, ...parsed };
+          // Sanitize the text-size knob: persisted/hand-edited junk must never
+          // drive the root rem to an unusable extreme (#239).
+          merged.chromeScale = clampChromeScale(merged.chromeScale);
+          set(rawSettingsAtom, merged);
         } catch (err) {
           console.error('Failed to parse settings from localStorage:', err);
         }

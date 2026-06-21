@@ -312,7 +312,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             >
               {/* Left timeline badge/dot */}
               <div
-                className={`absolute -left-[25px] top-0.5 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center text-[8px] font-bold transition-all duration-300 ${
+                className={`absolute -left-[25px] top-0.5 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center text-[0.5rem] font-bold transition-all duration-300 ${
                   isCurrent
                     ? THEME_GLASS.TIMELINE_BADGE_ACTIVE
                     : THEME_GLASS.TIMELINE_BADGE_DEFAULT
@@ -329,12 +329,12 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
                     : THEME_GLASS.TIMELINE_CARD_DEFAULT
                 }`}
               >
-                <div className={`flex items-center justify-between text-[10px] ${THEME_GLASS.TEXT_MUTED} font-semibold uppercase tracking-wider`}>
+                <div className={`flex items-center justify-between text-xs ${THEME_GLASS.TEXT_MUTED} font-semibold tracking-wider`}>
                   <span className={isCurrent ? 'text-indigo-400 font-bold' : ''}>
                     {node.label}
                   </span>
                   {isBranch && parentIndex !== null && (
-                    <span className="text-amber-400/80 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-500/10 font-sans tracking-normal uppercase text-[8px]">
+                    <span className="text-amber-400/80 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-500/10 font-sans tracking-normal text-[0.5rem]">
                       Branch from step {parentIndex}
                     </span>
                   )}

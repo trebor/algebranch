@@ -16,6 +16,7 @@ import { parseEquation, Equation, RelationOperator } from 'math-engine-client';
 import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import { trackEvent } from '../utils/analytics';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 // Relation operators the input modal lets the user choose between (#34).
 const RELATION_OPTIONS: RelationOperator[] = ['=', '<', '>', '<=', '>='];
@@ -48,36 +49,6 @@ export const EquationInputModal: React.FC = () => {
       setSubmitError(null);
     }
   }
-
-  // Body scroll-lock + autofocus are genuine DOM side-effects, so they stay in
-  // an effect.
-  React.useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      // Delay focus slightly for framer-motion entry animation
-      const timer = setTimeout(() => {
-        lhsRef.current?.focus();
-      }, 150);
-      return () => clearTimeout(timer);
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-  }, [isOpen]);
-
-  // Escape key close handler
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, setIsOpen]);
 
   // Real-time parser validation — derived from the inputs during render
   // (via useMemo) rather than synchronized into state through an effect.
@@ -197,6 +168,14 @@ export const EquationInputModal: React.FC = () => {
     setIsOpen(false);
   };
 
+  // Focus trap + scroll lock + Escape-to-close + focus restore. The LHS input
+  // takes initial focus rather than the first tab stop (the close button).
+  const dialogRef = useFocusTrap<HTMLDivElement>({
+    isOpen,
+    onClose: handleClose,
+    initialFocusRef: lhsRef,
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const combined = `${lhsStr.trim()} ${relation} ${rhsStr.trim()}`;
@@ -230,6 +209,10 @@ export const EquationInputModal: React.FC = () => {
 
           {/* Modal Container */}
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="equation-input-title"
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -243,7 +226,7 @@ export const EquationInputModal: React.FC = () => {
             <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4 select-none shrink-0">
               <div className="flex items-center gap-2.5">
                 <PenTool className="text-indigo-400 w-5 h-5" />
-                <h2 className="text-lg font-bold text-white tracking-wide">Enter Equation</h2>
+                <h2 id="equation-input-title" className="text-lg font-bold text-white tracking-wide">Enter Equation</h2>
               </div>
               <button
                 onClick={handleClose}

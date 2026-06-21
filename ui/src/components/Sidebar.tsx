@@ -78,6 +78,8 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   const [isMobileRecentsOpen, setIsMobileRecentsOpen] = React.useState(false);
   const mounted = useIsHydrated();
 
+  const recentsTriggerRef = React.useRef<HTMLButtonElement>(null);
+
   const handleRecentsClick = () => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
     if (isMobile) {
@@ -86,6 +88,20 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
       setIsDropdownOpen(!isDropdownOpen);
     }
   };
+
+  // Close the Saved-Workspaces dropdown / mobile sheet on Escape and return
+  // focus to its trigger, matching the dialogs' keyboard-dismiss behavior.
+  React.useEffect(() => {
+    if (!isDropdownOpen && !isMobileRecentsOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setIsDropdownOpen(false);
+      setIsMobileRecentsOpen(false);
+      recentsTriggerRef.current?.focus();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isDropdownOpen, isMobileRecentsOpen]);
 
 
 
@@ -179,6 +195,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                     wrapperClassName="w-full min-w-0"
                   >
                     <button
+                      ref={recentsTriggerRef}
                       type="button"
                       onClick={handleRecentsClick}
                       className={`w-full h-8 px-3 text-xs flex items-center justify-between gap-2 min-w-0 ${THEME_GLASS.FIELD_SELECT}`}
@@ -191,6 +208,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                   </Tooltip>
                 ) : (
                   <button
+                    ref={recentsTriggerRef}
                     type="button"
                     onClick={handleRecentsClick}
                     className={`w-full h-8 px-3 text-xs flex items-center justify-between gap-2 min-w-0 ${THEME_GLASS.FIELD_SELECT}`}

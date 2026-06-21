@@ -12,6 +12,7 @@ import { X, Info, ExternalLink, Shield } from 'lucide-react';
 import { aboutModalOpenAtom } from '../store/equation';
 import { consentAtom } from '../store/consent';
 import { THEME_GLASS } from '../constants/theme';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import {
   APP_VERSION,
   COPYRIGHT_NOTICE,
@@ -23,26 +24,12 @@ export const AboutModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(aboutModalOpenAtom);
   const setConsent = useSetAtom(consentAtom);
 
-  // Escape key handler
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, setIsOpen]);
-
   const handleClose = () => {
     setIsOpen(false);
   };
+
+  // Focus trap + scroll lock + Escape-to-close + focus restore.
+  const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose: handleClose });
 
   return (
     <AnimatePresence>
@@ -59,6 +46,10 @@ export const AboutModal: React.FC = () => {
 
           {/* Modal Container */}
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="about-modal-title"
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -72,7 +63,7 @@ export const AboutModal: React.FC = () => {
             <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER_SUBTLE} pb-4 mb-4 select-none shrink-0`}>
               <div className="flex items-center gap-2.5">
                 <Info className="text-indigo-400 w-5 h-5" />
-                <h2 className="text-lg font-bold text-white tracking-wide">About Algebranch</h2>
+                <h2 id="about-modal-title" className="text-lg font-bold text-white tracking-wide">About Algebranch</h2>
               </div>
               <button
                 onClick={handleClose}

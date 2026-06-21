@@ -129,7 +129,7 @@ export const SettingsModal: React.FC = () => {
             {/* Settings Content */}
             <div className="flex flex-col gap-5 overflow-y-auto pr-1">
               <div className={THEME_GLASS.SETTING_ROW_STACKED}>
-                <div className="flex flex-col gap-1 select-none">
+                <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-white">
                     Interface text size
                   </span>
@@ -166,7 +166,7 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1 select-none">
+                <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-white">
                     Evaluate to Decimal
                   </span>
@@ -195,7 +195,7 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1 select-none">
+                <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-white">
                     Keyboard Shortcuts
                   </span>
@@ -218,7 +218,7 @@ export const SettingsModal: React.FC = () => {
 
               {!!installPrompt && (
                 <div className={THEME_GLASS.SETTING_ROW}>
-                  <div className="flex flex-col gap-1 select-none">
+                  <div className="flex flex-col gap-1">
                     <span className="text-sm font-semibold text-white">
                       Install Algebranch
                     </span>
@@ -238,7 +238,7 @@ export const SettingsModal: React.FC = () => {
               )}
 
               <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1 select-none">
+                <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-white">
                     Privacy & Cookies
                   </span>

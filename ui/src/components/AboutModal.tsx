@@ -104,7 +104,7 @@ export const AboutModal: React.FC = () => {
 
               {/* GPLv3 License text area */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-white/60 font-semibold flex items-center gap-1.5 select-none">
+                <span className="text-xs text-white/60 font-semibold flex items-center gap-1.5">
                   <Shield size={12} className="text-indigo-400" />
                   GNU General Public License (GPLv3)
                 </span>
@@ -115,7 +115,7 @@ export const AboutModal: React.FC = () => {
 
               {/* Third-Party OSS Attributions */}
               <div className="flex flex-col gap-2.5">
-                <span className="text-xs text-white/60 font-semibold select-none">
+                <span className="text-xs text-white/60 font-semibold">
                   Third-Party Open Source Software
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

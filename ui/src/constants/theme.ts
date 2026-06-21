@@ -176,9 +176,34 @@ export const THEME_GLASS = {
   COPY_MENU_HEADER: 'flex flex-col gap-0.5 px-2.5 pt-1.5 pb-2 mb-0.5 border-b border-white/10 select-none',
   COPY_MENU_HEADER_LABEL: 'text-[0.5625rem] font-bold tracking-wider text-indigo-400/80',
   COPY_MENU_HEADER_EXPR: 'block truncate text-xs text-indigo-50',
+  // Typeset preview of the equation being copied (#243): the real
+  // PreviewEquationNode render (lhs = rhs) replaces the flat unicode echo, so the
+  // header reads as "a picture of which equation" rather than a fourth format.
+  // Scrolls horizontally inside the fixed-width menu when the equation is wide.
+  COPY_MENU_HEADER_PREVIEW: 'flex justify-center max-w-full overflow-x-auto scrollbar-thin',
+  COPY_MENU_HEADER_PREVIEW_ROW: 'flex items-center gap-1.5 text-sm text-indigo-50 min-w-max',
+  COPY_MENU_HEADER_PREVIEW_SEP: 'font-mono text-indigo-400/80 select-none',
   // Off-path node while an export-scope preview is active (#46): faded so the
   // root -> selected path reads as the slice being copied.
   COPY_PREVIEW_DIMMED: 'opacity-25 transition-opacity duration-200',
+
+  // Copy split-button (#243): mirrors the Share pill — a primary segment that
+  // copies the default (Unicode) format in one click, plus a caret that reveals
+  // the Plain / Unicode / LaTeX menu and signals the dropdown. Two sizes:
+  // `panel` (roomy derivation toolbar) and `tree` (compact, sits in the per-step
+  // hover toolbar on a history card). The copied state tints the whole control.
+  COPY_SPLIT_PANEL: 'inline-flex items-stretch rounded-lg border border-white/10 text-white transition-colors',
+  COPY_SPLIT_PANEL_PRIMARY: 'flex items-center px-1.5 py-1.5 rounded-l-lg hover:bg-white/5 active:scale-95 transition-all cursor-pointer disabled:opacity-30 disabled:pointer-events-none',
+  COPY_SPLIT_PANEL_DIVIDER: 'w-px self-stretch my-1 bg-white/10',
+  COPY_SPLIT_PANEL_CARET: 'flex items-center px-1 rounded-r-lg text-white/55 hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none',
+  // The tree variant is a compact, centered split-button with no panel fill —
+  // just two saturated glyphs and a thin separator, each segment lighting up on
+  // hover — so it stays unobtrusive on the node yet clearly legible (#243).
+  COPY_SPLIT_TREE: 'inline-flex items-center rounded-md text-indigo-100 transition-colors',
+  COPY_SPLIT_TREE_PRIMARY: 'flex items-center p-1 rounded-l-md hover:bg-white/10 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none',
+  COPY_SPLIT_TREE_DIVIDER: 'w-px self-stretch my-1 bg-white/10',
+  COPY_SPLIT_TREE_CARET: 'flex items-center px-0.5 rounded-r-md text-indigo-100/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-40 disabled:pointer-events-none',
+  COPY_SPLIT_COPIED: 'text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10',
 
   // Share split-button (#241): a pill split into a primary segment (copies the
   // headline WORKSPACE link in one gesture) and a caret that reveals the scope

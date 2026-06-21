@@ -105,15 +105,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
           <CopyFormatMenu
             getText={(format) => formatDerivation(tree, currentNodeId, format)}
             iconSize={16}
-            triggerClassName={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer text-white`}
-            copiedClassName="text-emerald-400"
+            variant="panel"
             tooltip={<HotkeyHint label="Copy full derivation" sequence={['C', 'D']} />}
             disabled={Object.keys(tree).length <= 1}
             trackAction="copy_derivation"
             trackCategory="history"
             trackLabel={currentNodeId}
             scopeLabel={`Full derivation · ${exportScope.stepCount} ${exportScope.stepCount === 1 ? 'step' : 'steps'}`}
-            scopeDetail={exportScope.endpoint}
+            scopeEquation={exportScope.endpoint}
             onPreviewChange={setExportPreview}
           />
           <Tooltip content={<HotkeyHint label="Undo step" keys="⌘Z" />}>
@@ -256,15 +255,14 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
           <CopyFormatMenu
             getText={(format) => formatDerivation(tree, currentNodeId, format)}
             iconSize={16}
-            triggerClassName={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer text-white`}
-            copiedClassName="text-emerald-400"
+            variant="panel"
             tooltip={<HotkeyHint label="Copy full derivation" sequence={['C', 'D']} />}
             disabled={sortedNodes.length <= 1}
             trackAction="copy_derivation"
             trackCategory="history"
             trackLabel={currentNodeId}
             scopeLabel={`Full derivation · ${exportScope.stepCount} ${exportScope.stepCount === 1 ? 'step' : 'steps'}`}
-            scopeDetail={exportScope.endpoint}
+            scopeEquation={exportScope.endpoint}
             onPreviewChange={setExportPreview}
           />
           <button

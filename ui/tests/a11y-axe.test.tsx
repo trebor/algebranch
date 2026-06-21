@@ -26,18 +26,19 @@ describe('a11y: axe structural audit', () => {
     expect(results.violations.map((v) => v.id)).toContain('button-name');
   });
 
-  it('CopyFormatMenu trigger has no structural a11y violations', async () => {
+  it('CopyFormatMenu split-button has no structural a11y violations', async () => {
     const { container, getByRole } = render(
       <CopyFormatMenu
         getText={() => 'x = 1'}
-        triggerClassName="p-2"
+        variant="panel"
         trackAction="copy_test"
         trackCategory="test"
         trackLabel="test"
       />,
     );
-    // The icon-only trigger carries a real accessible name (the sweep's payload).
-    expect(getByRole('button')).toHaveAccessibleName('Copy options');
+    // Both icon-only segments carry real accessible names (the sweep's payload).
+    expect(getByRole('button', { name: 'Copy equation' })).toBeInTheDocument();
+    expect(getByRole('button', { name: 'Copy format options' })).toBeInTheDocument();
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });

@@ -52,3 +52,21 @@ body {
     opacity: 1;
   }
 }
+
+/* Accessibility: honor prefers-reduced-motion (#145). Users who ask for reduced
+   motion get near-instant transitions and animations in place of the decorative
+   pulses, pings, spins, and breathing loops. No information is conveyed by
+   motion alone, so collapsing it loses nothing. This catches CSS-driven
+   animation (Tailwind animate-* utilities and our @keyframes); JS-driven
+   framer-motion animation is handled separately by <MotionConfig
+   reducedMotion="user"> in the root layout. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

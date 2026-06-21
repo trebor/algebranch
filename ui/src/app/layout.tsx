@@ -7,6 +7,7 @@ import "./globals.css";
 import Script from "next/script";
 
 import { Provider as JotaiProvider } from "jotai";
+import { ReducedMotionProvider } from "../components/ReducedMotionProvider";
 import { ConsentManager } from "../components/ConsentManager";
 
 const geistSans = Geist({
@@ -153,8 +154,13 @@ export default function RootLayout({
           }}
         />
         <JotaiProvider>
-          {children}
-          <ConsentManager />
+          {/* Reactively respect the OS prefers-reduced-motion setting for every
+              framer-motion animation (#145); CSS animations are handled by the
+              media query in globals.css. */}
+          <ReducedMotionProvider>
+            {children}
+            <ConsentManager />
+          </ReducedMotionProvider>
         </JotaiProvider>
         {gaId && (
           <>

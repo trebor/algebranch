@@ -91,18 +91,37 @@ Clicking the circled `=` operator opens the global operations menu, letting you 
 
 ### Settings & Preferences
 *   **Disable "Evaluate to Decimal"**: Toggle off decimal approximations to keep fractions, roots, and irrationals in their exact symbolic forms.
+*   **Interface text size**: Scale the app's interface text — menus, labels, and buttons — across four steps from Default to Largest. The setting is independent of the equation canvas, which keeps fitting itself to the available space, and it persists in this browser. You can also cycle it from the keyboard with `T` and `Shift + T`.
 
 ### Keyboard Shortcuts
 
-Single-key shortcuts work whenever you are *not* typing in a text field:
+Single-key shortcuts work whenever you are *not* typing in a text field. Press `?` at any time to open the in-app shortcuts overlay.
 
 | Key | Action |
 | --- | --- |
-| `L` | Toggle the equation library |
 | `W` | Toggle the workspace panel |
+| `L` | Toggle the equation library |
 | `H` | Toggle the history sidebar |
 | `G` | Toggle the variable-relationship graph |
-| `Esc` | Deselect the current term |
+| `S` | Swap the two sides of the equation |
+| `=` | Open the global equals menu (apply an operation to both sides) |
+| `Esc` | Clear the current selection |
+| `N` | New workspace |
+| `[` / `]` | Previous / next workspace |
+| `T` / `Shift + T` | Larger / smaller interface text |
+| `A` | About Algebranch |
+| `F` | Send feedback |
+| `,` | Open settings |
+| `?` | Show the keyboard-shortcuts overlay |
+
+Copy and share live under the `C` leader — press `C`, then a second key:
+
+| Sequence | Action |
+| --- | --- |
+| `C` then `D` | Copy the full derivation as text |
+| `C` then `E` | Copy the current equation as text |
+| `C` then `L` | Copy an equation share link (`?eq=…`) |
+| `C` then `W` | Copy a workspace share link (`?ws=…`) |
 
 With a modifier:
 
@@ -110,6 +129,6 @@ With a modifier:
 | --- | --- |
 | `Ctrl/Cmd + Z` | Undo a step |
 | `Ctrl/Cmd + Shift + Z` or `Ctrl/Cmd + Y` | Redo a step |
-| `Ctrl/Cmd + Shift + S` | Swap the two sides of the equation |
+| `Ctrl/Cmd + Backspace` | Close the current workspace |
 
 When entering an equation, typing `=`, `<`, or `>` in either side sets the relation and jumps focus to the other side.

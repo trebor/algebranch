@@ -558,6 +558,29 @@ export function clampChromeScale(value: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+/**
+ * Step to the next text-size option, wrapping around the ends — backing the
+ * `T` / `Shift+T` hotkey (#239). Wrapping is intentional: tapping `T` past the
+ * largest rolls back to the smallest, so a user who overshoots can simply keep
+ * pressing the same key to come back around to what they want. The incoming
+ * value is clamped and snapped to the nearest known option first, so an
+ * off-grid or junk scale still cycles predictably. `direction` is +1 (larger)
+ * or -1 (smaller).
+ */
+export function cycleChromeScale(current: number, direction: 1 | -1 = 1): number {
+  const scales: number[] = TEXT_SIZE_OPTIONS.map((o) => o.scale);
+  const clamped = clampChromeScale(current);
+  let idx = scales.indexOf(clamped);
+  if (idx === -1) {
+    idx = scales.reduce(
+      (best, s, i) => (Math.abs(s - clamped) < Math.abs(scales[best] - clamped) ? i : best),
+      0,
+    );
+  }
+  const next = (idx + direction + scales.length) % scales.length;
+  return scales[next];
+}
+
 export const DEFAULT_SETTINGS: UserSettings = {
   allowEvaluateToDecimal: true,
   seenEqualsHint: false,

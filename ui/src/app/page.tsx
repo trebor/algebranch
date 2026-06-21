@@ -71,6 +71,8 @@ import {
   previousGraphSizeAtom,
   isGraphViableAtom,
   settingsAtom,
+  TEXT_SIZE_OPTIONS,
+  cycleChromeScale,
   pwaInstallPromptAtom,
   aboutModalOpenAtom,
   closeTabAtom,
@@ -807,7 +809,7 @@ export default function Home() {
           });
         }
       },
-      description: 'Deselect current selection',
+      description: 'Clear selection',
       category: 'Equation',
     },
     {
@@ -849,6 +851,35 @@ export default function Home() {
       category: 'Equation',
     },
     {
+      // Bare `t` grows the interface text-size knob (#239) one step and wraps
+      // from the largest back to the smallest; Shift+T goes the other way. The
+      // wrap lets a user who overshoots keep tapping the same key to come back
+      // around. A toast confirms the change, since the steps are subtle.
+      key: 't',
+      action: () => {
+        const nextScale = cycleChromeScale(settings.chromeScale, 1);
+        const label = TEXT_SIZE_OPTIONS.find((o) => o.scale === nextScale)?.label ?? '';
+        setSettings((prev) => ({ ...prev, chromeScale: nextScale }));
+        setToast({ message: `Interface text size: ${label}`, key: Date.now() });
+        trackEvent({ action: 'shortcut_text_size_larger', category: 'keyboard', label });
+      },
+      description: 'Larger interface text',
+      category: 'Accessibility',
+    },
+    {
+      key: 't',
+      shift: true,
+      action: () => {
+        const nextScale = cycleChromeScale(settings.chromeScale, -1);
+        const label = TEXT_SIZE_OPTIONS.find((o) => o.scale === nextScale)?.label ?? '';
+        setSettings((prev) => ({ ...prev, chromeScale: nextScale }));
+        setToast({ message: `Interface text size: ${label}`, key: Date.now() });
+        trackEvent({ action: 'shortcut_text_size_smaller', category: 'keyboard', label });
+      },
+      description: 'Smaller interface text',
+      category: 'Accessibility',
+    },
+    {
       // Bare `c` (no Cmd, so native Cmd/Ctrl+C text-copy is untouched) copies the
       // whole workspace transcript — the active derivation path, root → current.
       // The richer copy sits on the bare key to make sharing a full worked
@@ -863,7 +894,7 @@ export default function Home() {
           })
           .catch((err) => console.error('Failed to copy derivation:', err));
       },
-      description: 'Copy full derivation (text)',
+      description: 'Copy full derivation as text',
       category: 'Copy & Share',
     },
     {
@@ -880,7 +911,7 @@ export default function Home() {
           })
           .catch((err) => console.error('Failed to copy equation:', err));
       },
-      description: 'Copy equation (text)',
+      description: 'Copy equation as text',
       category: 'Copy & Share',
     },
     {

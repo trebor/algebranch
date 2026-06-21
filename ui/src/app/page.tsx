@@ -1367,8 +1367,15 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className={`active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full px-2 pt-16 pb-4 sm:p-4 lg:p-8 text-base font-light cursor-default relative group/canvas ${
-                onboardingChapterId ? 'overflow-auto lg:overflow-hidden' : 'overflow-auto'
+              className={`active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full px-2 pt-16 sm:px-4 sm:pt-4 lg:px-8 lg:pt-8 text-base font-light cursor-default relative group/canvas ${
+                onboardingChapterId
+                  ? 'pb-4 lg:pb-8 overflow-auto lg:overflow-hidden'
+                  // The fixed BottomNav (h-14 + safe-area, lg:hidden) overlays the
+                  // canvas bottom on phones/tablets; pad the centering region down
+                  // to the nav's top edge so the expression centers in the visible
+                  // space above it rather than sinking behind it (#247 follow-up).
+                  // The canvas background still extends behind the nav as intended.
+                  : 'pb-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] lg:pb-8 overflow-auto'
               }`}
             >
               {/* Collapsed workspace switcher — anchored top-left of the

@@ -1200,7 +1200,7 @@ export default function Home() {
             content={leftSidebarOpen ? "Hide Left Sidebar (W / L)" : "Show Left Sidebar (W / L)"} 
             position="right"
             wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
-              leftSidebarOpen ? 'left-[344px] -translate-x-1/2' : 'left-[8px] -translate-x-1/2'
+              leftSidebarOpen ? 'left-[21.5rem] -translate-x-1/2' : 'left-[0.5rem] -translate-x-1/2'
             }`}
           >
             <button
@@ -1496,7 +1496,7 @@ export default function Home() {
             content={rightSidebarOpen ? "Hide History Sidebar (H)" : "Show History Sidebar (H)"} 
             position="left"
             wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
-              rightSidebarOpen ? 'right-[344px] translate-x-1/2' : 'right-[8px] translate-x-1/2'
+              rightSidebarOpen ? 'right-[21.5rem] translate-x-1/2' : 'right-[0.5rem] translate-x-1/2'
             }`}
           >
             <button

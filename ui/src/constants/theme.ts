@@ -141,6 +141,11 @@ export const THEME_GLASS = {
 
   // --- Page / Main Canvas specific ---
   HEADER_BUTTON: 'flex items-center gap-1.5 p-2 sm:px-3.5 sm:py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group',
+  OVERFLOW_TRIGGER: 'flex items-center justify-center p-2 rounded-full border border-white/10 text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group',
+  OVERFLOW_MENU: 'absolute right-0 top-full mt-1.5 z-50 w-44 p-1 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-0.5 text-left',
+  OVERFLOW_MENU_ITEM: 'flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-left text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none text-xs font-semibold',
+  HEADER_ICON_ABOUT: 'text-indigo-400 group-hover:scale-110 transition-transform',
+  HEADER_ICON_SETTINGS: 'text-indigo-400 group-hover:rotate-45 transition-transform',
   EDGE_HANDLE: 'w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95',
   TOAST_ALERT: 'flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/25 bg-neutral-900/80 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]',
   TOAST_LOADING: 'flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/20 bg-neutral-900/60 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]',

@@ -180,6 +180,25 @@ export const THEME_GLASS = {
   // root -> selected path reads as the slice being copied.
   COPY_PREVIEW_DIMMED: 'opacity-25 transition-opacity duration-200',
 
+  // Share split-button (#241): a pill split into a primary segment (copies the
+  // headline WORKSPACE link in one gesture) and a caret that reveals the scope
+  // menu. `relative group` anchors the one-time hint pulse ring.
+  SHARE_PILL: 'flex items-stretch rounded-full border border-white/10 bg-white/5 shadow-md transition-all duration-300 relative group',
+  SHARE_PILL_PRIMARY: 'flex items-center gap-1.5 py-1.5 pl-3 pr-2.5 sm:pl-3.5 text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 rounded-l-full transition-colors cursor-pointer',
+  SHARE_PILL_DIVIDER: 'w-px self-stretch my-1.5 bg-white/15',
+  SHARE_PILL_CARET: 'flex items-center px-1.5 sm:px-2 text-white/55 hover:text-white hover:bg-white/10 rounded-r-full transition-colors cursor-pointer',
+  // One-time "you have something worth sending" pulse ring on the Share pill
+  // (#241). animate-ping; only rendered when motion is allowed.
+  SHARE_HINT_PULSE: 'pointer-events-none absolute -inset-0.5 rounded-full border border-indigo-400/60 animate-ping',
+  // Share scope menu (#241): wider than COPY_MENU so each row can carry a
+  // selling subtitle describing what the link restores.
+  SHARE_MENU: 'absolute right-0 top-full mt-1.5 z-50 w-64 p-1 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-0.5 text-left',
+  SHARE_MENU_ITEM: 'flex items-start gap-2.5 w-full px-2.5 py-2 rounded-lg text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none',
+  // The headline row (workspace): tinted so it reads as the recommended action.
+  SHARE_MENU_ITEM_PRIMARY: 'bg-indigo-600/10 hover:bg-indigo-600/25 text-white',
+  SHARE_MENU_ITEM_TITLE: 'text-xs font-semibold',
+  SHARE_MENU_ITEM_DESC: 'text-[0.625rem] leading-snug text-white/45',
+
   EQUALS_MINI_PETAL_SWAP: 'text-amber-400 border-amber-500/20',
   EQUALS_MINI_PETAL_POWER: 'text-teal-400 border-teal-500/20',
   EQUALS_MINI_PETAL_ADD: 'text-indigo-400 border-indigo-500/20',

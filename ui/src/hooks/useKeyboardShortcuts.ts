@@ -10,8 +10,20 @@ import { shouldIgnoreShortcut } from '../utils/keyboardShortcuts';
  * Describes a single keyboard shortcut binding.
  */
 export interface ShortcutConfig {
-  /** The key to match (lowercase), e.g. `'z'`, `'b'`, `'h'`, `'s'`. */
+  /**
+   * The key to match (lowercase), e.g. `'z'`, `'b'`, `'h'`, `'s'`. When
+   * {@link ShortcutConfig.leader} is set this is the *second* key of the
+   * sequence (e.g. `leader: 'c', key: 'd'` for "C then D").
+   */
   key: string;
+  /**
+   * Leader key for a two-step sequence (Vim/GitHub-style). When set, the
+   * binding fires only when the bare leader key is pressed, followed by
+   * {@link ShortcutConfig.key} within {@link LEADER_TIMEOUT_MS}. Sequence keys
+   * are matched bare — modifiers never arm or complete a sequence, so native
+   * combos like ⌘C are untouched.
+   */
+  leader?: string;
   /** When `true`, requires Cmd (Mac) **or** Ctrl (Windows/Linux). */
   meta?: boolean;
   /** When `true`, requires the Shift modifier. */
@@ -36,6 +48,9 @@ export interface ShortcutConfig {
   enabled?: boolean;
 }
 
+/** How long a pressed leader key stays "armed" awaiting its second key. */
+export const LEADER_TIMEOUT_MS = 1500;
+
 /** Options controlling the shortcut listener as a whole. */
 export interface UseKeyboardShortcutsOptions {
   /**
@@ -43,6 +58,12 @@ export interface UseKeyboardShortcutsOptions {
    * bare-key binding can't act on the app obscured behind the dialog.
    */
   disabled?: boolean;
+  /**
+   * Notified whenever the armed leader key changes — the leader's lowercase
+   * letter while a sequence is pending, then `null` when it completes, aborts,
+   * or times out. Lets the UI surface a hint (e.g. "C …").
+   */
+  onPendingLeader?: (leader: string | null) => void;
 }
 
 /**
@@ -80,42 +101,96 @@ export function useKeyboardShortcuts(
     optionsRef.current = options;
   }, [options]);
 
+  // Pending leader state for two-step sequences. Refs (not state) so the stable
+  // listener always sees the latest without re-registering.
+  const pendingLeaderRef = useRef<string | null>(null);
+  const leaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
+    const clearPendingLeader = () => {
+      if (leaderTimerRef.current) {
+        clearTimeout(leaderTimerRef.current);
+        leaderTimerRef.current = null;
+      }
+      if (pendingLeaderRef.current !== null) {
+        pendingLeaderRef.current = null;
+        optionsRef.current.onPendingLeader?.(null);
+      }
+    };
+
     function handleKeyDown(event: KeyboardEvent): void {
       if (shouldIgnoreShortcut(event.target as HTMLElement | null, optionsRef.current.disabled ?? false)) {
         return;
       }
 
       const pressedKey = event.key.toLowerCase();
+      const hasMeta = event.metaKey || event.ctrlKey;
+      const isBare = !hasMeta && !event.shiftKey && !event.altKey;
 
+      // --- Complete (or abort) a pending leader sequence ---
+      if (pendingLeaderRef.current) {
+        const leader = pendingLeaderRef.current;
+        clearPendingLeader();
+        if (pressedKey === 'escape') {
+          // Escape cancels the armed leader without doing anything else.
+          event.preventDefault();
+          return;
+        }
+        if (isBare) {
+          const seq = shortcutsRef.current.find(
+            (s) =>
+              s.enabled !== false &&
+              s.leader?.toLowerCase() === leader &&
+              s.key.toLowerCase() === pressedKey,
+          );
+          if (seq) {
+            event.preventDefault();
+            seq.action();
+            return;
+          }
+        }
+        // No matching sequence — fall through and treat this key as a fresh
+        // press (so e.g. an unrelated bare key still does its own thing).
+      }
+
+      // --- Single-chord match ---
       for (const shortcut of shortcutsRef.current) {
-        // Skip disabled shortcuts.
         if (shortcut.enabled === false) continue;
+        if (shortcut.leader) continue; // sequence bindings handled below
 
-        // --- Key match ---
         if (pressedKey !== shortcut.key.toLowerCase()) continue;
 
-        // --- Modifier match ---
         const wantMeta = shortcut.meta ?? false;
         const wantShift = shortcut.shift ?? false;
         const wantAlt = shortcut.alt ?? false;
-
-        const hasMeta = event.metaKey || event.ctrlKey;
 
         if (wantMeta !== hasMeta) continue;
         if (wantShift !== event.shiftKey) continue;
         if (wantAlt !== event.altKey) continue;
 
-        // All conditions satisfied — fire the action.
         event.preventDefault();
         shortcut.action();
         return; // First match wins.
+      }
+
+      // --- Arm a leader, if this bare key starts any sequence ---
+      if (isBare) {
+        const isLeader = shortcutsRef.current.some(
+          (s) => s.enabled !== false && s.leader?.toLowerCase() === pressedKey,
+        );
+        if (isLeader) {
+          event.preventDefault();
+          pendingLeaderRef.current = pressedKey;
+          optionsRef.current.onPendingLeader?.(pressedKey);
+          leaderTimerRef.current = setTimeout(clearPendingLeader, LEADER_TIMEOUT_MS);
+        }
       }
     }
 
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      clearPendingLeader();
     };
   }, []); // Stable — never re-registers.
 }

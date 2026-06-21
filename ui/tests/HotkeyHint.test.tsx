@@ -23,4 +23,11 @@ describe('HotkeyHint', () => {
     expect(caps.map((c) => c.textContent)).toEqual(['W', 'L']);
     expect(container.querySelectorAll('kbd')).toHaveLength(2);
   });
+
+  it('renders a sequence as chips joined by "then"', () => {
+    const { container } = render(<HotkeyHint label="Copy derivation" sequence={['C', 'D']} />);
+    const caps = container.querySelectorAll('kbd');
+    expect([...caps].map((c) => c.textContent)).toEqual(['C', 'D']);
+    expect(container.textContent).toContain('then');
+  });
 });

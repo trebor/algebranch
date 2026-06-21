@@ -814,9 +814,9 @@ export default function Home() {
       category: 'Equation',
     },
     {
+      // Bare `s` swaps the two sides of the equation — reclaimed from the old
+      // ⌘⇧S now that copy/share live under the `C` leader.
       key: 's',
-      meta: true,
-      shift: true,
       action: () => {
         swapSides();
         trackEvent({
@@ -881,11 +881,11 @@ export default function Home() {
       category: 'Accessibility',
     },
     {
-      // Bare `c` (no Cmd, so native Cmd/Ctrl+C text-copy is untouched) copies the
-      // whole workspace transcript — the active derivation path, root → current.
-      // The richer copy sits on the bare key to make sharing a full worked
-      // solution the default gesture; mirrors the "Copy full derivation" button.
-      key: 'c',
+      // Copy/share family under the `C` leader (#239). `C D` copies the whole
+      // workspace transcript — the active derivation path, root → current.
+      // Leader keys are bare, so native Cmd/Ctrl+C text-copy is untouched.
+      leader: 'c',
+      key: 'd',
       action: () => {
         navigator.clipboard
           .writeText(formatDerivation(tree, currentNodeId, 'plain'))
@@ -899,9 +899,9 @@ export default function Home() {
       category: 'Copy & Share',
     },
     {
-      // Shift+C copies just the current equation as plain text (the lighter copy).
-      key: 'c',
-      shift: true,
+      // `C E` copies just the current equation as plain text.
+      leader: 'c',
+      key: 'e',
       action: () => {
         if (!currentEq) return;
         navigator.clipboard
@@ -916,10 +916,10 @@ export default function Home() {
       category: 'Copy & Share',
     },
     {
-      // Bare `s` copies a `?ws=` deep link that restores the entire workspace
-      // (full history tree + name) — the headline share, on the bare key to
-      // encourage passing whole workspaces around.
-      key: 's',
+      // `C W` copies a `?ws=` deep link that restores the entire workspace
+      // (full history tree + name).
+      leader: 'c',
+      key: 'w',
       action: async () => {
         try {
           const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName);
@@ -936,10 +936,10 @@ export default function Home() {
       category: 'Copy & Share',
     },
     {
-      // Shift+S copies the lighter `?eq=` link (reopens just the equation, not
-      // the derivation tree). Distinct from swap-sides (⌘⇧S — has Cmd).
-      key: 's',
-      shift: true,
+      // `C L` copies the lighter `?eq=` link (reopens just the equation, not
+      // the derivation tree).
+      leader: 'c',
+      key: 'l',
       action: () => {
         if (!currentEq) return;
         const url = buildEquationUrl(window.location.origin, equationToString(currentEq));
@@ -1080,8 +1080,44 @@ export default function Home() {
       category: 'Equation',
       keyLabel: '=',
     },
+    {
+      // Settings on bare `,`, echoing the universal ⌘, convention in the app's
+      // naked-key scheme.
+      key: ',',
+      action: () => {
+        setSettingsModalOpen(true);
+        trackEvent({ action: 'shortcut_open_settings', category: 'keyboard' });
+      },
+      description: 'Settings',
+      category: 'Help',
+      keyLabel: ',',
+    },
+    {
+      // ⌘, alias for muscle memory; hidden so the cheat-sheet shows the bare key.
+      key: ',',
+      meta: true,
+      action: () => {
+        setSettingsModalOpen(true);
+        trackEvent({ action: 'shortcut_open_settings', category: 'keyboard' });
+      },
+      description: 'Settings',
+      category: 'Help',
+      hidden: true,
+    },
   ];
-  useKeyboardShortcuts(shortcutBindings, { disabled: anyModalOpen });
+  useKeyboardShortcuts(shortcutBindings, {
+    disabled: anyModalOpen,
+    // Surface what follows an armed leader, so the sequence is discoverable in
+    // the moment (not only via the ? cheat-sheet).
+    onPendingLeader: (leader) => {
+      if (leader === 'c') {
+        setToast({
+          message: 'Copy / share — D derivation · E equation · L link · W workspace',
+          key: Date.now(),
+        });
+      }
+    },
+  });
 
   // Mobile swipe gestures logic
   React.useEffect(() => {

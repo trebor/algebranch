@@ -124,9 +124,22 @@ export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts })
                         className="flex items-center justify-between gap-4 py-1"
                       >
                         <span className="text-sm text-zinc-300">{shortcut.description}</span>
-                        <kbd className={THEME_GLASS.SHORTCUT_KEYCAP}>
-                          {shortcut.keyLabel ?? formatShortcut(shortcut, isMac)}
-                        </kbd>
+                        {shortcut.leader ? (
+                          // Two-step sequence: render "leader then key" as two chips.
+                          <span className="flex items-center gap-1.5 shrink-0">
+                            <kbd className={THEME_GLASS.SHORTCUT_KEYCAP}>
+                              {formatShortcut({ key: shortcut.leader }, isMac)}
+                            </kbd>
+                            <span className="text-xs text-white/40">then</span>
+                            <kbd className={THEME_GLASS.SHORTCUT_KEYCAP}>
+                              {formatShortcut({ key: shortcut.key }, isMac)}
+                            </kbd>
+                          </span>
+                        ) : (
+                          <kbd className={THEME_GLASS.SHORTCUT_KEYCAP}>
+                            {shortcut.keyLabel ?? formatShortcut(shortcut, isMac)}
+                          </kbd>
+                        )}
                       </div>
                     ))}
                   </div>

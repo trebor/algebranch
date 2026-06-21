@@ -162,7 +162,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
             <span className={THEME_GLASS.COPY_MENU_HEADER_LABEL}>Create Share Link</span>
           </div>
           <Tooltip
-            content={<HotkeyHint label="Copy equation link" keys="⇧S" />}
+            content={<HotkeyHint label="Copy equation link" sequence={['C', 'L']} />}
             position="left"
             autoAlign={false}
             wrapperClassName="w-full"
@@ -178,7 +178,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
             </button>
           </Tooltip>
           <Tooltip
-            content={<HotkeyHint label="Copy workspace link" keys="S" />}
+            content={<HotkeyHint label="Copy workspace link" sequence={['C', 'W']} />}
             position="left"
             autoAlign={false}
             wrapperClassName="w-full"

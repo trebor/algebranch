@@ -1143,6 +1143,7 @@ export default function Home() {
                 setFeedbackModalOpen(true);
               }}
               className={THEME_GLASS.HEADER_BUTTON}
+              aria-label="Feedback"
             >
               <MessageSquarePlus size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
               <span className="hidden sm:inline">Feedback</span>
@@ -1285,6 +1286,7 @@ export default function Home() {
                         addTab();
                       }}
                       className={THEME_GLASS.ICON_BUTTON}
+                      aria-label="Clone workspace"
                     >
                       <GitBranch size={14} />
                     </button>
@@ -1298,6 +1300,7 @@ export default function Home() {
                       }}
                       disabled={savedSessions.length <= 1}
                       className={THEME_GLASS.ICON_BUTTON_DANGER}
+                      aria-label="Delete workspace permanently"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -1453,6 +1456,7 @@ export default function Home() {
                       }}
                       disabled={graphSize === 'expand'}
                       className="p-1 hover:bg-white/10 text-white/70 hover:text-white disabled:text-white/20 disabled:hover:bg-transparent rounded-full active:scale-90 transition-all cursor-pointer disabled:cursor-not-allowed"
+                      aria-label="Expand graph"
                     >
                       <ChevronUp size={14} />
                     </button>
@@ -1469,6 +1473,7 @@ export default function Home() {
                         }
                       }}
                       className="p-1 hover:bg-white/10 text-white/70 hover:text-white rounded-full active:scale-90 transition-all cursor-pointer"
+                      aria-label={graphSize === 'expand' ? 'Shrink graph' : 'Hide graph'}
                     >
                       <ChevronDown size={14} />
                     </button>

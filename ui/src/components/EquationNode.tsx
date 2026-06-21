@@ -1138,6 +1138,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   <button
                     className={buttonClass}
                     style={buttonStyle}
+                    aria-label={single.label || config.singularLabel}
                     onMouseEnter={(e) => {
                       e.stopPropagation();
                       if (stack.type !== 'substitute') {
@@ -1171,6 +1172,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               <button
                 className={buttonClass}
                 style={buttonStyle}
+                aria-label={`Show ${config.pluralLabel}`}
                 onMouseEnter={(e) => {
                   e.stopPropagation();
                   cancelMenuClose();

@@ -374,6 +374,7 @@ export const FeedbackModal: React.FC = () => {
                             onMouseEnter={() => setHoveredRating(star)}
                             onMouseLeave={() => setHoveredRating(0)}
                             className="p-1 text-zinc-600 hover:text-yellow-400 active:scale-90 transition-all cursor-pointer"
+                            aria-label={`Rate ${star} out of 5 stars`}
                           >
                             <Star
                               size={18}

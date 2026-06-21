@@ -97,6 +97,8 @@ export const THEME_GLASS = {
   BADGE_MUTED: 'text-white/55 bg-white/5 rounded-full border border-white/5',
   // Keycap chip for the keyboard-shortcuts cheat-sheet (#126).
   SHORTCUT_KEYCAP: 'inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-lg border border-white/15 bg-white/5 text-white/90 text-xs font-semibold shadow-sm select-none',
+  // Compact keycap for inline hotkey hints inside tooltips (HotkeyHint, #239).
+  SHORTCUT_KEYCAP_SM: 'inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-md border border-white/15 bg-white/5 text-white/90 text-xs font-semibold shadow-sm select-none',
   ACCENT_PLAY: 'p-1.5 rounded-lg bg-white/0 group-hover:bg-indigo-600/20 text-white/35 group-hover:text-indigo-400 border border-transparent group-hover:border-indigo-500/30 transform group-hover:scale-105 transition-all duration-200',
   
   // Library specific

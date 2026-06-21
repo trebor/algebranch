@@ -6,6 +6,7 @@
 import React from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { Tooltip } from './Tooltip';
+import { HotkeyHint } from './HotkeyHint';
 import { CopyFormatMenu } from './CopyFormatMenu';
 import { WorkspaceTreeView } from './WorkspaceTreeView';
 import { equationToString } from 'math-engine-client';
@@ -91,7 +92,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
     }`}>
       {/* Sidebar Header with Timeline Actions */}
       <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER} pb-4 shrink-0`}>
-        <Tooltip content="Toggle Sidebar (H)" position="left" autoAlign={false}>
+        <Tooltip content={<HotkeyHint label="Toggle Sidebar" keys="H" />} position="left" autoAlign={false}>
           <h2 
             onClick={() => setRightSidebarOpen(false)}
             className="text-base lg:text-lg font-semibold lg:font-bold text-white flex items-center gap-2 select-none cursor-pointer hover:text-indigo-200 transition-colors"
@@ -106,7 +107,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
             iconSize={16}
             triggerClassName={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer text-white`}
             copiedClassName="text-emerald-400"
-            tooltip="Copy full derivation (C)"
+            tooltip={<HotkeyHint label="Copy full derivation" keys="C" />}
             disabled={Object.keys(tree).length <= 1}
             trackAction="copy_derivation"
             trackCategory="history"
@@ -115,7 +116,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
             scopeDetail={exportScope.endpoint}
             onPreviewChange={setExportPreview}
           />
-          <Tooltip content="Undo step (⌘Z)">
+          <Tooltip content={<HotkeyHint label="Undo step" keys="⌘Z" />}>
             <button
               onClick={handleUndo}
               disabled={!canUndo}
@@ -125,7 +126,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
               <ChevronLeft size={16} />
             </button>
           </Tooltip>
-          <Tooltip content="Redo step (⌘⇧Z)">
+          <Tooltip content={<HotkeyHint label="Redo step" keys="⌘⇧Z" />}>
             <button
               onClick={handleRedo}
               disabled={!canRedo}
@@ -257,7 +258,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             iconSize={16}
             triggerClassName={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer text-white`}
             copiedClassName="text-emerald-400"
-            tooltip="Copy full derivation (C)"
+            tooltip={<HotkeyHint label="Copy full derivation" keys="C" />}
             disabled={sortedNodes.length <= 1}
             trackAction="copy_derivation"
             trackCategory="history"

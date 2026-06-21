@@ -36,8 +36,8 @@ interface CopyFormatMenuProps {
   triggerClassName: string;
   /** Class applied to the trigger while showing the copied state. */
   copiedClassName?: string;
-  /** Tooltip label for the trigger. Omit to skip the tooltip (e.g. when the menu's own header already names the action). */
-  tooltip?: string;
+  /** Tooltip content for the trigger. Omit to skip the tooltip (e.g. when the menu's own header already names the action). */
+  tooltip?: React.ReactNode;
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
   disabled?: boolean;
   /** Analytics action + label, e.g. 'copy_derivation'. Format is appended to the label. */

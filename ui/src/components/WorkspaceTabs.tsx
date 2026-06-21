@@ -13,6 +13,7 @@ import {
   WorkspaceTab
 } from '../store/equation';
 import { Tooltip } from './Tooltip';
+import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
 
 const formatTimestamp = (ts: number): string => {
@@ -179,7 +180,7 @@ export const WorkspaceTabs: React.FC = () => {
       </div>
 
       {/* Plus Button to add tab - Pinned to the right */}
-      <Tooltip content="New workspace tab (N)" position="bottom" autoAlign={false}>
+      <Tooltip content={<HotkeyHint label="New workspace tab" keys="N" />} position="bottom" autoAlign={false}>
         <button
           onClick={() => setIsInputModalOpen(true)}
           className="flex items-center justify-center p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white/40 hover:text-white transition-all cursor-pointer shrink-0"

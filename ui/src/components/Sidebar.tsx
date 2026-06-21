@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 import { useAtomValue, useSetAtom, useAtom } from 'jotai';
 import { useIsHydrated } from '../hooks/useIsHydrated';
 import { Tooltip } from './Tooltip';
+import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
 import { Equation, parseEquation, ensureNodeIds, deserializeEquation } from 'math-engine-client';
 import {
@@ -133,7 +134,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
     <div className="shrink-0 flex flex-col gap-3">
       {/* Header (Desktop Only) */}
       <div className={`hidden xl:flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
-        <Tooltip content="Toggle Workspace (W)" position="right" autoAlign={false}>
+        <Tooltip content={<HotkeyHint label="Toggle Workspace" keys="W" />} position="right" autoAlign={false}>
           <h2 
             onClick={() => setLeftSidebarOpen(false)}
             className="text-lg font-bold text-white flex items-center gap-2 select-none cursor-pointer hover:text-indigo-200 transition-colors"
@@ -151,7 +152,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
             Define Equation
           </span>
           <div className="grid grid-cols-2 gap-2">
-            <Tooltip content="Enter your own equation in a new workspace (N)" position="bottom" autoAlign={false} wrapperClassName="w-full">
+            <Tooltip content={<HotkeyHint label="Enter your own equation in a new workspace" keys="N" />} position="bottom" autoAlign={false} wrapperClassName="w-full">
               <button
                 type="button"
                 onClick={() => {
@@ -441,7 +442,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
       {/* Header */}
       {showHeader && (
         <div className={`hidden xl:flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
-          <Tooltip content="Toggle Equation Library (L)" position="right" autoAlign={false}>
+          <Tooltip content={<HotkeyHint label="Toggle Equation Library" keys="L" />} position="right" autoAlign={false}>
             <h2 
               onClick={() => setLeftSidebarOpen(false)}
               className="text-lg font-bold text-white flex items-center gap-2 select-none cursor-pointer hover:text-indigo-200 transition-colors"

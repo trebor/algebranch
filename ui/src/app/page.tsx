@@ -18,6 +18,7 @@ import { SettingsModal } from '../components/SettingsModal';
 import { AboutModal } from '../components/AboutModal';
 import { OnboardingTour } from '../components/OnboardingTour';
 import { Tooltip } from '../components/Tooltip';
+import { HotkeyHint } from '../components/HotkeyHint';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { ShareMenu } from '../components/ShareMenu';
 import { FactsStrip } from '../components/FactsStrip';
@@ -1228,7 +1229,7 @@ export default function Home() {
         {/* Left Sidebar Edge Handle (Desktop Only) */}
         <div className="hidden lg:block">
           <Tooltip 
-            content={leftSidebarOpen ? "Hide Left Sidebar (W / L)" : "Show Left Sidebar (W / L)"} 
+            content={<HotkeyHint label={leftSidebarOpen ? "Hide Left Sidebar" : "Show Left Sidebar"} keys={['W', 'L']} />}
             position="right"
             wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
               leftSidebarOpen ? 'left-[21.5rem] -translate-x-1/2' : 'left-[0.5rem] -translate-x-1/2'
@@ -1296,7 +1297,7 @@ export default function Home() {
                       open so it can always be closed. Replaces the old oversized
                       floating "Graph" pill. */}
                   {(isGraphViable || graphSize !== 'hidden') && (
-                    <Tooltip content={graphSize === 'hidden' ? 'Show graph (G)' : 'Hide graph (G)'} position="left">
+                    <Tooltip content={<HotkeyHint label={graphSize === 'hidden' ? 'Show graph' : 'Hide graph'} keys="G" />} position="left">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1477,7 +1478,7 @@ export default function Home() {
               >
                 {/* Graph resize/close controls sitting in the top-right corner of the header */}
                 <div className="absolute right-4 top-1.5 z-35 select-none flex items-center bg-neutral-900 border border-white/10 rounded-full px-1.5 py-0.5 shadow-md">
-                  <Tooltip content="Expand graph (2/3) (G)" position="top" autoAlign={false}>
+                  <Tooltip content={<HotkeyHint label="Expand graph (2/3)" keys="G" />} position="top" autoAlign={false}>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1493,7 +1494,7 @@ export default function Home() {
                     </button>
                   </Tooltip>
                   <div className="w-[1px] h-3 bg-white/10 mx-0.5" />
-                  <Tooltip content={graphSize === 'expand' ? "Shrink graph (1/3) (G)" : "Hide graph (G)"} position="top" autoAlign={false}>
+                  <Tooltip content={<HotkeyHint label={graphSize === 'expand' ? "Shrink graph (1/3)" : "Hide graph"} keys="G" />} position="top" autoAlign={false}>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1524,7 +1525,7 @@ export default function Home() {
         {/* Right Sidebar Edge Handle (Desktop Only) */}
         <div className="hidden lg:block">
           <Tooltip 
-            content={rightSidebarOpen ? "Hide History Sidebar (H)" : "Show History Sidebar (H)"} 
+            content={<HotkeyHint label={rightSidebarOpen ? "Hide History Sidebar" : "Show History Sidebar"} keys="H" />}
             position="left"
             wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
               rightSidebarOpen ? 'right-[21.5rem] translate-x-1/2' : 'right-[0.5rem] translate-x-1/2'

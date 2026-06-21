@@ -6,6 +6,7 @@
 import React from 'react';
 import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import { Tooltip } from './Tooltip';
+import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
 import { CopyFormatMenu } from './CopyFormatMenu';
 import { equationToString, getEquationStatus } from 'math-engine-client';
@@ -579,7 +580,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                       iconSize={10}
                       triggerClassName={`p-1 rounded-md border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-neutral-950 ${THEME_GLASS.TEXT_MUTED} hover:text-white hover:bg-white/10 hover:border-white/15 cursor-pointer`}
                       copiedClassName="text-emerald-400 hover:text-emerald-400 border-emerald-500/20 bg-emerald-500/10 opacity-100"
-                      tooltip="Copy equation (⇧C)"
+                      tooltip={<HotkeyHint label="Copy equation" keys="⇧C" />}
                       tooltipPosition="top"
                       trackAction="copy_step"
                       trackCategory="history"

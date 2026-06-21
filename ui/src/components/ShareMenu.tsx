@@ -6,14 +6,12 @@
 import React from 'react';
 import { Share2, Check, Variable, Layers } from 'lucide-react';
 import { Tooltip } from './Tooltip';
+import { HotkeyHint } from './HotkeyHint';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
 
 const COPIED_TIMEOUT = 2000;
 const MENU_CLOSE_GRACE = 500;
-
-// Compact keycap for the per-option hotkey hints in the share menu tooltips.
-const SHORTCUT_KEYCAP_SM = `${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`;
 
 interface ShareMenuProps {
   /** The current equation string (to build the eq share link). */
@@ -164,12 +162,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
             <span className={THEME_GLASS.COPY_MENU_HEADER_LABEL}>Create Share Link</span>
           </div>
           <Tooltip
-            content={
-              <span className="flex items-center gap-1.5">
-                Copy equation link
-                <kbd className={SHORTCUT_KEYCAP_SM}>⇧S</kbd>
-              </span>
-            }
+            content={<HotkeyHint label="Copy equation link" keys="⇧S" />}
             position="left"
             autoAlign={false}
             wrapperClassName="w-full"
@@ -185,12 +178,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
             </button>
           </Tooltip>
           <Tooltip
-            content={
-              <span className="flex items-center gap-1.5">
-                Copy workspace link
-                <kbd className={SHORTCUT_KEYCAP_SM}>S</kbd>
-              </span>
-            }
+            content={<HotkeyHint label="Copy workspace link" keys="S" />}
             position="left"
             autoAlign={false}
             wrapperClassName="w-full"

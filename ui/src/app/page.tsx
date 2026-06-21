@@ -1044,6 +1044,42 @@ export default function Home() {
       category: 'Help',
       keyLabel: '?',
     },
+    {
+      key: 'a',
+      action: () => {
+        setAboutOpen(true);
+        trackEvent({ action: 'shortcut_open_about', category: 'keyboard' });
+      },
+      description: 'About Algebranch',
+      category: 'Help',
+    },
+    {
+      key: 'f',
+      action: () => {
+        // Mirror the header Feedback button: seed the form with the active
+        // equation as context when there is one.
+        setFeedbackContext(currentEq ? `Active Equation: ${equationToString(currentEq)}` : null);
+        setFeedbackModalOpen(true);
+        trackEvent({ action: 'shortcut_open_feedback', category: 'keyboard' });
+      },
+      description: 'Send feedback',
+      category: 'Help',
+    },
+    {
+      // Open the global equals menu (apply an operation to both sides) — the same
+      // action as clicking the = sign. Skip when there's no equation or the sign
+      // is locked.
+      key: '=',
+      action: () => {
+        if (!currentEq || equalsLocked) return;
+        dismissEqualsHint();
+        setRadialMenuOpen(!radialMenuOpen);
+        trackEvent({ action: 'shortcut_toggle_equals_menu', category: 'keyboard' });
+      },
+      description: 'Apply an operation to both sides',
+      category: 'Equation',
+      keyLabel: '=',
+    },
   ];
   useKeyboardShortcuts(shortcutBindings, { disabled: anyModalOpen });
 

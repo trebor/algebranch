@@ -11,6 +11,7 @@ import { shortcutsOverlayOpenAtom } from '../store/equation';
 import { ShortcutConfig } from '../hooks/useKeyboardShortcuts';
 import { formatShortcut } from '../utils/keyboardShortcuts';
 import { THEME_GLASS } from '../constants/theme';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const UNCATEGORIZED = 'Other';
 
@@ -63,21 +64,8 @@ export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts })
 
   const handleClose = React.useCallback(() => setIsOpen(false), [setIsOpen]);
 
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, setIsOpen]);
+  // Focus trap + scroll lock + Escape-to-close + focus restore.
+  const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose: handleClose });
 
   return (
     <AnimatePresence>
@@ -94,6 +82,10 @@ export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts })
 
           {/* Modal Container */}
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shortcuts-overlay-title"
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -107,7 +99,7 @@ export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts })
             <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4 select-none">
               <div className="flex items-center gap-2.5">
                 <Keyboard className="text-indigo-400 w-5 h-5" />
-                <h2 className="text-lg font-bold text-white tracking-wide">Keyboard Shortcuts</h2>
+                <h2 id="shortcuts-overlay-title" className="text-lg font-bold text-white tracking-wide">Keyboard Shortcuts</h2>
               </div>
               <button
                 onClick={handleClose}

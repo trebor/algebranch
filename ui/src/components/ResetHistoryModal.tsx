@@ -16,6 +16,7 @@ import {
 } from '../store/equation';
 import { trackEvent } from '../utils/analytics';
 import { THEME_GLASS } from '../constants/theme';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export const ResetHistoryModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(resetHistoryModalOpenAtom);
@@ -26,26 +27,12 @@ export const ResetHistoryModal: React.FC = () => {
 
   const stepCount = Math.max(0, Object.keys(tree).length - 1);
 
-  // Escape key handler
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, setIsOpen]);
-
   const handleClose = () => {
     setIsOpen(false);
   };
+
+  // Focus trap + scroll lock + Escape-to-close + focus restore.
+  const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose: handleClose });
 
   const handleReset = () => {
     if (Object.keys(tree).length > 1) {
@@ -86,6 +73,10 @@ export const ResetHistoryModal: React.FC = () => {
 
           {/* Modal Container */}
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reset-history-title"
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -99,7 +90,7 @@ export const ResetHistoryModal: React.FC = () => {
             <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4 select-none">
               <div className="flex items-center gap-2.5">
                 <AlertTriangle className="text-red-400 w-5 h-5" />
-                <h2 className="text-lg font-bold text-white tracking-wide">Reset History</h2>
+                <h2 id="reset-history-title" className="text-lg font-bold text-white tracking-wide">Reset History</h2>
               </div>
               <button
                 onClick={handleClose}

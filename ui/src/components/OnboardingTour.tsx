@@ -30,6 +30,7 @@ import Image from 'next/image';
 import { Play, ArrowRight, ArrowLeft, CheckCircle2, X, BookOpen, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 // Node-color palette for the completion confetti (indigo, emerald, amber, sky, rose)
 const CONFETTI_COLORS = ['#818cf8', '#34d399', '#fbbf24', '#38bdf8', '#fb7185'];
@@ -270,19 +271,16 @@ export const OnboardingTour: React.FC = () => {
     setCompleted(true);
   }, [setShowPrompt, setShowDirectory, setCompleted]);
 
-  // Escape on the opening prompt/directory skips straight into the app, so a
-  // user who just wants to start solving isn't trapped by the tutorial.
-  useEffect(() => {
-    if (!showPrompt) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        handleSkipPrompt();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showPrompt, handleSkipPrompt]);
+  // Focus trap + scroll lock + focus restore for the opening welcome/directory
+  // dialog. Escape maps to "skip straight into the app" (handleSkipPrompt), so a
+  // user who just wants to start solving isn't trapped by the tutorial. Initial
+  // focus lands on the first chapter so Enter starts the tour immediately.
+  const firstChapterButtonRef = useRef<HTMLButtonElement>(null);
+  const promptDialogRef = useFocusTrap<HTMLDivElement>({
+    isOpen: showPrompt,
+    onClose: handleSkipPrompt,
+    initialFocusRef: firstChapterButtonRef,
+  });
 
   const handleStartChapter = (id: string) => {
     setShowPrompt(false);
@@ -300,6 +298,17 @@ export const OnboardingTour: React.FC = () => {
   const activeChapter = ONBOARDING_CHAPTERS.find(c => c.id === chapterId);
   const activeStep = activeChapter && stepIndex !== null ? activeChapter.steps[stepIndex] : null;
   const isLastStep = activeChapter && stepIndex !== null ? stepIndex === activeChapter.steps.length - 1 : false;
+
+  // When a walkthrough step opens or advances, move keyboard focus to the step's
+  // primary action ("Next"/"Finish") so keyboard/SR users land on the control
+  // that drives the tour instead of being dropped on the page body. The step
+  // card is non-modal, so the highlighted equation nodes stay reachable by Tab.
+  const stepNextButtonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (activeChapter && activeStep !== null && stepIndex !== null) {
+      stepNextButtonRef.current?.focus();
+    }
+  }, [chapterId, stepIndex, activeChapter, activeStep]);
 
   // Two-beat celebration: on solve, confetti bursts over the open workspace so
   // the solved equation stays visible; the chapter-complete modal arrives as a
@@ -338,12 +347,37 @@ export const OnboardingTour: React.FC = () => {
     setChapterProgress(readOnboardingSteps());
   }, [isLastStep, chapterId]);
 
+  // Finish the tutorial and drop into free exploration. Lifted to the top level
+  // so the chapter-complete celebration's focus trap (below) can use it as its
+  // Escape / dismiss action, and the buttons inside that modal can share it.
+  const handleFinishTour = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('algebranch_onboarding_completed', 'true');
+    }
+    setCompleted(true);
+    setStep(null);
+  }, [setCompleted, setStep]);
+
+  // Chapter-complete celebration modal: trap focus and land it on the primary
+  // action — "Next: <chapter>" until the final chapter, then "Finish & Explore
+  // Freely". Escape dismisses into free exploration.
+  const celebrationPrimaryRef = useRef<HTMLButtonElement>(null);
+  const celebrationDialogRef = useFocusTrap<HTMLDivElement>({
+    isOpen: celebrationReady,
+    onClose: handleFinishTour,
+    initialFocusRef: celebrationPrimaryRef,
+  });
+
   // Render the initial Welcome/Chapter directory prompt
   if (showPrompt) {
     if (!mounted || typeof document === 'undefined') return null;
     return createPortal(
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 max-lg:pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
         <motion.div
+          ref={promptDialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="onboarding-prompt-title"
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           className={`${THEME_GLASS.PANEL} max-w-md w-full pt-6 pb-0 flex flex-col gap-6 max-h-[85svh] overflow-y-auto overflow-x-hidden ${THEME_GLASS.TOOLTIP_DETAILS}`}
@@ -359,12 +393,13 @@ export const OnboardingTour: React.FC = () => {
                 className="h-10 w-10 object-contain rounded-full shrink-0"
               />
               <div>
-                <h3 className="font-bold text-white text-base lg:text-lg">Welcome to Algebranch!</h3>
+                <h3 id="onboarding-prompt-title" className="font-bold text-white text-base lg:text-lg">Welcome to Algebranch!</h3>
                 <p className="text-[10px] text-indigo-300/60 font-medium">Interactive Algebra Tour</p>
               </div>
             </div>
             <button
               onClick={handleSkipPrompt}
+              aria-label="Skip tutorial"
               className={`hover:bg-white/5 p-1 rounded-lg transition-colors cursor-pointer ${THEME_GLASS.TEXT_MUTED} hover:text-white`}
             >
               <X size={16} />
@@ -377,7 +412,7 @@ export const OnboardingTour: React.FC = () => {
             </p>
             
             <div className="flex flex-col gap-2.5 mt-2">
-              {ONBOARDING_CHAPTERS.map((chapter) => {
+              {ONBOARDING_CHAPTERS.map((chapter, index) => {
                 const isCompleted = completedChapters.includes(chapter.id);
                 const savedStep = chapterProgress[chapter.id];
                 const hasProgress = !isCompleted && savedStep !== undefined && savedStep > 0;
@@ -385,6 +420,7 @@ export const OnboardingTour: React.FC = () => {
                 return (
                   <button
                     key={chapter.id}
+                    ref={index === 0 ? firstChapterButtonRef : undefined}
                     onClick={() => handleStartChapter(chapter.id)}
                     className={`w-full text-left p-3 rounded-xl border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-white/5 hover:bg-white/10 hover:border-white/10 active:scale-[0.99] transition-all flex items-center justify-between gap-3 cursor-pointer group`}
                   >
@@ -453,14 +489,6 @@ export const OnboardingTour: React.FC = () => {
     const chapterIndex = ONBOARDING_CHAPTERS.findIndex(c => c.id === activeChapter.id);
     const nextChapter = chapterIndex >= 0 ? ONBOARDING_CHAPTERS[chapterIndex + 1] : undefined;
 
-    const handleFinish = () => {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('algebranch_onboarding_completed', 'true');
-      }
-      setCompleted(true);
-      setStep(null);
-    };
-
     if (!mounted || typeof document === 'undefined') return null;
 
     return createPortal(
@@ -478,6 +506,10 @@ export const OnboardingTour: React.FC = () => {
           >
             <ConfettiBurst />
             <motion.div
+              ref={celebrationDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="chapter-complete-title"
               initial={{ scale: 0.9, y: 12, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 260, damping: 22 }}
@@ -496,13 +528,14 @@ export const OnboardingTour: React.FC = () => {
                 <span className="text-[10px] font-bold tracking-wider uppercase text-emerald-400/80">
                   Chapter Complete — {activeChapter.title}
                 </span>
-                <h3 className="font-bold text-white text-base lg:text-lg">{activeStep.title}</h3>
+                <h3 id="chapter-complete-title" className="font-bold text-white text-base lg:text-lg">{activeStep.title}</h3>
                 <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed`}>{activeStep.description}</p>
               </div>
 
               <div className="flex flex-col gap-2.5 w-full pt-2">
                 {nextChapter ? (
                   <button
+                    ref={celebrationPrimaryRef}
                     onClick={() => startChapter(nextChapter.id)}
                     className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_PRIMARY}`}
                   >
@@ -511,7 +544,8 @@ export const OnboardingTour: React.FC = () => {
                   </button>
                 ) : (
                   <button
-                    onClick={handleFinish}
+                    ref={celebrationPrimaryRef}
+                    onClick={handleFinishTour}
                     className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_SUCCESS}`}
                   >
                     <CheckCircle2 size={13} />
@@ -529,7 +563,7 @@ export const OnboardingTour: React.FC = () => {
                   </button>
                   {nextChapter && (
                     <button
-                      onClick={handleFinish}
+                      onClick={handleFinishTour}
                       className={`flex-1 h-8 px-2 text-[11px] font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
                     >
                       <Play size={12} className="shrink-0" />
@@ -670,6 +704,7 @@ export const OnboardingTour: React.FC = () => {
                 )}
 
                 <button
+                  ref={stepNextButtonRef}
                   onClick={() => setStep(isLastStep ? null : stepIndex + 1)}
                   className={`h-7 px-3 text-[10px] font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_PRIMARY}`}
                 >

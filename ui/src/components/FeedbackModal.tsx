@@ -11,6 +11,7 @@ import { feedbackModalOpenAtom, feedbackContextAtom, historyTreeAtom, HistoryNod
 import { Equation, equationToString } from 'math-engine-client';
 import { trackEvent } from '../utils/analytics';
 import { THEME_GLASS } from '../constants/theme';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import { buildWorkspaceUrl, buildEquationUrl, buildGithubIssueUrl, parseUserAgent, ShareMode } from '../utils/feedbackUrl';
 import { WorkspaceTreeView } from './WorkspaceTreeView';
@@ -95,23 +96,6 @@ export const FeedbackModal: React.FC = () => {
     setErrorStr(null);
   }, []);
 
-  // Focus trap and escape key handler
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, setIsOpen]);
-
   // Reset form state when the modal opens. Done during render via the
   // previous-prop pattern (React's "adjust state when a prop changes") rather
   // than an effect, so the reset is applied before paint.
@@ -125,6 +109,15 @@ export const FeedbackModal: React.FC = () => {
     setIsOpen(false);
     setTimeout(resetForm, 300);
   };
+
+  // Focus trap + scroll lock + Escape-to-close + focus restore. Initial focus
+  // lands on the Subject field so the user can start typing immediately.
+  const subjectInputRef = React.useRef<HTMLInputElement>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>({
+    isOpen,
+    onClose: handleClose,
+    initialFocusRef: subjectInputRef,
+  });
 
   const handleSubmitType = async (e: React.FormEvent, feedbackType: FeedbackType) => {
     e.preventDefault();
@@ -205,6 +198,10 @@ export const FeedbackModal: React.FC = () => {
 
           {/* Modal Container */}
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feedback-modal-title"
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -218,7 +215,7 @@ export const FeedbackModal: React.FC = () => {
             {/* Header */}
             <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER_SUBTLE} pb-4 mb-4 select-none`}>
               <div>
-                <h2 className="text-lg font-bold text-white tracking-wide">Share Feedback</h2>
+                <h2 id="feedback-modal-title" className="text-lg font-bold text-white tracking-wide">Share Feedback</h2>
                 <p className="text-xs text-indigo-300 font-semibold tracking-wider uppercase mt-0.5">
                   Help us improve Algebranch
                 </p>
@@ -276,6 +273,7 @@ export const FeedbackModal: React.FC = () => {
                       Subject
                     </label>
                     <input
+                      ref={subjectInputRef}
                       type="text"
                       required
                       value={subject}

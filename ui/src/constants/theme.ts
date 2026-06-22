@@ -166,6 +166,8 @@ export const THEME_GLASS = {
   EQUALS_SIGN: 'relative text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black transition-all z-10',
   EQUALS_SIGN_INTERACTIVE: 'cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95',
   EQUALS_BADGE: 'absolute -top-2 -right-2 w-5 h-5 rounded-full bg-indigo-600 border border-indigo-400 flex items-center justify-center text-xs leading-none text-white font-bold select-none cursor-pointer shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse z-20',
+  RELATION_SELECT: 'w-14 h-8 appearance-none bg-indigo-500/5 hover:bg-indigo-500/15 border border-indigo-500/20 hover:border-indigo-400/35 focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-500/30 text-indigo-400 font-mono font-bold text-sm text-center rounded-lg cursor-pointer transition-all focus:outline-none pl-2.5 pr-5 shadow-inner shadow-black/40',
+  RELATION_SELECT_CHEVRON: 'absolute right-1.5 pointer-events-none text-indigo-400/50 transition-colors',
   // Positioning is supplied at render time: the popover is portaled to <body>
   // with fixed coords (see page.tsx) so it escapes the overflow-clipping /
   // scaled equation ancestors that previously hid it behind content (#172).

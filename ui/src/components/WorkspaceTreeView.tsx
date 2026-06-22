@@ -571,7 +571,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                 )}
 
                 {/* Truncated Equation Label */}
-                <span className={`text-xs font-mono truncate max-w-full text-indigo-50 font-semibold text-center ${interactive ? 'pl-2 pr-12' : 'px-2'}`}>
+                <span className={`text-xs font-mono truncate max-w-full text-indigo-50 font-semibold text-center ${interactive ? 'px-10' : 'px-2'}`}>
                   {equationToString(node.equation)}
                 </span>
 

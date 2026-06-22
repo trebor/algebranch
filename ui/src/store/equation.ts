@@ -788,6 +788,28 @@ export const substitutionPathsAtom = atom<Record<string, SubstitutionOption[]>>(
 });
 
 /**
+ * Filtered substitution facts that are actually applicable to the current equation
+ * (i.e. those that have at least one valid substitution or combination option).
+ */
+export const applicableFactsAtom = atom<SubstitutionFact[]>((get) => {
+  const allFacts = get(availableFactsAtom);
+  const pathsRecord = get(substitutionPathsAtom);
+  
+  const usedKeys = new Set<string>();
+  for (const options of Object.values(pathsRecord)) {
+    for (const option of options) {
+      if (option.fact) {
+        usedKeys.add(`${option.fact.variable} = ${option.fact.expression.toString()}`);
+      }
+    }
+  }
+  
+  return allFacts.filter(fact => 
+    usedKeys.has(`${fact.variable} = ${fact.expression.toString()}`)
+  );
+});
+
+/**
  * Computes the absolute layout coordinates of the tree using DFS.
  */
 export const treeLayoutAtom = atom<Record<string, VisualTreeNode>>((get) => {

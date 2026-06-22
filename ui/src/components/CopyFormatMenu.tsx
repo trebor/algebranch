@@ -4,6 +4,7 @@
 'use client';
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Copy, Check, ChevronDown } from 'lucide-react';
 import type { Equation } from 'math-engine-client';
 import { Tooltip } from './Tooltip';
@@ -11,6 +12,8 @@ import { PreviewEquationNode } from './PreviewEquationNode';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
 import type { ExportFormat } from '../store/equation';
+
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
 // A copy split-button (#46, #243): the primary segment copies the default format
 // in one gesture, and a caret reveals the full Plain / Unicode / LaTeX menu.
@@ -33,6 +36,12 @@ const COPIED_TIMEOUT = 2000;
 // Grace before a click-opened menu closes after the cursor leaves it, so clipping
 // the edge doesn't dismiss it.
 const MENU_CLOSE_GRACE = 500;
+
+const DEFAULT_MENU_WIDTH = 176;
+const DEFAULT_MENU_HEIGHT = 160;
+const VIEWPORT_PADDING = 8;
+const MENU_OFFSET = 6;
+const HIDDEN_COORDINATE = -9999;
 
 // Two sizes of the same split-button: roomy in the derivation toolbar, compact in
 // the per-step hover toolbar on a history card.
@@ -80,6 +89,8 @@ interface CopyFormatMenuProps {
    * component decoupled from app state.
    */
   onPreviewChange?: (active: boolean) => void;
+  /** Fired when the dropdown menu is opened or closed. */
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
@@ -96,11 +107,14 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   scopeLabel,
   scopeEquation,
   onPreviewChange,
+  onOpenChange,
 }) => {
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const menuRef = React.useRef<HTMLDivElement | null>(null);
+  const [menuPos, setMenuPos] = React.useState<{ left: number; top: number } | null>(null);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const v = VARIANTS[variant];
 
@@ -121,14 +135,67 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   }, [hovered, onPreviewChange]);
 
   React.useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
+
+  // Calculate fixed layout position on resize or scroll to prevent clipping
+  useIsomorphicLayoutEffect(() => {
+    if (!open) return;
+    const compute = () => {
+      const anchor = containerRef.current;
+      const menu = menuRef.current;
+      if (!anchor) return;
+
+      const a = anchor.getBoundingClientRect();
+      const menuW = menu?.offsetWidth ?? DEFAULT_MENU_WIDTH;
+      const menuH = menu?.offsetHeight ?? DEFAULT_MENU_HEIGHT;
+
+      // Horizontal: center the menu relative to the split-button,
+      // and clamp it so it sits at least VIEWPORT_PADDING inside the viewport edges.
+      const centerX = a.left + a.width / 2;
+      const halfW = menuW / 2;
+      const left = Math.max(VIEWPORT_PADDING, Math.min(centerX - halfW, window.innerWidth - menuW - VIEWPORT_PADDING));
+
+      // Vertical: open below the split-button by default if it fits.
+      // If it doesn't fit below, flip it to open above.
+      const fitsBelow = a.bottom + MENU_OFFSET + menuH <= window.innerHeight - VIEWPORT_PADDING;
+      const rawTop = fitsBelow ? a.bottom + MENU_OFFSET : a.top - MENU_OFFSET - menuH;
+      const top = Math.max(VIEWPORT_PADDING, Math.min(rawTop, window.innerHeight - menuH - VIEWPORT_PADDING));
+
+      setMenuPos({ left, top });
+    };
+
+    compute();
+
+    // Defer a layout check in case the menu is newly mounted and needs to be measured
+    const frameId = requestAnimationFrame(compute);
+
+    window.addEventListener('resize', compute);
+    window.addEventListener('scroll', compute, true);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', compute);
+      window.removeEventListener('scroll', compute, true);
+    };
+  }, [open]);
+
+  React.useEffect(() => {
     if (!open) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const isInsideAnchor = containerRef.current?.contains(target);
+      const isInsideMenu = menuRef.current?.contains(target);
+      if (!isInsideAnchor && !isInsideMenu) {
         setOpen(false);
+        setMenuPos(null);
       }
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        setMenuPos(null);
+      }
     };
     document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
@@ -147,13 +214,17 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   const handleMouseLeave = () => {
     setHovered(false);
     clearCloseTimer();
-    closeTimer.current = setTimeout(() => setOpen(false), MENU_CLOSE_GRACE);
+    closeTimer.current = setTimeout(() => {
+      setOpen(false);
+      setMenuPos(null);
+    }, MENU_CLOSE_GRACE);
   };
 
   const copy = (format: ExportFormat) => {
     // Close the menu and drop the hover/preview so the path animation stops on copy.
     clearCloseTimer();
     setOpen(false);
+    setMenuPos(null);
     setHovered(false);
     navigator.clipboard.writeText(getText(format)).then(() => {
       setCopied(true);
@@ -174,7 +245,11 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
 
   const handleCaretClick = (e: React.MouseEvent) => {
     if (stopPropagation) e.stopPropagation();
-    setOpen((value) => !value);
+    const next = !open;
+    setOpen(next);
+    if (!next) {
+      setMenuPos(null);
+    }
   };
 
   const primaryButton = (
@@ -219,8 +294,19 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
           <ChevronDown size={v.caretSize} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
       </div>
-      {open && (
-        <div role="menu" className={THEME_GLASS.COPY_MENU}>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          style={{
+            position: 'fixed',
+            left: menuPos ? `${menuPos.left}px` : `${HIDDEN_COORDINATE}px`,
+            top: menuPos ? `${menuPos.top}px` : `${HIDDEN_COORDINATE}px`,
+            opacity: menuPos ? 1 : 0,
+            pointerEvents: 'auto',
+          }}
+          className={THEME_GLASS.COPY_MENU}
+        >
           {(scopeLabel || scopeEquation) && (
             <div className={THEME_GLASS.COPY_MENU_HEADER}>
               {scopeLabel && <span className={THEME_GLASS.COPY_MENU_HEADER_LABEL}>{scopeLabel}</span>}
@@ -246,7 +332,8 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
               {label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

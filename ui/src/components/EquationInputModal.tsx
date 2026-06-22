@@ -6,7 +6,7 @@
 import React from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, PenTool, HelpCircle, AlertCircle, Check, BookOpen, ArrowRight } from 'lucide-react';
+import { X, PenTool, HelpCircle, AlertCircle, Check, BookOpen, ArrowRight, ChevronDown } from 'lucide-react';
 import {
   equationInputModalOpenAtom,
   resetToEquationStringAtom
@@ -22,6 +22,8 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
 const RELATION_OPTIONS: RelationOperator[] = ['=', '<', '>', '<=', '>='];
 // Detects a relation operator in pasted/typed text (two-char forms first).
 const RELATION_REGEX = /<=|>=|<|>|=/;
+
+const CHEVRON_SIZE = 12;
 
 export const EquationInputModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(equationInputModalOpenAtom);
@@ -258,18 +260,21 @@ export const EquationInputModal: React.FC = () => {
                     autoCapitalize="off"
                     spellCheck="false"
                   />
-                  <select
-                    value={relation}
-                    onChange={(e) => setRelation(e.target.value as RelationOperator)}
-                    aria-label="Relation operator"
-                    className="text-indigo-400 font-mono font-bold text-sm px-1 shrink-0 bg-transparent cursor-pointer focus:outline-none text-center appearance-none hover:text-indigo-300 transition-colors"
-                  >
-                    {RELATION_OPTIONS.map((op) => (
-                      <option key={op} value={op} className="bg-neutral-900 text-white">
-                        {RELATION_DISPLAY[op]}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative flex items-center shrink-0">
+                    <select
+                      value={relation}
+                      onChange={(e) => setRelation(e.target.value as RelationOperator)}
+                      aria-label="Relation operator"
+                      className={THEME_GLASS.RELATION_SELECT}
+                    >
+                      {RELATION_OPTIONS.map((op) => (
+                        <option key={op} value={op} className="bg-neutral-900 text-white">
+                          {RELATION_DISPLAY[op]}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={CHEVRON_SIZE} className={THEME_GLASS.RELATION_SELECT_CHEVRON} />
+                  </div>
                   <input
                     ref={rhsRef}
                     type="text"

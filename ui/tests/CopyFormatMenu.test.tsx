@@ -117,4 +117,65 @@ describe('CopyFormatMenu', () => {
     await waitFor(() => expect(writeText).toHaveBeenCalled());
     expect(onParentClick).not.toHaveBeenCalled();
   });
+
+  it('aligns the menu left or right based on the align prop', async () => {
+    const { rerender } = render(
+      <CopyFormatMenu
+        getText={(format) => equationToFormat(eq, format)}
+        variant="tree"
+        trackAction="copy_step"
+        trackCategory="history"
+        trackLabel="node-1"
+        align="left"
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
+    let menu = screen.getByRole('menu');
+    expect(menu.className).toContain('left-0');
+    expect(menu.className).not.toContain('right-0');
+
+    // Close it
+    await userEvent.keyboard('{Escape}');
+
+    // Rerender with align="right"
+    rerender(
+      <CopyFormatMenu
+        getText={(format) => equationToFormat(eq, format)}
+        variant="tree"
+        trackAction="copy_step"
+        trackCategory="history"
+        trackLabel="node-1"
+        align="right"
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
+    menu = screen.getByRole('menu');
+    expect(menu.className).toContain('right-0');
+    expect(menu.className).not.toContain('left-0');
+  });
+
+  it('calls onOpenChange when opening and closing the menu', async () => {
+    const onOpenChange = vi.fn();
+    render(
+      <CopyFormatMenu
+        getText={(format) => equationToFormat(eq, format)}
+        variant="tree"
+        trackAction="copy_step"
+        trackCategory="history"
+        trackLabel="node-1"
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+
+    // Open menu
+    await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
+    expect(onOpenChange).toHaveBeenLastCalledWith(true);
+
+    // Close menu via Escape
+    await userEvent.keyboard('{Escape}');
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
 });

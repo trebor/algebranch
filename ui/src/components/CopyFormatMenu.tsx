@@ -80,6 +80,10 @@ interface CopyFormatMenuProps {
    * component decoupled from app state.
    */
   onPreviewChange?: (active: boolean) => void;
+  /** Horizontal alignment: left-0 or right-0. Defaults to right. */
+  align?: 'left' | 'right';
+  /** Fired when the dropdown menu is opened or closed. */
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
@@ -96,6 +100,8 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   scopeLabel,
   scopeEquation,
   onPreviewChange,
+  align = 'right',
+  onOpenChange,
 }) => {
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -119,6 +125,10 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
     onPreviewChange?.(hovered);
     return () => onPreviewChange?.(false);
   }, [hovered, onPreviewChange]);
+
+  React.useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -220,7 +230,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
         </button>
       </div>
       {open && (
-        <div role="menu" className={THEME_GLASS.COPY_MENU}>
+        <div role="menu" className={`${THEME_GLASS.COPY_MENU} ${align === 'left' ? 'left-0' : 'right-0'}`}>
           {(scopeLabel || scopeEquation) && (
             <div className={THEME_GLASS.COPY_MENU_HEADER}>
               {scopeLabel && <span className={THEME_GLASS.COPY_MENU_HEADER_LABEL}>{scopeLabel}</span>}

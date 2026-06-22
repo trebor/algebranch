@@ -71,6 +71,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
   const exportPreviewActive = useAtomValue(exportPreviewActiveAtom);
   const isMounted = useIsHydrated();
+  const [activeCopyMenuNodeId, setActiveCopyMenuNodeId] = React.useState<string | null>(null);
 
   const activeCardRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -469,6 +470,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
               key={node.id}
               position="right"
               delay={300} // Snappy but deliberate 300ms hover delay to prevent jitter
+              visible={activeCopyMenuNodeId === node.id ? false : undefined}
               // Each node wrapper is its own stacking context (z-10), so the copy
               // dropdown's z-50 only outranks content *within* this node — later
               // sibling nodes (steps below) would paint over it. Lift the active
@@ -596,6 +598,14 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                       scopeLabel="This step"
                       scopeEquation={node.equation}
                       stopPropagation
+                      align={node.x < 140 ? 'left' : 'right'}
+                      onOpenChange={(isOpen) => {
+                        if (isOpen) {
+                          setActiveCopyMenuNodeId(node.id);
+                        } else {
+                          setActiveCopyMenuNodeId((current) => current === node.id ? null : current);
+                        }
+                      }}
                     />
                   </div>
                 )}

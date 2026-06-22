@@ -56,13 +56,17 @@ This section is the **canonical commit/merge protocol** for every agent in this 
 
 **Commit & approval lifecycle** — never skip a step without explicit user authorization:
 1. Write the changes test-first per the TDD cycle above, run the full validation gate, and confirm it passes.
-2. **Halt.** Summarize the changes, point the user to the modified files for review/verification, and provide **specific local test URLs** (e.g., `http://localhost:3000/?eq=<test-expression>`) with detailed guidance on what to interact with, what test inputs/operators to click, and what exact visual or logical behavior to verify. **Always URL-encode the equation** (everything after `?eq=`) so it survives the share-link round-trip **and stays fully clickable in the terminal**. `encodeURIComponent` covers the round-trip cases — `=`→`%3D`, `/`→`%2F`, `+`→`%2B`, `,`→`%2C` (form-decoding silently turns a raw `+` into a space, corrupting sums) — but it leaves `(`, `)`, `*` raw, and most CLIs drop a trailing `)` from the hyperlink (so the user can't click the whole URL). Encode those too: `(`→`%28`, `)`→`%29`, `*`→`%2A`. Do **not** commit speculatively.
+2. **Halt.** Summarize the changes, point the user to the modified files for review/verification, and provide **specific local test URLs** (e.g., `http://localhost:3000/?eq=<test-expression>` for Claude or `http://localhost:3001/?eq=<test-expression>` for Gemini) with detailed guidance on what to interact with, what test inputs/operators to click, and what exact visual or logical behavior to verify. **Always URL-encode the equation** (everything after `?eq=`) so it survives the share-link round-trip **and stays fully clickable in the terminal**. `encodeURIComponent` covers the round-trip cases — `=`→`%3D`, `/`→`%2F`, `+`→`%2B`, `,`→`%2C` (form-decoding silently turns a raw `+` into a space, corrupting sums) — but it leaves `(`, `)`, `*` raw, and most CLIs drop a trailing `)` from the hyperlink (so the user can't click the whole URL). Encode those too: `(`→`%28`, `)`→`%29`, `*`→`%2A`. Do **not** commit speculatively.
 3. Commit only after the user explicitly approves.
 4. Never `git push`, `gh pr merge`, or merge directly without approval. Once commits are approved, offer to finalize: open/merge the PR, delete the feature branch, and clean up.
 
 ## Local dev server
 
-**The human owns the local dev server** (`npm run dev`, http://localhost:3000) — they start, stop, and restart it. Agents must **not** launch it or poll it (no background `npm run dev`, no health-check curl loops); that wastes tokens on something the human does instantly, and avoids two agents fighting over the port.
+**The human owns the local dev servers** — they start, stop, and restart them. Each agent's worktree runs its dev server on a dedicated port:
+- **Claude** (at `/Users/trebor/src/algebranch`): Runs on `http://localhost:3000` via `npm run dev`.
+- **Gemini** (at `/Users/trebor/src/gemini/algebranch`): Runs on `http://localhost:3001` via `npm run dev:gemini`.
+
+Agents must **not** launch the dev servers or poll them (no background runs, no health-check curl loops); that wastes tokens on something the human does instantly, and avoids port conflicts.
 
 When a change needs verifying in the running app, **tell the human what to run and whether a restart is required**:
 - **UI changes** (anything under `ui/src` — components, store, theme): Next dev hot-reloads. **No restart.**
@@ -85,7 +89,7 @@ PNGs land in `screenshots/` (gitignored) by default; never commit them. Caveats 
 - **Animations are time-based** — a screenshot is one frame. Pass `--no-motion` for a clean static layout shot (e.g. when the `animate-ping` pulse would obscure spacing).
 - **Hover/click states must be scripted** — use `--hover`/`--click` with a CSS selector to capture interaction-gated UI.
 - **Scale is viewport-dependent** — `useMathScale` (0.4–2.8×) keys off container size, so set `--width`/`--height` deliberately to test scale extremes; a captured layout is only valid for that viewport.
-- **The human owns the dev server** — this script *points at* `localhost:3000`; it does not (and must not) start the server.
+- **The human owns the dev server** — this script points at the active dev server (automatically defaulting to `localhost:3000` for Claude or `localhost:3001` for Gemini based on the worktree path); it does not (and must not) start the server.
 
 ## Styling guardrails
 
@@ -94,3 +98,4 @@ PNGs land in `screenshots/` (gitignored) by default; never commit them. Caveats 
 ## Coordination & Hand-offs
 
 - **Strictly human-triggered**: Handoff and pickup operations are human-triggered. Never perform or automate a handoff or pickup unless the user explicitly instructs you to do so. Do not auto-execute these processes on your own.
+- **Worktree Isolation**: We run in separate git worktrees of the same repository. Claude operates in `/Users/trebor/src/algebranch`, and Gemini operates in `/Users/trebor/src/gemini/algebranch`. The `agent-relay` inbox files (`~/.local/state/agent-relay/algebranch/`) coordinate work transitions between our worktrees.

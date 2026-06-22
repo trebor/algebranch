@@ -11,6 +11,7 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=ui",
+    "dev:gemini": "npm run dev --workspace=ui -- -p 3001",
     "start": "npm run start --workspace=ui",
     "dev:lan": "npx --workspace=ui next dev --webpack -H 0.0.0.0",
     "start:lan": "npx --workspace=ui next start -H 0.0.0.0",

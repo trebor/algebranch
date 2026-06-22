@@ -69,7 +69,8 @@ function parseArgs(argv) {
 }
 
 const args = parseArgs(process.argv.slice(2));
-const base = args.base ?? 'http://localhost:3000';
+const defaultBase = process.cwd().includes('/gemini/') ? 'http://localhost:3001' : 'http://localhost:3000';
+const base = args.base ?? defaultBase;
 const out = args.out ?? 'screenshots/hero.png';
 const width = Number(args.width ?? 1440);
 const height = Number(args.height ?? 900);

@@ -1315,10 +1315,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 onMouseEnter={cancelMenuClose}
                 onMouseLeave={scheduleMenuClose}
               >
-                {/* Invisible hover bridge: extends the hit area to overlap the handle
-                    (above or below) so the cursor never crosses a dead gap. Behind the
-                    rows (-z-10) so it never intercepts their hovers/clicks. */}
-                <div aria-hidden="true" className="absolute -inset-4 -z-10" />
                 {sections.map((section, idx) => (
                   <React.Fragment key={idx}>
                     {idx > 0 && <div className="w-full border-t border-white/10 my-1" />}

@@ -7,7 +7,7 @@ import React from 'react';
 import { useAtomValue } from 'jotai';
 import { mjs } from 'math-engine';
 import { Replace } from 'lucide-react';
-import { availableFactsAtom, onboardingChapterIdAtom, graphSizeAtom } from '../store/equation';
+import { applicableFactsAtom, onboardingChapterIdAtom, graphSizeAtom } from '../store/equation';
 import { equationToString } from 'math-engine-client';
 import { THEME_GLASS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
@@ -19,7 +19,7 @@ import { TooltipCard } from './TooltipCard';
  * Replace handles — hidden entirely when no facts exist.
  */
 export const FactsStrip: React.FC = () => {
-  const facts = useAtomValue(availableFactsAtom);
+  const facts = useAtomValue(applicableFactsAtom);
   const inTour = !!useAtomValue(onboardingChapterIdAtom);
   const graphSize = useAtomValue(graphSizeAtom);
   if (facts.length === 0) return null;

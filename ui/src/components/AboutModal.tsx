@@ -8,7 +8,7 @@ import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Info, ExternalLink, Shield } from 'lucide-react';
+import { X, Info, ExternalLink, Shield, Github } from 'lucide-react';
 import { aboutModalOpenAtom } from '../store/equation';
 import { consentAtom } from '../store/consent';
 import { THEME_GLASS } from '../constants/theme';
@@ -17,7 +17,8 @@ import {
   APP_VERSION,
   COPYRIGHT_NOTICE,
   THIRD_PARTY_ATTRIBUTIONS,
-  GPL_LICENSE_TEXT
+  GPL_LICENSE_TEXT,
+  GITHUB_REPO_URL
 } from '../constants/about';
 
 export const AboutModal: React.FC = () => {
@@ -164,6 +165,15 @@ export const AboutModal: React.FC = () => {
                 >
                   Cookie Settings
                 </button>
+                <a
+                  href={GITHUB_REPO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${THEME_GLASS.LINK} flex items-center gap-1.5`}
+                >
+                  <Github size={14} className="shrink-0" />
+                  GitHub
+                </a>
               </div>
               <button
                 onClick={handleClose}

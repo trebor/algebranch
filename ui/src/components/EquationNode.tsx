@@ -334,6 +334,35 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   }, [cancelMenuClose, closeMenu]);
   React.useEffect(() => cancelMenuClose, [cancelMenuClose]);
 
+  // Open a multi-option handle's menu anchored to its button. Shared by hover
+  // (onMouseEnter) and keyboard/click (Enter/Space) so the menu is reachable
+  // without a pointer (#231).
+  const openStackMenu = React.useCallback(
+    (el: HTMLElement, type: 'reduce' | 'distribute' | 'identity' | 'substitute') => {
+      cancelMenuClose();
+      const rect = el.getBoundingClientRect();
+      const left = Math.max(
+        MENU_HALF_WIDTH_PX + 8,
+        Math.min(rect.left + rect.width / 2, window.innerWidth - MENU_HALF_WIDTH_PX - 8),
+      );
+      // Handle in the top half of the viewport => open the menu downward (and
+      // vice-versa) so it always grows into the roomier half.
+      const placement = rect.top + rect.height / 2 < window.innerHeight / 2 ? 'below' : 'above';
+      setMenuAnchor({
+        top: placement === 'below' ? rect.bottom + MENU_ANCHOR_GAP_PX : rect.top - MENU_ANCHOR_GAP_PX,
+        left,
+        placement,
+      });
+      setOpenMenuType(type);
+      setHoveredOption(null);
+      if (type !== 'substitute') {
+        setHoverReducePath(path);
+        setHoverReduceIndex(null);
+      }
+    },
+    [cancelMenuClose, path, setHoverReducePath, setHoverReduceIndex],
+  );
+
   // The circle marks the reduce/substitution handle itself when one produces the
   // step's expected equation; otherwise it marks the node box (selection/
   // transposition steps).
@@ -483,22 +512,18 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     return null;
   };
 
-  const handleNodeClick = (e: React.MouseEvent) => {
-    // During the tour no node click may bubble to the workspace canvas, whose
-    // onClick deselects the source (page.tsx). Otherwise a blocked/static click
-    // would clear the selection and desync step order. The gating below still
-    // decides which clicks actually do something.
-    if (isOnboardingActive) {
-      e.stopPropagation();
-    }
-
+  // The actionable core shared by mouse click and keyboard activation (#231).
+  // It applies the same onboarding gating, target-apply, and toggle-select logic
+  // regardless of input modality; event-specific concerns (stopPropagation,
+  // preventDefault) stay in the wrappers below.
+  const activateNode = () => {
     if (isStatic) {
       return;
     }
 
     if (isOnboardingActive) {
       if (sourcePath) {
-        // A source is selected: only a valid target is actionable. Re-clicking
+        // A source is selected: only a valid target is actionable. Re-activating
         // the source (or any non-target node) is blocked — otherwise the
         // toggle-select branch below would deselect it and desync step order.
         const activeTargetPath = getTargetPath();
@@ -510,8 +535,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         if (path !== onboardingHighlightPath) return;
       }
     }
-
-    e.stopPropagation();
 
     const activeTargetPath = getTargetPath();
     if (activeTargetPath && sourcePath) {
@@ -540,6 +563,42 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       setSourcePath(path);
       trackEvent({
         action: 'select_node',
+        category: 'math_interaction',
+        label: path,
+      });
+    }
+  };
+
+  const handleNodeClick = (e: React.MouseEvent) => {
+    // During the tour no node click may bubble to the workspace canvas, whose
+    // onClick deselects the source (page.tsx). Otherwise a blocked/static click
+    // would clear the selection and desync step order. activateNode still decides
+    // which clicks actually do something.
+    if (isOnboardingActive) {
+      e.stopPropagation();
+    }
+
+    if (isStatic) {
+      return;
+    }
+
+    e.stopPropagation();
+    activateNode();
+  };
+
+  // Keyboard parity for the tab-to-green nav (#231): Enter/Space act on the node
+  // (only actionable nodes are tab stops), Escape clears a live selection.
+  const handleNodeKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      e.stopPropagation();
+      activateNode();
+    } else if (e.key === 'Escape' && isSelected) {
+      e.preventDefault();
+      e.stopPropagation();
+      setSourcePath(null);
+      trackEvent({
+        action: 'deselect_node',
         category: 'math_interaction',
         label: path,
       });
@@ -985,11 +1044,36 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     paddingBottom: `${layout.nodePy}em`,
   };
 
+  // Tab-to-green keyboard operability + screen-reader semantics (#231). Only an
+  // actionable node (canClick) is a tab stop and a button; every other (static)
+  // node stays out of the tab order and unlabelled so a screen reader isn't
+  // forced to walk every nested container. The label reads the term plus the
+  // action it offers in the current selection state.
+  const termText = node.toString();
+  const nodeAriaLabel = isSelected
+    ? `${termText}, selected term, press Escape to deselect`
+    : isTarget
+    ? `Move selection to ${termText}`
+    : isCandidate
+    ? `${termText}, press Enter to select this term`
+    : undefined;
+  const interactiveProps: React.HTMLAttributes<HTMLDivElement> & { tabIndex: number } = canClick
+    ? {
+        role: 'button',
+        tabIndex: 0,
+        'aria-pressed': isSelected || undefined,
+        'aria-label': nodeAriaLabel,
+        onKeyDown: handleNodeKeyDown,
+      }
+    : { tabIndex: -1 };
+
   const element = (
     <div
       data-flip-id={nodeId}
+      data-eq-node=""
       style={customStyle}
-      className={`relative inline-flex items-center justify-center border rounded-[0.4em] select-none ${semanticStyle}`}
+      className={`relative inline-flex items-center justify-center border rounded-[0.4em] select-none ${THEME_GLASS.NODE_FOCUS_RING} ${semanticStyle}`}
+      {...interactiveProps}
       onMouseEnter={() => {
         setHoverPath(path);
       }}
@@ -1138,6 +1222,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   <button
                     className={buttonClass}
                     style={buttonStyle}
+                    // Transposition mode disables the toolbar (pointer-events-none);
+                    // drop the handles from the tab order too so keyboard nav
+                    // skips them on the way to the target (#231).
+                    tabIndex={sourcePath ? -1 : undefined}
                     aria-label={single.label || config.singularLabel}
                     onMouseEnter={(e) => {
                       e.stopPropagation();
@@ -1172,37 +1260,35 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               <button
                 className={buttonClass}
                 style={buttonStyle}
+                // See single-handle note: skip handles in the tab order while a
+                // source is selected and the toolbar is inert (#231).
+                tabIndex={sourcePath ? -1 : undefined}
                 aria-label={`Show ${config.pluralLabel}`}
+                aria-haspopup="menu"
+                aria-expanded={openMenuType === stack.type}
                 onMouseEnter={(e) => {
                   e.stopPropagation();
-                  cancelMenuClose();
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const left = Math.max(
-                    MENU_HALF_WIDTH_PX + 8,
-                    Math.min(rect.left + rect.width / 2, window.innerWidth - MENU_HALF_WIDTH_PX - 8),
-                  );
-                  // Handle in the top half of the viewport => open the menu downward
-                  // (and vice-versa) so it always grows into the roomier half.
-                  const placement = rect.top + rect.height / 2 < window.innerHeight / 2 ? 'below' : 'above';
-                  setMenuAnchor({
-                    top: placement === 'below' ? rect.bottom + MENU_ANCHOR_GAP_PX : rect.top - MENU_ANCHOR_GAP_PX,
-                    left,
-                    placement,
-                  });
-                  setOpenMenuType(stack.type);
-                  setHoveredOption(null);
-                  if (stack.type !== 'substitute') {
-                    setHoverReducePath(path);
-                    setHoverReduceIndex(null);
-                  }
+                  openStackMenu(e.currentTarget, stack.type);
                 }}
                 onMouseLeave={(e) => {
                   e.stopPropagation();
                   scheduleMenuClose();
                 }}
                 onClick={(e) => {
-                  // Selection happens in the menu; clicking the handle does nothing.
+                  // Keyboard parity (#231): Enter/Space fire a click, so toggling
+                  // the menu here makes the stack operable without a pointer.
                   e.stopPropagation();
+                  if (openMenuType === stack.type) {
+                    closeMenu();
+                  } else {
+                    openStackMenu(e.currentTarget, stack.type);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && openMenuType === stack.type) {
+                    e.stopPropagation();
+                    closeMenu();
+                  }
                 }}
               >
                 {buttonInner}

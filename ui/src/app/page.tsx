@@ -36,6 +36,9 @@ import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
 import { buildEquationUrl, buildWorkspaceUrl } from '../utils/feedbackUrl';
 import {
   currentEquationAtom,
+  liveAnnouncementAtom,
+  treeRefocusNonceAtom,
+  candidatePathsAtom,
   hoverPathAtom,
   targetPathsAtom,
   reduciblePathsAtom,
@@ -98,6 +101,7 @@ import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch,
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
+import { useEquationTreeFocus } from '../hooks/useEquationTreeFocus';
 import { trackEvent } from '../utils/analytics';
 import { fetchMathScan } from '../utils/mathScan';
 
@@ -191,6 +195,9 @@ const readWsParam = (search: string): string | null => {
 
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
+  const liveAnnouncement = useAtomValue(liveAnnouncementAtom);
+  const treeRefocusNonce = useAtomValue(treeRefocusNonceAtom);
+  const candidatePaths = useAtomValue(candidatePathsAtom);
   const [, setHoverPath] = useAtom(hoverPathAtom);
   const [targetPaths, setTargetPaths] = useAtom(targetPathsAtom);
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
@@ -200,6 +207,18 @@ export default function Home() {
   const [tree, setTree] = useAtom(historyTreeAtom);
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
   const [savedSessions, setSavedSessions] = useAtom(savedSessionsAtom);
+
+  // Keyboard-focus management for the equation tree (#231): after a keyboard
+  // apply or an edit-modal submit, move focus to the first actionable term so a
+  // screen-reader/keyboard user isn't dropped to <body>. Keyed on the current
+  // node id (a new equation) and re-attempted as the candidate set repopulates.
+  const equationTreeFocusRef = React.useRef<HTMLDivElement>(null);
+  const treeFocusHandlers = useEquationTreeFocus({
+    containerRef: equationTreeFocusRef,
+    equationKey: currentNodeId,
+    candidatePathsKey: candidatePaths,
+    refocusNonce: treeRefocusNonce,
+  });
   const tabs = useAtomValue(tabsAtom);
   const activeTabId = useAtomValue(activeTabIdAtom);
   const [currentSessionId, setCurrentSessionId] = useAtom(currentSessionIdAtom);
@@ -1445,7 +1464,17 @@ export default function Home() {
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center gap-2 origin-center">
+                <div
+                  className="flex flex-col items-center justify-center gap-2 origin-center"
+                  ref={equationTreeFocusRef}
+                  onFocusCapture={treeFocusHandlers.onFocusCapture}
+                  onBlurCapture={treeFocusHandlers.onBlurCapture}
+                >
+                  {/* Screen-reader narration of the latest applied transform (#231).
+                      Visually hidden; aria-atomic so the whole step is re-spoken. */}
+                  <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+                    {liveAnnouncement}
+                  </div>
                   <div
                     ref={activeContentRef}
                     style={{

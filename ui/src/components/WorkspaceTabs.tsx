@@ -15,6 +15,7 @@ import {
 import { Tooltip } from './Tooltip';
 import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
+import { THEME_GLASS } from '../constants/theme';
 
 const formatTimestamp = (ts: number): string => {
   const diff = Date.now() - ts;
@@ -77,6 +78,17 @@ export const WorkspaceTabs: React.FC = () => {
     }
   };
 
+  // Keyboard activation for the tab itself (select the workspace). Ignored when
+  // the key originated on a nested control (rename input, pencil/close buttons),
+  // which carry their own handlers.
+  const handleTabKeyDown = (e: React.KeyboardEvent, tabId: string) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      setActiveTabId(tabId);
+    }
+  };
+
   const truncateName = (name: string, maxLen = 18) => {
     if (name.length <= maxLen) return name;
     return name.substring(0, maxLen) + '...';
@@ -115,7 +127,19 @@ export const WorkspaceTabs: React.FC = () => {
               ref={isActive ? activeTabRef : undefined}
               onClick={() => !isEditing && setActiveTabId(tab.id)}
               onDoubleClick={(e) => handleStartEdit(e, tab)}
-              className={`group flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer select-none transition-all duration-200 shrink-0 ${
+              {...(isEditing
+                ? {}
+                : {
+                    role: 'button',
+                    tabIndex: 0,
+                    'aria-label': `Workspace: ${tab.name}`,
+                    // Workspaces are mutually exclusive, so the active tab is the
+                    // "current" selection — not an independent on/off toggle
+                    // (which aria-pressed would make a screen reader announce).
+                    'aria-current': isActive || undefined,
+                    onKeyDown: (e: React.KeyboardEvent) => handleTabKeyDown(e, tab.id),
+                  })}
+              className={`group flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer select-none transition-all duration-200 shrink-0 ${THEME_GLASS.NODE_FOCUS_RING} ${
                 isActive
                   ? 'bg-white/10 border-indigo-500/30 text-white shadow-[0_4px_12px_rgba(0,0,0,0.25)] backdrop-blur-sm'
                   : 'bg-white/5 border-white/5 text-white/50 hover:text-white/80 hover:bg-white/10 hover:border-white/10 backdrop-blur-sm'

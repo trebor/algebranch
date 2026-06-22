@@ -7,5 +7,12 @@ import '@testing-library/jest-dom/vitest';
 // so these tests guard structural a11y (accessible names, roles); contrast is verified
 // in a real browser via Playwright.
 import { toHaveNoViolations } from 'jest-axe';
-import { expect } from 'vitest';
+import { expect, vi } from 'vitest';
 expect.extend(toHaveNoViolations);
+
+// jsdom doesn't implement scrollIntoView; components that scroll the active
+// tab/step into view (WorkspaceTabs, WorkspaceTreeView) would otherwise throw
+// on mount. Stub it as a no-op.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = vi.fn();
+}

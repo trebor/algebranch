@@ -105,6 +105,18 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
     onAfterSelect?.();
   };
 
+  // Keyboard activation for a step bubble (select that step). Ignored in
+  // read-only previews and when the key bubbled up from a nested control
+  // (e.g. the copy menu), which carries its own handler.
+  const handleStepKeyDown = (e: React.KeyboardEvent, id: string) => {
+    if (!interactive) return;
+    if (e.target !== e.currentTarget) return;
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      handleStepClick(id);
+    }
+  };
+
   // Compute permanent chronological indices for visual rendering
   const sortedNodes = React.useMemo(() => {
     return Object.values(tree).sort((a, b) => a.timestamp - b.timestamp);
@@ -441,9 +453,17 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
               >
                 <div
                   onClick={() => handleStepClick(loopAncestor.id)} // Selects and jumps back to the original ancestor!
+                  {...(interactive
+                    ? {
+                        role: 'button',
+                        tabIndex: 0,
+                        'aria-label': `Loop back to step ${loopAncestor.stepIndex} (${loopAncestor.label})`,
+                        onKeyDown: (e: React.KeyboardEvent) => handleStepKeyDown(e, loopAncestor.id),
+                      }
+                    : {})}
                   onMouseEnter={() => setHoveredLoopTargetId(loopAncestor.id)}
                   onMouseLeave={() => setHoveredLoopTargetId(null)}
-                  className={`w-11 h-11 rounded-full flex items-center justify-center border select-none transition-all duration-300 relative group/node ${
+                  className={`w-11 h-11 rounded-full flex items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${
                     isLoopHighlight
                       ? THEME_GLASS.LOOP_NODE_ACTIVE
                       : THEME_GLASS.LOOP_NODE_DEFAULT
@@ -496,13 +516,26 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
               <div
                 ref={isCurrent ? activeCardRef : undefined}
                 onClick={() => handleStepClick(node.id)}
+                {...(interactive
+                  ? {
+                      role: 'button',
+                      tabIndex: 0,
+                      // Lead with the action (what this step *did*), not the raw
+                      // symbol string — which a screen reader would mispronounce
+                      // ("x caret 2…") and is tedious to hear. Correct math speech
+                      // is tracked separately as a dedicated a11y workstream.
+                      'aria-label': `Step ${stepNum}: ${node.change?.text ? sentenceCase(node.change.text) : node.label}`,
+                      'aria-current': isCurrent ? ('step' as const) : undefined,
+                      onKeyDown: (e: React.KeyboardEvent) => handleStepKeyDown(e, node.id),
+                    }
+                  : {})}
                 onMouseEnter={() => {
                   setHoveredLoopTargetId(node.id);
                 }}
                 onMouseLeave={() => {
                   setHoveredLoopTargetId(null);
                 }}
-                className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none transition-all duration-300 relative group/node ${
+                className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${
                   isLoopHighlight
                     ? THEME_GLASS.TREE_NODE_LOOP
                     : isCurrent

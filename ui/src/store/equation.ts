@@ -886,6 +886,22 @@ export const getCanonicalKey = (eqVal: Equation): string => {
   }
 };
 
+// Polite screen-reader narration of the most recently applied transform (#231).
+// A visually-hidden role="status" region in page.tsx reads this so a screen
+// reader speaks each step's result; every apply funnels through pushEquationAtom,
+// so setting it there covers transposition, reduce/distribute/identity,
+// substitution, toggle-root, and the global both-sides operations alike.
+export const liveAnnouncementAtom = atom<string>('');
+
+// Nonce that requests keyboard focus be moved to the first actionable term in
+// the equation tree (#231). Bumped by explicit user edits (the equation-input
+// modal submit) where focus sits outside the tree, so useEquationTreeFocus
+// refocuses regardless of its focus-within guard.
+export const treeRefocusNonceAtom = atom<number>(0);
+export const requestTreeRefocusAtom = atom(null, (get, set) => {
+  set(treeRefocusNonceAtom, get(treeRefocusNonceAtom) + 1);
+});
+
 // Write-only Actions
 
 /**
@@ -894,10 +910,14 @@ export const getCanonicalKey = (eqVal: Equation): string => {
 export const pushEquationAtom = atom(
   null,
   (get, set, newEq: Equation, stepLabel?: string, change?: StepChange) => {
+    // Narrate the applied step before any early return so loop/existing-child
+    // branches announce too.
+    set(liveAnnouncementAtom, `${stepLabel ? `${stepLabel}: ` : ''}${equationToString(newEq)}`);
+
     const tree = get(historyTreeAtom);
     const currentNodeId = get(currentNodeIdAtom);
     const activeNode = tree[currentNodeId];
-    
+
     const newCanonical = getCanonicalKey(newEq);
 
     // 1. Find the earliest node in the entire history tree that is canonically equivalent to newEq (Loop Detection)
@@ -1164,6 +1184,12 @@ export const loadSessionAtom = atom(
     const session = sessions.find(s => s.id === sessionId);
     if (!session) return;
 
+    // Loading from the library is an explicit "give me this equation" action, so
+    // move keyboard/screen-reader focus to the first term (#231) — whether it
+    // opens a new tab or reactivates one already open. (This is distinct from
+    // clicking the tab strip, which is a separate path we leave alone.)
+    set(requestTreeRefocusAtom);
+
     // Check if a tab with this sessionId is already open
     const prevTabs = get(tabsAtom);
     const existingTab = prevTabs.find(t => t.sessionId === sessionId);
@@ -1272,6 +1298,12 @@ export const resetToEquationStringAtom = atom(
   null,
   (_get, set, eqStr: string, customName?: string) => {
     set(createNewSessionAtom, eqStr, customName);
+    // Loading an equation from the library or the input modal is an explicit
+    // "give me this equation" action, so move keyboard/screen-reader focus to
+    // its first term (#231). Only this explicit-reset wrapper bumps the nonce —
+    // createNewSessionAtom is also used for the passive initial mount, which
+    // must not steal focus on first paint.
+    set(requestTreeRefocusAtom);
   }
 );
 

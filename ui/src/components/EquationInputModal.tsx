@@ -184,6 +184,8 @@ export const EquationInputModal: React.FC = () => {
     if (!lhsStr.trim() || !rhsStr.trim() || validationError) return;
 
     try {
+      // resetToEquation also moves keyboard/screen-reader focus to the new
+      // equation's first term (#231), covering this modal and the library alike.
       resetToEquation(combined);
       trackEvent({
         action: 'load_custom_equation',

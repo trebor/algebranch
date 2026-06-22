@@ -118,41 +118,21 @@ describe('CopyFormatMenu', () => {
     expect(onParentClick).not.toHaveBeenCalled();
   });
 
-  it('aligns the menu left or right based on the align prop', async () => {
-    const { rerender } = render(
+  it('renders the menu inside a portal as a child of document.body', async () => {
+    render(
       <CopyFormatMenu
         getText={(format) => equationToFormat(eq, format)}
         variant="tree"
         trackAction="copy_step"
         trackCategory="history"
         trackLabel="node-1"
-        align="left"
       />
     );
 
     await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
-    let menu = screen.getByRole('menu');
-    expect(menu.className).toContain('left-0');
-    expect(menu.className).not.toContain('right-0');
-
-    // Close it
-    await userEvent.keyboard('{Escape}');
-
-    // Rerender with align="right"
-    rerender(
-      <CopyFormatMenu
-        getText={(format) => equationToFormat(eq, format)}
-        variant="tree"
-        trackAction="copy_step"
-        trackCategory="history"
-        trackLabel="node-1"
-        align="right"
-      />
-    );
-    await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
-    menu = screen.getByRole('menu');
-    expect(menu.className).toContain('right-0');
-    expect(menu.className).not.toContain('left-0');
+    const menu = screen.getByRole('menu');
+    expect(menu).toBeInTheDocument();
+    expect(menu.parentElement).toBe(document.body);
   });
 
   it('calls onOpenChange when opening and closing the menu', async () => {

@@ -598,7 +598,6 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                       scopeLabel="This step"
                       scopeEquation={node.equation}
                       stopPropagation
-                      align={node.x < 140 ? 'left' : 'right'}
                       onOpenChange={(isOpen) => {
                         if (isOpen) {
                           setActiveCopyMenuNodeId(node.id);

@@ -29,6 +29,7 @@ import {
 } from '../store/equation';
 import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, greekNameFor } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
+import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
 import { describeTransposition, describeReduction, describeSubstitution, describeCollapse } from 'math-engine';
@@ -295,6 +296,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const currentEq = useAtomValue(currentEquationAtom);
   const candidatePaths = useAtomValue(candidatePathsAtom);
   const toggleRootSign = useSetAtom(toggleRootSignAtom);
+  // Roving-tabindex controller for the expression composite widget (#257). Null
+  // when rendered outside a provider (isolated tests / previews), in which case
+  // the node falls back to the legacy single-Tab-stop-per-candidate behavior.
+  const roving = useOptionalRovingTabindex();
   // Honor prefers-reduced-motion (#145): suppress the decorative handle pulse.
   const reducedMotion = useReducedMotion();
   const isOnboardingActive = !!useAtomValue(onboardingChapterIdAtom);
@@ -586,27 +591,160 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     activateNode();
   };
 
-  // Keyboard parity for the tab-to-green nav (#231): Enter/Space act on the node
-  // (only actionable nodes are tab stops), Escape clears a live selection.
+  // Keyboard model for the expression composite widget (#231, #257). Enter/Space
+  // activate the node; arrow keys rove between actionable terms (Left/Right in
+  // document order, Up/Down along the AST to an ancestor/descendant candidate,
+  // Home/End to the ends); Escape clears a live selection and releases focus to
+  // the region container. Tab/Shift+Tab are left untouched so focus exits the
+  // widget naturally (WCAG 2.1.2, not a focus trap).
   const handleNodeKeyDown = (e: React.KeyboardEvent) => {
+    // Only this node's own box drives term navigation. Keydowns bubbling up from a
+    // descendant treeitem or a folded-in handle button are owned by those elements
+    // (each stops/handles its own keys), so the ancestor must not double-act (#257).
+    if (e.target !== e.currentTarget) return;
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       e.preventDefault();
       e.stopPropagation();
       activateNode();
-    } else if (e.key === 'Escape' && isSelected) {
+      return;
+    }
+    if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
-      setSourcePath(null);
-      trackEvent({
-        action: 'deselect_node',
-        category: 'math_interaction',
-        label: path,
-      });
+      if (isSelected) {
+        setSourcePath(null);
+        trackEvent({
+          action: 'deselect_node',
+          category: 'math_interaction',
+          label: path,
+        });
+      }
+      roving?.focusContainer();
+      return;
+    }
+    if (!roving) return;
+    switch (e.key) {
+      case 'ArrowRight':
+        e.preventDefault();
+        e.stopPropagation();
+        roving.moveFocus('next');
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        e.stopPropagation();
+        roving.moveFocus('prev');
+        break;
+      case 'Home':
+        e.preventDefault();
+        e.stopPropagation();
+        roving.moveFocus('first');
+        break;
+      case 'End':
+        e.preventDefault();
+        e.stopPropagation();
+        roving.moveFocus('last');
+        break;
+      case 'ArrowDown': {
+        // Nearest descendant candidate (fewest extra path segments), document
+        // order breaking ties.
+        e.preventDefault();
+        e.stopPropagation();
+        const descendant = roving
+          .orderedKeys()
+          .filter((k) => k.startsWith(path + '/'))
+          .map((k) => ({ k, depth: k.split('/').length }))
+          .sort((a, b) => a.depth - b.depth)[0];
+        if (descendant) roving.setActive(descendant.k, { focus: true });
+        break;
+      }
+      case 'ArrowUp': {
+        // Closest ancestor candidate (longest matching path prefix).
+        e.preventDefault();
+        e.stopPropagation();
+        const ancestor = roving
+          .orderedKeys()
+          .filter((k) => path.startsWith(k + '/'))
+          .sort((a, b) => b.length - a.length)[0];
+        if (ancestor) roving.setActive(ancestor, { focus: true });
+        break;
+      }
     }
   };
 
   // Styling hooks
   const canClick = sourcePath ? (isSelected || isTarget) : isCandidate;
+
+  // Roving integration (#257): the controller's active candidate is the single
+  // Tab stop (tabIndex 0); every other candidate is -1. Outside a provider, fall
+  // back to the legacy behavior where every candidate is its own Tab stop.
+  // Only a transposition-actionable node (canClick) is a roving *term* — Enter on
+  // it selects/applies. A node that is a treeitem solely to host a handle (see
+  // isTreeitem below) is never the active term, so it stays tabIndex -1 and does
+  // not register; its handle registers instead.
+  const rovingTabIndex = roving
+    ? (canClick && roving.activeKey === path ? 0 : -1)
+    : (canClick ? 0 : -1);
+  const registerRovingItem = React.useCallback(
+    (el: HTMLElement | null) => {
+      if (!roving || !canClick) return;
+      if (el) roving.registerItem(path, el);
+      else roving.unregisterItem(path);
+    },
+    [roving, path, canClick],
+  );
+
+  // Handle buttons fold into the SAME roving sequence as the terms (#257): each is
+  // its own item keyed `${path}#${type}`, so the whole expression remains a single
+  // Tab stop and arrow keys reach the handles in document order. One stable ref
+  // callback per stack type (there are only four), rebuilt when the controller
+  // changes, mirroring registerRovingItem — stable identity avoids registry churn.
+  const handleRovingRefs = React.useMemo(() => {
+    const make = (key: string) => (el: HTMLElement | null) => {
+      if (!roving) return;
+      // Secondary: a handle is arrow-reachable but never the default Tab entry
+      // point, so Tab never lands on a handle ahead of its term (#257).
+      if (el) roving.registerItem(key, el, { primary: false });
+      else roving.unregisterItem(key);
+    };
+    return {
+      reduce: make(`${path}#reduce`),
+      distribute: make(`${path}#distribute`),
+      identity: make(`${path}#identity`),
+      substitute: make(`${path}#substitute`),
+    } as Record<'reduce' | 'distribute' | 'identity' | 'substitute', (el: HTMLElement | null) => void>;
+  }, [roving, path]);
+
+  const handleRovingKeyDown = React.useCallback(
+    (e: React.KeyboardEvent, stackType: 'reduce' | 'distribute' | 'identity' | 'substitute') => {
+      switch (e.key) {
+        case 'ArrowRight':
+          if (roving) { e.preventDefault(); e.stopPropagation(); roving.moveFocus('next'); }
+          break;
+        case 'ArrowLeft':
+          if (roving) { e.preventDefault(); e.stopPropagation(); roving.moveFocus('prev'); }
+          break;
+        case 'Home':
+          if (roving) { e.preventDefault(); e.stopPropagation(); roving.moveFocus('first'); }
+          break;
+        case 'End':
+          if (roving) { e.preventDefault(); e.stopPropagation(); roving.moveFocus('last'); }
+          break;
+        case 'Escape':
+          // An open multi-option menu closes first; otherwise release focus to the
+          // region container, matching the term's Escape behavior.
+          if (openMenuType === stackType) {
+            e.stopPropagation();
+            closeMenu();
+          } else if (roving) {
+            e.preventDefault();
+            e.stopPropagation();
+            roving.focusContainer();
+          }
+          break;
+      }
+    },
+    [roving, openMenuType, closeMenu],
+  );
 
   // Only dim candidate nodes if the user is actively hovering over *some* valid candidate.
   // Otherwise, if they hover static parts of the expression, keep all candidates bright (scan mode).
@@ -1050,22 +1188,61 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   // forced to walk every nested container. The label reads the term plus the
   // action it offers in the current selection state.
   const termText = node.toString();
+  // A node hosts handles (Simplify/Distribute/…) only when its toolbar is live —
+  // i.e. not while a transposition source is selected (the toolbar is inert then).
+  const handlesNavigable = handleCount > 0 && !sourcePath;
+  // A node is a treeitem if it is transposition-actionable (canClick) OR it hosts
+  // a handle. The latter is essential: a handle <button> nested in a bare div
+  // under role="tree" violates aria-required-children, so even a non-candidate
+  // handle host must be a treeitem to keep its folded-in handle valid (#257).
+  const isTreeitem = canClick || handlesNavigable;
   const nodeAriaLabel = isSelected
     ? `${termText}, selected term, press Escape to deselect`
     : isTarget
     ? `Move selection to ${termText}`
     : isCandidate
     ? `${termText}, press Enter to select this term`
+    : isTreeitem
+    ? termText
     : undefined;
-  const interactiveProps: React.HTMLAttributes<HTMLDivElement> & { tabIndex: number } = canClick
+  // Actionable terms are treeitems in a role="tree" composite widget (#257):
+  // treeitem-in-treeitem is valid ARIA, unlike the button-in-button nesting it
+  // replaces (which VoiceOver demoted to "group"). aria-selected carries the
+  // selection state a treeitem expects (replacing button's aria-pressed), and is
+  // emitted only on selectable (canClick) terms — a handle-only host is not
+  // selectable. Static (non-actionable, non-handle) nodes carry no role or
+  // tabIndex, so a role="tree" ancestor can validly own the treeitems nested
+  // beneath these generic wrappers.
+  const interactiveProps: React.HTMLAttributes<HTMLDivElement> & {
+    tabIndex?: number;
+    ref?: React.Ref<HTMLDivElement>;
+  } = isTreeitem
     ? {
-        role: 'button',
-        tabIndex: 0,
-        'aria-pressed': isSelected || undefined,
+        role: 'treeitem',
+        tabIndex: rovingTabIndex,
+        ...(canClick ? { 'aria-selected': isSelected } : {}),
         'aria-label': nodeAriaLabel,
         onKeyDown: handleNodeKeyDown,
+        ref: registerRovingItem,
       }
-    : { tabIndex: -1 };
+    : {};
+
+  // ARIA tree structure (#257): a treeitem nested directly inside another treeitem
+  // violates aria-required-parent — child treeitems must sit in a role="group".
+  // A non-leaf treeitem's rendered content holds its operand treeitems, so wrap it
+  // in a group. The wrapper is display:contents-free (a real inline-flex box, since
+  // display:contents would drop the group role from the a11y tree) but shrink-wraps
+  // its content, leaving the visual math layout unchanged. Leaves (constants /
+  // symbols) and static (non-treeitem) wrappers need no group.
+  const isLeafNode = node.type === 'ConstantNode' || node.type === 'SymbolNode';
+  const renderedContent =
+    isTreeitem && !isLeafNode ? (
+      <div role="group" className="inline-flex items-center justify-center">
+        {renderContent()}
+      </div>
+    ) : (
+      renderContent()
+    );
 
   const element = (
     <div
@@ -1084,7 +1261,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       }}
       onClick={handleNodeClick}
     >
-      {renderContent()}
+      {renderedContent}
 
       {/* Onboarding annotation circle: a bright white loop overshooting the node box,
           deliberately outside the app's rounded-rect + hue vocabulary. Rendered as a
@@ -1138,6 +1315,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             const config = STACK_CONFIG[stack.type];
             const IconComponent = config.icon;
             const single = stack.options.length === 1 ? stack.options[0] : null;
+
+            // Roving integration (#257): the handle is its own item in the shared
+            // sequence. It registers only while navigable (toolbar live), so a
+            // transposition source selection (toolbar inert) folds it back out.
+            const handleKey = `${path}#${stack.type}`;
+            const handleTabIndex = roving
+              ? (roving.activeKey === handleKey ? 0 : -1)
+              : (sourcePath ? -1 : undefined);
+            const handleRef = roving && handlesNavigable ? handleRovingRefs[stack.type] : undefined;
 
             const isStackMarked = isOnboardingActive && (
               (stack.type === 'substitute' && isSubHandleMarked) ||
@@ -1222,10 +1408,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                   <button
                     className={buttonClass}
                     style={buttonStyle}
-                    // Transposition mode disables the toolbar (pointer-events-none);
-                    // drop the handles from the tab order too so keyboard nav
-                    // skips them on the way to the target (#231).
-                    tabIndex={sourcePath ? -1 : undefined}
+                    // Roving item folded into the expression's single Tab stop
+                    // (#257): tabIndex is controller-driven, and in transposition
+                    // mode the handle leaves the roving set (toolbar inert).
+                    ref={handleRef}
+                    tabIndex={handleTabIndex}
+                    onKeyDown={(e) => handleRovingKeyDown(e, stack.type)}
                     aria-label={single.label || config.singularLabel}
                     onMouseEnter={(e) => {
                       e.stopPropagation();
@@ -1260,9 +1448,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
               <button
                 className={buttonClass}
                 style={buttonStyle}
-                // See single-handle note: skip handles in the tab order while a
-                // source is selected and the toolbar is inert (#231).
-                tabIndex={sourcePath ? -1 : undefined}
+                // Roving item folded into the expression's single Tab stop (#257);
+                // arrow keys rove, Escape closes the menu or releases focus.
+                ref={handleRef}
+                tabIndex={handleTabIndex}
                 aria-label={`Show ${config.pluralLabel}`}
                 aria-haspopup="menu"
                 aria-expanded={openMenuType === stack.type}
@@ -1284,12 +1473,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                     openStackMenu(e.currentTarget, stack.type);
                   }
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape' && openMenuType === stack.type) {
-                    e.stopPropagation();
-                    closeMenu();
-                  }
-                }}
+                onKeyDown={(e) => handleRovingKeyDown(e, stack.type)}
               >
                 {buttonInner}
               </button>

@@ -42,37 +42,39 @@ function renderTree(store: ReturnType<typeof createStore>, interactive = true) {
 describe('WorkspaceTreeView keyboard/a11y semantics', () => {
   afterEach(cleanup);
 
-  it('exposes each step as a focusable button labelled by its step number', () => {
-    renderTree(makeStore());
-    expect(screen.getByRole('button', { name: /step 0/i })).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('button', { name: /step 1/i })).toHaveAttribute('tabindex', '0');
+  it('exposes the current step as the single Tab stop, labelled by its step number', () => {
+    renderTree(makeStore('1'));
+    // The composite widget is one Tab stop: the current step is tabbable, the rest
+    // rove via arrow keys.
+    expect(screen.getByRole('treeitem', { name: /step 1/i })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('treeitem', { name: /step 0/i })).toHaveAttribute('tabindex', '-1');
   });
 
   it('leads the step label with the action, not the raw equation string', () => {
     renderTree(makeStore());
     // The operation ("Subtract 1") is the spoken identity; the raw symbol string
     // ("x=2") is not crammed into the accessible name (deferred to math-speech work).
-    const step = screen.getByRole('button', { name: /step 1/i });
+    const step = screen.getByRole('treeitem', { name: /step 1/i });
     expect(step).toHaveAccessibleName(/subtract 1/i);
     expect(step.getAttribute('aria-label')).not.toContain('x=2');
   });
 
   it('marks the current step as the current selection', () => {
     renderTree(makeStore('1'));
-    expect(screen.getByRole('button', { name: /step 1/i })).toHaveAttribute('aria-current', 'step');
-    expect(screen.getByRole('button', { name: /step 0/i })).not.toHaveAttribute('aria-current', 'step');
+    expect(screen.getByRole('treeitem', { name: /step 1/i })).toHaveAttribute('aria-current', 'step');
+    expect(screen.getByRole('treeitem', { name: /step 0/i })).not.toHaveAttribute('aria-current', 'step');
   });
 
   it('selects a step on Enter', () => {
     const store = makeStore('1');
     renderTree(store);
-    fireEvent.keyDown(screen.getByRole('button', { name: /step 0/i }), { key: 'Enter' });
+    fireEvent.keyDown(screen.getByRole('treeitem', { name: /step 0/i }), { key: 'Enter' });
     // currentNodeId tracks the active tab's pointer; selecting step 0 moves it there.
     expect(store.get(rawTabsAtom)[0].currentNodeId).toBe('0');
   });
 
-  it('does not expose step nodes as buttons in a read-only preview', () => {
+  it('does not expose step nodes as treeitems in a read-only preview', () => {
     renderTree(makeStore(), false);
-    expect(screen.queryByRole('button', { name: /step 0/i })).toBeNull();
+    expect(screen.queryByRole('treeitem', { name: /step 0/i })).toBeNull();
   });
 });

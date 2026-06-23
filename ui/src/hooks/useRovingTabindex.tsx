@@ -29,7 +29,7 @@ import React from 'react';
 
 export type RovingDirection = 'next' | 'prev' | 'first' | 'last';
 
-interface RovingContextValue {
+export interface RovingContextValue {
   activeKey: string | null;
   /**
    * Register a focusable item. `primary` (default true) marks a "real" stop that

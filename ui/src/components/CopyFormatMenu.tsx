@@ -91,6 +91,13 @@ interface CopyFormatMenuProps {
   onPreviewChange?: (active: boolean) => void;
   /** Fired when the dropdown menu is opened or closed. */
   onOpenChange?: (open: boolean) => void;
+  /**
+   * When false, the split-button's trigger drops out of the keyboard focus order
+   * (tabIndex -1) — used inside the history tree composite widget, which is a
+   * single Tab stop and exposes copy via a key on the focused step instead (#257).
+   * The menu stays fully mouse-operable. Defaults to true.
+   */
+  focusable?: boolean;
 }
 
 export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
@@ -108,7 +115,9 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   scopeEquation,
   onPreviewChange,
   onOpenChange,
+  focusable = true,
 }) => {
+  const triggerTabIndex = focusable ? undefined : -1;
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
@@ -257,6 +266,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
       type="button"
       onClick={handlePrimaryClick}
       disabled={disabled}
+      tabIndex={triggerTabIndex}
       className={v.primary}
       aria-label={copied ? 'Copied' : 'Copy equation'}
     >
@@ -286,6 +296,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
           type="button"
           onClick={handleCaretClick}
           disabled={disabled}
+          tabIndex={triggerTabIndex}
           aria-haspopup="menu"
           aria-expanded={open}
           aria-label="Copy format options"

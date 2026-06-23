@@ -37,37 +37,37 @@ function renderWith(activeId = 'a') {
 describe('WorkspaceTabs keyboard/a11y semantics', () => {
   afterEach(cleanup);
 
-  it('exposes each tab as a focusable button labelled by its workspace name', () => {
-    renderWith();
-    const tab = screen.getByRole('button', { name: /Beta workspace/i });
-    expect(tab).toHaveAttribute('tabindex', '0');
+  it('exposes the selected tab as the single Tab stop, labelled by its workspace name', () => {
+    renderWith('b');
+    const active = screen.getByRole('tab', { name: /Beta workspace/i });
+    expect(active).toHaveAttribute('tabindex', '0');
   });
 
-  it('marks the active tab as the current selection (not a toggle)', () => {
+  it('marks the active tab as selected (not a toggle)', () => {
     renderWith('a');
-    const active = screen.getByRole('button', { name: /Alpha workspace/i });
-    const inactive = screen.getByRole('button', { name: /Beta workspace/i });
-    // Workspaces are mutually exclusive, so the active one is "current" — not an
-    // independent on/off toggle (which aria-pressed would announce).
-    expect(active).toHaveAttribute('aria-current', 'true');
+    const active = screen.getByRole('tab', { name: /Alpha workspace/i });
+    const inactive = screen.getByRole('tab', { name: /Beta workspace/i });
+    // Workspaces are mutually exclusive tabs, so the active one is the selected
+    // tab — not an independent on/off toggle (which aria-pressed would announce).
+    expect(active).toHaveAttribute('aria-selected', 'true');
     expect(active).not.toHaveAttribute('aria-pressed');
-    expect(inactive).not.toHaveAttribute('aria-current');
+    expect(inactive).toHaveAttribute('aria-selected', 'false');
   });
 
   it('switches the active workspace on Enter', () => {
     const { store } = renderWith('a');
-    fireEvent.keyDown(screen.getByRole('button', { name: /Beta workspace/i }), { key: 'Enter' });
+    fireEvent.keyDown(screen.getByRole('tab', { name: /Beta workspace/i }), { key: 'Enter' });
     expect(store.get(rawActiveTabIdAtom)).toBe('b');
   });
 
   it('switches the active workspace on Space', () => {
     const { store } = renderWith('a');
-    fireEvent.keyDown(screen.getByRole('button', { name: /Beta workspace/i }), { key: ' ' });
+    fireEvent.keyDown(screen.getByRole('tab', { name: /Beta workspace/i }), { key: ' ' });
     expect(store.get(rawActiveTabIdAtom)).toBe('b');
   });
 
   it('gives each tab a visible keyboard-focus indicator', () => {
     renderWith();
-    expect(screen.getByRole('button', { name: /Alpha workspace/i }).className).toContain('focus-visible:ring');
+    expect(screen.getByRole('tab', { name: /Alpha workspace/i }).className).toContain('focus-visible:ring');
   });
 });

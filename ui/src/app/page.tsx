@@ -21,6 +21,7 @@ import { Tooltip } from '../components/Tooltip';
 import { HotkeyHint } from '../components/HotkeyHint';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { WorkspaceSwitcher } from '../components/WorkspaceSwitcher';
+import { SkipLinks } from '../components/SkipLinks';
 import { RovingTabindexProvider } from '../hooks/useRovingTabindex';
 import { ShareMenu } from '../components/ShareMenu';
 import { HeaderOverflowMenu } from '../components/HeaderOverflowMenu';
@@ -1236,6 +1237,10 @@ export default function Home() {
 
   return (
     <div className="relative flex flex-col h-dvh w-screen overflow-hidden overscroll-none bg-[#080711] text-white font-sans">
+      {/* Keyboard fast-lane: must be the very first focusable element so it's the
+          first Tab stop, ahead of the header and sidebars (#257). */}
+      <SkipLinks />
+
       {/* Background neon grid effect */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none -z-10" />
 
@@ -1368,12 +1373,18 @@ export default function Home() {
             {/* 1. Active Derivation Workspace */}
             <div
               ref={activeContainerRef}
+              id="equation-region"
+              role="region"
+              aria-label="Equation"
+              // tabIndex=-1 lets the "Skip to equation" link land focus here
+              // without adding a Tab stop (#257).
+              tabIndex={-1}
               onClick={() => {
                 if (sourcePath !== null) {
                   setSourcePath(null);
                 }
               }}
-              className={`active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full px-2 pt-16 sm:px-4 sm:pt-4 lg:px-8 lg:pt-8 text-base font-light cursor-default relative group/canvas ${
+              className={`active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full px-2 pt-16 sm:px-4 sm:pt-4 lg:px-8 lg:pt-8 text-base font-light cursor-default relative group/canvas outline-none ${
                 onboardingChapterId
                   ? 'pb-4 lg:pb-8 overflow-auto lg:overflow-hidden'
                   // The fixed BottomNav (h-14 + safe-area, lg:hidden) overlays the
@@ -1700,7 +1711,7 @@ export default function Home() {
               ? 'lg:w-80 lg:min-w-[20rem] lg:ml-4 lg:opacity-100' 
               : 'lg:w-0 lg:min-w-0 lg:ml-0 lg:opacity-0 lg:overflow-hidden lg:pointer-events-none'
           } shrink-0`}>
-            <ControlPanel />
+            <ControlPanel regionId="history-region" />
           </div>
         </div>
       </div>

@@ -70,4 +70,9 @@ describe('WorkspaceTabs keyboard/a11y semantics', () => {
     renderWith();
     expect(screen.getByRole('tab', { name: /Alpha workspace/i }).className).toContain('focus-visible:ring');
   });
+
+  it('groups the tab strip in a Workspaces navigation landmark (#257)', () => {
+    renderWith();
+    expect(screen.getByRole('navigation', { name: /workspaces/i })).toBeInTheDocument();
+  });
 });

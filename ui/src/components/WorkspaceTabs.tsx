@@ -302,7 +302,9 @@ export const WorkspaceTabs: React.FC = () => {
   };
 
   return (
-    <div className="w-full flex items-center justify-between bg-transparent px-0 max-lg:px-3 pt-2 pb-0 gap-4 shrink-0 select-none">
+    // PR A's "Workspaces" navigation landmark (the rotor fast-lane) wraps PR C's
+    // tablist composite widget — landmark over widget (#257).
+    <nav aria-label="Workspaces" className="w-full flex items-center justify-between bg-transparent px-0 max-lg:px-3 pt-2 pb-0 gap-4 shrink-0 select-none">
       <RovingTabindexProvider>
         <TabList
           tabs={tabs}
@@ -330,6 +332,6 @@ export const WorkspaceTabs: React.FC = () => {
           <Plus size={13} />
         </button>
       </Tooltip>
-    </div>
+    </nav>
   );
 };

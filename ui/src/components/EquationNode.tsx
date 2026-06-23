@@ -316,6 +316,17 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const [openMenuType, setOpenMenuType] = React.useState<'reduce' | 'distribute' | 'identity' | 'substitute' | null>(null);
   const [menuAnchor, setMenuAnchor] = React.useState<{ top: number; left: number; placement: 'above' | 'below' } | null>(null);
   const menuCloseTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keyboard focus model for the multi-option menu (#257, PR D). A keyboard-opened
+  // menu is a modal-style transient popover: focus moves to the first option and
+  // arrow keys rove it; Escape / outside-click close it and return focus to the
+  // handle. A hover-opened menu leaves focus alone — a pointer user is never yanked
+  // in. menuOpenedViaKeyboardRef records which path opened it; menuTriggerElRef is
+  // the handle to restore focus to; menuOptionRefs is the ordered option registry.
+  const [menuActiveIndex, setMenuActiveIndex] = React.useState(0);
+  const menuOpenedViaKeyboardRef = React.useRef(false);
+  const menuTriggerElRef = React.useRef<HTMLElement | null>(null);
+  const menuContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const menuOptionRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
 
   const cancelMenuClose = React.useCallback(() => {
     if (menuCloseTimer.current) {
@@ -339,12 +350,94 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   }, [cancelMenuClose, closeMenu]);
   React.useEffect(() => cancelMenuClose, [cancelMenuClose]);
 
+  // Close the menu and hand focus back to the handle that opened it. The exit
+  // path for Escape / outside-click — never a permanent trap (WCAG 2.1.2).
+  const closeMenuAndRestoreFocus = React.useCallback(() => {
+    const trigger = menuTriggerElRef.current;
+    closeMenu();
+    trigger?.focus();
+  }, [closeMenu]);
+
+  // Roving within the open menu. Reads the live focus position from the option
+  // registry (so it's immune to stale state) and wraps at both ends.
+  const moveMenuFocus = React.useCallback((dir: 'next' | 'prev' | 'first' | 'last') => {
+    const els = menuOptionRefs.current.filter((el): el is HTMLButtonElement => !!el);
+    if (els.length === 0) return;
+    const cur = els.indexOf(document.activeElement as HTMLButtonElement);
+    let next: number;
+    if (dir === 'first') next = 0;
+    else if (dir === 'last') next = els.length - 1;
+    else if (dir === 'next') next = cur < 0 ? 0 : (cur + 1) % els.length;
+    else next = cur < 0 ? els.length - 1 : (cur - 1 + els.length) % els.length;
+    els[next]?.focus();
+    setMenuActiveIndex(next);
+  }, []);
+
+  const handleMenuKeyDown = React.useCallback(
+    (e: React.KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault(); e.stopPropagation(); moveMenuFocus('next');
+          break;
+        case 'ArrowUp':
+          e.preventDefault(); e.stopPropagation(); moveMenuFocus('prev');
+          break;
+        case 'Home':
+          e.preventDefault(); e.stopPropagation(); moveMenuFocus('first');
+          break;
+        case 'End':
+          e.preventDefault(); e.stopPropagation(); moveMenuFocus('last');
+          break;
+        case 'Tab':
+          // Focus wraps within the open popover (modal-style transient menu, as
+          // scoped in #257) — Escape / outside-click remain the clean exits.
+          e.preventDefault(); e.stopPropagation();
+          moveMenuFocus(e.shiftKey ? 'prev' : 'next');
+          break;
+        case 'Escape':
+          e.preventDefault(); e.stopPropagation(); closeMenuAndRestoreFocus();
+          break;
+      }
+    },
+    [moveMenuFocus, closeMenuAndRestoreFocus],
+  );
+
+  // Keyboard-opened menus move focus to the first option once the portal commits;
+  // hover-opened menus leave focus on the page (no yank for a pointer user).
+  React.useEffect(() => {
+    if (openMenuType && menuOpenedViaKeyboardRef.current) {
+      menuOptionRefs.current[0]?.focus();
+    }
+  }, [openMenuType]);
+
+  // Outside-click dismissal: a pointerdown anywhere outside the open menu and its
+  // handle closes it, returning focus to the handle (matching Escape).
+  React.useEffect(() => {
+    if (!openMenuType) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (
+        target &&
+        (menuTriggerElRef.current?.contains(target) ||
+          menuContainerRef.current?.contains(target))
+      ) {
+        return;
+      }
+      closeMenuAndRestoreFocus();
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onPointerDown, true);
+  }, [openMenuType, closeMenuAndRestoreFocus]);
+
   // Open a multi-option handle's menu anchored to its button. Shared by hover
   // (onMouseEnter) and keyboard/click (Enter/Space) so the menu is reachable
   // without a pointer (#231).
   const openStackMenu = React.useCallback(
-    (el: HTMLElement, type: 'reduce' | 'distribute' | 'identity' | 'substitute') => {
+    (el: HTMLElement, type: 'reduce' | 'distribute' | 'identity' | 'substitute', viaKeyboard = false) => {
       cancelMenuClose();
+      menuTriggerElRef.current = el;
+      menuOpenedViaKeyboardRef.current = viaKeyboard;
+      setMenuActiveIndex(0);
       const rect = el.getBoundingClientRect();
       const left = Math.max(
         MENU_HALF_WIDTH_PX + 8,
@@ -1465,12 +1558,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 }}
                 onClick={(e) => {
                   // Keyboard parity (#231): Enter/Space fire a click, so toggling
-                  // the menu here makes the stack operable without a pointer.
+                  // the menu here makes the stack operable without a pointer. A
+                  // keyboard-activated click reports detail === 0, which routes the
+                  // menu into its focus-grabbing modal-style mode (#257, PR D).
                   e.stopPropagation();
                   if (openMenuType === stack.type) {
                     closeMenu();
                   } else {
-                    openStackMenu(e.currentTarget, stack.type);
+                    openStackMenu(e.currentTarget, stack.type, e.detail === 0);
                   }
                 }}
                 onKeyDown={(e) => handleRovingKeyDown(e, stack.type)}
@@ -1501,12 +1596,21 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
             );
             const listEl = (
               <div
+                role="menu"
+                aria-label={`${stack.options.length} ${config.pluralLabel} available`}
                 className="flex flex-col w-full divide-y divide-white/5"
                 onMouseLeave={() => setHoveredOption(null)}
               >
                 {stack.options.map((opt, i) => (
                   <button
                     key={i}
+                    role="menuitem"
+                    // Roving cursor within the menu (#257, PR D): exactly one option
+                    // is in the tab order; arrows move the active one. Focus is
+                    // managed imperatively, so the rest sit at tabIndex -1.
+                    ref={(el) => { menuOptionRefs.current[i] = el; }}
+                    tabIndex={i === menuActiveIndex ? 0 : -1}
+                    onKeyDown={handleMenuKeyDown}
                     className={`w-full min-w-0 text-left px-1.5 py-1.5 flex flex-col gap-0.5 cursor-pointer ${THEME_GLASS.LIST_ITEM_HOVER}`}
                     onMouseEnter={() => {
                       setHoveredOption({ type: stack.type, index: i });
@@ -1574,6 +1678,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
             return createPortal(
               <div
+                ref={menuContainerRef}
                 style={{
                   position: 'fixed',
                   top: `${menuAnchor.top}px`,

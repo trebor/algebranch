@@ -362,8 +362,10 @@ export const isEquationSatisfiedAtRoot = (
   const guesses = [1.0, -1.0, 5.0, -5.0, 0.5, -0.5, 0.1, -0.1];
   let hasCheckedAnyRoot = false;
   const isRealEq = isEquationReal(eqSource, scope);
+  const sourceVars = Array.from(new Set(getVariables(eqSource.lhs).concat(getVariables(eqSource.rhs))));
 
   for (const solveVar of variables) {
+    if (!sourceVars.includes(solveVar)) continue;
     for (const guess of guesses) {
       const root = solveForVariable(eqSource.lhs, eqSource.rhs, solveVar, { ...scope }, guess);
       if (root !== null && isValFinite(root) && !isValNaN(root)) {
@@ -452,7 +454,9 @@ const quickRejectByRoot = (eq1: Equation, eq2: Equation, variables: string[]): b
 
     const sourceViolatesOther = (source: Equation, other: Equation): boolean => {
       const isRealSrc = isEquationReal(source, scope);
+      const sourceVars = Array.from(new Set(getVariables(source.lhs).concat(getVariables(source.rhs))));
       for (const solveVar of variables) {
+        if (!sourceVars.includes(solveVar)) continue;
         for (const guess of QUICK_REJECT_GUESSES) {
           const root = solveForVariable(source.lhs, source.rhs, solveVar, { ...scope }, guess);
           if (root === null || !isValFinite(root) || isValNaN(root)) continue;
@@ -479,11 +483,36 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
   try {
     const numTestRuns = 3;
 
+    const varsEq1 = Array.from(new Set(getVariables(eq1.lhs).concat(getVariables(eq1.rhs))));
+    const varsEq2 = Array.from(new Set(getVariables(eq2.lhs).concat(getVariables(eq2.rhs))));
+
     for (let run = 0; run < numTestRuns; run++) {
       const scope: Record<string, number> = {};
       variables.forEach((v) => {
         scope[v] = Math.random() * (RANGE_MID_MAX - RANGE_MID_MIN) + RANGE_MID_MIN;
       });
+
+      // Constant equation tautology check:
+      // If one equation is a constant tautology (no variables, difference is 0),
+      // the other must also be satisfied at the random scope point.
+      if (varsEq1.length === 0) {
+        const d1 = subV(evaluatePoint(eq1.lhs, scope), evaluatePoint(eq1.rhs, scope));
+        if (!isValNaN(d1) && isValFinite(d1) && absNum(d1) <= 1e-5) {
+          const d2 = subV(evaluatePoint(eq2.lhs, scope), evaluatePoint(eq2.rhs, scope));
+          if (isValNaN(d2) || !isValFinite(d2) || absNum(d2) > 1e-5) {
+            return false;
+          }
+        }
+      }
+      if (varsEq2.length === 0) {
+        const d2 = subV(evaluatePoint(eq2.lhs, scope), evaluatePoint(eq2.rhs, scope));
+        if (!isValNaN(d2) && isValFinite(d2) && absNum(d2) <= 1e-5) {
+          const d1 = subV(evaluatePoint(eq1.lhs, scope), evaluatePoint(eq1.rhs, scope));
+          if (isValNaN(d1) || !isValFinite(d1) || absNum(d1) > 1e-5) {
+            return false;
+          }
+        }
+      }
 
       // Find roots of eq1
       const roots1: Record<string, any[]> = {};
@@ -492,6 +521,7 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
 
       for (const solveVar of variables) {
         roots1[solveVar] = [];
+        if (!varsEq1.includes(solveVar)) continue;
         for (const guess of guesses) {
           const root = solveForVariable(eq1.lhs, eq1.rhs, solveVar, { ...scope }, guess);
           if (root !== null && isValFinite(root) && !isValNaN(root)) {
@@ -508,7 +538,8 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
       const isRealEq2 = isEquationReal(eq2, scope);
       for (const solveVar of variables) {
         roots2[solveVar] = [];
-        const extraGuesses = [...guesses, ...roots1[solveVar]];
+        if (!varsEq2.includes(solveVar)) continue;
+        const extraGuesses = [...guesses, ...(roots1[solveVar] || [])];
         for (const guess of extraGuesses) {
           const root = solveForVariable(eq2.lhs, eq2.rhs, solveVar, { ...scope }, guess);
           if (root !== null && isValFinite(root) && !isValNaN(root)) {
@@ -523,7 +554,8 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
       // Now verify root equivalence:
       // 1. Every root in roots1 satisfies eq2
       for (const solveVar of variables) {
-        for (const root of roots1[solveVar]) {
+        const roots = roots1[solveVar] || [];
+        for (const root of roots) {
           const localScope = { ...scope, [solveVar]: root };
           const dTarget = subV(evaluatePoint(eq2.lhs, localScope), evaluatePoint(eq2.rhs, localScope));
           if (isValNaN(dTarget) || !isValFinite(dTarget) || absNum(dTarget) > 1e-5) {
@@ -534,7 +566,8 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
 
       // 2. Every root in roots2 satisfies eq1
       for (const solveVar of variables) {
-        for (const root of roots2[solveVar]) {
+        const roots = roots2[solveVar] || [];
+        for (const root of roots) {
           const localScope = { ...scope, [solveVar]: root };
           const dTarget = subV(evaluatePoint(eq1.lhs, localScope), evaluatePoint(eq1.rhs, localScope));
           if (isValNaN(dTarget) || !isValFinite(dTarget) || absNum(dTarget) > 1e-5) {
@@ -546,7 +579,7 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
       // If no roots were checked at all (e.g. constant equations), fall back to random point diff
       let hasCheckedAnyRoot = false;
       for (const solveVar of variables) {
-        if (roots1[solveVar].length > 0 || roots2[solveVar].length > 0) {
+        if ((roots1[solveVar] && roots1[solveVar].length > 0) || (roots2[solveVar] && roots2[solveVar].length > 0)) {
           hasCheckedAnyRoot = true;
           break;
         }

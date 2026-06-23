@@ -83,6 +83,12 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(areEquationsEquivalent(eq1, eqInvalid)).toBe(false);
   });
 
+  test('areEquationsEquivalent handles identities with domain restrictions correctly', () => {
+    const eq1 = parseEquation('(x - 1) / (x - 1) + 2 + 3 = 6');
+    const eq2 = parseEquation('6 = 6');
+    expect(areEquationsEquivalent(eq1, eq2)).toBe(true);
+  });
+
   test('generateValidMoves suggests correct algebraic transfers', () => {
     const eq = parseEquation('x + 2 = 5');
 

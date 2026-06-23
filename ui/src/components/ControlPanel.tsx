@@ -30,10 +30,17 @@ import { useIsMobile } from '../hooks/useBreakpoint';
 interface ControlPanelProps {
   onCloseMobile?: () => void;
   noBorder?: boolean;
+  /**
+   * When set, marks this instance as the skip-link target for the history region
+   * (#257). Only the always-present desktop instance passes it; the mobile
+   * bottom-sheet instance omits it so the id stays unique in the document.
+   */
+  regionId?: string;
 }
 
-export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBorder }) => {
+export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBorder, regionId }) => {
   const isMobile = useIsMobile();
+  const headingId = React.useId();
   const [tree] = useAtom(historyTreeAtom);
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
   const setSourcePath = useSetAtom(sourcePathAtom);
@@ -85,15 +92,24 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
   };
 
   return (
-    <div className={`w-full h-full flex flex-col gap-4 ${
-      isMobile || noBorder
-        ? 'p-0 bg-transparent' 
-        : `${THEME_GLASS.PANEL} p-4`
-    }`}>
+    <div
+      id={regionId}
+      role="region"
+      aria-labelledby={headingId}
+      // tabIndex=-1 only on the skip-link target instance, so the "Skip to
+      // history" link can land focus here without adding a Tab stop (#257).
+      tabIndex={regionId ? -1 : undefined}
+      className={`w-full h-full flex flex-col gap-4 outline-none ${
+        isMobile || noBorder
+          ? 'p-0 bg-transparent'
+          : `${THEME_GLASS.PANEL} p-4`
+      }`}
+    >
       {/* Sidebar Header with Timeline Actions */}
       <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER} pb-4 shrink-0`}>
         <Tooltip content={<HotkeyHint label="Toggle Sidebar" keys="H" />} position="left" autoAlign={false}>
-          <h2 
+          <h2
+            id={headingId}
             onClick={() => setRightSidebarOpen(false)}
             className="text-base lg:text-lg font-semibold lg:font-bold text-white flex items-center gap-2 select-none cursor-pointer hover:text-indigo-200 transition-colors"
           >

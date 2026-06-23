@@ -33,6 +33,13 @@ export const THEME_GLASS = {
   // 2.4.7). focus-visible only, so mouse users never see it; a bright ring +
   // dark offset reads clearly over every node state (candidate/source/target).
   NODE_FOCUS_RING: 'outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 focus-visible:z-30',
+  // Skip link (#257): visually hidden until it receives keyboard focus, then it
+  // surfaces as a styled pill pinned top-left so a keyboard user can jump
+  // straight to the equation/history region (WCAG 2.4.1, Bypass Blocks).
+  // Bright indigo fill + light text so it stands out sharply against the app's
+  // near-black background (dark-on-dark would be near-invisible), with a clear
+  // focus ring for the WCAG 2.4.7 indicator.
+  SKIP_LINK: 'sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-5 focus:py-3 focus:rounded-xl focus:bg-indigo-600 focus:text-base focus:font-bold focus:text-white focus:shadow-2xl focus:shadow-indigo-600/40 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-neutral-950',
   CARD_CANDIDATE_SCAN: 'border-sky-400/30 bg-sky-500/10 text-sky-100 shadow-[0_0_15px_rgba(56,189,248,0.1)] cursor-pointer',
   CARD_HOVER: 'border-indigo-400/40 bg-neutral-900/90 text-white font-medium shadow-md shadow-indigo-500/5 cursor-pointer',
   TREE_BG: 'bg-[#1c1a35] border border-white/5 rounded-2xl shadow-inner w-full',

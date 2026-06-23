@@ -95,7 +95,7 @@ export const WorkspaceTabs: React.FC = () => {
   };
 
   return (
-    <div className="w-full flex items-center justify-between bg-transparent px-0 max-lg:px-3 pt-2 pb-0 gap-4 shrink-0 select-none">
+    <nav aria-label="Workspaces" className="w-full flex items-center justify-between bg-transparent px-0 max-lg:px-3 pt-2 pb-0 gap-4 shrink-0 select-none">
       {/* Scrollable tab containers list */}
       <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
         {tabs.map((tab) => {
@@ -213,6 +213,6 @@ export const WorkspaceTabs: React.FC = () => {
           <Plus size={13} />
         </button>
       </Tooltip>
-    </div>
+    </nav>
   );
 };

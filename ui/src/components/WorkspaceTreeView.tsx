@@ -9,7 +9,7 @@ import { Tooltip } from './Tooltip';
 import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
 import { CopyFormatMenu } from './CopyFormatMenu';
-import { equationToString, getEquationStatus } from 'math-engine-client';
+import { equationToString, equationToSpeech, getEquationStatus } from 'math-engine-client';
 import { trackEvent } from '../utils/analytics';
 import { sentenceCase } from '../utils/text';
 import {
@@ -187,12 +187,14 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
     }
   };
 
-  // Lead with the action (what this step *did*), not the raw symbol string — which
-  // a screen reader would mispronounce and is tedious to hear (math speech is a
-  // separate workstream). The loop bubble names where it jumps back to.
+  // Lead with the action (what this step *did*), then read the resulting equation
+  // as real spoken math (#256) — "x squared minus 9 equals 0", not the raw symbol
+  // string a screen reader would mispronounce. The loop bubble names where it
+  // jumps back to.
+  const action = node.change?.text ? sentenceCase(node.change.text) : node.label;
   const ariaLabel = loopAncestor
     ? `Loop back to step ${loopAncestor.stepIndex} (${loopAncestor.label})`
-    : `Step ${stepNum}: ${node.change?.text ? sentenceCase(node.change.text) : node.label}`;
+    : `Step ${stepNum}: ${action}. ${equationToSpeech(node.equation)}`;
 
   const interactiveProps = interactive
     ? {

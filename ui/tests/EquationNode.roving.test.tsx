@@ -192,7 +192,8 @@ describe('EquationNode roving navigation (#257, PR B)', () => {
     renderTree(store);
 
     const handle = screen.getByRole('button', { name: /substitute x = 7/i });
-    const lhsTerm = screen.getByRole('treeitem', { name: /^x \+ 5, press Enter/i });
+    // The term aria-label now reads as spoken math (#256): "x plus 5", not "x + 5".
+    const lhsTerm = screen.getByRole('treeitem', { name: /^x plus 5, press Enter/i });
     expect(handle).toHaveAttribute('tabindex', '-1');
     expect(lhsTerm).toHaveAttribute('tabindex', '0');
   });
@@ -228,7 +229,7 @@ describe('EquationNode roving navigation (#257, PR B)', () => {
     act(() => store.set(candidatePathsAtom, new Set(['lhs', 'lhs/0', 'lhs/1', 'rhs'])));
 
     // Re-query after the re-render (the prior nodes are replaced).
-    expect(screen.getByRole('treeitem', { name: /^2 \* x \+ 1, press Enter/i })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('treeitem', { name: /^2 times x plus 1, press Enter/i })).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('button', { name: /substitute x = 2/i })).toHaveAttribute('tabindex', '-1');
   });
 

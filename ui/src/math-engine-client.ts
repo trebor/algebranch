@@ -23,6 +23,8 @@ export {
   equationToLatex,
   equationToLatexAligned,
   equationToUnicode,
+  equationToSpeech,
+  nodeToSpeech,
   formatNumber,
   flipRelation,
   ensureNodeIds,

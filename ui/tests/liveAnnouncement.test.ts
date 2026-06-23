@@ -30,10 +30,11 @@ function makeStore(eqText: string) {
 }
 
 describe('liveAnnouncementAtom — screen-reader narration of applied transforms', () => {
-  it('narrates the new equation when a step is pushed', () => {
+  it('narrates the new equation as readable speech when a step is pushed', () => {
     const store = makeStore('x=1');
     store.set(pushEquationAtom, parseEquation('x=2'));
-    expect(store.get(liveAnnouncementAtom)).toContain('x = 2');
+    // Real math speech (#256), not the raw "x = 2" symbol string.
+    expect(store.get(liveAnnouncementAtom)).toContain('x equals 2');
   });
 
   it('includes the step label when one is given', () => {
@@ -41,6 +42,6 @@ describe('liveAnnouncementAtom — screen-reader narration of applied transforms
     store.set(pushEquationAtom, parseEquation('x=2'), 'Simplify');
     const msg = store.get(liveAnnouncementAtom);
     expect(msg).toContain('Simplify');
-    expect(msg).toContain('x = 2');
+    expect(msg).toContain('x equals 2');
   });
 });

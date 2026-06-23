@@ -21,6 +21,7 @@ import { Tooltip } from '../components/Tooltip';
 import { HotkeyHint } from '../components/HotkeyHint';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { WorkspaceSwitcher } from '../components/WorkspaceSwitcher';
+import { RovingTabindexProvider } from '../hooks/useRovingTabindex';
 import { ShareMenu } from '../components/ShareMenu';
 import { HeaderOverflowMenu } from '../components/HeaderOverflowMenu';
 import { SharedWorkspaceBanner } from '../components/SharedWorkspaceBanner';
@@ -218,6 +219,7 @@ export default function Home() {
     equationKey: currentNodeId,
     candidatePathsKey: candidatePaths,
     refocusNonce: treeRefocusNonce,
+    selectionKey: sourcePath,
   });
   const tabs = useAtomValue(tabsAtom);
   const activeTabId = useAtomValue(activeTabIdAtom);
@@ -1464,6 +1466,7 @@ export default function Home() {
                   )}
                 </div>
               ) : (
+                <RovingTabindexProvider containerRef={activeContentRef}>
                 <div
                   className="flex flex-col items-center justify-center gap-2 origin-center"
                   ref={equationTreeFocusRef}
@@ -1475,13 +1478,19 @@ export default function Home() {
                   <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
                     {liveAnnouncement}
                   </div>
+                  {/* The expression is a single composite widget (#257): one Tab
+                      stop, arrow keys rove between actionable terms. tabIndex=-1
+                      lets Escape release focus back here without adding a stop. */}
                   <div
                     ref={activeContentRef}
+                    role="tree"
+                    aria-label="Equation"
+                    tabIndex={-1}
                     style={{
                       fontSize: `${activeScaleValue}em`,
                       opacity: activeIsScaled ? 1 : 0,
                     }}
-                    className="flex items-center justify-center gap-[0.4em] sm:gap-[0.6em] lg:gap-[0.8em] flex-nowrap w-max"
+                    className="flex items-center justify-center gap-[0.4em] sm:gap-[0.6em] lg:gap-[0.8em] flex-nowrap w-max outline-none"
                   >
                     {/* LHS Term Tree */}
                     <div className="flex justify-end min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
@@ -1492,6 +1501,17 @@ export default function Home() {
                     <Tooltip content="Apply an operation to both sides" position="bottom" visible={equalsLocked || (showIdleHint && showEqualsPopover) ? false : undefined}>
                       <span
                         ref={equalsRef}
+                        // The equals sign is an actionable equation node, so it is a
+                        // treeitem in the role="tree" composite widget (#257). This
+                        // is also required for validity: its idle-hint "?" badge is a
+                        // <button>, and a button nested in a bare element under
+                        // role="tree" violates aria-required-children — inside a
+                        // treeitem it is allowed. tabIndex -1 keeps the single Tab
+                        // stop (keyboard activation of global ops lands in a later PR).
+                        role="treeitem"
+                        aria-label="Apply an operation to both sides"
+                        aria-selected={false}
+                        tabIndex={-1}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (equalsLocked) return;
@@ -1509,6 +1529,9 @@ export default function Home() {
                           <button
                             type="button"
                             aria-label="What does the = sign do?"
+                            // Out of the tab order: the equals treeitem is one node
+                            // in the single-Tab-stop expression widget (#257).
+                            tabIndex={-1}
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowEqualsPopover((prev) => !prev);
@@ -1586,6 +1609,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+                </RovingTabindexProvider>
               )}
 
             </div>

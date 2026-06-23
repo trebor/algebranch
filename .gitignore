@@ -27,4 +27,6 @@ Thumbs.db
 
 # Screenshots and temporary layout captures
 /*.png
-/screenshots/
+# Unanchored so it also covers workspace-local capture dirs (e.g. ui/screenshots/
+# from `npm run shoot` run inside the ui workspace), not just the repo root.
+screenshots/

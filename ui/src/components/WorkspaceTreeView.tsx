@@ -23,10 +23,16 @@ import {
   rightSidebarOpenAtom,
   exportPreviewActiveAtom,
   equationToFormat,
+  type VisualTreeNode,
+  type HistoryNode,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { Check, CircleSlash, Infinity, Replace, TriangleAlert } from 'lucide-react';
 import { useIsHydrated } from '../hooks/useIsHydrated';
+import {
+  RovingTabindexProvider,
+  useOptionalRovingTabindex,
+} from '../hooks/useRovingTabindex';
 
 // Top offset (Tailwind class) for each vertical slot in the stack of badges
 // pinned to a tree node's top-right corner. Badges fill slots top-down in a
@@ -49,6 +55,374 @@ interface WorkspaceTreeViewProps {
   /** Override the scroll-container classes (e.g. a capped height in a modal). */
   className?: string;
 }
+
+type PositionedNode = VisualTreeNode & { x: number; y: number; width: number };
+type LoopAncestor = { id: string; stepIndex: number; label: string };
+
+interface HistoryStepNodeProps {
+  node: PositionedNode;
+  loopAncestor: LoopAncestor | undefined;
+  stepNum: number;
+  cardHeight: number;
+  isActive: boolean;
+  isCurrent: boolean;
+  isLoopHighlight: boolean;
+  interactive: boolean;
+  exportPreviewActive: boolean;
+  activeCardRef: React.MutableRefObject<HTMLDivElement | null>;
+  activeCopyMenuNodeId: string | null;
+  setActiveCopyMenuNodeId: React.Dispatch<React.SetStateAction<string | null>>;
+  tree: Record<string, HistoryNode>;
+  childrenByParent: Map<string, string[]>;
+  roots: string[];
+  onSelect: (id: string) => void;
+  onHoverLoop: (id: string | null) => void;
+}
+
+/**
+ * One step in the history `role="tree"` composite widget (#257).
+ *
+ * Each step is a `role="treeitem"` (not the old `role="button"` wrapping the copy
+ * `<button>`s — that button-in-button nesting is what VoiceOver demoted to
+ * "group"). The whole tree is a single Tab stop: the current step is the entry
+ * (`primary`), arrow keys rove along the derivation graph — Up/Down to the
+ * parent/child step, Left/Right between sibling branches — Enter selects, and
+ * `C` copies the focused step (the copy split-button is mouse-only, out of the
+ * focus order). Escape releases focus back to the tree container.
+ */
+const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
+  node,
+  loopAncestor,
+  stepNum,
+  cardHeight,
+  isActive,
+  isCurrent,
+  isLoopHighlight,
+  interactive,
+  exportPreviewActive,
+  activeCardRef,
+  activeCopyMenuNodeId,
+  setActiveCopyMenuNodeId,
+  tree,
+  childrenByParent,
+  roots,
+  onSelect,
+  onHoverLoop,
+}) => {
+  const roving = useOptionalRovingTabindex();
+  // Activating a loop bubble jumps to the ancestor it points back to; a regular
+  // step selects itself.
+  const selectId = loopAncestor ? loopAncestor.id : node.id;
+
+  // Stable ref: registers this step with the roving controller (the current step
+  // is `primary`, so it is the tree's default Tab entry) and tracks the current
+  // card for scroll-into-view. Mirrors the churn profile of the expression tree's
+  // registration (re-created only when the controller or current-ness changes).
+  const setNodeRef = React.useCallback(
+    (el: HTMLDivElement | null) => {
+      if (roving) {
+        if (el) roving.registerItem(node.id, el, { primary: isCurrent });
+        else roving.unregisterItem(node.id);
+      }
+      if (isCurrent) activeCardRef.current = el;
+    },
+    [roving, node.id, isCurrent, activeCardRef],
+  );
+
+  const tabIndex = roving ? (roving.activeKey === node.id ? 0 : -1) : 0;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!interactive) return;
+    // Keys bubbling up from the copy split-button carry their own handlers.
+    if (e.target !== e.currentTarget) return;
+    switch (e.key) {
+      case 'Enter':
+      case ' ':
+      case 'Spacebar':
+        e.preventDefault();
+        e.stopPropagation();
+        onSelect(selectId);
+        return;
+      case 'c':
+      case 'C':
+        // Copy reaches the focused step by key, since the copy trigger is out of
+        // the focus order (#257). Copies display-ready Unicode (the menu's default).
+        e.preventDefault();
+        e.stopPropagation();
+        navigator.clipboard?.writeText(equationToFormat(node.equation, 'unicode'));
+        trackEvent({ action: 'copy_step', category: 'history', label: node.id });
+        return;
+      case 'Escape':
+        if (roving) {
+          e.preventDefault();
+          e.stopPropagation();
+          roving.focusContainer();
+        }
+        return;
+    }
+    if (!roving) return;
+    const move = (id: string | undefined | null) => {
+      if (id && id !== node.id) {
+        e.preventDefault();
+        e.stopPropagation();
+        roving.setActive(id, { focus: true });
+      }
+    };
+    switch (e.key) {
+      case 'ArrowUp':
+        move(tree[node.id]?.parentId);
+        break;
+      case 'ArrowDown':
+        move((childrenByParent.get(node.id) ?? [])[0]);
+        break;
+      case 'ArrowLeft':
+      case 'ArrowRight': {
+        const parentId = tree[node.id]?.parentId ?? null;
+        const sibs = parentId ? childrenByParent.get(parentId) ?? [node.id] : roots;
+        const idx = sibs.indexOf(node.id);
+        const nextIdx = e.key === 'ArrowRight' ? Math.min(idx + 1, sibs.length - 1) : Math.max(idx - 1, 0);
+        move(sibs[nextIdx]);
+        break;
+      }
+    }
+  };
+
+  // Lead with the action (what this step *did*), not the raw symbol string — which
+  // a screen reader would mispronounce and is tedious to hear (math speech is a
+  // separate workstream). The loop bubble names where it jumps back to.
+  const ariaLabel = loopAncestor
+    ? `Loop back to step ${loopAncestor.stepIndex} (${loopAncestor.label})`
+    : `Step ${stepNum}: ${node.change?.text ? sentenceCase(node.change.text) : node.label}`;
+
+  const interactiveProps = interactive
+    ? {
+        role: 'treeitem' as const,
+        tabIndex,
+        // aria-selected is the tree's selection state; aria-current="step" marks
+        // the user's position in the derivation. Both ride on the same node.
+        'aria-selected': isCurrent,
+        'aria-current': isCurrent ? ('step' as const) : undefined,
+        'aria-keyshortcuts': 'C',
+        'aria-label': ariaLabel,
+        onKeyDown: handleKeyDown,
+      }
+    : {};
+
+  if (loopAncestor) {
+    // Render Compact Loop Terminal Bubble!
+    return (
+      <Tooltip
+        position="right"
+        delay={300} // Snappy but deliberate 300ms hover delay to prevent jitter
+        wrapperClassName="z-10 absolute"
+        style={{
+          left: `${node.x + (node.width - 44) / 2}px`, // Center the 44px bubble in the column
+          top: `${node.y}px`,
+          width: `44px`,
+          height: `${cardHeight}px`,
+        }}
+        className="w-56 p-3 z-50 text-left lowercase-none normal-case flex flex-col gap-1.5 pointer-events-auto"
+        content={
+          <div className="flex flex-col gap-0.5 text-fuchsia-300 font-semibold p-1">
+            <div className="flex items-center gap-1 tracking-wider text-[0.5rem] font-bold text-fuchsia-400">
+              <Infinity size={10} />
+              <span>Loop Detected</span>
+            </div>
+            <div className="text-xs lowercase-none normal-case leading-tight">
+              This action leads back to <strong>Step {loopAncestor.stepIndex} ({loopAncestor.label})</strong>.
+            </div>
+            <div className={`text-[0.5625rem] ${THEME_GLASS.TEXT_MUTED} mt-1 italic`}>
+              Click to select and return to Step {loopAncestor.stepIndex}.
+            </div>
+          </div>
+        }
+      >
+        <div
+          ref={setNodeRef}
+          onClick={() => onSelect(selectId)} // Selects and jumps back to the original ancestor!
+          {...interactiveProps}
+          onMouseEnter={() => onHoverLoop(loopAncestor.id)}
+          onMouseLeave={() => onHoverLoop(null)}
+          className={`w-11 h-11 rounded-full flex items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${
+            isLoopHighlight
+              ? THEME_GLASS.LOOP_NODE_ACTIVE
+              : THEME_GLASS.LOOP_NODE_DEFAULT
+          } ${interactive ? '' : 'cursor-default'}`}
+        >
+          {/* Step index badge on top-left */}
+          <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center font-bold shadow transition-all duration-300 ${
+            isLoopHighlight
+              ? THEME_GLASS.TREE_NODE_BADGE_LOOP
+              : 'bg-fuchsia-950 border-fuchsia-500/30 text-fuchsia-400'
+          }`}>
+            {stepNum}
+          </span>
+
+          {/* Infinite Loop Icon in Center */}
+          <Infinity size={18} className="stroke-[2.5]" />
+        </div>
+      </Tooltip>
+    );
+  }
+
+  // Right-corner badges stack top-down in a fixed priority order:
+  // substitute → restriction → contradiction/identity. Each present badge claims
+  // the next slot, so its vertical offset is just the count of higher-priority
+  // badges that are showing.
+  const eqStatus = getEquationStatus(node.equation);
+  const hasSubstituteBadge = node.change?.op === 'substitute';
+  const hasRestrictionBadge = !!node.change?.assumptions?.length;
+  const isContradiction = eqStatus === 'contradiction';
+  const isIdentity = eqStatus === 'identity';
+  const substituteSlot = 0;
+  const restrictionSlot = hasSubstituteBadge ? 1 : 0;
+  const statusSlot = (hasSubstituteBadge ? 1 : 0) + (hasRestrictionBadge ? 1 : 0);
+
+  return (
+    <Tooltip
+      position="right"
+      delay={300} // Snappy but deliberate 300ms hover delay to prevent jitter
+      visible={activeCopyMenuNodeId === node.id ? false : undefined}
+      // Each node wrapper is its own stacking context (z-10), so the copy
+      // dropdown's z-50 only outranks content *within* this node — later
+      // sibling nodes (steps below) would paint over it. Lift the active
+      // node above its siblings while hovered/focused so its menu floats free.
+      wrapperClassName="z-10 absolute hover:z-30 focus-within:z-30"
+      style={{
+        left: `${node.x}px`,
+        top: `${node.y}px`,
+        width: `${node.width}px`,
+        height: `${cardHeight}px`,
+      }}
+      className={`max-w-[85vw] w-max p-4 z-50 text-left lowercase-none normal-case flex flex-col gap-2 pointer-events-auto font-sans ${THEME_GLASS.TOOLTIP_DETAILS}`}
+      content={
+        <TooltipCard
+          eyebrow={`Step Details — ${node.label}`}
+          meta={`Step ${stepNum}`}
+          description={sentenceCase(node.change?.text)}
+          assumptions={node.change?.assumptions}
+          equation={node.equation}
+        />
+      }
+    >
+      <div
+        ref={setNodeRef}
+        onClick={() => onSelect(node.id)}
+        {...interactiveProps}
+        onMouseEnter={() => onHoverLoop(node.id)}
+        onMouseLeave={() => onHoverLoop(null)}
+        className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${
+          isLoopHighlight
+            ? THEME_GLASS.TREE_NODE_LOOP
+            : isCurrent
+            ? THEME_GLASS.TREE_NODE_ACTIVE
+            : THEME_GLASS.TREE_NODE_DEFAULT
+        } ${exportPreviewActive && !isActive ? THEME_GLASS.COPY_PREVIEW_DIMMED : ''} ${interactive ? '' : 'cursor-default'}`}
+      >
+        {/* Step index badge on top-left */}
+        <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center font-bold shadow transition-all duration-300 ${
+          isLoopHighlight
+            ? THEME_GLASS.TREE_NODE_BADGE_LOOP
+            : isCurrent
+            ? THEME_GLASS.TREE_NODE_BADGE_ACTIVE
+            : THEME_GLASS.TREE_NODE_BADGE_DEFAULT
+        }`}>
+          {stepNum}
+        </span>
+
+        {/* Substitution badge (#3): marks steps produced by substituting
+            a fact from another workspace */}
+        {hasSubstituteBadge && (
+          <Tooltip
+            content="Substituted from another workspace"
+            position="top"
+            className="w-max max-w-[240px] text-center text-sm"
+            wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[substituteSlot]} -right-1.5`}
+          >
+            <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_SUBSTITUTE}`}>
+              <Replace size={9} />
+            </span>
+          </Tooltip>
+        )}
+
+        {/* Domain-restriction badge (#63): marks steps that assume an
+            expression is non-zero (cancellation / division by a variable),
+            so the caveat is visible on the tree, not just in the tooltip.
+            Stacks below the substitute badge in case both apply. */}
+        {hasRestrictionBadge && (
+          <Tooltip
+            content={`Valid only if ${node.change?.assumptions?.join(' and ')}`}
+            position="top"
+            className="w-max max-w-[240px] text-center text-sm"
+            wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[restrictionSlot]} -right-1.5`}
+          >
+            <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_RESTRICTION}`}>
+              <TriangleAlert size={9} />
+            </span>
+          </Tooltip>
+        )}
+
+        {/* Contradiction / identity badge (#92): flags terminal states
+            that collapsed to a constant relation — a contradiction
+            (e.g. 3 = -3, no solution) or an identity (e.g. 0 = 0,
+            always true). Stacks below any substitute/restriction badge. */}
+        {(isContradiction || isIdentity) && (
+          <Tooltip
+            content={isContradiction
+              ? 'Contradiction — this statement is false, so there is no solution'
+              : 'Identity — this statement is always true'}
+            position="top"
+            className="w-max max-w-[240px] text-center text-sm"
+            wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[statusSlot]} -right-1.5`}
+          >
+            <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${isContradiction ? THEME_GLASS.TREE_NODE_BADGE_CONTRADICTION : THEME_GLASS.TREE_NODE_BADGE_IDENTITY}`}>
+              {isContradiction ? <CircleSlash size={9} /> : <Check size={9} />}
+            </span>
+          </Tooltip>
+        )}
+
+        {/* Truncated Equation Label */}
+        <span className={`text-xs font-mono truncate max-w-full text-indigo-50 font-semibold text-center ${interactive ? 'px-10' : 'px-2'}`}>
+          {equationToString(node.equation)}
+        </span>
+
+        {/* Hover Actions Toolbar — omitted in read-only preview mode
+            (e.g. the Feedback modal), where copying a step isn't useful. */}
+        {interactive && (
+          // Rests clearly visible (not at the faint contextual-actions
+          // opacity) and brightens to full on node hover (#243).
+          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center opacity-70 group-hover/node:opacity-100 transition-opacity duration-300 z-20">
+            {/* The `C E` hotkey copies the *current* step only, so the
+                keycap hint would mislead on any other node — show the
+                plain label there. The split-button is mouse-only here: keyboard
+                copies the focused step with the advertised C shortcut (#257). */}
+            <CopyFormatMenu
+              getText={(format) => equationToFormat(node.equation, format)}
+              iconSize={11}
+              variant="tree"
+              focusable={false}
+              tooltip={isCurrent ? <HotkeyHint label="Copy equation" sequence={['C', 'E']} /> : 'Copy equation'}
+              tooltipPosition="top"
+              trackAction="copy_step"
+              trackCategory="history"
+              trackLabel={node.id}
+              scopeLabel="This step"
+              scopeEquation={node.equation}
+              stopPropagation
+              onOpenChange={(isOpen) => {
+                if (isOpen) {
+                  setActiveCopyMenuNodeId(node.id);
+                } else {
+                  setActiveCopyMenuNodeId((current) => current === node.id ? null : current);
+                }
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </Tooltip>
+  );
+};
 
 /**
  * The workspace derivation graph — the SVG-connected node tree shown in the
@@ -74,6 +448,8 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   const [activeCopyMenuNodeId, setActiveCopyMenuNodeId] = React.useState<string | null>(null);
 
   const activeCardRef = React.useRef<HTMLDivElement | null>(null);
+  // The role="tree" container; Escape on a step releases focus back here (#257).
+  const treeContainerRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     if (!scrollActiveIntoView) return;
@@ -103,18 +479,6 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
       setRightSidebarOpen(false);
     }
     onAfterSelect?.();
-  };
-
-  // Keyboard activation for a step bubble (select that step). Ignored in
-  // read-only previews and when the key bubbled up from a nested control
-  // (e.g. the copy menu), which carries its own handler.
-  const handleStepKeyDown = (e: React.KeyboardEvent, id: string) => {
-    if (!interactive) return;
-    if (e.target !== e.currentTarget) return;
-    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
-      e.preventDefault();
-      handleStepClick(id);
-    }
   };
 
   // Compute permanent chronological indices for visual rendering
@@ -219,6 +583,31 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
     return map;
   }, [visualNodes]);
 
+  // Sibling ordering for keyboard roving (#257): children of each parent (and the
+  // roots) in left-to-right visual order, so ArrowLeft/Right step between branches
+  // as they appear, and ArrowDown lands on the leftmost child.
+  const { childrenByParent, roots } = React.useMemo(() => {
+    const byParent = new Map<string, string[]>();
+    const rootList: typeof visualNodes = [];
+    const groups = new Map<string, typeof visualNodes>();
+    visualNodes.forEach((n) => {
+      if (n.parentId === null) {
+        rootList.push(n);
+      } else {
+        const arr = groups.get(n.parentId) ?? [];
+        arr.push(n);
+        groups.set(n.parentId, arr);
+      }
+    });
+    groups.forEach((arr, parentId) => {
+      byParent.set(parentId, [...arr].sort((a, b) => a.x - b.x).map((n) => n.id));
+    });
+    return {
+      childrenByParent: byParent,
+      roots: [...rootList].sort((a, b) => a.x - b.x).map((n) => n.id),
+    };
+  }, [visualNodes]);
+
   // SVG grid sizing
   const svgWidth = React.useMemo(() => {
     if (visualNodes.length === 0) return 260;
@@ -258,18 +647,26 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
     return links;
   }, [visualNodes, visualNodesMap, activePathSet]);
 
-  return (
-    <div className={className ?? `flex-1 overflow-auto pr-1 relative ${THEME_GLASS.TREE_BG}`}>
+  // The derivation graph as a single composite widget (#257): one Tab stop on the
+  // role="tree" container, arrow keys rove between steps (Up/Down = parent/child,
+  // Left/Right = sibling branches). Read-only previews skip the tree semantics.
+  const canvas = (
       <div
+        ref={treeContainerRef}
+        {...(interactive
+          ? { role: 'tree' as const, 'aria-label': 'Derivation history', tabIndex: -1 }
+          : {})}
         style={
           interactive
             ? { width: `${svgWidth}px`, height: `${svgHeight}px`, minWidth: '100%' }
             : { width: `${svgWidth}px`, height: `${svgHeight}px` }
         }
-        className={interactive ? 'relative' : 'relative mx-auto'}
+        className={interactive ? 'relative outline-none' : 'relative mx-auto'}
       >
-        {/* SVG Connection Lines */}
+        {/* SVG Connection Lines (decorative — hidden from the a11y tree so the
+            tree's required children stay valid) */}
         <svg
+          aria-hidden="true"
           style={{ width: `${svgWidth}px`, height: `${svgHeight}px` }}
           className="absolute inset-0 pointer-events-none z-0"
         >
@@ -402,250 +799,39 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
         {/* Tree Node Bubbles */}
         {visualNodes.map((node) => {
           const loopAncestor = loopAncestorMap.get(node.id);
-          const isActive = activePathSet.has(node.id);
-          const isCurrent = currentNodeId === node.id;
-          const isLoopHighlight = hoveredLoopTargetId === node.id || (loopAncestor && hoveredLoopTargetId === loopAncestor.id);
-          const stepNum = stepIndices.get(node.id) ?? 0;
-
-          // Right-corner badges stack top-down in a fixed priority order:
-          // substitute → restriction → contradiction/identity. Each present
-          // badge claims the next slot, so its vertical offset is just the
-          // count of higher-priority badges that are showing.
-          const eqStatus = getEquationStatus(node.equation);
-          const hasSubstituteBadge = node.change?.op === 'substitute';
-          const hasRestrictionBadge = !!node.change?.assumptions?.length;
-          const isContradiction = eqStatus === 'contradiction';
-          const isIdentity = eqStatus === 'identity';
-          const substituteSlot = 0;
-          const restrictionSlot = hasSubstituteBadge ? 1 : 0;
-          const statusSlot =
-            (hasSubstituteBadge ? 1 : 0) + (hasRestrictionBadge ? 1 : 0);
-
-          if (loopAncestor) {
-            // Render Compact Loop Terminal Bubble!
-            return (
-              <Tooltip
-                key={node.id}
-                position="right"
-                delay={300} // Snappy but deliberate 300ms hover delay to prevent jitter
-                wrapperClassName="z-10 absolute"
-                style={{
-                  left: `${node.x + (node.width - 44) / 2}px`, // Center the 44px bubble in the column
-                  top: `${node.y}px`,
-                  width: `44px`,
-                  height: `${cardHeight}px`,
-                }}
-                className="w-56 p-3 z-50 text-left lowercase-none normal-case flex flex-col gap-1.5 pointer-events-auto"
-                content={
-                  <div className="flex flex-col gap-0.5 text-fuchsia-300 font-semibold p-1">
-                    <div className="flex items-center gap-1 tracking-wider text-[0.5rem] font-bold text-fuchsia-400">
-                      <Infinity size={10} />
-                      <span>Loop Detected</span>
-                    </div>
-                    <div className="text-xs lowercase-none normal-case leading-tight">
-                      This action leads back to <strong>Step {loopAncestor.stepIndex} ({loopAncestor.label})</strong>.
-                    </div>
-                    <div className={`text-[0.5625rem] ${THEME_GLASS.TEXT_MUTED} mt-1 italic`}>
-                      Click to select and return to Step {loopAncestor.stepIndex}.
-                    </div>
-                  </div>
-                }
-              >
-                <div
-                  onClick={() => handleStepClick(loopAncestor.id)} // Selects and jumps back to the original ancestor!
-                  {...(interactive
-                    ? {
-                        role: 'button',
-                        tabIndex: 0,
-                        'aria-label': `Loop back to step ${loopAncestor.stepIndex} (${loopAncestor.label})`,
-                        onKeyDown: (e: React.KeyboardEvent) => handleStepKeyDown(e, loopAncestor.id),
-                      }
-                    : {})}
-                  onMouseEnter={() => setHoveredLoopTargetId(loopAncestor.id)}
-                  onMouseLeave={() => setHoveredLoopTargetId(null)}
-                  className={`w-11 h-11 rounded-full flex items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${
-                    isLoopHighlight
-                      ? THEME_GLASS.LOOP_NODE_ACTIVE
-                      : THEME_GLASS.LOOP_NODE_DEFAULT
-                  } ${interactive ? '' : 'cursor-default'}`}
-                >
-                  {/* Step index badge on top-left */}
-                  <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center font-bold shadow transition-all duration-300 ${
-                    isLoopHighlight
-                      ? THEME_GLASS.TREE_NODE_BADGE_LOOP
-                      : 'bg-fuchsia-950 border-fuchsia-500/30 text-fuchsia-400'
-                  }`}>
-                    {stepNum}
-                  </span>
-
-                  {/* Infinite Loop Icon in Center */}
-                  <Infinity size={18} className="stroke-[2.5]" />
-                </div>
-              </Tooltip>
-            );
-          }
-
           return (
-            <Tooltip
+            <HistoryStepNode
               key={node.id}
-              position="right"
-              delay={300} // Snappy but deliberate 300ms hover delay to prevent jitter
-              visible={activeCopyMenuNodeId === node.id ? false : undefined}
-              // Each node wrapper is its own stacking context (z-10), so the copy
-              // dropdown's z-50 only outranks content *within* this node — later
-              // sibling nodes (steps below) would paint over it. Lift the active
-              // node above its siblings while hovered/focused so its menu floats free.
-              wrapperClassName="z-10 absolute hover:z-30 focus-within:z-30"
-              style={{
-                left: `${node.x}px`,
-                top: `${node.y}px`,
-                width: `${node.width}px`,
-                height: `${cardHeight}px`,
-              }}
-              className={`max-w-[85vw] w-max p-4 z-50 text-left lowercase-none normal-case flex flex-col gap-2 pointer-events-auto font-sans ${THEME_GLASS.TOOLTIP_DETAILS}`}
-              content={
-                <TooltipCard
-                  eyebrow={`Step Details — ${node.label}`}
-                  meta={`Step ${stepNum}`}
-                  description={sentenceCase(node.change?.text)}
-                  assumptions={node.change?.assumptions}
-                  equation={node.equation}
-                />
-              }
-            >
-              <div
-                ref={isCurrent ? activeCardRef : undefined}
-                onClick={() => handleStepClick(node.id)}
-                {...(interactive
-                  ? {
-                      role: 'button',
-                      tabIndex: 0,
-                      // Lead with the action (what this step *did*), not the raw
-                      // symbol string — which a screen reader would mispronounce
-                      // ("x caret 2…") and is tedious to hear. Correct math speech
-                      // is tracked separately as a dedicated a11y workstream.
-                      'aria-label': `Step ${stepNum}: ${node.change?.text ? sentenceCase(node.change.text) : node.label}`,
-                      'aria-current': isCurrent ? ('step' as const) : undefined,
-                      onKeyDown: (e: React.KeyboardEvent) => handleStepKeyDown(e, node.id),
-                    }
-                  : {})}
-                onMouseEnter={() => {
-                  setHoveredLoopTargetId(node.id);
-                }}
-                onMouseLeave={() => {
-                  setHoveredLoopTargetId(null);
-                }}
-                className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${
-                  isLoopHighlight
-                    ? THEME_GLASS.TREE_NODE_LOOP
-                    : isCurrent
-                    ? THEME_GLASS.TREE_NODE_ACTIVE
-                    : THEME_GLASS.TREE_NODE_DEFAULT
-                } ${exportPreviewActive && !isActive ? THEME_GLASS.COPY_PREVIEW_DIMMED : ''} ${interactive ? '' : 'cursor-default'}`}
-              >
-                {/* Step index badge on top-left */}
-                <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center font-bold shadow transition-all duration-300 ${
-                  isLoopHighlight
-                    ? THEME_GLASS.TREE_NODE_BADGE_LOOP
-                    : isCurrent
-                    ? THEME_GLASS.TREE_NODE_BADGE_ACTIVE
-                    : THEME_GLASS.TREE_NODE_BADGE_DEFAULT
-                }`}>
-                  {stepNum}
-                </span>
-
-                {/* Substitution badge (#3): marks steps produced by substituting
-                    a fact from another workspace */}
-                {hasSubstituteBadge && (
-                  <Tooltip
-                    content="Substituted from another workspace"
-                    position="top"
-                    className="w-max max-w-[240px] text-center text-sm"
-                    wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[substituteSlot]} -right-1.5`}
-                  >
-                    <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_SUBSTITUTE}`}>
-                      <Replace size={9} />
-                    </span>
-                  </Tooltip>
-                )}
-
-                {/* Domain-restriction badge (#63): marks steps that assume an
-                    expression is non-zero (cancellation / division by a variable),
-                    so the caveat is visible on the tree, not just in the tooltip.
-                    Stacks below the substitute badge in case both apply. */}
-                {hasRestrictionBadge && (
-                  <Tooltip
-                    content={`Valid only if ${node.change?.assumptions?.join(' and ')}`}
-                    position="top"
-                    className="w-max max-w-[240px] text-center text-sm"
-                    wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[restrictionSlot]} -right-1.5`}
-                  >
-                    <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_RESTRICTION}`}>
-                      <TriangleAlert size={9} />
-                    </span>
-                  </Tooltip>
-                )}
-
-                {/* Contradiction / identity badge (#92): flags terminal states
-                    that collapsed to a constant relation — a contradiction
-                    (e.g. 3 = -3, no solution) or an identity (e.g. 0 = 0,
-                    always true). Stacks below any substitute/restriction badge. */}
-                {(isContradiction || isIdentity) && (
-                  <Tooltip
-                    content={isContradiction
-                      ? 'Contradiction — this statement is false, so there is no solution'
-                      : 'Identity — this statement is always true'}
-                    position="top"
-                    className="w-max max-w-[240px] text-center text-sm"
-                    wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[statusSlot]} -right-1.5`}
-                  >
-                    <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${isContradiction ? THEME_GLASS.TREE_NODE_BADGE_CONTRADICTION : THEME_GLASS.TREE_NODE_BADGE_IDENTITY}`}>
-                      {isContradiction ? <CircleSlash size={9} /> : <Check size={9} />}
-                    </span>
-                  </Tooltip>
-                )}
-
-                {/* Truncated Equation Label */}
-                <span className={`text-xs font-mono truncate max-w-full text-indigo-50 font-semibold text-center ${interactive ? 'px-10' : 'px-2'}`}>
-                  {equationToString(node.equation)}
-                </span>
-
-                {/* Hover Actions Toolbar — omitted in read-only preview mode
-                    (e.g. the Feedback modal), where copying a step isn't useful. */}
-                {interactive && (
-                  // Rests clearly visible (not at the faint contextual-actions
-                  // opacity) and brightens to full on node hover (#243).
-                  <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center opacity-70 group-hover/node:opacity-100 transition-opacity duration-300 z-20">
-                    {/* The `C E` hotkey copies the *current* step only, so the
-                        keycap hint would mislead on any other node — show the
-                        plain label there. */}
-                    <CopyFormatMenu
-                      getText={(format) => equationToFormat(node.equation, format)}
-                      iconSize={11}
-                      variant="tree"
-                      tooltip={isCurrent ? <HotkeyHint label="Copy equation" sequence={['C', 'E']} /> : 'Copy equation'}
-                      tooltipPosition="top"
-                      trackAction="copy_step"
-                      trackCategory="history"
-                      trackLabel={node.id}
-                      scopeLabel="This step"
-                      scopeEquation={node.equation}
-                      stopPropagation
-                      onOpenChange={(isOpen) => {
-                        if (isOpen) {
-                          setActiveCopyMenuNodeId(node.id);
-                        } else {
-                          setActiveCopyMenuNodeId((current) => current === node.id ? null : current);
-                        }
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            </Tooltip>
+              node={node}
+              loopAncestor={loopAncestor}
+              stepNum={stepIndices.get(node.id) ?? 0}
+              cardHeight={cardHeight}
+              isActive={activePathSet.has(node.id)}
+              isCurrent={currentNodeId === node.id}
+              isLoopHighlight={hoveredLoopTargetId === node.id || (!!loopAncestor && hoveredLoopTargetId === loopAncestor.id)}
+              interactive={interactive}
+              exportPreviewActive={exportPreviewActive}
+              activeCardRef={activeCardRef}
+              activeCopyMenuNodeId={activeCopyMenuNodeId}
+              setActiveCopyMenuNodeId={setActiveCopyMenuNodeId}
+              tree={tree}
+              childrenByParent={childrenByParent}
+              roots={roots}
+              onSelect={handleStepClick}
+              onHoverLoop={setHoveredLoopTargetId}
+            />
           );
         })}
       </div>
+  );
+
+  return (
+    <div className={className ?? `flex-1 overflow-auto pr-1 relative ${THEME_GLASS.TREE_BG}`}>
+      {interactive ? (
+        <RovingTabindexProvider containerRef={treeContainerRef}>{canvas}</RovingTabindexProvider>
+      ) : (
+        canvas
+      )}
     </div>
   );
 };

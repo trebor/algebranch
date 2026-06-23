@@ -30,7 +30,7 @@ import {
 import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, greekNameFor } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
 import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
-import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber } from 'math-engine-client';
+import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
 import { describeTransposition, describeReduction, describeSubstitution, describeCollapse } from 'math-engine';
 import { ArrowLeftRight, Zap, Split, RefreshCw, Replace, TriangleAlert } from 'lucide-react';
@@ -1279,8 +1279,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   // actionable node (canClick) is a tab stop and a button; every other (static)
   // node stays out of the tab order and unlabelled so a screen reader isn't
   // forced to walk every nested container. The label reads the term plus the
-  // action it offers in the current selection state.
-  const termText = node.toString();
+  // action it offers in the current selection state. Speak the term as readable
+  // math (#256) — "x squared", not the raw "x ^ 2" the AST string would give.
+  const termText = nodeToSpeech(node);
   // A node hosts handles (Simplify/Distribute/…) only when its toolbar is live —
   // i.e. not while a transposition source is selected (the toolbar is inert then).
   const handlesNavigable = handleCount > 0 && !sourcePath;

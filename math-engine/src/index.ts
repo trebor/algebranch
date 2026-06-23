@@ -22,6 +22,7 @@ export * from './substitute';
 export * from './graphing';
 export * from './factor';
 export * from './serialize';
+export * from './speech';
 export * from './compress';
 export * from './sync';
 

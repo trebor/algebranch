@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { atom } from 'jotai';
-import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation, compressString } from 'math-engine-client';
+import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation, compressString } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
 import { applyGlobalOp, GlobalOpParams, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
@@ -912,7 +912,7 @@ export const pushEquationAtom = atom(
   (get, set, newEq: Equation, stepLabel?: string, change?: StepChange) => {
     // Narrate the applied step before any early return so loop/existing-child
     // branches announce too.
-    set(liveAnnouncementAtom, `${stepLabel ? `${stepLabel}: ` : ''}${equationToString(newEq)}`);
+    set(liveAnnouncementAtom, `${stepLabel ? `${stepLabel}: ` : ''}${equationToSpeech(newEq)}`);
 
     const tree = get(historyTreeAtom);
     const currentNodeId = get(currentNodeIdAtom);

@@ -25,8 +25,9 @@ import { formatNumber } from './index';
 type Format = 'latex' | 'unicode';
 
 // Operator precedence. Atoms/functions/parenthesised content sit above every
-// operator so they are never parenthesised as a child.
-const PREC = { add: 1, mul: 2, unary: 3, pow: 4, atom: 5 } as const;
+// operator so they are never parenthesised as a child. Exported so the speech
+// serializer (#256) shares one precedence/grouping source of truth.
+export const PREC = { add: 1, mul: 2, unary: 3, pow: 4, atom: 5 } as const;
 
 // Greek spelled-out name → LaTeX command. Mirrors the curated coverage of the
 // UI's SYMBOL_DISPLAY (#65): all lowercase except omicron, plus the capitals
@@ -74,18 +75,18 @@ const isOperator = (node: math.MathNode): node is math.OperatorNode => node.type
 const isParenthesis = (node: math.MathNode) => node.type === 'ParenthesisNode';
 
 // mathjs FunctionNode.fn is sometimes a string, sometimes a SymbolNode-like object.
-const fnName = (node: math.FunctionNode): string => {
+export const fnName = (node: math.FunctionNode): string => {
   const anyNode = node as any;
   if (typeof anyNode.fn === 'string') return anyNode.fn;
   if (anyNode.fn && typeof anyNode.fn === 'object' && 'name' in anyNode.fn) return anyNode.fn.name;
   return anyNode.name ?? '';
 };
 
-const isUnaryMinus = (node: math.OperatorNode): boolean =>
+export const isUnaryMinus = (node: math.OperatorNode): boolean =>
   node.op === '-' && node.args.length === 1;
 
 // Precedence of a node as it participates in parenthesisation decisions.
-const precedenceOf = (node: math.MathNode): number => {
+export const precedenceOf = (node: math.MathNode): number => {
   if (isParenthesis(node)) return precedenceOf((node as any).content);
   if (isOperator(node)) {
     const op = (node as math.OperatorNode).op;
@@ -98,7 +99,7 @@ const precedenceOf = (node: math.MathNode): number => {
 };
 
 // A leaf-ish node that reads cleanly as a root/function argument without parens.
-const isAtomic = (node: math.MathNode): boolean => {
+export const isAtomic = (node: math.MathNode): boolean => {
   if (isParenthesis(node)) return isAtomic((node as any).content);
   return node.type === 'ConstantNode' || node.type === 'SymbolNode' || node.type === 'FunctionNode';
 };

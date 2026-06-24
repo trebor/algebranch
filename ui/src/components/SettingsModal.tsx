@@ -6,13 +6,14 @@
 import React from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sliders, Info, Download, Keyboard } from 'lucide-react';
+import { X, Sliders, Info, Download, Keyboard, HelpCircle } from 'lucide-react';
 import {
   settingsModalOpenAtom,
   settingsAtom,
   aboutModalOpenAtom,
   pwaInstallPromptAtom,
   shortcutsOverlayOpenAtom,
+  helpModalOpenAtom,
   TEXT_SIZE_OPTIONS,
   clampChromeScale,
 } from '../store/equation';
@@ -32,6 +33,7 @@ export const SettingsModal: React.FC = () => {
   const [settings, setSettings] = useAtom(settingsAtom);
   const setAboutOpen = useSetAtom(aboutModalOpenAtom);
   const setShortcutsOverlayOpen = useSetAtom(shortcutsOverlayOpenAtom);
+  const setHelpOpen = useSetAtom(helpModalOpenAtom);
   const [installPrompt, setInstallPrompt] = useAtom(pwaInstallPromptAtom);
   const setConsent = useSetAtom(consentAtom);
 
@@ -200,7 +202,7 @@ export const SettingsModal: React.FC = () => {
                     Keyboard Shortcuts
                   </span>
                   <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                    View every shortcut for navigating history, workspaces, and panels. Press <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>?</kbd> any time.
+                    View every shortcut for navigating history, workspaces, and panels. Press <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>?</kbd> or <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>k</kbd> any time.
                   </span>
                 </div>
                 <button
@@ -213,6 +215,32 @@ export const SettingsModal: React.FC = () => {
                 >
                   <Keyboard size={13} />
                   <span>View</span>
+                </button>
+              </div>
+
+              <div className={THEME_GLASS.SETTING_ROW}>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold text-white">
+                    Help
+                  </span>
+                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                    Read instructions on formulas, transposition, simplify handles, and node semantics.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHelpOpen(true);
+                    setIsOpen(false);
+                    trackEvent({
+                      action: 'settings_open_help',
+                      category: 'settings',
+                    });
+                  }}
+                  className={`px-3 py-2 text-xs font-bold ${THEME_GLASS.BUTTON_SECONDARY} flex items-center gap-1.5 shrink-0 self-center cursor-pointer`}
+                >
+                  <HelpCircle size={13} />
+                  <span>Open</span>
                 </button>
               </div>
 

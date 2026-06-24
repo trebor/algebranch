@@ -4,7 +4,7 @@
 'use client';
 
 import React from 'react';
-import { MoreVertical, Settings as SettingsIcon, Info } from 'lucide-react';
+import { MoreVertical, Settings as SettingsIcon, Info, HelpCircle } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
@@ -12,11 +12,13 @@ import { trackEvent } from '../utils/analytics';
 interface HeaderOverflowMenuProps {
   onOpenSettings: () => void;
   onOpenAbout: () => void;
+  onOpenHelp: () => void;
 }
 
 export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
   onOpenSettings,
   onOpenAbout,
+  onOpenHelp,
 }) => {
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
@@ -43,6 +45,12 @@ export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
     setOpen(false);
     onOpenSettings();
     trackEvent({ action: 'overflow_open_settings', category: 'interaction' });
+  };
+
+  const handleHelpClick = () => {
+    setOpen(false);
+    onOpenHelp();
+    trackEvent({ action: 'overflow_open_help', category: 'interaction' });
   };
 
   const handleAboutClick = () => {
@@ -79,6 +87,15 @@ export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
           >
             <SettingsIcon size={14} className={THEME_GLASS.HEADER_ICON_SETTINGS} />
             <span>Settings</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleHelpClick}
+            className={`${THEME_GLASS.OVERFLOW_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
+          >
+            <HelpCircle size={14} className="text-indigo-400" />
+            <span>Help</span>
           </button>
           <button
             type="button"

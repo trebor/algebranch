@@ -9,10 +9,12 @@ import { HeaderOverflowMenu } from '@/components/HeaderOverflowMenu';
 describe('HeaderOverflowMenu', () => {
   let onOpenSettings: () => void;
   let onOpenAbout: () => void;
+  let onOpenHelp: () => void;
 
   beforeEach(() => {
     onOpenSettings = vi.fn();
     onOpenAbout = vi.fn();
+    onOpenHelp = vi.fn();
   });
 
   afterEach(cleanup);
@@ -22,6 +24,7 @@ describe('HeaderOverflowMenu', () => {
       <HeaderOverflowMenu
         onOpenSettings={onOpenSettings}
         onOpenAbout={onOpenAbout}
+        onOpenHelp={onOpenHelp}
       />
     );
 
@@ -56,6 +59,15 @@ describe('HeaderOverflowMenu', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: /about/i }));
 
     expect(onOpenAbout).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('calls onOpenHelp and closes the menu when Help is clicked', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /more options/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /help/i }));
+
+    expect(onOpenHelp).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menu')).toBeNull();
   });
 

@@ -152,6 +152,10 @@ describe('buildGithubIssueUrl', () => {
     expect(url.searchParams.get('title')).toBe('feat: Something broke');
     expect(url.searchParams.get('problem')).toBe(basePayload.message);
     expect(url.searchParams.get('rating')).toBe('4');
+    expect(url.searchParams.get('device')).toBe('Desktop');
+    expect(url.searchParams.get('browser')).toBe('Chrome');
+    expect(url.searchParams.get('os')).toBe('macOS');
+    expect(url.searchParams.get('user-agent')).toBe(basePayload.userAgent);
     // The chosen link lands in the common `share-link` field, not the proposal.
     expect(url.searchParams.get('share-link')).toBe(basePayload.shareLink);
     expect(url.searchParams.get('proposal')).not.toContain('Rating:');

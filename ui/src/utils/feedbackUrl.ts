@@ -191,6 +191,10 @@ export const buildGithubIssueUrl = (payload: FeedbackPayload): string => {
       '\n\n'
     ),
     'share-link': shareLink,
+    device,
+    browser,
+    os,
+    'user-agent': userAgent,
     rating: formatRating(rating),
   });
 };

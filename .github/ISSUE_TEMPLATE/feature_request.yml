@@ -53,6 +53,36 @@ body:
     validations:
       required: false
   - type: input
+    id: device
+    attributes:
+      label: Device type
+      description: Auto-detected by the in-app feedback form.
+      placeholder: e.g. Desktop, Mobile, Tablet
+    validations:
+      required: false
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      placeholder: e.g. Chrome 130, Safari 18
+    validations:
+      required: false
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: e.g. macOS 15, iOS 18, Windows 11
+    validations:
+      required: false
+  - type: input
+    id: user-agent
+    attributes:
+      label: User agent
+      description: Auto-filled raw browser string — ground truth if the parsed fields above miss an edge case.
+      placeholder: Mozilla/5.0 …
+    validations:
+      required: false
+  - type: input
     id: rating
     attributes:
       label: Experience rating (1–5 stars)

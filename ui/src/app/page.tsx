@@ -1304,9 +1304,14 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Under-header Layout (Sidebar + Main Workspace + Right Sidebar) */}
+      {/* Under-header Layout (Sidebar + Main Workspace + Right Sidebar). On
+          desktop the pb-4 is the panel's bottom margin; below lg the fixed
+          BottomNav covers the bottom and the workspace column already reserves
+          the nav clearance (--bottom-nav-clearance), so this padding must NOT
+          stack on top of it — otherwise it re-opens a too-large gap between the
+          last element and the nav (#251). Hence lg:pb-4 only. */}
       <div className={`flex-1 flex w-full overflow-hidden min-h-0 relative z-20 px-4 max-lg:px-0 pt-0 ${
-        onboardingChapterId ? 'pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:pb-4' : 'pb-4'
+        onboardingChapterId ? 'pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:pb-4' : 'pb-0 lg:pb-4'
       }`}>
         {/* Backdrop overlay for mobile drawers */}
         <div
@@ -1368,7 +1373,15 @@ export default function Home() {
               </div>
             )
           )}
-          <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL} overflow-hidden max-lg:border-x-0 max-lg:rounded-none`}>
+          {/* Workspace column. The fixed mobile BottomNav overlays the bottom of
+              this column, so reserve its overlap (+ a small gap) HERE, once, via
+              --bottom-nav-clearance — instead of the canvas / FactsStrip / graph
+              each re-reserving it with diverging hardcoded values (#251). Skipped
+              during the tour, when the nav is hidden and the coach card docks
+              directly below. */}
+          <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL} overflow-hidden max-lg:border-x-0 max-lg:rounded-none ${
+            onboardingChapterId ? '' : 'max-lg:pb-[calc(var(--bottom-nav-clearance)+var(--facts-gap))]'
+          }`}>
 
             {/* 1. Active Derivation Workspace */}
             <div
@@ -1384,15 +1397,14 @@ export default function Home() {
                   setSourcePath(null);
                 }
               }}
-              className={`active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full px-2 pt-16 sm:px-4 sm:pt-4 lg:px-8 lg:pt-8 text-base font-light cursor-default relative group/canvas outline-none ${
-                onboardingChapterId
-                  ? 'pb-4 lg:pb-8 overflow-auto lg:overflow-hidden'
-                  // The fixed BottomNav (h-14 + safe-area, lg:hidden) overlays the
-                  // canvas bottom on phones/tablets; pad the centering region down
-                  // to the nav's top edge so the expression centers in the visible
-                  // space above it rather than sinking behind it (#247 follow-up).
-                  // The canvas background still extends behind the nav as intended.
-                  : 'pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] lg:pb-8 overflow-auto'
+              // Symmetric vertical padding so the auto-scaled expression sits
+              // optically centered top/bottom (#251). The BottomNav clearance is
+              // owned by the column wrapper now, so the canvas only carries its
+              // own balanced gap. (The short-screen override in globals.css keeps
+              // a larger top inset to clear the top-left switcher pill — the one
+              // intentional asymmetry.)
+              className={`active-workspace-canvas flex-1 flex flex-col items-center justify-center min-h-0 w-full px-2 py-4 sm:px-4 lg:px-8 lg:py-8 text-base font-light cursor-default relative group/canvas outline-none ${
+                onboardingChapterId ? 'overflow-auto lg:overflow-hidden' : 'overflow-auto'
               }`}
             >
               {/* Collapsed workspace switcher — anchored top-left of the
@@ -1634,7 +1646,7 @@ export default function Home() {
             {/* 2. Collapsible Bottom Graph Panel */}
             {graphSize !== 'hidden' && (
               <div 
-                className={`border-t ${THEME_GLASS.PANEL_BORDER} relative flex flex-col bg-white/[0.01] transition-all duration-300 ease-in-out shrink-0 max-lg:pb-[calc(3.5rem+env(safe-area-inset-bottom))]`}
+                className={`border-t ${THEME_GLASS.PANEL_BORDER} relative flex flex-col bg-white/[0.01] transition-all duration-300 ease-in-out shrink-0`}
                 style={{ height: graphSize === 'expand' ? '66%' : '33%' }}
               >
                 {/* Graph resize/close controls sitting in the top-right corner of the header */}

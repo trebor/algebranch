@@ -7,7 +7,7 @@ import React from 'react';
 import { useAtomValue } from 'jotai';
 import { mjs } from 'math-engine';
 import { Replace } from 'lucide-react';
-import { applicableFactsAtom, onboardingChapterIdAtom, graphSizeAtom } from '../store/equation';
+import { applicableFactsAtom } from '../store/equation';
 import { equationToString } from 'math-engine-client';
 import { THEME_GLASS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
@@ -20,8 +20,6 @@ import { TooltipCard } from './TooltipCard';
  */
 export const FactsStrip: React.FC = () => {
   const facts = useAtomValue(applicableFactsAtom);
-  const inTour = !!useAtomValue(onboardingChapterIdAtom);
-  const graphSize = useAtomValue(graphSizeAtom);
   if (facts.length === 0) return null;
 
   const strip = (s: string) => s.replace(/\s+/g, '');
@@ -29,12 +27,9 @@ export const FactsStrip: React.FC = () => {
   return (
     // One row, horizontally scrollable — same overflow treatment as the tab bar
     // above, so narrow screens swipe sideways instead of clipping or wrapping.
-    // On mobile the fixed BottomNav overlays the bottom of the panel, so the
-    // strip clears its height (+ safe area) — except during the tour, when the
-    // nav is hidden and the coach card docks directly below.
-    <div className={`flex items-center gap-2 px-3 pb-2 pt-1 select-none shrink-0 min-w-0 ${
-      inTour ? '' : graphSize === 'hidden' ? 'max-lg:mb-[calc(3.5rem+env(safe-area-inset-bottom))]' : ''
-    }`}>
+    // The BottomNav overlap is reserved once on the workspace-column wrapper via
+    // --bottom-nav-clearance (#251), so the strip carries no nav clearance itself.
+    <div className="flex items-center gap-2 px-3 pb-2 pt-1 select-none shrink-0 min-w-0">
       <span className={`shrink-0 text-[0.5625rem] tracking-wider font-semibold ${THEME_GLASS.TEXT_MUTED}`}>
         Substitutions
       </span>

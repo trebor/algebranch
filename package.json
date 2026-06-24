@@ -20,12 +20,15 @@
     "lint": "npm run lint --workspace=ui",
     "type-check": "npm run type-check --workspace=math-engine && npm run type-check --workspace=ui",
     "prepare": "npm run build --workspace=math-engine",
+    "axe": "node scripts/axe-ci.mjs",
     "shoot": "node scripts/shoot.mjs",
     "shoot:hero": "node scripts/shoot-hero.mjs",
     "build-logos": "node scripts/build_logos.mjs",
     "build-social-preview": "node scripts/build_social_preview.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "axe-core": "^4.10.3",
     "playwright": "1.60.0"
   }
 }

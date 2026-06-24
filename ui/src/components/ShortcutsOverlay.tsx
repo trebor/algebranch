@@ -110,8 +110,9 @@ export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts })
               </button>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-5">
+            {/* Content — focusable so keyboard users can scroll the list when it
+                overflows (axe: scrollable-region-focusable). */}
+            <div tabIndex={0} className="flex-1 overflow-y-auto pr-1 flex flex-col gap-5">
               {groups.map((group) => (
                 <div key={group.category}>
                   <h3 className="text-xs font-bold capitalize tracking-widest text-indigo-300/70 mb-2 select-none">
@@ -130,7 +131,7 @@ export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts })
                             <kbd className={THEME_GLASS.SHORTCUT_KEYCAP}>
                               {formatShortcut({ key: shortcut.leader }, isMac)}
                             </kbd>
-                            <span className="text-xs text-white/40">then</span>
+                            <span className={`text-xs ${THEME_GLASS.TEXT_MUTED}`}>then</span>
                             <kbd className={THEME_GLASS.SHORTCUT_KEYCAP}>
                               {formatShortcut({ key: shortcut.key }, isMac)}
                             </kbd>
@@ -148,7 +149,7 @@ export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts })
             </div>
 
             {/* Footer hint */}
-            <div className="border-t border-white/5 pt-4 mt-4 text-xs text-white/40 select-none">
+            <div className={`border-t border-white/5 pt-4 mt-4 text-xs ${THEME_GLASS.TEXT_MUTED} select-none`}>
               Press <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>?</kbd> any time to reopen this list.
             </div>
           </motion.div>

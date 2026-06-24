@@ -20,6 +20,7 @@
     "lint": "npm run lint --workspace=ui",
     "type-check": "npm run type-check --workspace=math-engine && npm run type-check --workspace=ui",
     "prepare": "npm run build --workspace=math-engine",
+    "kill-port": "node scripts/kill-port.mjs",
     "axe": "node scripts/axe-ci.mjs",
     "shoot": "node scripts/shoot.mjs",
     "shoot:hero": "node scripts/shoot-hero.mjs",

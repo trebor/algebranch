@@ -1442,6 +1442,10 @@ export const mathLoadingAtom = atom(false);
 export interface ToastState {
   message: string;
   key: number;
+  type?: 'default' | 'update';
+  onAction?: () => void;
+  actionLabel?: string;
+  persistent?: boolean;
 }
 
 /**

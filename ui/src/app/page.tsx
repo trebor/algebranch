@@ -102,7 +102,7 @@ import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react';
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -617,18 +617,93 @@ export default function Home() {
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       if (process.env.NODE_ENV === 'production') {
+        const showUpdateToast = (waitingWorker: ServiceWorker) => {
+          const reloadAction = () => {
+            waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+          };
+
+          // Set initial toast message immediately
+          setToast({
+            message: 'New version available',
+            key: Date.now(),
+            type: 'update',
+            persistent: true,
+            actionLabel: 'Reload',
+            onAction: reloadAction
+          });
+
+          // Request version from the waiting service worker
+          const channel = new MessageChannel();
+          channel.port1.onmessage = (event) => {
+            const swVersion = event.data?.version;
+            if (swVersion) {
+              setToast((prev) => {
+                if (prev && prev.type === 'update') {
+                  return {
+                    ...prev,
+                    message: `New version (${swVersion}) available`
+                  };
+                }
+                return {
+                  message: `New version (${swVersion}) available`,
+                  key: Date.now(),
+                  type: 'update',
+                  persistent: true,
+                  actionLabel: 'Reload',
+                  onAction: reloadAction
+                };
+              });
+            }
+          };
+          waitingWorker.postMessage({ type: 'GET_VERSION' }, [channel.port2]);
+        };
+
         const registerSW = () => {
           navigator.serviceWorker.register('/sw.js')
-            .then((reg) => console.log('Service worker registered successfully:', reg.scope))
+            .then((reg) => {
+              // If there's already a waiting worker, prompt reload
+              if (reg.waiting) {
+                showUpdateToast(reg.waiting);
+              }
+
+              // Listen for future updates
+              reg.addEventListener('updatefound', () => {
+                const installingWorker = reg.installing;
+                if (installingWorker) {
+                  installingWorker.addEventListener('statechange', () => {
+                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                      showUpdateToast(installingWorker);
+                    }
+                  });
+                }
+              });
+            })
             .catch((err) => console.error('Service worker registration failed:', err));
         };
+
+        const hadControllerOnLoad = !!navigator.serviceWorker.controller;
+        let refreshing = false;
+        const handleControllerChange = () => {
+          if (!refreshing && hadControllerOnLoad) {
+            refreshing = true;
+            window.location.reload();
+          }
+        };
+        navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
 
         if (document.readyState === 'complete') {
           registerSW();
         } else {
           window.addEventListener('load', registerSW);
-          return () => window.removeEventListener('load', registerSW);
+          return () => {
+            window.removeEventListener('load', registerSW);
+            navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+          };
         }
+
+        return () => {
+          navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+        };
       } else {
         // In development, unregister service workers to avoid hot-reloading caching issues
         navigator.serviceWorker.getRegistrations().then((registrations) => {
@@ -640,7 +715,7 @@ export default function Home() {
         });
       }
     }
-  }, []);
+  }, [setToast]);
 
   // Capture the browser's PWA install promotion event. We do NOT preventDefault
   // so the browser's native automatic promotion can still run when appropriate,
@@ -1225,7 +1300,7 @@ export default function Home() {
 
   // Auto-dismiss toast status messages after 2.5 seconds
   React.useEffect(() => {
-    if (!toast) return;
+    if (!toast || toast.persistent) return;
     const timer = setTimeout(() => {
       setToast(null);
     }, 2500);
@@ -1436,9 +1511,29 @@ export default function Home() {
               )}
               {/* Calculating Math Engine Spinner / Toast Notification */}
               {toast ? (
-                <div key={`toast-${toast.key}`} className={`absolute top-4 left-4 z-30 short-screen-toast-offset ${THEME_GLASS.TOAST_ALERT}`}>
-                  <Check size={12} className="text-emerald-400 shrink-0" />
+                <div key={`toast-${toast.key}`} className={`absolute top-4 left-4 z-30 short-screen-toast-offset ${THEME_GLASS.TOAST_ALERT} flex items-center gap-2`}>
+                  {toast.type === 'update' ? (
+                    <RefreshCw size={12} className="text-indigo-400 shrink-0 animate-[spin_3s_linear_infinite]" />
+                  ) : (
+                    <Check size={12} className="text-emerald-400 shrink-0" />
+                  )}
                   <span>{toast.message}</span>
+                  {toast.onAction && (
+                    <button
+                      onClick={toast.onAction}
+                      className="ml-2 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-[10px] transition-all cursor-pointer active:scale-95 border border-indigo-400/20 shadow-md shadow-indigo-600/20"
+                    >
+                      {toast.actionLabel || 'Action'}
+                    </button>
+                  )}
+                  {toast.type === 'update' && (
+                    <button
+                      onClick={() => setToast(null)}
+                      className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-zinc-300 font-semibold rounded-lg text-[10px] transition-all cursor-pointer active:scale-95 border border-white/5"
+                    >
+                      Dismiss
+                    </button>
+                  )}
                 </div>
               ) : isMathLoading ? (
                 <div className={`absolute top-4 left-4 z-30 short-screen-toast-offset ${THEME_GLASS.TOAST_LOADING}`}>

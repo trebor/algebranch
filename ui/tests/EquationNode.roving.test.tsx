@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { describe, it, expect, afterEach } from 'vitest';
+import React from 'react';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { Provider, createStore } from 'jotai';
 import { EquationNode } from '@/components/EquationNode';
@@ -62,6 +63,23 @@ function renderTree(store: ReturnType<typeof createStore>) {
         </div>
       </RovingTabindexProvider>
     </Provider>,
+  );
+}
+
+// Variant that wires a real container ref to the role="tree" element, so the
+// roving controller's `focusContainer()` (Escape "release" exit) has a target —
+// mirroring the page, where the tree div is the container Escape can release to.
+function ContainerTree({ store }: { store: ReturnType<typeof createStore> }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  return (
+    <Provider store={store}>
+      <RovingTabindexProvider containerRef={ref}>
+        <div role="tree" aria-label="Equation" tabIndex={-1} ref={ref}>
+          <EquationNode path="lhs" />
+          <EquationNode path="rhs" />
+        </div>
+      </RovingTabindexProvider>
+    </Provider>
   );
 }
 
@@ -231,6 +249,38 @@ describe('EquationNode roving navigation (#257, PR B)', () => {
     // Re-query after the re-render (the prior nodes are replaced).
     expect(screen.getByRole('treeitem', { name: /^2 times x plus 1, press Enter/i })).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('button', { name: /substitute x = 2/i })).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('steps Escape out to the enclosing term, re-speaking it — not ejecting to the top (#271)', () => {
+    // The whole LHS (lhs) and the nested constant 9 (lhs/1) are both actionable.
+    // Arrowing into the inner term then Escaping must land on the enclosing term —
+    // resuming the user's place one level out — rather than releasing to the top.
+    const store = makeStore('x^2-9=0', ['lhs', 'lhs/1']);
+    renderTree(store);
+    const outer = screen.getAllByRole('treeitem')[0];
+    act(() => outer.focus());
+    fireEvent.keyDown(outer, { key: 'ArrowDown' });
+    const inner = screen.getAllByRole('treeitem')[1];
+    expect(inner).toHaveAttribute('tabindex', '0');
+    expect(document.activeElement).toBe(inner);
+
+    fireEvent.keyDown(inner, { key: 'Escape' });
+    // Focus steps OUT to the enclosing term, which is re-spoken by landing on it.
+    expect(screen.getAllByRole('treeitem')[0]).toHaveAttribute('tabindex', '0');
+    expect(document.activeElement).toBe(screen.getAllByRole('treeitem')[0]);
+  });
+
+  it('releases Escape to the region container only at the top level — no enclosing term (#271)', () => {
+    // Three top-level sibling candidates, none nested in another candidate: there
+    // is no enclosing term to step out to, so Escape releases to the container.
+    const store = makeStore('x^2-9=0', ['lhs/0', 'lhs/1', 'rhs']);
+    render(<ContainerTree store={store} />);
+    const container = screen.getByRole('tree');
+    const first = screen.getAllByRole('treeitem')[0];
+    act(() => first.focus());
+
+    fireEvent.keyDown(first, { key: 'Escape' });
+    expect(document.activeElement).toBe(container);
   });
 
   it('makes a handle-only node (not a candidate) a treeitem so its handle stays reachable', () => {

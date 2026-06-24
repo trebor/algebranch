@@ -684,12 +684,38 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     activateNode();
   };
 
+  // Escape "step out" (#271): rather than ejecting to the top of the widget,
+  // Escape resumes the user's place one level out — it focuses the nearest
+  // enclosing term (re-spoken by landing on it), so stepping out of a deep nested
+  // sub-expression never strands a screen-reader user above the workspace toolbar.
+  // `includeSelf` lets a handle return to its own term first (the handle hangs off
+  // `origin`); a term passes false so it climbs to a strict ancestor. Only when
+  // there is no enclosing term does it release to the region container — the
+  // genuine top-level exit (#257 WCAG "release").
+  const stepOutFrom = React.useCallback(
+    (origin: string, includeSelf: boolean) => {
+      if (!roving) return;
+      const keys = roving.orderedKeys();
+      if (includeSelf && keys.includes(origin)) {
+        roving.setActive(origin, { focus: true });
+        return;
+      }
+      const ancestor = keys
+        .filter((k) => origin.startsWith(k + '/'))
+        .sort((a, b) => b.length - a.length)[0];
+      if (ancestor) roving.setActive(ancestor, { focus: true });
+      else roving.focusContainer();
+    },
+    [roving],
+  );
+
   // Keyboard model for the expression composite widget (#231, #257). Enter/Space
   // activate the node; arrow keys rove between actionable terms (Left/Right in
   // document order, Up/Down along the AST to an ancestor/descendant candidate,
-  // Home/End to the ends); Escape clears a live selection and releases focus to
-  // the region container. Tab/Shift+Tab are left untouched so focus exits the
-  // widget naturally (WCAG 2.1.2, not a focus trap).
+  // Home/End to the ends); Escape clears a live selection, then steps out to the
+  // enclosing term (#271) — releasing to the region container only at the top.
+  // Tab/Shift+Tab are left untouched so focus exits the widget naturally
+  // (WCAG 2.1.2, not a focus trap).
   const handleNodeKeyDown = (e: React.KeyboardEvent) => {
     // Only this node's own box drives term navigation. Keydowns bubbling up from a
     // descendant treeitem or a folded-in handle button are owned by those elements
@@ -705,14 +731,19 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
       e.preventDefault();
       e.stopPropagation();
       if (isSelected) {
+        // Cancelling a live selection is a deliberate "I'm done" exit: deselect
+        // and release to the region container (the #257 WCAG release).
         setSourcePath(null);
         trackEvent({
           action: 'deselect_node',
           category: 'math_interaction',
           label: path,
         });
+        roving?.focusContainer();
+        return;
       }
-      roving?.focusContainer();
+      // Plain navigation: step out one enclosing level instead of ejecting (#271).
+      stepOutFrom(path, false);
       return;
     }
     if (!roving) return;
@@ -823,20 +854,21 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
           if (roving) { e.preventDefault(); e.stopPropagation(); roving.moveFocus('last'); }
           break;
         case 'Escape':
-          // An open multi-option menu closes first; otherwise release focus to the
-          // region container, matching the term's Escape behavior.
+          // An open multi-option menu closes first; otherwise step out to the
+          // handle's own term (re-spoken), matching the term's Escape behavior —
+          // resuming the user's place rather than ejecting to the top (#271).
           if (openMenuType === stackType) {
             e.stopPropagation();
             closeMenu();
           } else if (roving) {
             e.preventDefault();
             e.stopPropagation();
-            roving.focusContainer();
+            stepOutFrom(path, true);
           }
           break;
       }
     },
-    [roving, openMenuType, closeMenu],
+    [roving, openMenuType, closeMenu, stepOutFrom, path],
   );
 
   // Only dim candidate nodes if the user is actively hovering over *some* valid candidate.

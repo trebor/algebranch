@@ -29,14 +29,15 @@ function makeStore() {
   return store;
 }
 
-describe('History region landmark (#257, PR A)', () => {
+describe('History region landmark (#257, PR A; #237)', () => {
   afterEach(cleanup);
 
-  it('wraps the history in a region labelled by the History heading', () => {
+  it('wraps the history in a complementary landmark labelled by the History heading', () => {
     render(<Provider store={makeStore()}><ControlPanel /></Provider>);
-    // aria-labelledby points the region at the existing <h2>History</h2>, so a
-    // screen-reader rotor lists it as the "History" region.
-    expect(screen.getByRole('region', { name: /history/i })).toBeInTheDocument();
+    // <aside> (complementary) labelled via aria-labelledby at the existing
+    // <h2>History</h2>, so a screen-reader rotor lists it as the "History"
+    // sidebar landmark — symmetric with the left "Equation library" aside (#237).
+    expect(screen.getByRole('complementary', { name: /history/i })).toBeInTheDocument();
   });
 
   it('exposes a focusable skip-link target id only when regionId is provided', () => {
@@ -45,13 +46,13 @@ describe('History region landmark (#257, PR A)', () => {
     );
     const region = document.getElementById('history-region');
     expect(region).not.toBeNull();
-    expect(region).toHaveAttribute('role', 'region');
+    expect(region?.tagName).toBe('ASIDE');
     // tabIndex=-1 lets the skip link land focus here without adding a Tab stop.
     expect(region).toHaveAttribute('tabindex', '-1');
     unmount();
 
     // The second (mobile bottom-sheet) instance omits regionId to avoid a
-    // duplicate id; it still gets the region role but no skip-target id.
+    // duplicate id; it still gets the landmark role but no skip-target id.
     render(<Provider store={makeStore()}><ControlPanel /></Provider>);
     expect(document.getElementById('history-region')).toBeNull();
   });

@@ -92,9 +92,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
   };
 
   return (
-    <div
+    // <aside> (complementary) landmark labelled by the History heading, so the
+    // right sidebar surfaces in a screen-reader rotor symmetric with the left
+    // "Equation library" aside (#237). Was a generic role="region" (#257).
+    <aside
       id={regionId}
-      role="region"
       aria-labelledby={headingId}
       // tabIndex=-1 only on the skip-link target instance, so the "Skip to
       // history" link can land focus here without adding a Tab stop (#257).
@@ -168,7 +170,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
       <div className="flex-1 flex flex-col min-h-0">
         <WorkspaceTreeView onAfterSelect={onCloseMobile} />
       </div>
-    </div>
+    </aside>
   );
 };
 

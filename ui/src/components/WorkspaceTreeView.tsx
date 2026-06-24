@@ -28,14 +28,18 @@ import {
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { Check, CircleSlash, Infinity } from 'lucide-react';
-import { useIsHydrated } from '../hooks/useIsHydrated';
 import {
   RovingTabindexProvider,
   useOptionalRovingTabindex,
 } from '../hooks/useRovingTabindex';
 import { HandleBadge } from './HandleBadge';
 import { TransitionTooltipCard } from './TransitionTooltipCard';
+import { pxToRem, rowCardLayout, REM_BASE, TREE_GUTTER_PX } from '../utils/treeLayout';
 import type { StepChange } from 'math-engine';
+
+// Measure the panel before first paint on the client (so the tree never flashes
+// at the fallback width), falling back to a no-op effect during SSR.
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
 // Shared dashed-flow treatment so the loop connector and the export-path preview
 // animate identically (same dash pattern + speed) (#46).
@@ -292,10 +296,10 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
         delay={300} // Snappy but deliberate 300ms hover delay to prevent jitter
         wrapperClassName="z-10 absolute"
         style={{
-          left: `${node.x + (node.width - 44) / 2}px`, // Center the 44px bubble in the column
-          top: `${node.y}px`,
-          width: `44px`,
-          height: `${cardHeight}px`,
+          left: pxToRem(node.x + (node.width - 44) / 2), // Center the 44px bubble in the column
+          top: pxToRem(node.y),
+          width: pxToRem(44),
+          height: pxToRem(cardHeight),
         }}
         className="w-56 p-3 z-50 text-left lowercase-none normal-case flex flex-col gap-1.5 pointer-events-auto"
         content={
@@ -360,10 +364,10 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
       // node above its siblings while hovered/focused so its menu floats free.
       wrapperClassName="z-10 absolute hover:z-30 focus-within:z-30"
       style={{
-        left: `${node.x}px`,
-        top: `${node.y}px`,
-        width: `${node.width}px`,
-        height: `${cardHeight}px`,
+        left: pxToRem(node.x),
+        top: pxToRem(node.y),
+        width: pxToRem(node.width),
+        height: pxToRem(cardHeight),
       }}
       className={`max-w-[85vw] w-max p-4 z-50 text-left lowercase-none normal-case flex flex-col gap-2 pointer-events-auto font-sans ${THEME_GLASS.TOOLTIP_DETAILS}`}
       content={
@@ -420,8 +424,13 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
           </Tooltip>
         )}
 
-        {/* Truncated Equation Label */}
-        <span className={`text-xs font-mono truncate max-w-full text-indigo-50 font-semibold text-center ${interactive ? 'px-10' : 'px-2'}`}>
+        {/* Truncated Equation Label. Asymmetric padding (#279): the right side
+            still clears the copy split-button toolbar (`pr-10`), but the left
+            only needs to clear the rounded corner — the step-index and
+            contradiction/identity badges sit at negative offsets *outside* the
+            card, so they buy no internal clearance. Slimming the left reclaims
+            width so the equation truncates less on narrow cards. */}
+        <span className={`text-xs font-mono truncate max-w-full text-indigo-50 font-semibold text-center ${interactive ? 'pl-3 pr-10' : 'px-2'}`}>
           {equationToString(node.equation)}
         </span>
 
@@ -483,12 +492,49 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   const layout = useAtomValue(treeLayoutAtom);
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
   const exportPreviewActive = useAtomValue(exportPreviewActiveAtom);
-  const isMounted = useIsHydrated();
   const [activeCopyMenuNodeId, setActiveCopyMenuNodeId] = React.useState<string | null>(null);
 
   const activeCardRef = React.useRef<HTMLDivElement | null>(null);
   // The role="tree" container; Escape on a step releases focus back here (#257).
   const treeContainerRef = React.useRef<HTMLDivElement | null>(null);
+  // The scrollable panel wrapping the tree drives the row layout so the cards
+  // fill it with symmetric gutters (#279). The width is held in *design units*
+  // (rem × REM_BASE), not raw px: the panel is sized in rem (lg:w-80 = 20rem), so
+  // its px width already grows with the text-size knob. Dividing the measured px
+  // back down by the live root font-size yields a font-invariant design width,
+  // which pxToRem then re-scales exactly once — measuring px directly would
+  // double-scale and overflow the panel as the knob grows the font. Falls back to
+  // 240 until the first measurement, matching the SSR + initial client render so
+  // hydration stays stable.
+  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = React.useState(240);
+  const lastContainerWidthRef = React.useRef(0);
+
+  useIsomorphicLayoutEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const measure = () => {
+      const cs = getComputedStyle(el);
+      const contentPx =
+        el.clientWidth - parseFloat(cs.paddingLeft || '0') - parseFloat(cs.paddingRight || '0');
+      if (contentPx <= 0) return;
+      const rootFontPx =
+        parseFloat(getComputedStyle(document.documentElement).fontSize) || REM_BASE;
+      const design = (contentPx * REM_BASE) / rootFontPx;
+      // Guard against ResizeObserver feedback from sub-pixel jitter (and from the
+      // knob, which moves px and font together so the design width holds steady).
+      if (Math.abs(design - lastContainerWidthRef.current) < 0.5) return;
+      lastContainerWidthRef.current = design;
+      setContainerWidth(design);
+    };
+    // Measure synchronously before the first paint so the cards never flash at
+    // the 240 fallback width and then resize into place (#279).
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => measure());
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   React.useEffect(() => {
     if (!scrollActiveIntoView) return;
@@ -588,23 +634,15 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
       nodesByDepth[d].sort((a, b) => a.column - b.column);
     });
 
-    // 3. Compute dynamic position and width on a row-by-row basis
-    const containerWidth = isMounted && typeof window !== 'undefined' && window.innerWidth < 1024
-      ? Math.max(240, window.innerWidth - 40)
-      : 240;
-    const minColWidth = 110;
-
+    // 3. Compute dynamic position and width on a row-by-row basis, filling the
+    //    measured panel with symmetric gutters (#279).
     return layoutNodes.map(node => {
       const rowNodes = nodesByDepth[node.depth] || [node];
       const rowNodeCount = rowNodes.length;
       const sortedIdx = rowNodes.findIndex(n => n.id === node.id);
 
-      const rowColWidth = Math.max(minColWidth, containerWidth / rowNodeCount);
-      const maxCardWidth = 228; // Standard elegant desktop width
-      const cardWidth = Math.min(maxCardWidth, rowColWidth - 12);
-
-      // Center the card in its column cell if it is smaller than the cell width
-      const x = 16 + sortedIdx * rowColWidth + (rowColWidth - 12 - cardWidth) / 2;
+      const { startX, cardWidth, step } = rowCardLayout(containerWidth, rowNodeCount);
+      const x = startX + sortedIdx * step;
       const y = 20 + node.depth * 76; // 76px ROW_HEIGHT
 
       return {
@@ -614,7 +652,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
         width: cardWidth,
       };
     });
-  }, [layoutNodes, isMounted]);
+  }, [layoutNodes, containerWidth]);
 
   const visualNodesMap = React.useMemo(() => {
     const map: Record<string, typeof visualNodes[0]> = {};
@@ -651,7 +689,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   const svgWidth = React.useMemo(() => {
     if (visualNodes.length === 0) return 260;
     const maxRight = Math.max(...visualNodes.map(n => n.x + n.width));
-    return maxRight + 16; // 16px padding right
+    return maxRight + TREE_GUTTER_PX; // mirror the left gutter on the right
   }, [visualNodes]);
 
   const svgHeight = 40 + maxDepth * 76 + cardHeight;
@@ -709,16 +747,20 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
           : {})}
         style={
           interactive
-            ? { width: `${svgWidth}px`, height: `${svgHeight}px`, minWidth: '100%' }
-            : { width: `${svgWidth}px`, height: `${svgHeight}px` }
+            ? { width: pxToRem(svgWidth), height: pxToRem(svgHeight), minWidth: '100%' }
+            : { width: pxToRem(svgWidth), height: pxToRem(svgHeight) }
         }
         className={interactive ? 'relative outline-none' : 'relative mx-auto'}
       >
         {/* SVG Connection Lines (decorative — hidden from the a11y tree so the
-            tree's required children stay valid) */}
+            tree's required children stay valid). The curves are drawn in the px
+            coordinate space the layout is computed in; the px `viewBox` maps that
+            space onto the rem-rendered box so the lines track the rem-positioned
+            cards as the root font-size scales the whole tree (#279). */}
         <svg
           aria-hidden="true"
-          style={{ width: `${svgWidth}px`, height: `${svgHeight}px` }}
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          style={{ width: pxToRem(svgWidth), height: pxToRem(svgHeight) }}
           className="absolute inset-0 pointer-events-none z-0"
         >
           <style>{`
@@ -871,7 +913,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
               position="top"
               className={`max-w-[85vw] w-max p-4 z-50 text-left lowercase-none normal-case flex flex-col gap-2 pointer-events-auto font-sans ${THEME_GLASS.TOOLTIP_DETAILS}`}
               wrapperClassName="absolute pointer-events-auto z-20 -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${xMid}px`, top: `${yMid}px` }}
+              style={{ left: pxToRem(xMid), top: pxToRem(yMid) }}
               content={
                 <TransitionTooltipCard
                   parentStepNum={parentStepNum}
@@ -934,7 +976,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   );
 
   return (
-    <div className={className ?? `flex-1 overflow-auto pr-1 relative ${THEME_GLASS.TREE_BG}`}>
+    <div ref={scrollContainerRef} className={className ?? `flex-1 overflow-auto pr-1 relative ${THEME_GLASS.TREE_BG}`}>
       {interactive ? (
         <RovingTabindexProvider containerRef={treeContainerRef}>{canvas}</RovingTabindexProvider>
       ) : (

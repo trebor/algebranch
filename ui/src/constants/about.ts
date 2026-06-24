@@ -4,6 +4,11 @@
 export const APP_VERSION = '1.0.0';
 export const COPYRIGHT_NOTICE = '© 2026 Robert Harris';
 export const GITHUB_REPO_URL = 'https://github.com/trebor/algebranch';
+export const DOCS_URL = `${GITHUB_REPO_URL}/blob/main/docs/index.md`;
+export const USER_GUIDE_URL = `${GITHUB_REPO_URL}/blob/main/docs/user-guide.md`;
+export const FAQ_URL = `${GITHUB_REPO_URL}/blob/main/docs/faq.md`;
+export const SCOPE_URL = `${GITHUB_REPO_URL}/blob/main/docs/scope.md`;
+export const FEATURES_URL = `${GITHUB_REPO_URL}/blob/main/docs/features.md`;
 
 
 export interface Attribution {

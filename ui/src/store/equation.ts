@@ -596,8 +596,10 @@ export const DEFAULT_SETTINGS: UserSettings = {
 
 export const settingsModalOpenAtom = atom(false);
 export const aboutModalOpenAtom = atom(false);
-// Keyboard-shortcuts cheat-sheet overlay (#126), opened with `?`.
+// Keyboard-shortcuts cheat-sheet overlay (#126), opened with `k`.
 export const shortcutsOverlayOpenAtom = atom(false);
+// Help modal (#48), opened with `?`.
+export const helpModalOpenAtom = atom(false);
 
 /**
  * True when any blocking modal/overlay is open. Global keyboard shortcuts read
@@ -611,7 +613,8 @@ export const anyModalOpenAtom = atom<boolean>((get) =>
   get(equationInputModalOpenAtom) ||
   get(settingsModalOpenAtom) ||
   get(aboutModalOpenAtom) ||
-  get(shortcutsOverlayOpenAtom)
+  get(shortcutsOverlayOpenAtom) ||
+  get(helpModalOpenAtom)
 );
 
 export const pwaInstallPromptAtom = atom<unknown>(null);

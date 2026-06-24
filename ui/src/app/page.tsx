@@ -38,6 +38,7 @@ import { useIsShortScreen, useIsVeryShortScreen } from '../hooks/useIsShortScree
 import { useImmersiveChrome } from '../hooks/useImmersiveChrome';
 import { useKeyboardShortcuts, ShortcutConfig } from '../hooks/useKeyboardShortcuts';
 import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
+import { HelpModal } from '../components/HelpModal';
 import { buildEquationUrl, buildWorkspaceUrl } from '../utils/feedbackUrl';
 import {
   currentEquationAtom,
@@ -74,6 +75,7 @@ import {
   createSessionFromStateAtom,
   currentTabNameAtom,
   deleteConfirmationModalOpenAtom,
+  resetHistoryModalOpenAtom,
   tabsAtom,
   activeTabIdAtom,
   activeBottomSheetAtom,
@@ -94,6 +96,7 @@ import {
   cycleActiveTabAtom,
   equationInputModalOpenAtom,
   shortcutsOverlayOpenAtom,
+  helpModalOpenAtom,
   anyModalOpenAtom,
   equationToFormat,
   formatDerivation,
@@ -231,9 +234,9 @@ export default function Home() {
 
   const syncMathState = useSetAtom(syncMathStateAtom);
   const clearMathState = useSetAtom(clearMathStateAtom);
-  const setFeedbackModalOpen = useSetAtom(feedbackModalOpenAtom);
+  const [feedbackOpen, setFeedbackModalOpen] = useAtom(feedbackModalOpenAtom);
   const setFeedbackContext = useSetAtom(feedbackContextAtom);
-  const setSettingsModalOpen = useSetAtom(settingsModalOpenAtom);
+  const [settingsOpen, setSettingsModalOpen] = useAtom(settingsModalOpenAtom);
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
   const setAppHydrated = useSetAtom(appHydratedAtom);
@@ -241,6 +244,7 @@ export default function Home() {
   const createSessionFromState = useSetAtom(createSessionFromStateAtom);
   const setSharedWorkspaceBanner = useSetAtom(sharedWorkspaceBannerAtom);
   const setDeleteConfirmationModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
+  const setResetHistoryModalOpen = useSetAtom(resetHistoryModalOpenAtom);
   const currentTabName = useAtomValue(currentTabNameAtom);
   const addTab = useSetAtom(addTabAtom);
   const [toast, setToast] = useAtom(toastAtom);
@@ -255,12 +259,72 @@ export default function Home() {
   const equalsLocked = !!onboardingChapterId && !onboardingGlobalOp;
   const swapSides = useSetAtom(swapSidesAtom);
   const setPwaInstallPrompt = useSetAtom(pwaInstallPromptAtom);
-  const setAboutOpen = useSetAtom(aboutModalOpenAtom);
+  const [aboutOpen, setAboutOpen] = useAtom(aboutModalOpenAtom);
   const closeTab = useSetAtom(closeTabAtom);
   const cycleActiveTab = useSetAtom(cycleActiveTabAtom);
   const setEquationInputModalOpen = useSetAtom(equationInputModalOpenAtom);
-  const setShortcutsOverlayOpen = useSetAtom(shortcutsOverlayOpenAtom);
+  const [shortcutsOverlayOpen, setShortcutsOverlayOpen] = useAtom(shortcutsOverlayOpenAtom);
+  const [helpOpen, setHelpOpen] = useAtom(helpModalOpenAtom);
   const anyModalOpen = useAtomValue(anyModalOpenAtom);
+
+  const closeAllModals = () => {
+    setAboutOpen(false);
+    setHelpOpen(false);
+    setFeedbackModalOpen(false);
+    setSettingsModalOpen(false);
+    setShortcutsOverlayOpen(false);
+    setEquationInputModalOpen(false);
+    setDeleteConfirmationModalOpen(false);
+    setResetHistoryModalOpen(false);
+  };
+
+  const toggleAbout = () => {
+    const nextState = !aboutOpen;
+    closeAllModals();
+    if (nextState) {
+      setAboutOpen(true);
+      trackEvent({ action: 'shortcut_open_about', category: 'keyboard' });
+    }
+  };
+
+  const toggleHelp = () => {
+    const nextState = !helpOpen;
+    closeAllModals();
+    if (nextState) {
+      setHelpOpen(true);
+      trackEvent({ action: 'shortcut_open_help', category: 'keyboard' });
+    } else {
+      trackEvent({ action: 'shortcut_close_help', category: 'keyboard' });
+    }
+  };
+
+  const toggleFeedback = () => {
+    const nextState = !feedbackOpen;
+    closeAllModals();
+    if (nextState) {
+      setFeedbackContext(currentEq ? `Active Equation: ${equationToString(currentEq)}` : null);
+      setFeedbackModalOpen(true);
+      trackEvent({ action: 'shortcut_open_feedback', category: 'keyboard' });
+    }
+  };
+
+  const toggleSettings = () => {
+    const nextState = !settingsOpen;
+    closeAllModals();
+    if (nextState) {
+      setSettingsModalOpen(true);
+      trackEvent({ action: 'shortcut_open_settings', category: 'keyboard' });
+    }
+  };
+
+  const toggleShortcuts = () => {
+    const nextState = !shortcutsOverlayOpen;
+    closeAllModals();
+    if (nextState) {
+      setShortcutsOverlayOpen(true);
+      trackEvent({ action: 'shortcut_open_cheatsheet', category: 'keyboard' });
+    }
+  };
   const [graphSize, setGraphSize] = useAtom(graphSizeAtom);
   const previousGraphSize = useAtomValue(previousGraphSizeAtom);
   const isGraphViable = useAtomValue(isGraphViableAtom);
@@ -813,6 +877,7 @@ export default function Home() {
   // Keyboard Shortcuts (Issue #17, expanded in #126). Defined as a single
   // source-of-truth array so the live handler and the `?` cheat-sheet overlay
   // render from the same bindings and can't drift.
+  /* eslint-disable react-hooks/purity */
   const shortcutBindings: ShortcutConfig[] = [
     {
       key: 'z',
@@ -1157,35 +1222,27 @@ export default function Home() {
       // here; the overlay shows the plain `?` glyph via keyLabel.
       key: '?',
       shift: true,
-      action: () => {
-        setShortcutsOverlayOpen(true);
-        trackEvent({
-          action: 'shortcut_open_cheatsheet',
-          category: 'keyboard',
-        });
-      },
-      description: 'Show keyboard shortcuts',
+      action: toggleHelp,
+      description: 'Help',
       category: 'Help',
       keyLabel: '?',
     },
     {
+      key: 'k',
+      action: toggleShortcuts,
+      description: 'Show keyboard shortcuts',
+      category: 'Help',
+      keyLabel: 'k',
+    },
+    {
       key: 'a',
-      action: () => {
-        setAboutOpen(true);
-        trackEvent({ action: 'shortcut_open_about', category: 'keyboard' });
-      },
+      action: toggleAbout,
       description: 'About Algebranch',
       category: 'Help',
     },
     {
       key: 'f',
-      action: () => {
-        // Mirror the header Feedback button: seed the form with the active
-        // equation as context when there is one.
-        setFeedbackContext(currentEq ? `Active Equation: ${equationToString(currentEq)}` : null);
-        setFeedbackModalOpen(true);
-        trackEvent({ action: 'shortcut_open_feedback', category: 'keyboard' });
-      },
+      action: toggleFeedback,
       description: 'Send feedback',
       category: 'Help',
     },
@@ -1208,10 +1265,7 @@ export default function Home() {
       // Settings on bare `,`, echoing the universal ⌘, convention in the app's
       // naked-key scheme.
       key: ',',
-      action: () => {
-        setSettingsModalOpen(true);
-        trackEvent({ action: 'shortcut_open_settings', category: 'keyboard' });
-      },
+      action: toggleSettings,
       description: 'Settings',
       category: 'Help',
       keyLabel: ',',
@@ -1220,19 +1274,24 @@ export default function Home() {
       // ⌘, alias for muscle memory; hidden so the cheat-sheet shows the bare key.
       key: ',',
       meta: true,
-      action: () => {
-        setSettingsModalOpen(true);
-        trackEvent({ action: 'shortcut_open_settings', category: 'keyboard' });
-      },
+      action: toggleSettings,
       description: 'Settings',
       category: 'Help',
       hidden: true,
     },
   ];
-  useKeyboardShortcuts(shortcutBindings, {
+  /* eslint-enable react-hooks/purity */
+
+  const modalNavigationKeys = new Set(['?', 'k', 'a', 'f', ',']);
+  const workspaceBindings = shortcutBindings.filter(
+    (s) => !modalNavigationKeys.has(s.key.toLowerCase())
+  );
+  const modalNavigationBindings = shortcutBindings.filter(
+    (s) => modalNavigationKeys.has(s.key.toLowerCase())
+  );
+
+  useKeyboardShortcuts(workspaceBindings, {
     disabled: anyModalOpen,
-    // Surface what follows an armed leader, so the sequence is discoverable in
-    // the moment (not only via the ? cheat-sheet).
     onPendingLeader: (leader) => {
       if (leader === 'c') {
         setToast({
@@ -1241,6 +1300,10 @@ export default function Home() {
         });
       }
     },
+  });
+
+  useKeyboardShortcuts(modalNavigationBindings, {
+    disabled: false,
   });
 
   // Mobile swipe gestures logic
@@ -1370,14 +1433,7 @@ export default function Home() {
           />
           <Tooltip content="Submit Feedback or Report Bug" position="bottom" autoAlign={false}>
             <button
-              onClick={() => {
-                if (currentEq) {
-                  setFeedbackContext(`Active Equation: ${equationToString(currentEq)}`);
-                } else {
-                  setFeedbackContext(null);
-                }
-                setFeedbackModalOpen(true);
-              }}
+              onClick={toggleFeedback}
               className={THEME_GLASS.HEADER_BUTTON}
               aria-label="Feedback"
             >
@@ -1391,8 +1447,9 @@ export default function Home() {
             <ImmersiveToggle onEnter={() => setImmersive(true)} />
           )}
           <HeaderOverflowMenu
-            onOpenSettings={() => setSettingsModalOpen(true)}
-            onOpenAbout={() => setAboutOpen(true)}
+            onOpenSettings={toggleSettings}
+            onOpenAbout={toggleAbout}
+            onOpenHelp={toggleHelp}
           />
         </div>
       </header>
@@ -1849,6 +1906,7 @@ export default function Home() {
       <SettingsModal />
       <AboutModal />
       <ShortcutsOverlay shortcuts={shortcutBindings} />
+      <HelpModal />
 
       {/* Mobile-only Bottom navigation and Sheets */}
       {!onboardingChapterId && <BottomNav />}

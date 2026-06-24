@@ -150,7 +150,7 @@ export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts })
 
             {/* Footer hint */}
             <div className={`border-t border-white/5 pt-4 mt-4 text-xs ${THEME_GLASS.TEXT_MUTED} select-none`}>
-              Press <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>?</kbd> any time to reopen this list.
+              Press <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>k</kbd> any time to reopen this list.
             </div>
           </motion.div>
         </div>

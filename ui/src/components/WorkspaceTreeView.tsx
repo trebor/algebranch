@@ -27,22 +27,87 @@ import {
   type HistoryNode,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
-import { Check, CircleSlash, Infinity, Replace, TriangleAlert } from 'lucide-react';
+import { Check, CircleSlash, Infinity } from 'lucide-react';
 import { useIsHydrated } from '../hooks/useIsHydrated';
 import {
   RovingTabindexProvider,
   useOptionalRovingTabindex,
 } from '../hooks/useRovingTabindex';
-
-// Top offset (Tailwind class) for each vertical slot in the stack of badges
-// pinned to a tree node's top-right corner. Badges fill slots top-down in a
-// fixed priority order so multiple badges never overlap.
-const TREE_NODE_BADGE_SLOT_TOP = ['-top-1.5', 'top-3', 'top-[30px]'] as const;
+import { HandleBadge } from './HandleBadge';
+import { TransitionTooltipCard } from './TransitionTooltipCard';
+import type { StepChange } from 'math-engine';
 
 // Shared dashed-flow treatment so the loop connector and the export-path preview
 // animate identically (same dash pattern + speed) (#46).
 const FLOW_DASH_ARRAY = '5, 5';
 const FLOW_DASH_ANIMATION = 'dash 30s linear infinite';
+
+const EDGE_OP_SYMBOLS: Record<string, string> = {
+  add: '+',
+  subtract: '−',
+  multiply: '⋅',
+  divide: '/',
+  power: '^',
+  root: '√',
+};
+
+const EDGE_REWRITE_LABELS: Record<string, string> = {
+  simplify: 'S',
+  distribute: 'D',
+  identity: 'I',
+  quadratic: 'Q',
+  quadratic_standard_form: 'Q',
+  substitute: 'S',
+  evaluate: 'E',
+};
+
+/**
+ * The short glyph shown inside a connector's transition handle (#103). Transition
+ * badges live on the edge into a node (a property of the *step*), while state
+ * badges — contradiction/identity, step index — stay on the node itself. Reads
+ * `node.change` when present, falling back to parsing the human label.
+ */
+const getEdgeBadgeDetails = (
+  change: StepChange | undefined,
+  label: string,
+): { shortLabel: string; isMath: boolean } => {
+  if (change) {
+    if (change.kind === 'bothSides') {
+      return { shortLabel: EDGE_OP_SYMBOLS[change.op] || '', isMath: true };
+    }
+    if (change.kind === 'rewrite') {
+      const shortLabel =
+        EDGE_REWRITE_LABELS[change.op] || (change.op ? change.op.charAt(0).toUpperCase() : '');
+      return { shortLabel, isMath: false };
+    }
+  }
+
+  // Fallback: parse the human-readable label when no structured change exists.
+  const lowerLabel = label.toLowerCase();
+  if (lowerLabel.startsWith('add ')) return { shortLabel: '+', isMath: true };
+  if (lowerLabel.startsWith('subtract ')) return { shortLabel: '−', isMath: true };
+  if (lowerLabel.startsWith('multiply ')) return { shortLabel: '⋅', isMath: true };
+  if (lowerLabel.startsWith('divide ')) return { shortLabel: '/', isMath: true };
+  if (lowerLabel === 'swap sides' || lowerLabel.startsWith('swap')) return { shortLabel: '↔', isMath: false };
+  if (lowerLabel === 'simplify') return { shortLabel: 'S', isMath: false };
+  if (lowerLabel === 'transpose') return { shortLabel: 'T', isMath: false };
+  if (lowerLabel === 'substitute') return { shortLabel: 'S', isMath: false };
+  if (lowerLabel === 'distribute') return { shortLabel: 'D', isMath: false };
+  return { shortLabel: label ? label.charAt(0).toUpperCase() : '', isMath: false };
+};
+
+/** Maps a transition to a themed handle accent, or 'neutral' for the glyph handles. */
+const getBadgeOpType = (
+  change: StepChange | undefined,
+  label: string,
+): 'simplify' | 'distribute' | 'identity' | 'substitute' | 'neutral' => {
+  const op = change?.kind === 'rewrite' ? change.op : label.toLowerCase();
+  if (op === 'simplify') return 'simplify';
+  if (op === 'distribute') return 'distribute';
+  if (op === 'identity') return 'identity';
+  if (op === 'substitute') return 'substitute';
+  return 'neutral';
+};
 
 interface WorkspaceTreeViewProps {
   /** When false, the tree is a read-only preview: node clicks don't navigate
@@ -267,18 +332,13 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
     );
   }
 
-  // Right-corner badges stack top-down in a fixed priority order:
-  // substitute → restriction → contradiction/identity. Each present badge claims
-  // the next slot, so its vertical offset is just the count of higher-priority
-  // badges that are showing.
+  // Only *state* badges live on the node now (#103): the contradiction/identity
+  // status is a pure function of this node's equation, so it pins to the
+  // top-right corner. Transition badges (substitute #3, restriction #63) moved
+  // onto the incoming connector — they describe the step, not the state.
   const eqStatus = getEquationStatus(node.equation);
-  const hasSubstituteBadge = node.change?.op === 'substitute';
-  const hasRestrictionBadge = !!node.change?.assumptions?.length;
   const isContradiction = eqStatus === 'contradiction';
   const isIdentity = eqStatus === 'identity';
-  const substituteSlot = 0;
-  const restrictionSlot = hasSubstituteBadge ? 1 : 0;
-  const statusSlot = (hasSubstituteBadge ? 1 : 0) + (hasRestrictionBadge ? 1 : 0);
 
   return (
     <Tooltip
@@ -299,10 +359,8 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
       className={`max-w-[85vw] w-max p-4 z-50 text-left lowercase-none normal-case flex flex-col gap-2 pointer-events-auto font-sans ${THEME_GLASS.TOOLTIP_DETAILS}`}
       content={
         <TooltipCard
-          eyebrow={`Step Details — ${node.label}`}
-          meta={`Step ${stepNum}`}
-          description={sentenceCase(node.change?.text)}
-          assumptions={node.change?.assumptions}
+          eyebrow={stepNum === 0 ? 'Initial state' : `Step ${stepNum}`}
+          meta={isCurrent ? 'Active step' : undefined}
           equation={node.equation}
         />
       }
@@ -332,42 +390,12 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
           {stepNum}
         </span>
 
-        {/* Substitution badge (#3): marks steps produced by substituting
-            a fact from another workspace */}
-        {hasSubstituteBadge && (
-          <Tooltip
-            content="Substituted from another workspace"
-            position="top"
-            className="w-max max-w-[240px] text-center text-sm"
-            wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[substituteSlot]} -right-1.5`}
-          >
-            <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_SUBSTITUTE}`}>
-              <Replace size={9} />
-            </span>
-          </Tooltip>
-        )}
-
-        {/* Domain-restriction badge (#63): marks steps that assume an
-            expression is non-zero (cancellation / division by a variable),
-            so the caveat is visible on the tree, not just in the tooltip.
-            Stacks below the substitute badge in case both apply. */}
-        {hasRestrictionBadge && (
-          <Tooltip
-            content={`Valid only if ${node.change?.assumptions?.join(' and ')}`}
-            position="top"
-            className="w-max max-w-[240px] text-center text-sm"
-            wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[restrictionSlot]} -right-1.5`}
-          >
-            <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_RESTRICTION}`}>
-              <TriangleAlert size={9} />
-            </span>
-          </Tooltip>
-        )}
-
         {/* Contradiction / identity badge (#92): flags terminal states
             that collapsed to a constant relation — a contradiction
             (e.g. 3 = -3, no solution) or an identity (e.g. 0 = 0,
-            always true). Stacks below any substitute/restriction badge. */}
+            always true). A pure function of this node's equation, so it
+            stays on the node (the lone state badge in the top-right corner);
+            transition badges moved to the connectors (#103). */}
         {(isContradiction || isIdentity) && (
           <Tooltip
             content={isContradiction
@@ -375,7 +403,7 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
               : 'Identity — this statement is always true'}
             position="top"
             className="w-max max-w-[240px] text-center text-sm"
-            wrapperClassName={`z-20 absolute ${TREE_NODE_BADGE_SLOT_TOP[statusSlot]} -right-1.5`}
+            wrapperClassName="z-20 absolute -top-1.5 -right-1.5"
           >
             <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${isContradiction ? THEME_GLASS.TREE_NODE_BADGE_CONTRADICTION : THEME_GLASS.TREE_NODE_BADGE_IDENTITY}`}>
               {isContradiction ? <CircleSlash size={9} /> : <Check size={9} />}
@@ -634,20 +662,32 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   const connections = React.useMemo(() => {
     const links: {
       parent: { x: number; y: number; width: number; id: string };
-      child: { x: number; y: number; width: number; id: string; isActive: boolean }
+      child: { x: number; y: number; width: number; id: string; isActive: boolean };
+      // Midpoint of the cubic connector. The control points are vertically
+      // symmetric about the endpoints, so the curve's t=0.5 point is exactly the
+      // average of the parent's bottom-center and the child's top-center — the
+      // anchor for the edge's transition handle (#103).
+      xMid: number;
+      yMid: number;
     }[] = [];
     visualNodes.forEach((node) => {
       if (node.parentId !== null && visualNodesMap[node.parentId]) {
         const parent = visualNodesMap[node.parentId];
         const isActiveLink = activePathSet.has(parent.id) && activePathSet.has(node.id);
+        const startX = parent.x + parent.width / 2;
+        const startY = parent.y + cardHeight;
+        const endX = node.x + node.width / 2;
+        const endY = node.y;
         links.push({
           parent: { x: parent.x, y: parent.y, width: parent.width, id: parent.id },
           child: { x: node.x, y: node.y, width: node.width, id: node.id, isActive: isActiveLink },
+          xMid: (startX + endX) / 2,
+          yMid: (startY + endY) / 2,
         });
       }
     });
     return links;
-  }, [visualNodes, visualNodesMap, activePathSet]);
+  }, [visualNodes, visualNodesMap, activePathSet, cardHeight]);
 
   // The derivation graph as a single composite widget (#257): one Tab stop on the
   // role="tree" container, arrow keys rove between steps (Up/Down = parent/child,
@@ -797,6 +837,63 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
             return null;
           })}
         </svg>
+
+        {/* Edge Transition Handles (#103) — the transition that produced each
+            child rides on its incoming connector (a property of the *step*),
+            not the node corner. Anchored to the curve midpoint. Decorative for
+            assistive tech (aria-hidden, kept out of the tree's roving focus
+            order): the child treeitem's accessible name already carries the
+            action + spoken equation, so the handle is a sighted-mouse affordance
+            and must not add a second Tab stop or an invalid non-treeitem child. */}
+        {connections.map(({ parent, child, xMid, yMid }) => {
+          const node = tree[child.id];
+          if (!node) return null;
+
+          const { shortLabel, isMath } = getEdgeBadgeDetails(node.change, node.label);
+          const opType = getBadgeOpType(node.change, node.label);
+          const hasRestrictionBadge = !!node.change?.assumptions?.length;
+          const isHighlighted = hoveredLoopTargetId === node.id;
+          const parentStepNum = stepIndices.get(parent.id) ?? 0;
+          const childStepNum = stepIndices.get(child.id) ?? 0;
+
+          return (
+            <Tooltip
+              key={`edge-handle-${node.id}`}
+              position="top"
+              className={`max-w-[85vw] w-max p-4 z-50 text-left lowercase-none normal-case flex flex-col gap-2 pointer-events-auto font-sans ${THEME_GLASS.TOOLTIP_DETAILS}`}
+              wrapperClassName="absolute pointer-events-auto z-20 -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${xMid}px`, top: `${yMid}px` }}
+              content={
+                <TransitionTooltipCard
+                  parentStepNum={parentStepNum}
+                  childStepNum={childStepNum}
+                  description={node.change?.text || node.label}
+                  change={node.change}
+                  assumptions={node.change?.assumptions}
+                />
+              }
+            >
+              <HandleBadge
+                opType={opType}
+                hasRestrictionBadge={hasRestrictionBadge}
+                shortLabel={shortLabel}
+                isMath={isMath}
+                isHighlighted={isHighlighted}
+                aria-hidden
+                tabIndex={-1}
+                className={interactive ? '' : 'cursor-default'}
+                onClick={
+                  interactive
+                    ? (e) => {
+                        e.stopPropagation();
+                        handleStepClick(node.id);
+                      }
+                    : undefined
+                }
+              />
+            </Tooltip>
+          );
+        })}
 
         {/* Tree Node Bubbles */}
         {visualNodes.map((node) => {

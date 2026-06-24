@@ -164,6 +164,9 @@ export const THEME_GLASS = {
   HEADER_ICON_ABOUT: 'text-indigo-400 group-hover:scale-110 transition-transform',
   HEADER_ICON_SETTINGS: 'text-indigo-400 group-hover:rotate-45 transition-transform',
   EDGE_HANDLE: 'w-full h-full flex items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95',
+  // Persistent peek tab that brings the chrome back from immersive mode (#252):
+  // a thin, centered pill hugging the top/bottom edge, always reachable.
+  PEEK_HANDLE: 'flex items-center justify-center w-16 h-5 rounded-full border border-white/10 bg-neutral-900/70 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer active:scale-95',
   TOAST_ALERT: 'flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/25 bg-neutral-900/80 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]',
   TOAST_LOADING: 'flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/20 bg-neutral-900/60 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]',
   SPINNER: 'animate-spin rounded-full border-indigo-500/20 border-t-indigo-400 shrink-0',

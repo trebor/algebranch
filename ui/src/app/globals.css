@@ -30,6 +30,25 @@
   /* Small, viewport-independent gap below the last element of the workspace
      column (canvas / FactsStrip / graph), separate from the nav clearance. */
   --facts-gap: 0.5rem;
+  /* Animate the chrome height vars so immersive mode (#252) slides the header /
+     nav away in step with the layout reclaiming their space, rather than
+     snapping. Transitioning the var on :root makes every `var()` consumer
+     (header height, --bottom-nav-clearance) re-evaluate each frame. The global
+     prefers-reduced-motion rule below force-snaps this for free. */
+  transition: --header-height 0.3s ease, --bottom-nav-height 0.3s ease;
+}
+
+/* Register the chrome height vars as real lengths so they can be transitioned
+   (a plain custom property is an untyped string and won't interpolate). #252. */
+@property --header-height {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 4rem;
+}
+@property --bottom-nav-height {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 3.5rem;
 }
 
 /* Short, narrow viewports — mobile landscape and similar (#218). The 64px
@@ -78,6 +97,35 @@
   .active-workspace-canvas {
     padding-top: 3rem; /* 48px — clears the switcher pill at top-3 */
     padding-bottom: var(--facts-gap);
+  }
+
+  /* Immersive hide-chrome mode (#252). useImmersiveChrome sets data-immersive on
+     :root when the user toggles it on this tight-landscape breakpoint. Collapse
+     both chrome height vars to 0 — the workspace + sidebars reclaim the space
+     automatically through the #218/#251 variable plumbing (--header-height,
+     --bottom-nav-clearance), zero per-component churn — and slide the bars out
+     of view. Double-gated (this rule lives inside SHORT_SCREEN_QUERY *and*
+     requires the attribute), so a stale attribute can never collapse the chrome
+     on a roomy viewport. Keep this query in step with SHORT_SCREEN_QUERY in
+     useIsShortScreen.ts. */
+  :root[data-immersive] {
+    --header-height: 0rem;
+    --bottom-nav-height: 0rem;
+  }
+  /* The in-flow header rolls up as its height var animates to 0; clip the
+     overflowing brand/buttons during the collapse and drop interactivity. */
+  :root[data-immersive] .app-header {
+    overflow: hidden;
+    pointer-events: none;
+  }
+  /* The fixed bottom nav collapses its row to 0 (above) and slides down past the
+     edge. overflow:hidden clips the icons as the row shrinks so nothing spills
+     when the safe-area inset is 0 (the translateY(100%) only covers the
+     inset/border residual, which is ~0 on such viewports). */
+  :root[data-immersive] .app-bottom-nav {
+    overflow: hidden;
+    transform: translateY(100%);
+    pointer-events: none;
   }
 }
 

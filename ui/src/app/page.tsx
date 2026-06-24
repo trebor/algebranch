@@ -31,8 +31,11 @@ import { FactsStrip } from '../components/FactsStrip';
 import { BottomNav } from '../components/BottomNav';
 import { BottomSheet } from '../components/BottomSheet';
 import { RadialMenu } from '../components/RadialMenu';
+import { ImmersiveToggle } from '../components/ImmersiveToggle';
+import { PeekHandle } from '../components/PeekHandle';
 import { useIsMobile } from '../hooks/useBreakpoint';
-import { useIsShortScreen } from '../hooks/useIsShortScreen';
+import { useIsShortScreen, useIsVeryShortScreen } from '../hooks/useIsShortScreen';
+import { useImmersiveChrome } from '../hooks/useImmersiveChrome';
 import { useKeyboardShortcuts, ShortcutConfig } from '../hooks/useKeyboardShortcuts';
 import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
 import { buildEquationUrl, buildWorkspaceUrl } from '../utils/feedbackUrl';
@@ -266,6 +269,16 @@ export default function Home() {
   // WorkspaceSwitcher anchored top-left of the canvas, reclaiming the tab band
   // (#247). Only one variant mounts, so the tab state is never duplicated.
   const isShortScreen = useIsShortScreen();
+  const isVeryShortScreen = useIsVeryShortScreen();
+  // Immersive hide-chrome (#252): lets the header + BottomNav retreat on tight
+  // landscape so the expression gets nearly the full height. The header toggle
+  // enters it at ≤500px tall; below ≤400px it auto-hides on its own. `active`
+  // gates the PeekHandle (the way back). Resets on leaving the short-screen
+  // breakpoint so the user is never stranded.
+  const { active: immersiveActive, immersive, setImmersive } = useImmersiveChrome(
+    isShortScreen,
+    isVeryShortScreen,
+  );
   const equalsRef = React.useRef<HTMLSpanElement>(null);
   const equalsPopoverRef = React.useRef<HTMLDivElement>(null);
   const lastEqStrRef = React.useRef<string | null>(null);
@@ -1249,7 +1262,7 @@ export default function Home() {
       <div className="absolute bottom-10 left-1/4 w-96 h-96 bg-sky-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
 
       {/* Top Header */}
-      <header className="h-[var(--header-height)] px-4 flex items-center justify-between select-none shrink-0 w-full z-30">
+      <header className="app-header h-[var(--header-height)] px-4 flex items-center justify-between select-none shrink-0 w-full z-30">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-0 cursor-pointer hover:opacity-90 active:scale-98 transition-all">
             <Image
@@ -1297,6 +1310,11 @@ export default function Home() {
               <span className="hidden sm:inline">Feedback</span>
             </button>
           </Tooltip>
+          {/* Enter immersive mode — only on short screens while chrome is shown
+              (#252). The PeekHandle is the way back out. */}
+          {isShortScreen && !immersive && (
+            <ImmersiveToggle onEnter={() => setImmersive(true)} />
+          )}
           <HeaderOverflowMenu
             onOpenSettings={() => setSettingsModalOpen(true)}
             onOpenAbout={() => setAboutOpen(true)}
@@ -1739,6 +1757,11 @@ export default function Home() {
 
       {/* Mobile-only Bottom navigation and Sheets */}
       {!onboardingChapterId && <BottomNav />}
+
+      {/* Immersive mode's only way back: thin peek tabs at the top/bottom edges
+          (#252). Mounted solely while active, so it never joins the tab order
+          when the chrome is shown. */}
+      {immersiveActive && <PeekHandle onExit={() => setImmersive(false)} />}
 
       <BottomSheet
         isOpen={activeBottomSheet === 'workspace'}

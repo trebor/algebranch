@@ -1754,9 +1754,22 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
 
   if (isTarget && targetPaths[path]) {
     const targetEquation = targetPaths[path];
+    // Surface the domain restriction the move relies on (e.g. dividing both sides
+    // by a variable factor assumes it is non-zero) *before* the user commits it —
+    // the same caveat that lands on the resulting connector in the history tree
+    // (#63, #103). sourcePath is guaranteed truthy here (isTarget requires it).
+    const transpositionAssumptions = sourcePath
+      ? describeTransposition(currentEq, sourcePath, path)?.assumptions
+      : undefined;
     const targetTooltipContent = (
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
         <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">Preview Move</span>
+        {transpositionAssumptions && transpositionAssumptions.length > 0 && (
+          <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} select-none`}>
+            <TriangleAlert size={11} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
+            <span>assuming {transpositionAssumptions.join(', ')}</span>
+          </span>
+        )}
         <div className="w-full border-t border-white/10 my-1" />
         <ScaledEquationFit measureEq={targetEquation} className="max-w-[280px] sm:max-w-[340px]">
           {renderEquationPreviewRow(targetEquation, false)}

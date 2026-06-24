@@ -75,4 +75,14 @@ describe('WorkspaceTabs keyboard/a11y semantics', () => {
     renderWith();
     expect(screen.getByRole('navigation', { name: /workspaces/i })).toBeInTheDocument();
   });
+
+  it('names the tablist distinctly from its wrapping landmark (#265)', () => {
+    renderWith();
+    // The nav landmark already supplies "Workspaces"; the inner tablist carries
+    // its own distinct accessible name so a screen reader does not announce
+    // "Workspaces" twice (landmark-over-widget de-duplication).
+    const tablist = screen.getByRole('tablist');
+    expect(tablist).toHaveAccessibleName('Open workspaces');
+    expect(tablist).not.toHaveAccessibleName(/^workspaces$/i);
+  });
 });

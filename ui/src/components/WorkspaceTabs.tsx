@@ -235,7 +235,9 @@ const TabList: React.FC<TabListProps> = ({ tabs, activeTabId, editingTabId, ...c
   return (
     <div
       role="tablist"
-      aria-label="Workspaces"
+      // The wrapping <nav> landmark already announces "Workspaces"; give the
+      // tablist a distinct name so a screen reader doesn't say it twice (#265).
+      aria-label="Open workspaces"
       className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none py-1"
     >
       {tabs.map((tab) => (

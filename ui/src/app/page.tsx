@@ -1495,7 +1495,9 @@ export default function Home() {
                   <div
                     ref={activeContentRef}
                     role="tree"
-                    aria-label="Equation"
+                    // The wrapping role="region" already announces "Equation";
+                    // name the tree distinctly so it isn't said twice (#265).
+                    aria-label="Interactive equation"
                     tabIndex={-1}
                     style={{
                       fontSize: `${activeScaleValue}em`,

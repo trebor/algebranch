@@ -42,8 +42,19 @@ describe('SkipLinks', () => {
     expect(document.getElementById('history-region')).toHaveFocus();
   });
 
-  it('keeps skip links out of the visual flow until focused', () => {
+  it('groups both links in a single labeled nav so a focused link reveals the whole set (#272)', () => {
     renderWithTargets();
-    expect(screen.getByRole('link', { name: /skip to equation/i }).className).toContain('sr-only');
+    const nav = screen.getByRole('navigation', { name: /skip links/i });
+    expect(nav).toContainElement(screen.getByRole('link', { name: /skip to equation/i }));
+    expect(nav).toContainElement(screen.getByRole('link', { name: /skip to history/i }));
+  });
+
+  it('keeps the skip-link group out of the visual flow until a child is focused (#272)', () => {
+    renderWithTargets();
+    const nav = screen.getByRole('navigation', { name: /skip links/i });
+    // The group container owns the visibility: hidden by default, revealed for
+    // the whole stack when any link inside receives focus (focus-within).
+    expect(nav.className).toContain('sr-only');
+    expect(nav.className).toContain('focus-within:not-sr-only');
   });
 });

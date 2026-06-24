@@ -48,3 +48,50 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # Browser-gated a11y complement to the jsdom structural suite (#238): runs
+  # axe-core (incl. `color-contrast`) against the built app in headless Chromium,
+  # guarding the WCAG AA contrast work from #145. Separate job so the fast
+  # validate gate above isn't slowed by the build + browser run.
+  a11y-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      # Serve the production build in the background, poll until it answers,
+      # then run the audit.
+      - name: Start server
+        run: npm run start &
+
+      - name: Wait for server
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000 >/dev/null; then
+              echo "Server is up."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server did not start within 60s." >&2
+          exit 1
+
+      - name: Run browser axe audit
+        run: npm run axe
+        env:
+          AXE_BASE_URL: http://localhost:3000

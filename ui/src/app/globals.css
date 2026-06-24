@@ -19,6 +19,17 @@
      labels are hidden, and the canvas padding follows in one place. Default
      3.5rem (56px), matching the original h-14. */
   --bottom-nav-height: 3.5rem;
+  /* Single source for the bottom-nav overlap (#251). The fixed mobile BottomNav
+     (+ safe-area inset) covers the bottom of the workspace column; reserve that
+     overlap ONCE on the column wrapper instead of having the canvas, FactsStrip,
+     and graph panel each re-reserve it with diverging hardcoded values. Because
+     it references --bottom-nav-height it compacts automatically on short screens
+     (no more 56-vs-44 "balloon"), and collapses to just the inset if the nav
+     height is ever driven to 0 (#252 immersive mode). */
+  --bottom-nav-clearance: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
+  /* Small, viewport-independent gap below the last element of the workspace
+     column (canvas / FactsStrip / graph), separate from the nav clearance. */
+  --facts-gap: 0.5rem;
 }
 
 /* Short, narrow viewports — mobile landscape and similar (#218). The 64px
@@ -58,13 +69,15 @@
   }
   /* Vertical real estate is critical here, and the auto-scaled expression ends up
      small — so the canvas's generous top/bottom padding reads as too much empty
-     space. Trim it to just what the overlays need: the top clears the top-left
-     switcher pill (+ top-right action buttons), the bottom clears the icon-only
-     nav with a hair of gap. Unlayered, so it overrides the Tailwind pt-*/pb-*
-     utilities only while this query matches (#247). */
+     space. Trim it to a tight, symmetric gap (#251). The nav clearance lives on
+     the column wrapper now (--bottom-nav-clearance), so the canvas only owns its
+     own small inset; the one intentional asymmetry is the top, which keeps a
+     larger inset to clear the top-left switcher pill (top-3 + ~36px pill).
+     Unlayered, so it overrides the Tailwind py-* utilities only while this query
+     matches (#247). */
   .active-workspace-canvas {
     padding-top: 3rem; /* 48px — clears the switcher pill at top-3 */
-    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 0.25rem);
+    padding-bottom: var(--facts-gap);
   }
 }
 

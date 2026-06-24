@@ -137,6 +137,34 @@ describe('WorkspaceTreeView transition badges on edges (#103)', () => {
     expect(handle!.querySelector('.lucide-replace')).not.toBeNull();
   });
 
+  it('renders every Simplify-handle rewrite with the simplify icon, whatever the engine op (#103)', () => {
+    // The ⚡ Simplify (reduce) handle records its rewrites under finer engine ops
+    // — evaluate / simplify / quadratic — but they came from the *same* handle,
+    // so the edge must always show that handle's icon, never a letter glyph.
+    for (const op of ['evaluate', 'simplify', 'quadratic', 'quadratic_standard_form'] as const) {
+      const store = createStore();
+      const tab: WorkspaceTab = {
+        id: 'a',
+        name: 'w',
+        historyTree: {
+          '0': { id: '0', equation: parseEquation('2+3=x'), parentId: null, childrenIds: ['1'], label: 'Initial', timestamp: 1 },
+          '1': { id: '1', equation: parseEquation('5=x'), parentId: '0', childrenIds: [], label: 'Simplify', timestamp: 2, change: { kind: 'rewrite', op, text: `${op} step` } },
+        },
+        currentNodeId: '1',
+        isCustomNamed: true,
+        timestamp: 2,
+      };
+      store.set(rawTabsAtom, [tab]);
+      store.set(rawActiveTabIdAtom, 'a');
+      const { container } = renderTree(store);
+      const handle = container.querySelector('button[aria-hidden="true"]');
+      expect(handle, `op=${op}`).not.toBeNull();
+      // Simplify handle icon is the ⚡ (lucide Zap), not an 'E'/'Q' letter glyph.
+      expect(handle!.querySelector('.lucide-zap'), `op=${op}`).not.toBeNull();
+      cleanup();
+    }
+  });
+
   it('still has exactly one Tab stop with the connector handles present', () => {
     renderTree(makeStore('1'));
     // Edge handles do not regress the #257 single-Tab-stop composite.

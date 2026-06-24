@@ -96,13 +96,22 @@ const getEdgeBadgeDetails = (
   return { shortLabel: label ? label.charAt(0).toUpperCase() : '', isMath: false };
 };
 
-/** Maps a transition to a themed handle accent, or 'neutral' for the glyph handles. */
+/**
+ * Maps a transition to a themed handle accent, or 'neutral' for the glyph
+ * handles. The edge icon must match the *handle the user clicked* (#103), so
+ * this keys off the handle family, not the engine's finer op classification:
+ * the ⚡ Simplify (reduce) handle records its rewrites under several ops —
+ * evaluate, simplify, and the quadratic-formula variants — that all map back to
+ * the one simplify icon. distribute / identity / substitute are already 1:1.
+ */
 const getBadgeOpType = (
   change: StepChange | undefined,
   label: string,
 ): 'simplify' | 'distribute' | 'identity' | 'substitute' | 'neutral' => {
   const op = change?.kind === 'rewrite' ? change.op : label.toLowerCase();
-  if (op === 'simplify') return 'simplify';
+  if (op === 'simplify' || op === 'evaluate' || op === 'quadratic' || op === 'quadratic_standard_form') {
+    return 'simplify';
+  }
   if (op === 'distribute') return 'distribute';
   if (op === 'identity') return 'identity';
   if (op === 'substitute') return 'substitute';

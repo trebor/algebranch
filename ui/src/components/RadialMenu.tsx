@@ -12,12 +12,21 @@ import {
   radialMenuOpenAtom,
   onboardingChapterIdAtom,
   onboardingGlobalOpAtom,
+  settingsAtom,
+  clampChromeScale,
 } from '../store/equation';
 import { trackEvent } from '../utils/analytics';
 import { ArrowLeftRight, Plus, Minus, Divide } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { THEME_GLASS } from '../constants/theme';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
+import {
+  RADIAL_ANGLE_START_DEG,
+  RADIAL_PETAL_COUNT,
+  radialRadiusPx,
+  radialIconPx,
+  radialSpinnerIconPx,
+} from '../utils/radialLayout';
 
 /**
  * Global operation types available in the radial menu.
@@ -35,7 +44,8 @@ type RadialAction =
   | { type: 'swap' };
 
 interface RadialPetal {
-  icon: React.ReactNode;
+  /** Glyph factory — `iconPx` scales lucide icons with the text-size knob (#278). */
+  icon: (iconPx: number) => React.ReactNode;
   label: string;
   tooltip: string;
   action: RadialAction;
@@ -43,18 +53,14 @@ interface RadialPetal {
 }
 
 const PETALS: RadialPetal[] = [
-  { icon: <ArrowLeftRight size={18} />, label: '↔', tooltip: 'Swap left and right sides', action: { type: 'swap' }, color: 'text-amber-400' },
-  { icon: <span className="text-sm font-bold">xⁿ</span>, label: 'xⁿ', tooltip: 'Raise both sides to nth power', action: { type: 'power', power: 2 }, color: 'text-teal-400' },
-  { icon: <Plus size={18} />, label: '+', tooltip: 'Add term to both sides', action: { type: 'add' }, color: 'text-indigo-400' },
-  { icon: <Minus size={18} />, label: '−', tooltip: 'Subtract term from both sides', action: { type: 'sub' }, color: 'text-violet-400' },
-  { icon: <span className="text-xl font-bold leading-none">{MULTIPLY_SYMBOL}</span>, label: MULTIPLY_SYMBOL, tooltip: 'Multiply both sides by term', action: { type: 'mul' }, color: 'text-rose-400' },
-  { icon: <Divide size={18} />, label: '÷', tooltip: 'Divide both sides by term', action: { type: 'div' }, color: 'text-pink-400' },
-  { icon: <span className="text-sm font-bold">ⁿ√</span>, label: 'ⁿ√', tooltip: 'Take nth root of both sides', action: { type: 'root', power: 2 }, color: 'text-emerald-400' },
+  { icon: (px) => <ArrowLeftRight size={px} />, label: '↔', tooltip: 'Swap left and right sides', action: { type: 'swap' }, color: 'text-amber-400' },
+  { icon: () => <span className="text-sm font-bold">xⁿ</span>, label: 'xⁿ', tooltip: 'Raise both sides to nth power', action: { type: 'power', power: 2 }, color: 'text-teal-400' },
+  { icon: (px) => <Plus size={px} />, label: '+', tooltip: 'Add term to both sides', action: { type: 'add' }, color: 'text-indigo-400' },
+  { icon: (px) => <Minus size={px} />, label: '−', tooltip: 'Subtract term from both sides', action: { type: 'sub' }, color: 'text-violet-400' },
+  { icon: () => <span className="text-xl font-bold leading-none">{MULTIPLY_SYMBOL}</span>, label: MULTIPLY_SYMBOL, tooltip: 'Multiply both sides by term', action: { type: 'mul' }, color: 'text-rose-400' },
+  { icon: (px) => <Divide size={px} />, label: '÷', tooltip: 'Divide both sides by term', action: { type: 'div' }, color: 'text-pink-400' },
+  { icon: () => <span className="text-sm font-bold">ⁿ√</span>, label: 'ⁿ√', tooltip: 'Take nth root of both sides', action: { type: 'root', power: 2 }, color: 'text-emerald-400' },
 ];
-
-// Radial layout
-const RADIUS = 72; // px from center
-const ANGLE_START = -90; // Start from top (12 o'clock)
 
 interface RadialMenuProps {
   /** Ref to the equals sign element for positioning */
@@ -71,6 +77,15 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
   const swapSides = useSetAtom(swapSidesAtom);
   const isTourActive = !!useAtomValue(onboardingChapterIdAtom);
   const tourGlobalOp = useAtomValue(onboardingGlobalOpAtom);
+
+  // The petal circles are rem-sized, so the text-size knob (#239) grows them via
+  // `--chrome-scale`. Scale the px ring radius and lucide glyphs by the same
+  // factor so the menu enlarges as one piece instead of overlapping into a
+  // "flower" with tiny icons (#278).
+  const chromeScale = clampChromeScale(useAtomValue(settingsAtom).chromeScale);
+  const radius = radialRadiusPx(chromeScale);
+  const iconPx = radialIconPx(chromeScale);
+  const spinnerIconPx = radialSpinnerIconPx(chromeScale);
   const [termInputAction, setTermInputAction] = React.useState<RadialAction | null>(null);
   const [termValue, setTermValue] = React.useState('');
   const [spinnerValue, setSpinnerValue] = React.useState(2);
@@ -251,10 +266,10 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
 
             {/* Petals */}
             {!termInputAction && PETALS.map((petal, i) => {
-              const angle = ANGLE_START + (i * 360) / PETALS.length;
+              const angle = RADIAL_ANGLE_START_DEG + (i * 360) / RADIAL_PETAL_COUNT;
               const rad = (angle * Math.PI) / 180;
-              const x = Math.cos(rad) * RADIUS;
-              const y = Math.sin(rad) * RADIUS;
+              const x = Math.cos(rad) * radius;
+              const y = Math.sin(rad) * radius;
 
               const isTourPetal = isTourActive && petalMatchesTourOp(petal.action);
               const isPetalLocked = isTourActive && !isTourPetal;
@@ -283,7 +298,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                     onClick={() => handlePetalClick(petal)}
                     aria-label={petal.tooltip || petal.label}
                   >
-                    {petal.icon}
+                    {petal.icon(iconPx)}
                     {isTourPetal && (
                       <span aria-hidden="true" className={`-inset-[0.35em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
                     )}
@@ -297,7 +312,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
               {termInputAction && (
                 <motion.form
                   initial={{ scale: 0.8, opacity: 0, y: 20 }}
-                  animate={{ scale: 1, opacity: 1, y: RADIUS + 12 }}
+                  animate={{ scale: 1, opacity: 1, y: radius + 12 }}
                   exit={{ scale: 0.8, opacity: 0, y: 20 }}
                   transition={{ type: 'spring', duration: 0.3, bounce: 0.2 }}
                   onSubmit={handleTermSubmit}
@@ -331,7 +346,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                           className={THEME_GLASS.SPINNER_BTN}
                           aria-label="Decrease value"
                         >
-                          <Minus size={12} className="text-white" />
+                          <Minus size={spinnerIconPx} className="text-white" />
                         </button>
                         <span className="w-6 text-center text-sm font-mono font-bold text-white">
                           {spinnerValue}
@@ -343,7 +358,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                           className={THEME_GLASS.SPINNER_BTN}
                           aria-label="Increase value"
                         >
-                          <Plus size={12} className="text-white" />
+                          <Plus size={spinnerIconPx} className="text-white" />
                         </button>
                       </div>
                     ) : (

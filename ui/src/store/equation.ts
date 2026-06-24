@@ -500,6 +500,14 @@ export const deleteConfirmationModalOpenAtom = atom(false);
 export const resetHistoryModalOpenAtom = atom(false);
 export const equationInputModalOpenAtom = atom(false);
 
+// Immersive hide-chrome state (#252). On tight landscape viewports the user can
+// retreat the header + BottomNav so nearly the full height goes to the
+// expression. Deliberately a plain (non-persisted) atom: the preference is
+// transient per session, so a reload always returns to chrome-shown and no
+// cold-load can strand the user with hidden chrome. `useImmersiveChrome` gates
+// this behind the short-screen breakpoint and resets it on leave.
+export const immersiveAtom = atom(false);
+
 // Mobile UI state atoms
 export type BottomSheetType = 'workspace' | 'history' | 'library' | null;
 export const activeBottomSheetAtom = atom<BottomSheetType>(null);

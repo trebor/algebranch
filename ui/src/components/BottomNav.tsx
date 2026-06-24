@@ -61,7 +61,7 @@ export const BottomNav: React.FC = () => {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-55 lg:hidden bg-[#110f22]/90 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
+      className="app-bottom-nav fixed bottom-0 left-0 right-0 z-55 lg:hidden bg-[#110f22]/90 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ease-in-out"
     >
       <div className="bottom-nav-row flex items-end justify-around h-[var(--bottom-nav-height)] px-2">
         {/* Undo */}

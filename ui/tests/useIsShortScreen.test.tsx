@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useIsShortScreen, SHORT_SCREEN_QUERY } from '@/hooks/useIsShortScreen';
+import {
+  useIsShortScreen,
+  useIsVeryShortScreen,
+  SHORT_SCREEN_QUERY,
+  VERY_SHORT_SCREEN_QUERY,
+} from '@/hooks/useIsShortScreen';
 
 /**
  * Controllable matchMedia stand-in: jsdom ships none, so we install a fake whose
@@ -61,5 +66,28 @@ describe('useIsShortScreen', () => {
 
     act(() => ctrl.set(false));
     expect(result.current).toBe(false);
+  });
+});
+
+describe('useIsVeryShortScreen (#252 auto-hide)', () => {
+  let original: typeof window.matchMedia;
+  beforeEach(() => {
+    original = window.matchMedia;
+  });
+  afterEach(() => {
+    window.matchMedia = original;
+  });
+
+  it('keys off a lower height threshold than the short-screen query', () => {
+    expect(VERY_SHORT_SCREEN_QUERY).toBe('(max-height: 400px) and (max-width: 1024px)');
+  });
+
+  it('reflects and reacts to the very-short viewport', () => {
+    const ctrl = installMatchMedia(false);
+    const { result } = renderHook(() => useIsVeryShortScreen());
+    expect(result.current).toBe(false);
+
+    act(() => ctrl.set(true));
+    expect(result.current).toBe(true);
   });
 });

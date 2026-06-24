@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, within } from '@testing-library/react';
 import { Provider, createStore } from 'jotai';
 import { WorkspaceTreeView } from '@/components/WorkspaceTreeView';
 import {
@@ -76,5 +76,99 @@ describe('WorkspaceTreeView keyboard/a11y semantics', () => {
   it('does not expose step nodes as treeitems in a read-only preview', () => {
     renderTree(makeStore(), false);
     expect(screen.queryByRole('treeitem', { name: /step 0/i })).toBeNull();
+  });
+});
+
+// A contradiction (3=2) reached by a substitution that assumed x ≠ 0 — the case
+// the issue cites as an edge/node confusion: the ≠ 0 caveat belongs to the step,
+// the contradiction to the state.
+function makeContradictionStore() {
+  const store = createStore();
+  const tab: WorkspaceTab = {
+    id: 'a',
+    name: 'w',
+    historyTree: {
+      '0': { id: '0', equation: parseEquation('x+1=3'), parentId: null, childrenIds: ['1'], label: 'Initial', timestamp: 1 },
+      '1': {
+        id: '1',
+        equation: parseEquation('3=2'),
+        parentId: '0',
+        childrenIds: [],
+        label: 'Substitute',
+        timestamp: 2,
+        change: { kind: 'rewrite', op: 'substitute', text: 'substitute the known value', assumptions: ['x ≠ 0'] },
+      },
+    },
+    currentNodeId: '1',
+    isCustomNamed: true,
+    timestamp: 2,
+  };
+  store.set(rawTabsAtom, [tab]);
+  store.set(rawActiveTabIdAtom, 'a');
+  return store;
+}
+
+describe('WorkspaceTreeView transition badges on edges (#103)', () => {
+  afterEach(cleanup);
+
+  it('renders the connector transition handle as decorative, out of the tab order', () => {
+    const { container } = renderTree(makeStore('1'));
+    // The single 0 -> 1 connection gets one handle. It is a sighted-mouse
+    // affordance: aria-hidden and not focusable, so it never becomes a second
+    // Tab stop nor an invalid non-treeitem child of role="tree".
+    const handles = container.querySelectorAll('button[aria-hidden="true"]');
+    expect(handles.length).toBe(1);
+    expect(handles[0]).toHaveAttribute('tabindex', '-1');
+    // The transition glyph is the operation ("Subtract 1" -> minus), not equation state.
+    expect(within(handles[0] as HTMLElement).getByText('−')).toBeInTheDocument();
+  });
+
+  it('keeps the contradiction (state) on the node but moves substitute/restriction (transition) off the node corner', () => {
+    const { container } = renderTree(makeContradictionStore());
+    const step = screen.getByRole('treeitem', { name: /step 1/i });
+    // State badge — the contradiction — stays pinned to the node.
+    expect(step.querySelector('.lucide-circle-slash')).not.toBeNull();
+    // Transition badges (substitution + ≠0 restriction) are no longer on the node corner.
+    expect(step.querySelector('.lucide-replace')).toBeNull();
+    expect(step.querySelector('.lucide-triangle-alert')).toBeNull();
+    // The substitution moved onto the incoming connector handle (decorative).
+    const handle = container.querySelector('button[aria-hidden="true"]');
+    expect(handle).not.toBeNull();
+    expect(handle!.querySelector('.lucide-replace')).not.toBeNull();
+  });
+
+  it('renders every Simplify-handle rewrite with the simplify icon, whatever the engine op (#103)', () => {
+    // The ⚡ Simplify (reduce) handle records its rewrites under finer engine ops
+    // — evaluate / simplify / quadratic — but they came from the *same* handle,
+    // so the edge must always show that handle's icon, never a letter glyph.
+    for (const op of ['evaluate', 'simplify', 'quadratic', 'quadratic_standard_form'] as const) {
+      const store = createStore();
+      const tab: WorkspaceTab = {
+        id: 'a',
+        name: 'w',
+        historyTree: {
+          '0': { id: '0', equation: parseEquation('2+3=x'), parentId: null, childrenIds: ['1'], label: 'Initial', timestamp: 1 },
+          '1': { id: '1', equation: parseEquation('5=x'), parentId: '0', childrenIds: [], label: 'Simplify', timestamp: 2, change: { kind: 'rewrite', op, text: `${op} step` } },
+        },
+        currentNodeId: '1',
+        isCustomNamed: true,
+        timestamp: 2,
+      };
+      store.set(rawTabsAtom, [tab]);
+      store.set(rawActiveTabIdAtom, 'a');
+      const { container } = renderTree(store);
+      const handle = container.querySelector('button[aria-hidden="true"]');
+      expect(handle, `op=${op}`).not.toBeNull();
+      // Simplify handle icon is the ⚡ (lucide Zap), not an 'E'/'Q' letter glyph.
+      expect(handle!.querySelector('.lucide-zap'), `op=${op}`).not.toBeNull();
+      cleanup();
+    }
+  });
+
+  it('still has exactly one Tab stop with the connector handles present', () => {
+    renderTree(makeStore('1'));
+    // Edge handles do not regress the #257 single-Tab-stop composite.
+    const tabbable = screen.getAllByRole('treeitem').filter((el) => el.getAttribute('tabindex') === '0');
+    expect(tabbable).toHaveLength(1);
   });
 });

@@ -12,7 +12,7 @@ import { Preset, PRESET_LIST } from '../constants/presets';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
 import { sentenceCase } from '../utils/text';
-import { mergeWorkspaces, ExportedWorkspace } from '../utils/workspaceTransfer';
+import { mergeWorkspaces, hashWorkspace, ExportedWorkspace } from '../utils/workspaceTransfer';
 
 // Global Initial Value Constants
 export const INITIAL_EQUATION_STRING = '2 * (x + 3) = 10';
@@ -1070,11 +1070,11 @@ export const pushEquationAtom = atom(
  */
 export const createNewSessionAtom = atom(
   null,
-  (get, set, initialEqStr?: string, customName?: string) => {
+  (get, set, initialEqStr?: string, customName?: string, options?: { dedupe?: boolean }) => {
     const eqStr = initialEqStr || INITIAL_EQUATION_STRING;
     const newId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const tabName = customName || eqStr;
-    
+
     try {
       const newEq = ensureNodeIds(parseEquation(eqStr));
       const newTree: Record<string, HistoryNode> = {
@@ -1087,6 +1087,33 @@ export const createNewSessionAtom = atom(
           timestamp: Date.now(),
         }
       };
+
+      // Share-link arrival dedupe (#299): when opening a `?eq=` link, if an
+      // untouched (pristine) workspace built from the same equation already
+      // exists, open it instead of spawning a duplicate. We compare canonical
+      // equation strings rather than a content hash because a rebuilt tree gets
+      // fresh node timestamps — only the equation itself is stable. "Pristine" =
+      // a single root node with no derivation steps, so a further-derived
+      // workspace that merely started from this equation is never hijacked.
+      if (options?.dedupe) {
+        const candidateEq = equationToString(newEq);
+        const match = get(savedSessionsAtom).find(s => {
+          const nodeIds = Object.keys(s.tree);
+          if (nodeIds.length !== 1) return false;
+          const root = s.tree[nodeIds[0]];
+          if (root.childrenIds && root.childrenIds.length > 0) return false;
+          try {
+            return equationToString(deserializeEquation(root.equation)) === candidateEq;
+          } catch {
+            return false;
+          }
+        });
+        if (match) {
+          set(loadSessionAtom, match.id);
+          set(toastAtom, { message: "You already have this workspace — opened it.", key: Date.now() });
+          return { matched: true };
+        }
+      }
 
       // Create a brand new workspace tab and select it
       const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -1137,8 +1164,10 @@ export const createNewSessionAtom = atom(
       } catch (err) {
         console.error('Failed to save sessions to localStorage:', err);
       }
+      return { matched: false };
     } catch (err) {
       console.error('Failed to create new session:', err);
+      return { matched: false };
     }
   }
 );
@@ -1158,6 +1187,18 @@ export const createSessionFromStateAtom = atom(
       const rootNode = tree["0"] || Object.values(tree)[0];
       const fallbackName = rootNode ? equationToString(rootNode.equation) : "Shared Workspace";
       const tabName = name || fallbackName;
+
+      // Share-link arrival dedupe (#299): if this exact workspace (same name +
+      // derivation tree, by content hash) is already saved, open the existing
+      // one instead of creating a duplicate tab. `tabName` is hashed because that
+      // is the name a freshly-created session would store, so it matches.
+      const candidateHash = hashWorkspace({ name: tabName, currentNodeId, tree: serializedTree });
+      const match = get(savedSessionsAtom).find(s => hashWorkspace(s) === candidateHash);
+      if (match) {
+        set(loadSessionAtom, match.id);
+        set(toastAtom, { message: "You already have this workspace — opened it.", key: Date.now() });
+        return { matched: true };
+      }
 
       const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const newTab: WorkspaceTab = {
@@ -1206,8 +1247,10 @@ export const createSessionFromStateAtom = atom(
       } catch (err) {
         console.error('Failed to save sessions to localStorage:', err);
       }
+      return { matched: false };
     } catch (err) {
       console.error('Failed to load shared session:', err);
+      return { matched: false };
     }
   }
 );

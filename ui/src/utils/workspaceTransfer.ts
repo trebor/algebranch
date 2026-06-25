@@ -156,7 +156,7 @@ const djb2 = (str: string): string => {
  * same derivation tree hash equally; this is the basis for the import dedupe.
  */
 export const hashWorkspace = (
-  workspace: ExportedWorkspace | SavedSession,
+  workspace: Pick<ExportedWorkspace, 'name' | 'currentNodeId' | 'tree'>,
 ): string => {
   const { name, currentNodeId, tree } = workspace;
   return djb2(JSON.stringify(canonicalize({ name, currentNodeId, tree })));

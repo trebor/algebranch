@@ -547,10 +547,12 @@ export default function Home() {
           try {
             const decompressed = await decompressString(cleanStateStr);
             const { tree, currentNodeId, name } = JSON.parse(decompressed);
-            createSessionFromState({ tree, currentNodeId, name });
+            const { matched } = createSessionFromState({ tree, currentNodeId, name });
             // Recipient loop (#241): the link restored someone's full derivation —
             // acknowledge it and teach the share feature at this primed moment.
-            setSharedWorkspaceBanner(true);
+            // On a dedupe match (#299) nothing new arrived, so the store already
+            // showed a "you already have this" toast — skip the banner.
+            if (!matched) setSharedWorkspaceBanner(true);
             // Clear query parameter from the URL to prevent duplicate tabs on page refresh
             window.history.replaceState(null, '', window.location.pathname);
           } catch (err) {
@@ -562,7 +564,9 @@ export default function Home() {
         const cleanEqStr = readEqParam(window.location.search);
         if (cleanEqStr) {
           try {
-            createNewSession(cleanEqStr);
+            // Dedupe (#299): if an untouched workspace for this equation already
+            // exists, open it (with a toast) rather than spawning a duplicate.
+            createNewSession(cleanEqStr, undefined, { dedupe: true });
             // Clear query parameter from the URL to prevent duplicate tabs on page refresh
             window.history.replaceState(null, '', window.location.pathname);
           } catch (err) {

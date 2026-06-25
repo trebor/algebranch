@@ -6,7 +6,10 @@
 import React from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { Layers } from 'lucide-react';
-import { sharedWorkspaceBannerAtom } from '../store/sharedWorkspaceBanner';
+import {
+  sharedWorkspaceBannerAtom,
+  markSharedWorkspaceBannerDismissed,
+} from '../store/sharedWorkspaceBanner';
 import { consentAtom } from '../store/consent';
 import { THEME_GLASS } from '../constants/theme';
 
@@ -45,7 +48,11 @@ export const SharedWorkspaceBanner = () => {
 
   if (!open) return null;
 
-  const dismiss = () => setOpen(false);
+  // Record the dismissal so future `?ws=` arrivals skip the banner (#263).
+  const dismiss = () => {
+    markSharedWorkspaceBannerDismissed();
+    setOpen(false);
+  };
 
   // Escape dismisses while focus is within the banner (scoped, no focus trap).
   const handleKeyDown = (e: React.KeyboardEvent) => {

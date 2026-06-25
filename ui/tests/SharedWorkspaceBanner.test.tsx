@@ -6,7 +6,10 @@ import { render, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, createStore } from 'jotai';
 import { SharedWorkspaceBanner } from '@/components/SharedWorkspaceBanner';
-import { sharedWorkspaceBannerAtom } from '@/store/sharedWorkspaceBanner';
+import {
+  sharedWorkspaceBannerAtom,
+  isSharedWorkspaceBannerDismissed,
+} from '@/store/sharedWorkspaceBanner';
 import { rawConsentAtom } from '@/store/consent';
 import type { ConsentState } from '@/utils/consent';
 
@@ -23,7 +26,10 @@ function renderWith(open: boolean, consent: ConsentState = 'denied') {
 }
 
 describe('SharedWorkspaceBanner', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
 
   it('stays hidden when no shared workspace was opened', () => {
     renderWith(false);
@@ -41,6 +47,19 @@ describe('SharedWorkspaceBanner', () => {
     const { store } = renderWith(true);
     await userEvent.click(screen.getByRole('button', { name: /got it|dismiss/i }));
     expect(store.get(sharedWorkspaceBannerAtom)).toBe(false);
+  });
+
+  it('remembers the dismissal so future share links stay quiet (#263)', async () => {
+    renderWith(true);
+    expect(isSharedWorkspaceBannerDismissed()).toBe(false);
+    await userEvent.click(screen.getByRole('button', { name: /got it|dismiss/i }));
+    expect(isSharedWorkspaceBannerDismissed()).toBe(true);
+  });
+
+  it('remembers the dismissal when closed via Escape (#263)', async () => {
+    renderWith(true);
+    await userEvent.keyboard('{Escape}');
+    expect(isSharedWorkspaceBannerDismissed()).toBe(true);
   });
 
   it('takes focus once consent is resolved', () => {

@@ -30,7 +30,10 @@ import { ExploreEquationTree } from '../components/ExploreEquationTree';
 import { ShareMenu } from '../components/ShareMenu';
 import { HeaderOverflowMenu } from '../components/HeaderOverflowMenu';
 import { SharedWorkspaceBanner } from '../components/SharedWorkspaceBanner';
-import { sharedWorkspaceBannerAtom } from '../store/sharedWorkspaceBanner';
+import {
+  sharedWorkspaceBannerAtom,
+  isSharedWorkspaceBannerDismissed,
+} from '../store/sharedWorkspaceBanner';
 import { FactsStrip } from '../components/FactsStrip';
 import { BottomNav } from '../components/BottomNav';
 import { BottomSheet } from '../components/BottomSheet';
@@ -551,8 +554,9 @@ export default function Home() {
             // Recipient loop (#241): the link restored someone's full derivation —
             // acknowledge it and teach the share feature at this primed moment.
             // On a dedupe match (#299) nothing new arrived, so the store already
-            // showed a "you already have this" toast — skip the banner.
-            if (!matched) setSharedWorkspaceBanner(true);
+            // showed a "you already have this" toast — skip the banner. Once the
+            // recipient has dismissed it (#263), every later share link stays quiet.
+            if (!matched && !isSharedWorkspaceBannerDismissed()) setSharedWorkspaceBanner(true);
             // Clear query parameter from the URL to prevent duplicate tabs on page refresh
             window.history.replaceState(null, '', window.location.pathname);
           } catch (err) {

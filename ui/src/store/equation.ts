@@ -1490,6 +1490,13 @@ export const clearMathStateAtom = atom(
  */
 export const mathLoadingAtom = atom(false);
 
+/**
+ * Atom: True while the equation tree is mid-slide (FLIP move animation, #234).
+ * Driven by `useFLIPAnimation`; nodes read it to suppress hover tooltips that
+ * would otherwise pop up under the cursor while a term is still in motion.
+ */
+export const isTreeAnimatingAtom = atom(false);
+
 export interface ToastState {
   message: string;
   key: number;

@@ -76,6 +76,7 @@ import {
   exportWorkspacesModalOpenAtom,
   importWorkspacesModalOpenAtom,
   mathLoadingAtom,
+  isTreeAnimatingAtom,
   hydrateWorkspaceTabsAtom,
   appHydratedAtom,
   toastAtom,
@@ -117,6 +118,7 @@ import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch,
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useEquationTreeFocus } from '../hooks/useEquationTreeFocus';
 import { trackEvent } from '../utils/analytics';
 import { fetchMathScan } from '../utils/mathScan';
@@ -463,7 +465,9 @@ export default function Home() {
     2.8
   );
 
-  useFLIPAnimation(activeContainerRef, currentEq);
+  const prefersReducedMotion = useReducedMotion();
+  const setTreeAnimating = useSetAtom(isTreeAnimatingAtom);
+  useFLIPAnimation(activeContainerRef, currentEq, prefersReducedMotion, setTreeAnimating);
 
   // Load initial state on mount (Client-side only to avoid Next.js SSR hydration mismatches)
   React.useEffect(() => {

@@ -25,6 +25,7 @@ import {
   onboardingTargetPathAtom,
   onboardingReduceHandleAtom,
   onboardingSubstitutionAtom,
+  isTreeAnimatingAtom,
   ReducibleActionInfo,
 } from '../store/equation';
 import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, greekNameFor } from '../constants/mathSymbols';
@@ -302,6 +303,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   const roving = useOptionalRovingTabindex();
   // Honor prefers-reduced-motion (#145): suppress the decorative handle pulse.
   const reducedMotion = useReducedMotion();
+  // Suppress this node's hover tooltip while the tree is mid-slide (#234), so a
+  // popover doesn't appear under the cursor while the term is still moving.
+  const isTreeAnimating = useAtomValue(isTreeAnimatingAtom);
   const isOnboardingActive = !!useAtomValue(onboardingChapterIdAtom);
   const onboardingHighlightPath = useAtomValue(onboardingHighlightPathAtom);
   const onboardingTargetPath = useAtomValue(onboardingTargetPathAtom);
@@ -1364,16 +1368,23 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   // in a group. The wrapper is display:contents-free (a real inline-flex box, since
   // display:contents would drop the group role from the a11y tree) but shrink-wraps
   // its content, leaving the visual math layout unchanged. Leaves (constants /
-  // symbols) and static (non-treeitem) wrappers need no group.
+  // symbols) need no wrapper at all.
+  //
+  // The wrapper is rendered for *every* non-leaf node and only its `role` toggles
+  // with `isTreeitem` (#234). `isTreeitem` flips when the async math scan lands
+  // (it keys off candidate/handle state), so making the wrapper itself
+  // conditional would add/remove a parent element and remount the whole operand
+  // subtree mid-transform — which silently wipes the in-flight FLIP slide. A
+  // roleless div is transparent to the a11y tree, so toggling only the attribute
+  // keeps both the semantics and the DOM structure stable.
   const isLeafNode = node.type === 'ConstantNode' || node.type === 'SymbolNode';
-  const renderedContent =
-    isTreeitem && !isLeafNode ? (
-      <div role="group" className="inline-flex items-center justify-center">
-        {renderContent()}
-      </div>
-    ) : (
-      renderContent()
-    );
+  const renderedContent = isLeafNode ? (
+    renderContent()
+  ) : (
+    <div role={isTreeitem ? 'group' : undefined} className="inline-flex items-center justify-center">
+      {renderContent()}
+    </div>
+  );
 
   const element = (
     <div
@@ -1535,7 +1546,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 </div>
               );
               return (
-                <Tooltip key={stack.type} content={singleTooltip} position="top" className="max-w-[300px] sm:max-w-[360px]">
+                <Tooltip
+                  key={stack.type}
+                  content={singleTooltip}
+                  position="top"
+                  // Suppress while the tree is mid-slide (#234): a freshly-revealed
+                  // handle under the cursor must not auto-pop its tooltip over a
+                  // term that is still moving.
+                  visible={isTreeAnimating ? false : undefined}
+                  className="max-w-[300px] sm:max-w-[360px]"
+                >
                   <button
                     className={buttonClass}
                     style={buttonStyle}
@@ -1588,6 +1608,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 aria-expanded={openMenuType === stack.type}
                 onMouseEnter={(e) => {
                   e.stopPropagation();
+                  // Don't auto-open the option menu on hover while the tree is
+                  // mid-slide (#234) — same rationale as the handle tooltips.
+                  if (isTreeAnimating) return;
                   openStackMenu(e.currentTarget, stack.type);
                 }}
                 onMouseLeave={(e) => {
@@ -1757,6 +1780,20 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     </span>
   ) : null;
 
+  // The interaction tooltip that wraps `element`. Whether a node *has* a tooltip
+  // (preview-move when it's a drop target, select-term when it's a candidate, or
+  // a Greek name label) flips with the async math scan — and a node that gains or
+  // loses its <Tooltip> wrapper has `element` re-parented, which remounts the
+  // whole operand subtree mid-transform and silently wipes the in-flight FLIP
+  // slide (#234). So the wrapper is *always* a <Tooltip> (a stable component type
+  // at this position); only its content and visibility vary. A node with nothing
+  // to say passes `content={null}` + `visible={false}`, so the wrapper renders
+  // but never shows a popover.
+  let tooltipContent: React.ReactNode = null;
+  // `undefined` = uncontrolled (hover-driven); a boolean = controlled.
+  let tooltipVisible: boolean | undefined = false;
+  let tooltipClassName = '';
+
   if (isTarget && targetPaths[path]) {
     const targetEquation = targetPaths[path];
     // Surface the domain restriction the move relies on (e.g. dividing both sides
@@ -1766,7 +1803,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     const transpositionAssumptions = sourcePath
       ? describeTransposition(currentEq, sourcePath, path)?.assumptions
       : undefined;
-    const targetTooltipContent = (
+    tooltipContent = (
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
         <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">Preview Move</span>
         {transpositionAssumptions && transpositionAssumptions.length > 0 && (
@@ -1781,20 +1818,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         </ScaledEquationFit>
       </div>
     );
-
-    return (
-      <Tooltip
-        content={targetTooltipContent}
-        position="top"
-        className="max-w-[300px] sm:max-w-[360px]"
-      >
-        {element}
-      </Tooltip>
-    );
-  }
-
-  if (!sourcePath && isCandidate) {
-    const candidateTooltipContent = (
+    tooltipVisible = undefined;
+    tooltipClassName = 'max-w-[300px] sm:max-w-[360px]';
+  } else if (!sourcePath && isCandidate) {
+    tooltipContent = (
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
         <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">Select Term</span>
         <div className="w-full border-t border-white/10 my-1" />
@@ -1804,28 +1831,24 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         {greekNameLabel}
       </div>
     );
-
-    return (
-      <Tooltip
-        content={candidateTooltipContent}
-        position="top"
-        visible={isHovered && hoverReducePath === null && openMenuType === null}
-        className="max-w-[300px] sm:max-w-[360px]"
-      >
-        {element}
-      </Tooltip>
-    );
+    tooltipVisible = isHovered && hoverReducePath === null && openMenuType === null;
+    tooltipClassName = 'max-w-[300px] sm:max-w-[360px]';
+  } else if (greekName) {
+    // Truly-static Greek symbol (no move handles): give the name its own hover tip.
+    tooltipContent = greekName;
+    tooltipVisible = undefined;
   }
 
-  // Truly-static Greek symbol (no move handles): no interaction tooltip wraps it,
-  // so give the name its own hover tip.
-  if (greekName) {
-    return (
-      <Tooltip content={greekName} position="top">
-        {element}
-      </Tooltip>
-    );
-  }
-
-  return element;
+  return (
+    <Tooltip
+      content={tooltipContent}
+      position="top"
+      // Force-hide while a slide is in flight; otherwise honor the per-case
+      // hover/controlled visibility computed above.
+      visible={isTreeAnimating ? false : tooltipVisible}
+      className={tooltipClassName}
+    >
+      {element}
+    </Tooltip>
+  );
 };

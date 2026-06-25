@@ -104,6 +104,8 @@ import {
   closeTabAtom,
   cycleActiveTabAtom,
   equationInputModalOpenAtom,
+  openEquationEditorAtom,
+  activeWorkspacePristineAtom,
   shortcutsOverlayOpenAtom,
   helpModalOpenAtom,
   anyModalOpenAtom,
@@ -114,7 +116,7 @@ import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil } from 'lucide-react';
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -306,6 +308,8 @@ export default function Home() {
   const closeTab = useSetAtom(closeTabAtom);
   const cycleActiveTab = useSetAtom(cycleActiveTabAtom);
   const setEquationInputModalOpen = useSetAtom(equationInputModalOpenAtom);
+  const openEquationEditor = useSetAtom(openEquationEditorAtom);
+  const isWorkspacePristine = useAtomValue(activeWorkspacePristineAtom);
   const [shortcutsOverlayOpen, setShortcutsOverlayOpen] = useAtom(shortcutsOverlayOpenAtom);
   const [helpOpen, setHelpOpen] = useAtom(helpModalOpenAtom);
   const anyModalOpen = useAtomValue(anyModalOpenAtom);
@@ -1706,6 +1710,19 @@ export default function Home() {
                       </button>
                     </Tooltip>
                   )}
+
+                  <Tooltip content={isWorkspacePristine ? 'Edit equation' : 'Edit as new workspace'} position="left">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEquationEditor();
+                      }}
+                      className={THEME_GLASS.ICON_BUTTON}
+                      aria-label={isWorkspacePristine ? 'Edit equation' : 'Edit as new workspace'}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  </Tooltip>
 
                   <Tooltip content="Clone workspace" position="left">
                     <button

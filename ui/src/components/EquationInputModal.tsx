@@ -4,12 +4,15 @@
 'use client';
 
 import React from 'react';
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, PenTool, HelpCircle, AlertCircle, Check, BookOpen, ArrowRight, ChevronDown } from 'lucide-react';
 import {
   equationInputModalOpenAtom,
-  resetToEquationStringAtom
+  resetToEquationStringAtom,
+  equationEditSeedAtom,
+  submitEquationEditAtom,
+  activeWorkspacePristineAtom
 } from '../store/equation';
 import { PreviewEquationNode } from './PreviewEquationNode';
 import { parseEquation, Equation, RelationOperator } from 'math-engine-client';
@@ -28,6 +31,14 @@ const CHEVRON_SIZE = 12;
 export const EquationInputModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(equationInputModalOpenAtom);
   const resetToEquation = useSetAtom(resetToEquationStringAtom);
+  const [editSeed, setEditSeed] = useAtom(equationEditSeedAtom);
+  const submitEquationEdit = useSetAtom(submitEquationEditAtom);
+  // Whether confirming an edit will edit the current workspace in place (pristine)
+  // or fork a new one (#261) — surfaced in the submit-button label below.
+  const isWorkspacePristine = useAtomValue(activeWorkspacePristineAtom);
+  // Edit mode is determined by whether a seed was present when the dialog
+  // opened; captured into local state so later typing doesn't change the mode.
+  const [isEditMode, setIsEditMode] = React.useState(false);
 
   const [lhsStr, setLhsStr] = React.useState('');
   const [rhsStr, setRhsStr] = React.useState('');
@@ -41,13 +52,17 @@ export const EquationInputModal: React.FC = () => {
 
   // Reset inputs when the modal opens — render-phase previous-prop pattern
   // (not an effect) so the cleared state is in place before paint.
-  const [prevIsOpen, setPrevIsOpen] = React.useState(isOpen);
+  // Seed `false` (not `isOpen`) so a dialog that mounts already-open still runs
+  // the open transition once — needed to prefill from an edit seed (#261).
+  const [prevIsOpen, setPrevIsOpen] = React.useState(false);
   if (isOpen !== prevIsOpen) {
     setPrevIsOpen(isOpen);
     if (isOpen) {
-      setLhsStr('');
-      setRhsStr('');
-      setRelation('=');
+      // Edit mode (#261): prefill both sides from the seed; otherwise open blank.
+      setLhsStr(editSeed?.lhs ?? '');
+      setRhsStr(editSeed?.rhs ?? '');
+      setRelation(editSeed?.relation ?? '=');
+      setIsEditMode(!!editSeed);
       setSubmitError(null);
     }
   }
@@ -168,6 +183,9 @@ export const EquationInputModal: React.FC = () => {
 
   const handleClose = () => {
     setIsOpen(false);
+    // Always clear the edit seed on close so it never leaks into a later blank
+    // ("new equation") open of this dialog (#261).
+    setEditSeed(null);
   };
 
   // Focus trap + scroll lock + Escape-to-close + focus restore. The LHS input
@@ -184,14 +202,26 @@ export const EquationInputModal: React.FC = () => {
     if (!lhsStr.trim() || !rhsStr.trim() || validationError) return;
 
     try {
-      // resetToEquation also moves keyboard/screen-reader focus to the new
-      // equation's first term (#231), covering this modal and the library alike.
-      resetToEquation(combined);
-      trackEvent({
-        action: 'load_custom_equation',
-        category: 'presets',
-        label: combined,
-      });
+      if (isEditMode) {
+        // Context-aware edit (#261): in-place when pristine, fork otherwise.
+        // Also moves focus to the new equation's first term (#231 parity).
+        submitEquationEdit(combined);
+        trackEvent({
+          action: 'edit_equation',
+          category: 'presets',
+          label: combined,
+        });
+      } else {
+        // resetToEquation also moves keyboard/screen-reader focus to the new
+        // equation's first term (#231), covering this modal and the library alike.
+        resetToEquation(combined);
+        trackEvent({
+          action: 'load_custom_equation',
+          category: 'presets',
+          label: combined,
+        });
+      }
+      setEditSeed(null);
       setIsOpen(false);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : String(err));
@@ -230,7 +260,7 @@ export const EquationInputModal: React.FC = () => {
             <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4 select-none shrink-0">
               <div className="flex items-center gap-2.5">
                 <PenTool className="text-indigo-400 w-5 h-5" />
-                <h2 id="equation-input-title" className="text-lg font-bold text-white tracking-wide">Enter Equation</h2>
+                <h2 id="equation-input-title" className="text-lg font-bold text-white tracking-wide">{isEditMode ? 'Edit Equation' : 'Enter Equation'}</h2>
               </div>
               <button
                 onClick={handleClose}
@@ -380,7 +410,11 @@ export const EquationInputModal: React.FC = () => {
                   disabled={!parsedEq || !!errorStr}
                   className="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-indigo-600/60 shadow-lg shadow-indigo-600/10 active:scale-95 disabled:active:scale-100 transition-all duration-150 flex items-center gap-1 cursor-pointer"
                 >
-                  <span>Use Equation</span>
+                  <span>
+                    {isEditMode
+                      ? (isWorkspacePristine ? 'Update Equation' : 'Edit as New Workspace')
+                      : 'Use Equation'}
+                  </span>
                   <ArrowRight size={12} />
                 </button>
               </div>

@@ -228,8 +228,6 @@ export default function Home() {
     setExplorationMode((wasExploring) => {
       if (wasExploring) {
         setModeAnnouncement('Interactive view');
-        // Return focus to the toggle after the interactive tree remounts.
-        requestAnimationFrame(() => exploreToggleRef.current?.focus());
         return false;
       }
       setSourcePath(null); // a stale selection has no meaning while reading
@@ -238,6 +236,14 @@ export default function Home() {
       return true;
     });
   }, [setExplorationMode, setSourcePath]);
+  // On leaving the read view, return focus to its toggle so a keyboard/SR user isn't
+  // stranded once the interactive tree remounts. In an effect (not the toggle
+  // callback) so reading the ref stays out of render — react-hooks/refs.
+  const prevExplorationRef = React.useRef(explorationMode);
+  React.useEffect(() => {
+    if (prevExplorationRef.current && !explorationMode) exploreToggleRef.current?.focus();
+    prevExplorationRef.current = explorationMode;
+  }, [explorationMode]);
   const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
   const [rightSidebarOpen, setRightSidebarOpen] = useAtom(rightSidebarOpenAtom);
   

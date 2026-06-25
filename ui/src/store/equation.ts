@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { atom } from 'jotai';
-import { Equation, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation, compressString } from 'math-engine-client';
+import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation, compressString } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
 import { applyGlobalOp, GlobalOpParams, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
@@ -1365,6 +1365,127 @@ export const resetToEquationStringAtom = atom(
     set(requestTreeRefocusAtom);
   }
 );
+
+/**
+ * The prefill payload for the equation input dialog when it is opened in "edit"
+ * mode (#261). `null` means the dialog opens blank for a brand-new equation.
+ */
+export interface EquationEditSeed {
+  lhs: string;
+  relation: RelationOperator;
+  rhs: string;
+}
+
+/**
+ * Splits an equation into the LHS / relation / RHS strings the input dialog
+ * needs to prefill its two sides. Reuses `equationToString` (which joins the
+ * sides with ` ${relation} `) and splits back on that exact separator, so the
+ * side strings round-trip through the same formatter the rest of the app uses.
+ */
+const toEquationEditSeed = (eq: Equation): EquationEditSeed => {
+  const relation = (eq.relation ?? '=') as RelationOperator;
+  const full = equationToString(eq);
+  const sep = ` ${relation} `;
+  const idx = full.indexOf(sep);
+  if (idx === -1) {
+    return { lhs: full.trim(), relation, rhs: '' };
+  }
+  return { lhs: full.slice(0, idx), relation, rhs: full.slice(idx + sep.length) };
+};
+
+/**
+ * Atom: the edit-mode seed for the input dialog. Set by `openEquationEditorAtom`
+ * and cleared by the dialog on close so a stale seed never leaks into a later
+ * blank ("new equation") open.
+ */
+export const equationEditSeedAtom = atom<EquationEditSeed | null>(null);
+
+/**
+ * Action: open the input dialog in edit mode, prefilled from the equation at the
+ * CURRENT node (#261). Navigating the tree then editing is how you "fork from a
+ * node" without spending per-node UI space.
+ */
+export const openEquationEditorAtom = atom(null, (get, set) => {
+  const eq = get(currentEquationAtom);
+  if (!eq) return;
+  set(equationEditSeedAtom, toEquationEditSeed(eq));
+  set(equationInputModalOpenAtom, true);
+});
+
+/**
+ * Read-only: is the active workspace "pristine" — a single root node with no
+ * derivation steps taken yet? Drives the adaptive Edit tooltip and the
+ * in-place-vs-fork branch in `submitEquationEditAtom` (#261).
+ */
+export const activeWorkspacePristineAtom = atom<boolean>((get) => {
+  const tabs = get(tabsAtom);
+  const activeId = get(activeTabIdAtom);
+  const activeTab = tabs.find(t => t.id === activeId) || tabs[0];
+  if (!activeTab) return true;
+  return Object.keys(activeTab.historyTree).length === 1;
+});
+
+/**
+ * Action: commit an edited equation from the input dialog (#261).
+ *
+ * Editing an equation starts a new derivation by definition — history cannot
+ * survive a change to the equation it descends from. So:
+ *  - Pristine workspace (no steps yet) → replace the root equation in place;
+ *    there is nothing to invalidate.
+ *  - Workspace with history → fork a fresh single-node workspace from the edited
+ *    equation, leaving the original derivation completely untouched.
+ *
+ * Parses up front so an invalid equation throws BEFORE any state is mutated; the
+ * dialog catches the throw and surfaces it as a submit error.
+ */
+export const submitEquationEditAtom = atom(null, (get, set, eqStr: string) => {
+  const newEq = ensureNodeIds(parseEquation(eqStr));
+
+  const tabs = get(tabsAtom);
+  const activeId = get(activeTabIdAtom);
+  const activeTab = tabs.find(t => t.id === activeId) || tabs[0];
+  const isPristine = !!activeTab && Object.keys(activeTab.historyTree).length === 1;
+
+  if (isPristine && activeTab) {
+    const updatedTabs = tabs.map(t => {
+      if (t.id !== activeTab.id) return t;
+      return {
+        ...t,
+        historyTree: {
+          '0': {
+            id: '0',
+            equation: newEq,
+            parentId: null,
+            childrenIds: [],
+            label: 'Initial',
+            timestamp: Date.now(),
+          },
+        },
+        currentNodeId: '0',
+        name: t.isCustomNamed ? t.name : eqStr,
+        isModified: true,
+        timestamp: Date.now(),
+      };
+    });
+    set(tabsAtom, updatedTabs);
+
+    // Clear intermediate interaction state, mirroring createNewSessionAtom.
+    set(sourcePathAtom, null);
+    set(hoverPathAtom, null);
+    set(hoverReducePathAtom, null);
+    set(hoverReduceIndexAtom, null);
+    set(hoveredLoopTargetIdAtom, null);
+
+    set(toastAtom, { message: 'Equation updated', key: Date.now() });
+  } else {
+    // createNewSessionAtom appends a new tab and makes it active; its own
+    // "Created new workspace" toast is replaced below with edit-specific copy.
+    set(createNewSessionAtom, eqStr);
+    set(toastAtom, { message: 'Edited copy opened in a new workspace; original kept', key: Date.now() });
+  }
+
+  set(requestTreeRefocusAtom);
+});
 
 /**
  * Action: Toggles the sign of a square root at the specified path (+/-).

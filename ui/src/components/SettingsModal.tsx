@@ -6,7 +6,7 @@
 import React from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sliders, Info, Download, Keyboard, HelpCircle } from 'lucide-react';
+import { X, Sliders, Info, Download, Keyboard, HelpCircle, Upload } from 'lucide-react';
 import {
   settingsModalOpenAtom,
   settingsAtom,
@@ -14,6 +14,8 @@ import {
   pwaInstallPromptAtom,
   shortcutsOverlayOpenAtom,
   helpModalOpenAtom,
+  exportWorkspacesModalOpenAtom,
+  importWorkspacesModalOpenAtom,
   TEXT_SIZE_OPTIONS,
   clampChromeScale,
 } from '../store/equation';
@@ -34,6 +36,8 @@ export const SettingsModal: React.FC = () => {
   const setAboutOpen = useSetAtom(aboutModalOpenAtom);
   const setShortcutsOverlayOpen = useSetAtom(shortcutsOverlayOpenAtom);
   const setHelpOpen = useSetAtom(helpModalOpenAtom);
+  const setExportWorkspacesOpen = useSetAtom(exportWorkspacesModalOpenAtom);
+  const setImportWorkspacesOpen = useSetAtom(importWorkspacesModalOpenAtom);
   const [installPrompt, setInstallPrompt] = useAtom(pwaInstallPromptAtom);
   const setConsent = useSetAtom(consentAtom);
 
@@ -242,6 +246,43 @@ export const SettingsModal: React.FC = () => {
                   <HelpCircle size={13} />
                   <span>Open</span>
                 </button>
+              </div>
+
+              <div className={THEME_GLASS.SETTING_ROW}>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold text-white">
+                    Workspaces
+                  </span>
+                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                    Back up your workspaces to a JSON file, move them to another device, or import a file someone shared with you.
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1.5 shrink-0 self-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExportWorkspacesOpen(true);
+                      setIsOpen(false);
+                      trackEvent({ action: 'settings_open_export', category: 'settings' });
+                    }}
+                    className={`px-3 py-2 text-xs font-bold ${THEME_GLASS.BUTTON_SECONDARY} flex items-center gap-1.5 justify-center cursor-pointer`}
+                  >
+                    <Upload size={13} />
+                    <span>Export</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImportWorkspacesOpen(true);
+                      setIsOpen(false);
+                      trackEvent({ action: 'settings_open_import', category: 'settings' });
+                    }}
+                    className={`px-3 py-2 text-xs font-bold ${THEME_GLASS.BUTTON_SECONDARY} flex items-center gap-1.5 justify-center cursor-pointer`}
+                  >
+                    <Download size={13} />
+                    <span>Import</span>
+                  </button>
+                </div>
               </div>
 
               {!!installPrompt && (

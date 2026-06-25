@@ -12,6 +12,7 @@ import { Preset, PRESET_LIST } from '../constants/presets';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
 import { sentenceCase } from '../utils/text';
+import { mergeWorkspaces, ExportedWorkspace } from '../utils/workspaceTransfer';
 
 // Global Initial Value Constants
 export const INITIAL_EQUATION_STRING = '2 * (x + 3) = 10';
@@ -600,6 +601,9 @@ export const aboutModalOpenAtom = atom(false);
 export const shortcutsOverlayOpenAtom = atom(false);
 // Help modal (#48), opened with `?`.
 export const helpModalOpenAtom = atom(false);
+// Workspace export / import modals (#203), opened from Settings.
+export const exportWorkspacesModalOpenAtom = atom(false);
+export const importWorkspacesModalOpenAtom = atom(false);
 
 /**
  * True when any blocking modal/overlay is open. Global keyboard shortcuts read
@@ -614,7 +618,9 @@ export const anyModalOpenAtom = atom<boolean>((get) =>
   get(settingsModalOpenAtom) ||
   get(aboutModalOpenAtom) ||
   get(shortcutsOverlayOpenAtom) ||
-  get(helpModalOpenAtom)
+  get(helpModalOpenAtom) ||
+  get(exportWorkspacesModalOpenAtom) ||
+  get(importWorkspacesModalOpenAtom)
 );
 
 export const pwaInstallPromptAtom = atom<unknown>(null);
@@ -1267,6 +1273,27 @@ export const loadSessionAtom = atom(
     } catch (err) {
       console.error('Failed to load session:', err);
     }
+  }
+);
+
+/**
+ * Action: Merge imported workspaces (#203) into the saved-session library and
+ * persist. Returns how many were added vs. skipped (content already present) so
+ * the Import modal can report the outcome. Dedupe / id-collision rules live in
+ * the pure `mergeWorkspaces` helper.
+ */
+export const importWorkspacesAtom = atom(
+  null,
+  (get, set, incoming: ExportedWorkspace[]): { added: number; skipped: number } => {
+    const existing = get(savedSessionsAtom);
+    const { merged, skipped } = mergeWorkspaces(existing, incoming);
+    set(savedSessionsAtom, merged);
+    try {
+      safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(merged));
+    } catch (err) {
+      console.error('Failed to persist imported sessions:', err);
+    }
+    return { added: merged.length - existing.length, skipped };
   }
 );
 

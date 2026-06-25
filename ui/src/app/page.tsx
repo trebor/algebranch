@@ -40,6 +40,7 @@ import { useIsShortScreen, useIsVeryShortScreen } from '../hooks/useIsShortScree
 import { useImmersiveChrome } from '../hooks/useImmersiveChrome';
 import { useKeyboardShortcuts, ShortcutConfig } from '../hooks/useKeyboardShortcuts';
 import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
+import { HelpModal } from '../components/HelpModal';
 import { buildEquationUrl, buildWorkspaceUrl } from '../utils/feedbackUrl';
 import {
   currentEquationAtom,
@@ -78,6 +79,7 @@ import {
   createSessionFromStateAtom,
   currentTabNameAtom,
   deleteConfirmationModalOpenAtom,
+  resetHistoryModalOpenAtom,
   tabsAtom,
   activeTabIdAtom,
   activeBottomSheetAtom,
@@ -98,6 +100,7 @@ import {
   cycleActiveTabAtom,
   equationInputModalOpenAtom,
   shortcutsOverlayOpenAtom,
+  helpModalOpenAtom,
   anyModalOpenAtom,
   equationToFormat,
   formatDerivation,
@@ -106,7 +109,7 @@ import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, ScanText } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw } from 'lucide-react';
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -260,9 +263,9 @@ export default function Home() {
 
   const syncMathState = useSetAtom(syncMathStateAtom);
   const clearMathState = useSetAtom(clearMathStateAtom);
-  const setFeedbackModalOpen = useSetAtom(feedbackModalOpenAtom);
+  const [feedbackOpen, setFeedbackModalOpen] = useAtom(feedbackModalOpenAtom);
   const setFeedbackContext = useSetAtom(feedbackContextAtom);
-  const setSettingsModalOpen = useSetAtom(settingsModalOpenAtom);
+  const [settingsOpen, setSettingsModalOpen] = useAtom(settingsModalOpenAtom);
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
   const setAppHydrated = useSetAtom(appHydratedAtom);
@@ -270,6 +273,7 @@ export default function Home() {
   const createSessionFromState = useSetAtom(createSessionFromStateAtom);
   const setSharedWorkspaceBanner = useSetAtom(sharedWorkspaceBannerAtom);
   const setDeleteConfirmationModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
+  const setResetHistoryModalOpen = useSetAtom(resetHistoryModalOpenAtom);
   const currentTabName = useAtomValue(currentTabNameAtom);
   const addTab = useSetAtom(addTabAtom);
   const [toast, setToast] = useAtom(toastAtom);
@@ -284,12 +288,72 @@ export default function Home() {
   const equalsLocked = !!onboardingChapterId && !onboardingGlobalOp;
   const swapSides = useSetAtom(swapSidesAtom);
   const setPwaInstallPrompt = useSetAtom(pwaInstallPromptAtom);
-  const setAboutOpen = useSetAtom(aboutModalOpenAtom);
+  const [aboutOpen, setAboutOpen] = useAtom(aboutModalOpenAtom);
   const closeTab = useSetAtom(closeTabAtom);
   const cycleActiveTab = useSetAtom(cycleActiveTabAtom);
   const setEquationInputModalOpen = useSetAtom(equationInputModalOpenAtom);
-  const setShortcutsOverlayOpen = useSetAtom(shortcutsOverlayOpenAtom);
+  const [shortcutsOverlayOpen, setShortcutsOverlayOpen] = useAtom(shortcutsOverlayOpenAtom);
+  const [helpOpen, setHelpOpen] = useAtom(helpModalOpenAtom);
   const anyModalOpen = useAtomValue(anyModalOpenAtom);
+
+  const closeAllModals = () => {
+    setAboutOpen(false);
+    setHelpOpen(false);
+    setFeedbackModalOpen(false);
+    setSettingsModalOpen(false);
+    setShortcutsOverlayOpen(false);
+    setEquationInputModalOpen(false);
+    setDeleteConfirmationModalOpen(false);
+    setResetHistoryModalOpen(false);
+  };
+
+  const toggleAbout = () => {
+    const nextState = !aboutOpen;
+    closeAllModals();
+    if (nextState) {
+      setAboutOpen(true);
+      trackEvent({ action: 'shortcut_open_about', category: 'keyboard' });
+    }
+  };
+
+  const toggleHelp = () => {
+    const nextState = !helpOpen;
+    closeAllModals();
+    if (nextState) {
+      setHelpOpen(true);
+      trackEvent({ action: 'shortcut_open_help', category: 'keyboard' });
+    } else {
+      trackEvent({ action: 'shortcut_close_help', category: 'keyboard' });
+    }
+  };
+
+  const toggleFeedback = () => {
+    const nextState = !feedbackOpen;
+    closeAllModals();
+    if (nextState) {
+      setFeedbackContext(currentEq ? `Active Equation: ${equationToString(currentEq)}` : null);
+      setFeedbackModalOpen(true);
+      trackEvent({ action: 'shortcut_open_feedback', category: 'keyboard' });
+    }
+  };
+
+  const toggleSettings = () => {
+    const nextState = !settingsOpen;
+    closeAllModals();
+    if (nextState) {
+      setSettingsModalOpen(true);
+      trackEvent({ action: 'shortcut_open_settings', category: 'keyboard' });
+    }
+  };
+
+  const toggleShortcuts = () => {
+    const nextState = !shortcutsOverlayOpen;
+    closeAllModals();
+    if (nextState) {
+      setShortcutsOverlayOpen(true);
+      trackEvent({ action: 'shortcut_open_cheatsheet', category: 'keyboard' });
+    }
+  };
   const [graphSize, setGraphSize] = useAtom(graphSizeAtom);
   const previousGraphSize = useAtomValue(previousGraphSizeAtom);
   const isGraphViable = useAtomValue(isGraphViableAtom);
@@ -646,18 +710,93 @@ export default function Home() {
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       if (process.env.NODE_ENV === 'production') {
+        const showUpdateToast = (waitingWorker: ServiceWorker) => {
+          const reloadAction = () => {
+            waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+          };
+
+          // Set initial toast message immediately
+          setToast({
+            message: 'New version available',
+            key: Date.now(),
+            type: 'update',
+            persistent: true,
+            actionLabel: 'Reload',
+            onAction: reloadAction
+          });
+
+          // Request version from the waiting service worker
+          const channel = new MessageChannel();
+          channel.port1.onmessage = (event) => {
+            const swVersion = event.data?.version;
+            if (swVersion) {
+              setToast((prev) => {
+                if (prev && prev.type === 'update') {
+                  return {
+                    ...prev,
+                    message: `New version (${swVersion}) available`
+                  };
+                }
+                return {
+                  message: `New version (${swVersion}) available`,
+                  key: Date.now(),
+                  type: 'update',
+                  persistent: true,
+                  actionLabel: 'Reload',
+                  onAction: reloadAction
+                };
+              });
+            }
+          };
+          waitingWorker.postMessage({ type: 'GET_VERSION' }, [channel.port2]);
+        };
+
         const registerSW = () => {
           navigator.serviceWorker.register('/sw.js')
-            .then((reg) => console.log('Service worker registered successfully:', reg.scope))
+            .then((reg) => {
+              // If there's already a waiting worker, prompt reload
+              if (reg.waiting) {
+                showUpdateToast(reg.waiting);
+              }
+
+              // Listen for future updates
+              reg.addEventListener('updatefound', () => {
+                const installingWorker = reg.installing;
+                if (installingWorker) {
+                  installingWorker.addEventListener('statechange', () => {
+                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                      showUpdateToast(installingWorker);
+                    }
+                  });
+                }
+              });
+            })
             .catch((err) => console.error('Service worker registration failed:', err));
         };
+
+        const hadControllerOnLoad = !!navigator.serviceWorker.controller;
+        let refreshing = false;
+        const handleControllerChange = () => {
+          if (!refreshing && hadControllerOnLoad) {
+            refreshing = true;
+            window.location.reload();
+          }
+        };
+        navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
 
         if (document.readyState === 'complete') {
           registerSW();
         } else {
           window.addEventListener('load', registerSW);
-          return () => window.removeEventListener('load', registerSW);
+          return () => {
+            window.removeEventListener('load', registerSW);
+            navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+          };
         }
+
+        return () => {
+          navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+        };
       } else {
         // In development, unregister service workers to avoid hot-reloading caching issues
         navigator.serviceWorker.getRegistrations().then((registrations) => {
@@ -669,7 +808,7 @@ export default function Home() {
         });
       }
     }
-  }, []);
+  }, [setToast]);
 
   // Capture the browser's PWA install promotion event. We do NOT preventDefault
   // so the browser's native automatic promotion can still run when appropriate,
@@ -767,6 +906,7 @@ export default function Home() {
   // Keyboard Shortcuts (Issue #17, expanded in #126). Defined as a single
   // source-of-truth array so the live handler and the `?` cheat-sheet overlay
   // render from the same bindings and can't drift.
+  /* eslint-disable react-hooks/purity */
   const shortcutBindings: ShortcutConfig[] = [
     {
       key: 'z',
@@ -1122,35 +1262,27 @@ export default function Home() {
       // here; the overlay shows the plain `?` glyph via keyLabel.
       key: '?',
       shift: true,
-      action: () => {
-        setShortcutsOverlayOpen(true);
-        trackEvent({
-          action: 'shortcut_open_cheatsheet',
-          category: 'keyboard',
-        });
-      },
-      description: 'Show keyboard shortcuts',
+      action: toggleHelp,
+      description: 'Help',
       category: 'Help',
       keyLabel: '?',
     },
     {
+      key: 'k',
+      action: toggleShortcuts,
+      description: 'Show keyboard shortcuts',
+      category: 'Help',
+      keyLabel: 'k',
+    },
+    {
       key: 'a',
-      action: () => {
-        setAboutOpen(true);
-        trackEvent({ action: 'shortcut_open_about', category: 'keyboard' });
-      },
+      action: toggleAbout,
       description: 'About Algebranch',
       category: 'Help',
     },
     {
       key: 'f',
-      action: () => {
-        // Mirror the header Feedback button: seed the form with the active
-        // equation as context when there is one.
-        setFeedbackContext(currentEq ? `Active Equation: ${equationToString(currentEq)}` : null);
-        setFeedbackModalOpen(true);
-        trackEvent({ action: 'shortcut_open_feedback', category: 'keyboard' });
-      },
+      action: toggleFeedback,
       description: 'Send feedback',
       category: 'Help',
     },
@@ -1173,10 +1305,7 @@ export default function Home() {
       // Settings on bare `,`, echoing the universal ⌘, convention in the app's
       // naked-key scheme.
       key: ',',
-      action: () => {
-        setSettingsModalOpen(true);
-        trackEvent({ action: 'shortcut_open_settings', category: 'keyboard' });
-      },
+      action: toggleSettings,
       description: 'Settings',
       category: 'Help',
       keyLabel: ',',
@@ -1185,19 +1314,24 @@ export default function Home() {
       // ⌘, alias for muscle memory; hidden so the cheat-sheet shows the bare key.
       key: ',',
       meta: true,
-      action: () => {
-        setSettingsModalOpen(true);
-        trackEvent({ action: 'shortcut_open_settings', category: 'keyboard' });
-      },
+      action: toggleSettings,
       description: 'Settings',
       category: 'Help',
       hidden: true,
     },
   ];
-  useKeyboardShortcuts(shortcutBindings, {
+  /* eslint-enable react-hooks/purity */
+
+  const modalNavigationKeys = new Set(['?', 'k', 'a', 'f', ',']);
+  const workspaceBindings = shortcutBindings.filter(
+    (s) => !modalNavigationKeys.has(s.key.toLowerCase())
+  );
+  const modalNavigationBindings = shortcutBindings.filter(
+    (s) => modalNavigationKeys.has(s.key.toLowerCase())
+  );
+
+  useKeyboardShortcuts(workspaceBindings, {
     disabled: anyModalOpen,
-    // Surface what follows an armed leader, so the sequence is discoverable in
-    // the moment (not only via the ? cheat-sheet).
     onPendingLeader: (leader) => {
       if (leader === 'c') {
         setToast({
@@ -1206,6 +1340,10 @@ export default function Home() {
         });
       }
     },
+  });
+
+  useKeyboardShortcuts(modalNavigationBindings, {
+    disabled: false,
   });
 
   // Mobile swipe gestures logic
@@ -1265,7 +1403,7 @@ export default function Home() {
 
   // Auto-dismiss toast status messages after 2.5 seconds
   React.useEffect(() => {
-    if (!toast) return;
+    if (!toast || toast.persistent) return;
     const timer = setTimeout(() => {
       setToast(null);
     }, 2500);
@@ -1335,14 +1473,7 @@ export default function Home() {
           />
           <Tooltip content="Submit Feedback or Report Bug" position="bottom" autoAlign={false}>
             <button
-              onClick={() => {
-                if (currentEq) {
-                  setFeedbackContext(`Active Equation: ${equationToString(currentEq)}`);
-                } else {
-                  setFeedbackContext(null);
-                }
-                setFeedbackModalOpen(true);
-              }}
+              onClick={toggleFeedback}
               className={THEME_GLASS.HEADER_BUTTON}
               aria-label="Feedback"
             >
@@ -1356,8 +1487,9 @@ export default function Home() {
             <ImmersiveToggle onEnter={() => setImmersive(true)} />
           )}
           <HeaderOverflowMenu
-            onOpenSettings={() => setSettingsModalOpen(true)}
-            onOpenAbout={() => setAboutOpen(true)}
+            onOpenSettings={toggleSettings}
+            onOpenAbout={toggleAbout}
+            onOpenHelp={toggleHelp}
           />
         </div>
       </header>
@@ -1476,9 +1608,29 @@ export default function Home() {
               )}
               {/* Calculating Math Engine Spinner / Toast Notification */}
               {toast ? (
-                <div key={`toast-${toast.key}`} className={`absolute top-4 left-4 z-30 short-screen-toast-offset ${THEME_GLASS.TOAST_ALERT}`}>
-                  <Check size={12} className="text-emerald-400 shrink-0" />
+                <div key={`toast-${toast.key}`} className={`absolute top-4 left-4 z-30 short-screen-toast-offset ${THEME_GLASS.TOAST_ALERT} flex items-center gap-2`}>
+                  {toast.type === 'update' ? (
+                    <RefreshCw size={12} className="text-indigo-400 shrink-0 animate-[spin_3s_linear_infinite]" />
+                  ) : (
+                    <Check size={12} className="text-emerald-400 shrink-0" />
+                  )}
                   <span>{toast.message}</span>
+                  {toast.onAction && (
+                    <button
+                      onClick={toast.onAction}
+                      className="ml-2 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-[10px] transition-all cursor-pointer active:scale-95 border border-indigo-400/20 shadow-md shadow-indigo-600/20"
+                    >
+                      {toast.actionLabel || 'Action'}
+                    </button>
+                  )}
+                  {toast.type === 'update' && (
+                    <button
+                      onClick={() => setToast(null)}
+                      className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-zinc-300 font-semibold rounded-lg text-[10px] transition-all cursor-pointer active:scale-95 border border-white/5"
+                    >
+                      Dismiss
+                    </button>
+                  )}
                 </div>
               ) : isMathLoading ? (
                 <div className={`absolute top-4 left-4 z-30 short-screen-toast-offset ${THEME_GLASS.TOAST_LOADING}`}>
@@ -1841,6 +1993,7 @@ export default function Home() {
       <SettingsModal />
       <AboutModal />
       <ShortcutsOverlay shortcuts={shortcutBindings} />
+      <HelpModal />
 
       {/* Mobile-only Bottom navigation and Sheets */}
       {!onboardingChapterId && <BottomNav />}

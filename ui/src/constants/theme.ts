@@ -33,6 +33,10 @@ export const THEME_GLASS = {
   // 2.4.7). focus-visible only, so mouse users never see it; a bright ring +
   // dark offset reads clearly over every node state (candidate/source/target).
   NODE_FOCUS_RING: 'outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 focus-visible:z-30',
+  // Read-view cursor (#270): the active stop in the aria-activedescendant tree never
+  // holds DOM focus (the tree container does), so focus-visible can't show it — this
+  // is an always-on ring marking where the reading cursor sits.
+  EXPLORE_CURSOR: 'ring-2 ring-sky-300 ring-offset-2 ring-offset-neutral-950 rounded-[0.2em] z-10',
   // Skip-link group (#257, #272): the whole set is visually hidden until any
   // link inside takes keyboard focus (focus-within), at which point the entire
   // stack surfaces top-left as a vertical list. Revealing the group — not just

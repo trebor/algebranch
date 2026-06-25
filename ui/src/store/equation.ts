@@ -904,6 +904,27 @@ export const getCanonicalKey = (eqVal: Equation): string => {
 // substitution, toggle-root, and the global both-sides operations alike.
 export const liveAnnouncementAtom = atom<string>('');
 
+// Assertive nav read-out for the Interaction-mode tree (#270). VoiceOver won't
+// re-announce a term when keyboard focus moves UP to its ENCLOSING treeitem — the
+// parent contains the child you came from, so VO announces "group" and goes quiet on
+// the label (the #271 ancestor-containment quirk). On those step-out moves only, the
+// roving handlers push the destination's label here for a live region to speak; a
+// toggled zero-width marker forces re-announcement even when the text repeats.
+export const navReadoutAtom = atom<string>('');
+export const announceNavAtom = atom(null, (get, set, text: string) => {
+  const marker = get(navReadoutAtom).endsWith('\u200B') ? '' : '\u200B';
+  set(navReadoutAtom, text + marker);
+});
+
+// Which of the two equation-reading intents the workspace is in (#270):
+//  - false (default) = Interaction mode: the #257 actionable-term roving tree, for
+//    hunting move handles and transforming the equation.
+//  - true = Exploration mode: a clean, handle-free rendering the user walks
+//    hierarchically (Left/Right between siblings, Down/Up in/out of a term's parts)
+//    to understand the equation's structure by ear. A distinct intent — reading,
+//    not acting — so it gets its own navigation model and visuals.
+export const explorationModeAtom = atom<boolean>(false);
+
 // Nonce that requests keyboard focus be moved to the first actionable term in
 // the equation tree (#231). Bumped by explicit user edits (the equation-input
 // modal submit) where focus sits outside the tree, so useEquationTreeFocus

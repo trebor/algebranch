@@ -804,7 +804,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   // Only a transposition-actionable node (canClick) is a roving *term* — Enter on
   // it selects/applies. A node that is a treeitem solely to host a handle (see
   // isTreeitem below) is never the active term, so it stays tabIndex -1 and does
-  // not register; its handle registers instead.
+  // not register; its handle registers instead. Reading every sub-term is the job
+  // of Exploration mode (#270), a separate clean tree — Interaction mode keeps the
+  // #257 actionable-only roving so hunting the move handles stays natural.
   const rovingTabIndex = roving
     ? (canClick && roving.activeKey === path ? 0 : -1)
     : (canClick ? 0 : -1);
@@ -1322,12 +1324,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
   // under role="tree" violates aria-required-children, so even a non-candidate
   // handle host must be a treeitem to keep its folded-in handle valid (#257).
   const isTreeitem = canClick || handlesNavigable;
+  // Sparse verb phrasing (#270): the action verb is heard on every actionable term,
+  // so it stays terse. (Reading non-actionable sub-terms is Exploration mode's job,
+  // a separate tree — here every treeitem is actionable, so it always has a verb.)
   const nodeAriaLabel = isSelected
-    ? `${termText}, selected term, press Escape to deselect`
+    ? `${termText}, selected`
     : isTarget
-    ? `Move selection to ${termText}`
+    ? `${termText}, Enter to move here`
     : isCandidate
-    ? `${termText}, press Enter to select this term`
+    ? `${termText}, Enter to select`
     : isTreeitem
     ? termText
     : undefined;

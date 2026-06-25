@@ -10,6 +10,21 @@ import { currentEquationAtom } from '../store/equation';
 import { Equation, getNodeByPath, getFunctionName, formatNumber } from 'math-engine-client';
 import { OPERATOR_DISPLAY, splitSubscript } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
+import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
+
+/**
+ * Exploration mode (#270): when present, the otherwise read-only preview renderer
+ * becomes a focusable, hierarchically-navigable `role="tree"` for reading the
+ * equation's structure by ear. Each node turns into a `treeitem` labelled as spoken
+ * math; arrow keys drill the AST (see ExploreEquationTree). `onExit` is invoked on
+ * Escape to leave the mode. Absent (the default), the preview stays inert — exactly
+ * its tooltip/menu behaviour.
+ */
+interface ExploreContextValue {
+  readonly active: boolean;
+  readonly onExit?: () => void;
+}
+export const ExploreContext = React.createContext<ExploreContextValue>({ active: false });
 
 const LeftParenSVG: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
   <svg
@@ -62,6 +77,8 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
 }) => {
   const currentEq = useAtomValue(currentEquationAtom);
   const eq = customEquation ?? currentEq;
+  const roving = useOptionalRovingTabindex();
+  const explore = React.useContext(ExploreContext);
 
   const node = React.useMemo(() => {
     if (customNode) return customNode;
@@ -72,6 +89,20 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
       return null;
     }
   }, [customNode, eq, path]);
+
+  // A node is an exploration stop (#270) when the explore tree is active and we have
+  // a live path to key it by. Parentheses stay transparent — drilling skips straight
+  // to their content, so a listener never hits a redundant "the quantity" stop.
+  const isStop = explore.active && !!roving && !!path && !!node && node.type !== 'ParenthesisNode';
+
+  const registerExploreItem = React.useCallback(
+    (el: HTMLElement | null) => {
+      if (!roving || !isStop || !path) return;
+      if (el) roving.registerItem(path, el);
+      else roving.unregisterItem(path);
+    },
+    [roving, isStop, path],
+  );
 
   if (!node) return null;
 
@@ -371,10 +402,19 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
     return <span>{node.toString()}</span>;
   };
 
+  // In read view a stop is a VISUAL cursor target only (#270): it registers (for
+  // depth-first ordering) and shows a ring when active, but carries NO ARIA role or
+  // name. The whole render is aria-hidden and a live region narrates the active stop
+  // (see ExploreEquationTree) — which sidesteps both the VoiceOver "moving up to a
+  // containing item announces 'group'" quirk and the "outline row" treeitem chatter.
+  const isActiveStop = isStop && roving?.activeKey === path;
+  const exploreProps = isStop ? { ref: registerExploreItem } : {};
+
   return (
     <div
       data-flip-id={nodeId}
-      className="relative inline-flex items-center justify-center"
+      className={`relative inline-flex items-center justify-center ${isActiveStop ? THEME_GLASS.EXPLORE_CURSOR : ''}`}
+      {...exploreProps}
     >
       {renderContent()}
     </div>

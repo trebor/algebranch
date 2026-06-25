@@ -23,6 +23,8 @@ import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { WorkspaceSwitcher } from '../components/WorkspaceSwitcher';
 import { SkipLinks } from '../components/SkipLinks';
 import { RovingTabindexProvider } from '../hooks/useRovingTabindex';
+import { useAncestorFocusBridge } from '../hooks/useAncestorFocusBridge';
+import { ExploreEquationTree } from '../components/ExploreEquationTree';
 import { ShareMenu } from '../components/ShareMenu';
 import { HeaderOverflowMenu } from '../components/HeaderOverflowMenu';
 import { SharedWorkspaceBanner } from '../components/SharedWorkspaceBanner';
@@ -42,6 +44,8 @@ import { buildEquationUrl, buildWorkspaceUrl } from '../utils/feedbackUrl';
 import {
   currentEquationAtom,
   liveAnnouncementAtom,
+  navReadoutAtom,
+  explorationModeAtom,
   treeRefocusNonceAtom,
   candidatePathsAtom,
   hoverPathAtom,
@@ -102,7 +106,7 @@ import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, ScanText } from 'lucide-react';
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -201,11 +205,36 @@ const readWsParam = (search: string): string | null => {
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
   const liveAnnouncement = useAtomValue(liveAnnouncementAtom);
+  const navReadout = useAtomValue(navReadoutAtom);
   const treeRefocusNonce = useAtomValue(treeRefocusNonceAtom);
   const candidatePaths = useAtomValue(candidatePathsAtom);
   const [, setHoverPath] = useAtom(hoverPathAtom);
   const [targetPaths, setTargetPaths] = useAtom(targetPathsAtom);
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
+  // Exploration mode (#270): the clean, hierarchical structural-reading view that
+  // replaces the interactive tree. A persistent live region narrates the mode switch
+  // politely; the toggle ref takes focus back on exit so a keyboard/SR user is never
+  // stranded outside the equation.
+  const [explorationMode, setExplorationMode] = useAtom(explorationModeAtom);
+  const [modeAnnouncement, setModeAnnouncement] = React.useState('');
+  const exploreToggleRef = React.useRef<HTMLButtonElement>(null);
+  // Speak the enclosing term when focus moves up/out to a containing item, where
+  // VoiceOver otherwise goes silent on the label (#270/#271).
+  const handleTreeFocusBridge = useAncestorFocusBridge();
+  const toggleExploration = React.useCallback(() => {
+    setExplorationMode((wasExploring) => {
+      if (wasExploring) {
+        setModeAnnouncement('Interactive view');
+        // Return focus to the toggle after the interactive tree remounts.
+        requestAnimationFrame(() => exploreToggleRef.current?.focus());
+        return false;
+      }
+      setSourcePath(null); // a stale selection has no meaning while reading
+      // The read view's own live region narrates the cursor; just announce the mode.
+      setModeAnnouncement('Read view');
+      return true;
+    });
+  }, [setExplorationMode, setSourcePath]);
   const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
   const [rightSidebarOpen, setRightSidebarOpen] = useAtom(rightSidebarOpenAtom);
   
@@ -901,6 +930,17 @@ export default function Home() {
       category: 'Equation',
     },
     {
+      // Bare `x` toggles the Read view (#270) — a clean view you step through part
+      // by part, vs. the interactive transform tree.
+      key: 'x',
+      action: () => {
+        toggleExploration();
+        trackEvent({ action: 'shortcut_toggle_exploration', category: 'keyboard' });
+      },
+      description: 'Toggle Read view',
+      category: 'Accessibility',
+    },
+    {
       // Bare `t` grows the interface text-size knob (#239) one step and wraps
       // from the largest back to the smallest; Shift+T goes the other way. The
       // wrap lets a user who overshoots keep tapping the same key to come back
@@ -1449,6 +1489,35 @@ export default function Home() {
               {/* Contextual Action Buttons for Active Workspace */}
               {currentEq && (
                 <div className="absolute top-4 right-4 z-30 contextual-actions flex items-center gap-2">
+                  {/* Read-view toggle (#270): switch between the Interactive view
+                      (move handles, transform) and a clean Read view that strips the
+                      chrome so the equation can be stepped through part by part. User-
+                      facing name is "Read view"; the code concept is "exploration". A
+                      real toggle button so a screen reader announces its pressed state,
+                      with parallel tooltips that each name the view they switch to. */}
+                  <Tooltip
+                    content={
+                      <HotkeyHint
+                        label={explorationMode ? 'Interactive view — transform the equation' : 'Read view — step through the equation'}
+                        keys="X"
+                      />
+                    }
+                    position="left"
+                  >
+                    <button
+                      ref={exploreToggleRef}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExploration();
+                      }}
+                      className={explorationMode ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
+                      aria-pressed={explorationMode}
+                      aria-label="Read view"
+                    >
+                      <ScanText size={14} />
+                    </button>
+                  </Tooltip>
+
                   {/* Graph toggle — only offered when the equation is legitimately
                       graphable (single variable), or while the graph is already
                       open so it can always be closed. Replaces the old oversized
@@ -1496,6 +1565,11 @@ export default function Home() {
                   </Tooltip>
                 </div>
               )}
+              {/* Persistent mode-switch narration (#270): lives OUTSIDE the swap
+                  below so the announcement survives the tree being replaced. */}
+              <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+                {modeAnnouncement}
+              </div>
               {!isHydrated ? (
                 <div className="flex flex-col items-center justify-center gap-3 select-none">
                   <div className={`h-8 w-8 border-4 ${THEME_GLASS.SPINNER}`} />
@@ -1506,6 +1580,10 @@ export default function Home() {
                     </div>
                   )}
                 </div>
+              ) : explorationMode ? (
+                // Exploration mode (#270): the clean, hierarchical structural tree
+                // replaces the interactive one, self-scaling to fill the workspace.
+                <ExploreEquationTree onExit={toggleExploration} />
               ) : (
                 <RovingTabindexProvider containerRef={activeContentRef}>
                 <div
@@ -1519,6 +1597,12 @@ export default function Home() {
                   <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
                     {liveAnnouncement}
                   </div>
+                  {/* Assertive bridge (#270/#271): on step-OUT (up) moves VoiceOver
+                      announces "group" and goes silent on the enclosing term's label,
+                      so the roving handlers push that label here for it to be spoken. */}
+                  <div aria-live="assertive" aria-atomic="true" className="sr-only">
+                    {navReadout}
+                  </div>
                   {/* The expression is a single composite widget (#257): one Tab
                       stop, arrow keys rove between actionable terms. tabIndex=-1
                       lets Escape release focus back here without adding a stop. */}
@@ -1529,6 +1613,9 @@ export default function Home() {
                     // name the tree distinctly so it isn't said twice (#265).
                     aria-label="Interactive equation"
                     tabIndex={-1}
+                    // Speak the enclosing term when focus moves up/out to a containing
+                    // item, where VoiceOver otherwise goes silent (#270/#271).
+                    onFocusCapture={handleTreeFocusBridge}
                     style={{
                       fontSize: `${activeScaleValue}em`,
                       opacity: activeIsScaled ? 1 : 0,

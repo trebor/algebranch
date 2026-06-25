@@ -63,7 +63,7 @@ describe('EquationNode keyboard/a11y semantics', () => {
     store.set(candidatePathsAtom, new Set(['lhs/1'])); // the constant 9
     renderTree(store);
 
-    const item = screen.getByRole('treeitem', { name: /select this term/i });
+    const item = screen.getByRole('treeitem', { name: /Enter to select/i });
     // The single candidate is the active item, so it is the one Tab stop.
     expect(item).toHaveAttribute('tabindex', '0');
   });
@@ -73,7 +73,7 @@ describe('EquationNode keyboard/a11y semantics', () => {
     store.set(candidatePathsAtom, new Set(['lhs/1']));
     renderTree(store);
 
-    const item = screen.getByRole('treeitem', { name: /select this term/i });
+    const item = screen.getByRole('treeitem', { name: /Enter to select/i });
     expect(item.className).toContain('focus-visible:ring');
   });
 
@@ -91,7 +91,7 @@ describe('EquationNode keyboard/a11y semantics', () => {
     store.set(sourcePathAtom, 'lhs/1');
     renderTree(store);
 
-    expect(screen.getByRole('treeitem', { name: /selected term/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('treeitem', { name: /, selected/i })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('selects a candidate on Enter', () => {
@@ -99,7 +99,7 @@ describe('EquationNode keyboard/a11y semantics', () => {
     store.set(candidatePathsAtom, new Set(['lhs/1']));
     renderTree(store);
 
-    fireEvent.keyDown(screen.getByRole('treeitem', { name: /select this term/i }), { key: 'Enter' });
+    fireEvent.keyDown(screen.getByRole('treeitem', { name: /Enter to select/i }), { key: 'Enter' });
     expect(store.get(sourcePathAtom)).toBe('lhs/1');
   });
 
@@ -108,7 +108,7 @@ describe('EquationNode keyboard/a11y semantics', () => {
     store.set(sourcePathAtom, 'lhs/1');
     renderTree(store);
 
-    fireEvent.keyDown(screen.getByRole('treeitem', { name: /selected term/i }), { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('treeitem', { name: /, selected/i }), { key: 'Escape' });
     expect(store.get(sourcePathAtom)).toBeNull();
   });
 
@@ -118,7 +118,7 @@ describe('EquationNode keyboard/a11y semantics', () => {
     store.set(targetPathsAtom, { rhs: parseEquation('x^2=9') });
     renderTree(store);
 
-    fireEvent.keyDown(screen.getByRole('treeitem', { name: /move selection to/i }), { key: 'Enter' });
+    fireEvent.keyDown(screen.getByRole('treeitem', { name: /Enter to move here/i }), { key: 'Enter' });
     expect(equationToString(store.get(currentEquationAtom))).toBe(equationToString(parseEquation('x^2=9')));
   });
 

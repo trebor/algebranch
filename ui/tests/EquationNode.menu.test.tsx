@@ -166,4 +166,24 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
     const tabbable = options.filter((o) => o.getAttribute('tabindex') === '0');
     expect(tabbable).toHaveLength(1);
   });
+
+  it('renders preview sizers even when no option is hovered (preventing size jumps)', () => {
+    const store = makeMultiOptionStore();
+    renderTree(store);
+    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    mouseClick(handle);
+
+    // Verify the "Hover an option to preview" hint is present
+    expect(screen.getByText(/hover an option to preview/i)).toBeInTheDocument();
+
+    // Verify that the invisible sizers are present in the DOM to reserve space
+    const sizers = screen.getAllByTestId('preview-sizer', { suggest: false }).concat(
+      screen.queryAllByText((content, element) => {
+        return element?.getAttribute('aria-hidden') === 'true' &&
+               element?.className?.includes('invisible') &&
+               (content.includes('-8') || content.includes('8'));
+      })
+    );
+    expect(sizers.length).toBeGreaterThan(0);
+  });
 });

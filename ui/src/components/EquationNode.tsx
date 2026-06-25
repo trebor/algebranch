@@ -1702,30 +1702,28 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
                 ))}
               </div>
             );
-            const previewEl = previewOption ? (
-              <ScaledEquationFit
-                key={`${path}:${openMenuType}`}
-                measureEq={stack.options[0]?.equation ?? null}
-                sizers={stack.options.map((opt, i) => (
-                  // Invisible sizers reserve the LARGEST option's size (no hover
-                  // reflow) and set the single scale factor.
-                  <div key={i} aria-hidden="true" className="invisible col-start-1 row-start-1">
-                    {renderEquationPreviewRow(opt.equation, true)}
+            const previewEl = (
+              <div className="relative w-full">
+                <div className={previewOption ? '' : 'invisible'}>
+                  <ScaledEquationFit
+                    key={`${path}:${openMenuType}`}
+                    measureEq={stack.options[0]?.equation ?? null}
+                    sizers={stack.options.map((opt, i) => (
+                      // Invisible sizers reserve the LARGEST option's size (no hover
+                      // reflow) and set the single scale factor.
+                      <div key={i} data-testid="preview-sizer" aria-hidden="true" className="invisible col-start-1 row-start-1">
+                        {renderEquationPreviewRow(opt.equation, true)}
+                      </div>
+                    ))}
+                  >
+                    {previewOption && renderEquationPreviewRow(previewOption.equation, false)}
+                  </ScaledEquationFit>
+                </div>
+                {!previewOption && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none py-3 px-1.5">
+                    <span className={`text-sm italic select-none ${THEME_GLASS.TEXT_MUTED}`}>Hover an option to preview</span>
                   </div>
-                ))}
-              >
-                {renderEquationPreviewRow(previewOption.equation, false)}
-              </ScaledEquationFit>
-            ) : (
-              // The empty-state hint centers in the popup, NOT inside the scaled
-              // equation grid — that grid is min-w-max (sized to the widest option),
-              // so a wide option would push the hint off-center and clip it (the
-              // overflow viewport pins the oversized track left). A plain full-width
-              // flex keeps it dead-centered regardless of option width. Width stays
-              // stable on hover because the equation's container never grows the
-              // popup (overflow-x-auto), so swapping in the equation doesn't reflow.
-              <div className="w-full flex items-center justify-center py-3 px-1.5">
-                <span className={`text-sm italic select-none ${THEME_GLASS.TEXT_MUTED}`}>Hover an option to preview</span>
+                )}
               </div>
             );
 

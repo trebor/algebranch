@@ -766,11 +766,21 @@ export const areEquationsEquivalent = (eq1: Equation, eq2: Equation): boolean =>
 };
 
 /**
- * Helper to get all parent paths that should be excluded from drop targets.
- * This includes the immediate parent and any parenthesis wrapping it, up to and including
- * the first non-parenthesis operator ancestor.
+ * Helper to get all ancestor paths that should be excluded from drop targets:
+ * every strict ancestor of the source, from its immediate parent up to and
+ * including the side root (`lhs`/`rhs`).
+ *
+ * Removing the source node collapses its parent to a sibling, so EVERY strict
+ * ancestor's subtree is mutated. Dropping the node back onto such an ancestor
+ * can never be a faithful transposition — the move validator's parametrized
+ * check replaces the target subtree with a free symbol, which would mask that
+ * mutation and accept a non-equivalent equation (e.g. `(... - x) / 1 = c`).
+ * Excluding all strict ancestors removes that whole class of corrupt moves; the
+ * only ancestor recombination that reproduces the original is the no-op (already
+ * filtered), and cross-equals moves target the opposite side root, never an
+ * ancestor of the source. See #301.
  */
-export const getExcludedParentPaths = (eq: Equation, sourcePath: string): Set<string> => {
+export const getExcludedParentPaths = (_eq: Equation, sourcePath: string): Set<string> => {
   const excluded = new Set<string>();
   if (!sourcePath.includes('/')) {
     return excluded;
@@ -779,16 +789,8 @@ export const getExcludedParentPaths = (eq: Equation, sourcePath: string): Set<st
   let currentPath = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
   while (true) {
     excluded.add(currentPath);
-    try {
-      const node = getNodeByPath(eq, currentPath);
-      if (node.type !== 'ParenthesisNode') {
-        break;
-      }
-    } catch {
-      break;
-    }
     if (!currentPath.includes('/')) {
-      break;
+      break; // reached the side root ('lhs'/'rhs')
     }
     currentPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
   }

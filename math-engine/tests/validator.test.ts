@@ -159,6 +159,48 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(equationToString(moves['rhs'])).toBe('x = (y - 1) * 2 - 4');
   });
 
+  test('#301 — dragging the 1 in 1/x onto the left side is rejected (was: "(x + 1) / 1")', () => {
+    // Plain-language repro, runnable by hand in the app:
+    //   Equation:  1/x + 1 = 3   (the correct answer is x = 1/2)
+    //   Action:    drag the "1" sitting on top of the fraction 1/x onto the whole
+    //              left side.
+    // Buggy versions OFFERED that drop and rewrote the equation to "(x + 1) / 1 = 3",
+    // which solves to x = 2 — a wrong answer. The fix removes that drop target.
+    const eq = parseEquation('1 / x + 1 = 3');
+    const moves = generateValidMoves(eq, 'lhs/0/0'); // 'lhs/0/0' = the numerator 1 of 1/x
+
+    // The corrupt destination — the whole left side — must NOT be offered.
+    expect(moves['lhs']).toBeUndefined();
+    // And the wrong result "(x + 1) / 1 = 3" must not appear among any offered move.
+    const offered = Object.values(moves).map(equationToString);
+    expect(offered).not.toContain('(x + 1) / 1 = 3');
+  });
+
+  test('#301 — every generated move is equivalent to the original equation', () => {
+    // The invariant that would have caught the transpose bug: a move offered for
+    // ANY source path must preserve the equation (same solution set).
+    const equations = [
+      '1 / m + 1 / (7 / 4) ^ 2 - 1 / (m * (7 / 4) ^ 2) = 2 / 5',
+      '((2 * (n - 7 / 4) ^ 2 - 9 / 8) / 5 + n - 1) / ((n - 1) * n) = 2 / 5',
+      'x + 2 = 5',
+      'x * y = 7 - 3',
+      '2 * (x + 3) = 10',
+    ];
+    const failures: string[] = [];
+    for (const eqStr of equations) {
+      const eq = parseEquation(eqStr);
+      for (const path of getAllPaths(eq)) {
+        const moves = generateValidMoves(eq, path);
+        for (const [target, move] of Object.entries(moves)) {
+          if (!areEquationsEquivalent(eq, move)) {
+            failures.push(`${eqStr} | src=${path} tgt=${target} -> ${equationToString(move)}`);
+          }
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
   test('autoSimplify eliminates redundant terms', () => {
     // Additive redundancy: x + 2 - 2 = 5  =>  x = 5
     const eq1 = parseEquation('x + 2 - 2 = 5');

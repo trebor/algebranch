@@ -15,6 +15,8 @@ import { DeleteWorkspaceModal } from '../components/DeleteWorkspaceModal';
 import { ResetHistoryModal } from '../components/ResetHistoryModal';
 import { EquationInputModal } from '../components/EquationInputModal';
 import { SettingsModal } from '../components/SettingsModal';
+import { ExportWorkspacesModal } from '../components/ExportWorkspacesModal';
+import { ImportWorkspacesModal } from '../components/ImportWorkspacesModal';
 import { AboutModal } from '../components/AboutModal';
 import { OnboardingTour } from '../components/OnboardingTour';
 import { Tooltip } from '../components/Tooltip';
@@ -71,6 +73,8 @@ import {
   feedbackModalOpenAtom,
   feedbackContextAtom,
   settingsModalOpenAtom,
+  exportWorkspacesModalOpenAtom,
+  importWorkspacesModalOpenAtom,
   mathLoadingAtom,
   hydrateWorkspaceTabsAtom,
   appHydratedAtom,
@@ -272,6 +276,8 @@ export default function Home() {
   const [feedbackOpen, setFeedbackModalOpen] = useAtom(feedbackModalOpenAtom);
   const setFeedbackContext = useSetAtom(feedbackContextAtom);
   const [settingsOpen, setSettingsModalOpen] = useAtom(settingsModalOpenAtom);
+  const setExportWorkspacesModalOpen = useSetAtom(exportWorkspacesModalOpenAtom);
+  const setImportWorkspacesModalOpen = useSetAtom(importWorkspacesModalOpenAtom);
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
   const setAppHydrated = useSetAtom(appHydratedAtom);
@@ -311,6 +317,8 @@ export default function Home() {
     setEquationInputModalOpen(false);
     setDeleteConfirmationModalOpen(false);
     setResetHistoryModalOpen(false);
+    setExportWorkspacesModalOpen(false);
+    setImportWorkspacesModalOpen(false);
   };
 
   const toggleAbout = () => {
@@ -1997,6 +2005,8 @@ export default function Home() {
       <ResetHistoryModal />
       <EquationInputModal />
       <SettingsModal />
+      <ExportWorkspacesModal />
+      <ImportWorkspacesModal />
       <AboutModal />
       <ShortcutsOverlay shortcuts={shortcutBindings} />
       <HelpModal />

@@ -26,7 +26,7 @@ interface HotkeyHintProps {
 export const HotkeyHint: React.FC<HotkeyHintProps> = ({ label, keys, sequence }) => {
   if (sequence && sequence.length > 0) {
     return (
-      <span className="flex items-center gap-1.5">
+      <span className="flex items-center gap-1.5 whitespace-nowrap">
         {label}
         {sequence.map((k, i) => (
           <React.Fragment key={`${k}-${i}`}>
@@ -40,7 +40,7 @@ export const HotkeyHint: React.FC<HotkeyHintProps> = ({ label, keys, sequence })
 
   const keyList = keys === undefined ? [] : Array.isArray(keys) ? keys : [keys];
   return (
-    <span className="flex items-center gap-1.5">
+    <span className="flex items-center gap-1.5 whitespace-nowrap">
       {label}
       {keyList.map((k, i) => (
         <kbd key={`${k}-${i}`} className={THEME_GLASS.SHORTCUT_KEYCAP_SM}>

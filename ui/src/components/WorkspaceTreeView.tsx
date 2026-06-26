@@ -23,18 +23,35 @@ import {
   rightSidebarOpenAtom,
   exportPreviewActiveAtom,
   equationToFormat,
+  activeZoomModeAtom,
   type VisualTreeNode,
   type HistoryNode,
+  type ZoomMode,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
-import { Check, CircleSlash, Infinity } from 'lucide-react';
+import { Check, CircleSlash, Infinity, ZoomIn, Search, ZoomOut } from 'lucide-react';
 import {
   RovingTabindexProvider,
   useOptionalRovingTabindex,
 } from '../hooks/useRovingTabindex';
 import { HandleBadge } from './HandleBadge';
 import { TransitionTooltipCard } from './TransitionTooltipCard';
-import { pxToRem, laneCardWidth, laneX, REM_BASE, TREE_GUTTER_PX } from '../utils/treeLayout';
+import {
+  pxToRem,
+  laneCardWidth,
+  laneX,
+  REM_BASE,
+  TREE_GUTTER_PX,
+  TREE_CARD_HEIGHT_PX,
+  TREE_BADGE_SIZE_PX,
+  TREE_TOP_OFFSET_PX,
+  TREE_ROW_HEIGHT_PX,
+  TREE_EMPTY_WIDTH_PX,
+  TREE_STANDARD_CONTENT_WIDTH,
+  TREE_COLLATERAL_TOLERANCE_PX,
+  TREE_LOOP_ARCH_OFFSET_PX,
+  TREE_ZOOM_MIN_DIFF_PX,
+} from '../utils/treeLayout';
 import type { StepChange } from 'math-engine';
 
 // Measure the panel before first paint on the client (so the tree never flashes
@@ -296,9 +313,9 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
         delay={300} // Snappy but deliberate 300ms hover delay to prevent jitter
         wrapperClassName="z-10 absolute"
         style={{
-          left: pxToRem(node.x + (node.width - 44) / 2), // Center the 44px bubble in the column
+          left: pxToRem(node.x + (node.width - TREE_BADGE_SIZE_PX) / 2), // Center the bubble in the column
           top: pxToRem(node.y),
-          width: pxToRem(44),
+          width: pxToRem(TREE_BADGE_SIZE_PX),
           height: pxToRem(cardHeight),
         }}
         className="w-56 p-3 z-50 text-left lowercase-none normal-case flex flex-col gap-1.5 pointer-events-auto"
@@ -507,8 +524,20 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   // 240 until the first measurement, matching the SSR + initial client render so
   // hydration stays stable.
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const [zoomMode, setZoomMode] = useAtom(activeZoomModeAtom);
+
+  const handleZoomChange = (mode: ZoomMode) => {
+    setZoomMode(mode);
+    trackEvent({
+      action: 'select_zoom',
+      category: 'history',
+      label: mode,
+    });
+  };
   const [containerWidth, setContainerWidth] = React.useState(240);
+  const [containerHeight, setContainerHeight] = React.useState(400);
   const lastContainerWidthRef = React.useRef(0);
+  const lastContainerHeightRef = React.useRef(0);
 
   useIsomorphicLayoutEffect(() => {
     const el = scrollContainerRef.current;
@@ -517,15 +546,21 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
       const cs = getComputedStyle(el);
       const contentPx =
         el.clientWidth - parseFloat(cs.paddingLeft || '0') - parseFloat(cs.paddingRight || '0');
-      if (contentPx <= 0) return;
+      const contentHeightPx =
+        el.clientHeight - parseFloat(cs.paddingTop || '0') - parseFloat(cs.paddingBottom || '0');
+      if (contentPx <= 0 || contentHeightPx <= 0) return;
       const rootFontPx =
         parseFloat(getComputedStyle(document.documentElement).fontSize) || REM_BASE;
       const design = (contentPx * REM_BASE) / rootFontPx;
+      const designHeight = (contentHeightPx * REM_BASE) / rootFontPx;
       // Guard against ResizeObserver feedback from sub-pixel jitter (and from the
       // knob, which moves px and font together so the design width holds steady).
-      if (Math.abs(design - lastContainerWidthRef.current) < 0.5) return;
+      if (Math.abs(design - lastContainerWidthRef.current) < 0.5 &&
+          Math.abs(designHeight - lastContainerHeightRef.current) < 0.5) return;
       lastContainerWidthRef.current = design;
+      lastContainerHeightRef.current = designHeight;
       setContainerWidth(design);
+      setContainerHeight(designHeight);
     };
     // Measure synchronously before the first paint so the cards never flash at
     // the 240 fallback width and then resize into place (#279).
@@ -548,7 +583,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
       }
     }, 100);
     return () => clearTimeout(timer);
-  }, [currentNodeId, scrollActiveIntoView]);
+  }, [currentNodeId, scrollActiveIntoView, zoomMode, containerWidth, containerHeight]);
 
   const handleStepClick = (id: string) => {
     if (!interactive) return;
@@ -615,20 +650,20 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   }, [sortedNodes, stepIndices, layoutNodes]);
 
   const maxDepth = Math.max(...layoutNodes.map(n => n.depth), 0);
-  const cardHeight = 44; // Sleek rectangular height
+  const cardHeight = TREE_CARD_HEIGHT_PX;
 
   // Position each card from its lane (#304): a fixed, row-independent width and a
   // column-driven x, so a branch descends in a straight vertical line and a wide
   // tree scrolls horizontally rather than re-packing each row across the panel.
   const visualNodes = React.useMemo(() => {
-    const cardWidth = laneCardWidth(containerWidth);
+    const cardWidth = laneCardWidth(TREE_STANDARD_CONTENT_WIDTH);
     return layoutNodes.map(node => ({
       ...node,
       x: laneX(node.column, cardWidth),
-      y: 20 + node.depth * 76, // 76px ROW_HEIGHT
+      y: TREE_TOP_OFFSET_PX + node.depth * TREE_ROW_HEIGHT_PX,
       width: cardWidth,
     }));
-  }, [layoutNodes, containerWidth]);
+  }, [layoutNodes]);
 
   const visualNodesMap = React.useMemo(() => {
     const map: Record<string, typeof visualNodes[0]> = {};
@@ -663,12 +698,29 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
 
   // SVG grid sizing
   const svgWidth = React.useMemo(() => {
-    if (visualNodes.length === 0) return 260;
+    if (visualNodes.length === 0) return TREE_EMPTY_WIDTH_PX;
     const maxRight = Math.max(...visualNodes.map(n => n.x + n.width));
     return maxRight + TREE_GUTTER_PX; // mirror the left gutter on the right
   }, [visualNodes]);
 
-  const svgHeight = 40 + maxDepth * 76 + cardHeight;
+  const svgHeight = TREE_TOP_OFFSET_PX * 2 + maxDepth * TREE_ROW_HEIGHT_PX + cardHeight;
+
+  // Compute Zoom Scale Factor
+  const zoomScale = React.useMemo(() => {
+    if (zoomMode === 'fit-width') {
+      const diff = svgWidth - containerWidth;
+      return diff <= TREE_ZOOM_MIN_DIFF_PX ? 1.0 : Math.min(1.0, containerWidth / svgWidth);
+    }
+    if (zoomMode === 'full-tree') {
+      const widthDiff = svgWidth - containerWidth;
+      const heightDiff = svgHeight - containerHeight;
+      // Zoom out only if there is a meaningful overflow in either direction
+      const wScale = widthDiff <= TREE_ZOOM_MIN_DIFF_PX ? 1.0 : containerWidth / svgWidth;
+      const hScale = heightDiff <= TREE_ZOOM_MIN_DIFF_PX ? 1.0 : containerHeight / svgHeight;
+      return Math.min(1.0, wScale, hScale);
+    }
+    return 1.0;
+  }, [zoomMode, containerWidth, containerHeight, svgWidth, svgHeight]);
 
   // Compute the path of ancestor node IDs from the root up to the active node pointer
   const activePathSet = React.useMemo(() => {
@@ -721,12 +773,16 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
         {...(interactive
           ? { role: 'tree' as const, 'aria-label': 'Derivation history', tabIndex: -1 }
           : {})}
-        style={
-          interactive
-            ? { width: pxToRem(svgWidth), height: pxToRem(svgHeight), minWidth: '100%' }
-            : { width: pxToRem(svgWidth), height: pxToRem(svgHeight) }
-        }
-        className={interactive ? 'relative outline-none' : 'relative mx-auto'}
+        style={{
+          width: pxToRem(svgWidth),
+          height: pxToRem(svgHeight),
+          transform: `scale(${zoomScale})`,
+          transformOrigin: 'top left',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+        }}
+        className={interactive ? 'outline-none' : ''}
       >
         {/* SVG Connection Lines (decorative — hidden from the a11y tree so the
             tree's required children stay valid). The curves are drawn in the px
@@ -791,27 +847,27 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                 let cp2x = 0;
                 let cp2y = 0;
 
-                const isCollateral = Math.abs(ancestor.y - node.y) < 10;
+                const isCollateral = Math.abs(ancestor.y - node.y) < TREE_COLLATERAL_TOLERANCE_PX;
                 const isAncestorAbove = ancestor.y < node.y;
 
                 if (isCollateral) {
                   const inBetweenNodes = visualNodes.filter(n =>
                     n.id !== ancestor.id &&
                     n.id !== node.id &&
-                    Math.abs(n.y - ancestor.y) < 10 &&
+                    Math.abs(n.y - ancestor.y) < TREE_COLLATERAL_TOLERANCE_PX &&
                     n.x > Math.min(ancestor.x, node.x) &&
                     n.x < Math.max(ancestor.x, node.x)
                   );
                   const hasObstacle = inBetweenNodes.length > 0;
-                  const archOffset = hasObstacle ? 50 : 0;
+                  const archOffset = hasObstacle ? TREE_LOOP_ARCH_OFFSET_PX : 0;
 
                   if (ancestor.x < node.x) {
-                    startX = node.x + (node.width - 44) / 2;
+                    startX = node.x + (node.width - TREE_BADGE_SIZE_PX) / 2;
                     startY = node.y + cardHeight / 2;
                     endX = ancestor.x + ancestor.width;
                     endY = ancestor.y + cardHeight / 2;
                   } else {
-                    startX = node.x + (node.width + 44) / 2;
+                    startX = node.x + (node.width + TREE_BADGE_SIZE_PX) / 2;
                     startY = node.y + cardHeight / 2;
                     endX = ancestor.x;
                     endY = ancestor.y + cardHeight / 2;
@@ -951,13 +1007,72 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
       </div>
   );
 
+  const scaledWrapper = (
+    <div
+      style={
+        interactive
+          ? {
+              width: pxToRem(svgWidth * zoomScale),
+              height: pxToRem(svgHeight * zoomScale),
+              position: 'relative',
+              overflow: 'hidden',
+              minWidth: '100%',
+            }
+          : {
+              width: pxToRem(svgWidth * zoomScale),
+              height: pxToRem(svgHeight * zoomScale),
+              position: 'relative',
+              overflow: 'hidden',
+            }
+      }
+      className={interactive ? 'relative' : 'relative mx-auto'}
+    >
+      {canvas}
+    </div>
+  );
+
+  if (!interactive) {
+    return (
+      <div ref={scrollContainerRef} className={className ?? `flex-1 overflow-auto pr-1 relative ${THEME_GLASS.TREE_BG}`}>
+        {scaledWrapper}
+      </div>
+    );
+  }
+
   return (
-    <div ref={scrollContainerRef} className={className ?? `flex-1 overflow-auto pr-1 relative ${THEME_GLASS.TREE_BG}`}>
-      {interactive ? (
-        <RovingTabindexProvider containerRef={treeContainerRef}>{canvas}</RovingTabindexProvider>
-      ) : (
-        canvas
-      )}
+    <div className={`relative flex-1 flex flex-col min-h-0 group ${className ?? THEME_GLASS.TREE_BG}`}>
+      <div className="absolute top-4 right-4 z-30 contextual-actions flex items-center gap-1.5">
+        <Tooltip content={<HotkeyHint label="Zoom: Normal" keys="Z" />} position="bottom">
+          <button
+            onClick={() => handleZoomChange('normal')}
+            className={zoomMode === 'normal' ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
+            aria-label="Zoom: Normal"
+          >
+            <ZoomIn size={14} />
+          </button>
+        </Tooltip>
+        <Tooltip content={<HotkeyHint label="Zoom: Fit Width" keys="Z" />} position="bottom">
+          <button
+            onClick={() => handleZoomChange('fit-width')}
+            className={zoomMode === 'fit-width' ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
+            aria-label="Zoom: Fit Width"
+          >
+            <Search size={14} />
+          </button>
+        </Tooltip>
+        <Tooltip content={<HotkeyHint label="Zoom: Full Tree" keys="Z" />} position="bottom">
+          <button
+            onClick={() => handleZoomChange('full-tree')}
+            className={zoomMode === 'full-tree' ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
+            aria-label="Zoom: Full Tree"
+          >
+            <ZoomOut size={14} />
+          </button>
+        </Tooltip>
+      </div>
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto pr-1 relative rounded-2xl">
+        <RovingTabindexProvider containerRef={treeContainerRef}>{scaledWrapper}</RovingTabindexProvider>
+      </div>
     </div>
   );
 };

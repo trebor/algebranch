@@ -51,6 +51,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
 
   const exportScope = getDerivationScope(tree, currentNodeId);
 
+
+
   // Undo moves to the parent step
   const activeNode = tree[currentNodeId];
   const canUndo = activeNode && activeNode.parentId !== null;
@@ -153,6 +155,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
               <ChevronRight size={16} />
             </button>
           </Tooltip>
+
           <Tooltip content="Reset history">
             <button
               onClick={handleResetAll}

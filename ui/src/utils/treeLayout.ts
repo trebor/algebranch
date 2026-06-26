@@ -33,6 +33,19 @@ export function pxToRem(px: number): string {
 export const TREE_GUTTER_PX = 16;
 /** Gap (px) between adjacent cards within a row. */
 export const TREE_COL_GAP_PX = 12;
+/** Height (px) of a step card. */
+export const TREE_CARD_HEIGHT_PX = 44;
+/** Size/diameter (px) of the round operator badge bubbles. */
+export const TREE_BADGE_SIZE_PX = 44;
+
+/** Top offset (px) for the tree layout. */
+export const TREE_TOP_OFFSET_PX = 20;
+/** Vertical distance (px) between adjacent rows in the tree. */
+export const TREE_ROW_HEIGHT_PX = 76;
+/** Default/fallback width (px) for the SVG layout when the tree is empty. */
+export const TREE_EMPTY_WIDTH_PX = 260;
+/** Content width (px) of the tree panel in its standard (1/3 screen) state, subtracting paddings and borders. */
+export const TREE_STANDARD_CONTENT_WIDTH = 282;
 /** Smallest a card may shrink to before the row overflows into a scroll. */
 export const TREE_MIN_CARD_PX = 110;
 /** Safety cap (px) so a lone card never balloons on an unusually wide panel. */
@@ -137,3 +150,12 @@ export function laneCardWidth(containerWidth: number): number {
 export function laneX(column: number, cardWidth: number): number {
   return TREE_GUTTER_PX + column * (cardWidth + TREE_COL_GAP_PX);
 }
+
+/** Vertical distance tolerance (px) to identify collateral loop nodes on the same row. */
+export const TREE_COLLATERAL_TOLERANCE_PX = 10;
+
+/** Arch vertical offset (px) for drawing a loop connector over intermediate nodes. */
+export const TREE_LOOP_ARCH_OFFSET_PX = 50;
+
+/** Sizing threshold (px) below which we do not apply scale-down zoom to avoid subpixel layout shifts. */
+export const TREE_ZOOM_MIN_DIFF_PX = 8;

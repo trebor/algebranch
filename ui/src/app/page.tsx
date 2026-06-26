@@ -98,6 +98,8 @@ import {
   onboardingGlobalOpAtom,
   graphSizeAtom,
   previousGraphSizeAtom,
+  rightSidebarSizeAtom,
+  previousRightSidebarSizeAtom,
   isGraphViableAtom,
   settingsAtom,
   TEXT_SIZE_OPTIONS,
@@ -112,6 +114,7 @@ import {
   shortcutsOverlayOpenAtom,
   helpModalOpenAtom,
   anyModalOpenAtom,
+  activeZoomModeAtom,
   equationToFormat,
   formatDerivation,
 } from '../store/equation';
@@ -379,6 +382,9 @@ export default function Home() {
   };
   const [graphSize, setGraphSize] = useAtom(graphSizeAtom);
   const previousGraphSize = useAtomValue(previousGraphSizeAtom);
+  const [rightSidebarSize, setRightSidebarSize] = useAtom(rightSidebarSizeAtom);
+  const previousRightSidebarSize = useAtomValue(previousRightSidebarSizeAtom);
+  const [, setZoomMode] = useAtom(activeZoomModeAtom);
   const isGraphViable = useAtomValue(isGraphViableAtom);
   const isMobile = useIsMobile();
   // Short/landscape viewports collapse the horizontal tab strip into the compact
@@ -395,6 +401,28 @@ export default function Home() {
     isShortScreen,
     isVeryShortScreen,
   );
+
+  const getRightSidebarLayout = () => {
+    if (rightSidebarSize === 'wider') {
+      return {
+        panelClasses: 'w-[40rem] translate-x-0 opacity-100 lg:w-[40rem] lg:min-w-[40rem] lg:ml-4 lg:opacity-100',
+        handlePosition: 'right-[41.5rem]',
+      };
+    }
+    if (rightSidebarSize === 'normal') {
+      return {
+        panelClasses: 'w-80 translate-x-0 opacity-100 lg:w-80 lg:min-w-[20rem] lg:ml-4 lg:opacity-100',
+        handlePosition: 'right-[21.5rem]',
+      };
+    }
+    return {
+      panelClasses: 'w-80 translate-x-full opacity-100 max-lg:pointer-events-none lg:w-0 lg:min-w-0 lg:ml-0 lg:opacity-0 lg:overflow-hidden lg:pointer-events-none',
+      handlePosition: 'right-[0.5rem]',
+    };
+  };
+
+  const rightSidebarLayout = getRightSidebarLayout();
+
   const equalsRef = React.useRef<HTMLSpanElement>(null);
   const equalsPopoverRef = React.useRef<HTMLDivElement>(null);
   const lastEqStrRef = React.useRef<string | null>(null);
@@ -940,6 +968,22 @@ export default function Home() {
   const shortcutBindings: ShortcutConfig[] = [
     {
       key: 'z',
+      action: () => {
+        setZoomMode((current) => {
+          if (current === 'normal') return 'fit-width';
+          if (current === 'fit-width') return 'full-tree';
+          return 'normal';
+        });
+        trackEvent({
+          action: 'shortcut_cycle_zoom',
+          category: 'keyboard',
+        });
+      },
+      description: 'Cycle history tree zoom level',
+      category: 'History',
+    },
+    {
+      key: 'z',
       meta: true,
       action: () => {
         const activeNode = tree[currentNodeId];
@@ -1037,7 +1081,17 @@ export default function Home() {
         if (isMobile) {
           setActiveBottomSheet((prev) => (prev === 'history' ? null : 'history'));
         } else {
-          setRightSidebarOpen((prev) => !prev);
+          if (rightSidebarSize === 'hidden') {
+            setRightSidebarSize('normal');
+          } else if (rightSidebarSize === 'wider') {
+            setRightSidebarSize('normal');
+          } else { // normal
+            if (previousRightSidebarSize === 'wider') {
+              setRightSidebarSize('hidden');
+            } else {
+              setRightSidebarSize('wider');
+            }
+          }
         }
         trackEvent({
           action: 'shortcut_toggle_right_sidebar',
@@ -1999,32 +2053,51 @@ export default function Home() {
         {/* Right Sidebar Edge Handle (Desktop Only) */}
         <div className="hidden lg:block">
           <Tooltip 
-            content={<HotkeyHint label={rightSidebarOpen ? "Hide History Sidebar" : "Show History Sidebar"} keys="H" />}
+            content={<HotkeyHint label={rightSidebarSize === 'hidden' ? "Show History Sidebar" : rightSidebarSize === 'wider' ? "Shrink History Sidebar (normal)" : "Expand History Sidebar (wider)"} keys="H" />}
             position="left"
             wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
-              rightSidebarOpen ? 'right-[21.5rem] translate-x-1/2' : 'right-[0.5rem] translate-x-1/2'
-            }`}
+              rightSidebarLayout.handlePosition
+            } translate-x-1/2`}
           >
-            <button
-              onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-              className={THEME_GLASS.EDGE_HANDLE}
-              aria-label={rightSidebarOpen ? "Close history" : "Open history"}
-            >
-              {rightSidebarOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-            </button>
+            <div className="w-full h-full flex flex-col items-center justify-center rounded-full border border-white/10 bg-neutral-900/60 backdrop-blur-md text-white/50 shadow-lg shadow-black/40 py-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (rightSidebarSize === 'hidden') {
+                    setRightSidebarSize('normal');
+                  } else if (rightSidebarSize === 'normal') {
+                    setRightSidebarSize('wider');
+                  }
+                }}
+                disabled={rightSidebarSize === 'wider'}
+                className="p-1 text-white/50 hover:text-indigo-300 hover:scale-110 active:scale-90 transition-all cursor-pointer disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-white/20 disabled:cursor-not-allowed"
+                aria-label="Expand history panel"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <div className="w-3 h-[1px] bg-white/10 my-0.5" />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (rightSidebarSize === 'wider') {
+                    setRightSidebarSize('normal');
+                  } else if (rightSidebarSize === 'normal') {
+                    setRightSidebarSize('hidden');
+                  }
+                }}
+                className="p-1 text-white/50 hover:text-indigo-300 hover:scale-110 active:scale-90 transition-all cursor-pointer"
+                aria-label={rightSidebarSize === 'wider' ? 'Shrink history panel' : 'Hide history panel'}
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </Tooltip>
         </div>
 
         <div className="hidden lg:block shrink-0">
-          <div className={`flex flex-col fixed top-[var(--header-height)] bottom-0 right-0 z-38 transform transition-all duration-300 ease-in-out ${
-            rightSidebarOpen 
-              ? 'w-80 translate-x-0 opacity-100' 
-              : 'w-80 translate-x-full opacity-100 max-lg:pointer-events-none'
-          } lg:relative lg:top-0 lg:translate-x-0 lg:z-30 lg:flex lg:flex-col lg:h-full ${
-            rightSidebarOpen 
-              ? 'lg:w-80 lg:min-w-[20rem] lg:ml-4 lg:opacity-100' 
-              : 'lg:w-0 lg:min-w-0 lg:ml-0 lg:opacity-0 lg:overflow-hidden lg:pointer-events-none'
-          } shrink-0`}>
+          <div className={`flex flex-col fixed top-[var(--header-height)] bottom-0 right-0 z-38 transform transition-all duration-300 ease-in-out lg:relative lg:top-0 lg:translate-x-0 lg:z-30 lg:flex lg:flex-col lg:h-full shrink-0 ${
+            rightSidebarLayout.panelClasses
+          }`}>
             <ControlPanel regionId="history-region" />
           </div>
         </div>

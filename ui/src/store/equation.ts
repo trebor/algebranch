@@ -331,6 +331,28 @@ export const activeTabIdAtom = atom(
   }
 );
 
+export type ZoomMode = 'normal' | 'fit-width' | 'full-tree';
+
+/** In-memory map tracking the ZoomMode for each workspace tab during the session */
+export const workspaceZoomModesAtom = atom<Record<string, ZoomMode>>({});
+
+/** Writable derived atom that gets/sets the ZoomMode for the currently active workspace */
+export const activeZoomModeAtom = atom<ZoomMode, [ZoomMode | ((prev: ZoomMode) => ZoomMode)], void>(
+  (get) => {
+    const activeTabId = get(activeTabIdAtom);
+    const modes = get(workspaceZoomModesAtom);
+    return modes[activeTabId] ?? 'normal';
+  },
+  (get, set, update) => {
+    const activeTabId = get(activeTabIdAtom);
+    const prev = get(workspaceZoomModesAtom);
+    const current = prev[activeTabId] ?? 'normal';
+    const next = typeof update === 'function' ? update(current) : update;
+    set(workspaceZoomModesAtom, { ...prev, [activeTabId]: next });
+  }
+);
+
+
 export const historyTreeAtom = atom(
   (get) => {
     const tabs = get(tabsAtom);
@@ -495,7 +517,34 @@ export const hoveredLoopTargetIdAtom = atom<string | null>(null);
 // dims off-path nodes so the export scope (root -> selected) is visible (#46).
 export const exportPreviewActiveAtom = atom(false);
 export const leftSidebarOpenAtom = atom(true);
-export const rightSidebarOpenAtom = atom(true);
+
+// Right Sidebar layout size state: 'hidden' | 'normal' (1/3 width, w-80) | 'wider' (2/3 width, w-[40rem])
+export const rawRightSidebarSizeAtom = atom<'hidden' | 'normal' | 'wider'>('normal');
+export const previousRightSidebarSizeAtom = atom<'hidden' | 'normal' | 'wider'>('normal');
+
+export const rightSidebarSizeAtom = atom(
+  (get) => get(rawRightSidebarSizeAtom),
+  (get, set, newValue: 'hidden' | 'normal' | 'wider') => {
+    const current = get(rawRightSidebarSizeAtom);
+    if (current !== newValue) {
+      set(previousRightSidebarSizeAtom, current);
+      set(rawRightSidebarSizeAtom, newValue);
+    }
+  }
+);
+
+export const rightSidebarOpenAtom = atom(
+  (get) => get(rawRightSidebarSizeAtom) !== 'hidden',
+  (get, set, open: boolean | ((prev: boolean) => boolean)) => {
+    const prevOpen = get(rawRightSidebarSizeAtom) !== 'hidden';
+    const nextOpen = typeof open === 'function' ? open(prevOpen) : open;
+    if (nextOpen) {
+      set(rightSidebarSizeAtom, 'normal');
+    } else {
+      set(rightSidebarSizeAtom, 'hidden');
+    }
+  }
+);
 export const feedbackModalOpenAtom = atom(false);
 export const feedbackContextAtom = atom<string | null>(null);
 export const deleteConfirmationModalOpenAtom = atom(false);

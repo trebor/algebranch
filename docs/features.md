@@ -102,6 +102,7 @@ Single-key shortcuts work whenever you are *not* typing in a text field. Press `
 | `W` | Toggle the workspace panel |
 | `L` | Toggle the equation library |
 | `H` | Toggle the history sidebar |
+| `Z` | Cycle history tree zoom level |
 | `G` | Toggle the variable-relationship graph |
 | `S` | Swap the two sides of the equation |
 | `=` | Open the global equals menu (apply an operation to both sides) |

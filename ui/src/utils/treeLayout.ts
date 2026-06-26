@@ -119,7 +119,7 @@ export function assignLanes(
 }
 
 /** How many lanes are sized to fit the measured panel before it scrolls (#304). */
-export const TREE_VISIBLE_LANES = 2;
+export const TREE_VISIBLE_LANES = 1;
 
 /**
  * The single, row-independent card width for the lane layout: sized so

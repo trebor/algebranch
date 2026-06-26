@@ -543,7 +543,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
         activeCardRef.current.scrollIntoView({
           behavior: 'smooth',
           block: 'nearest',
-          inline: 'nearest',
+          inline: 'center',
         });
       }
     }, 100);

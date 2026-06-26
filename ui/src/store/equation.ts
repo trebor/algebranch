@@ -13,6 +13,7 @@ import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
 import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
 import { sentenceCase } from '../utils/text';
 import { mergeWorkspaces, hashWorkspace, ExportedWorkspace } from '../utils/workspaceTransfer';
+import { assignLanes } from '../utils/treeLayout';
 
 // Global Initial Value Constants
 export const INITIAL_EQUATION_STRING = '2 * (x + 3) = 10';
@@ -831,35 +832,22 @@ export const applicableFactsAtom = atom<SubstitutionFact[]>((get) => {
  */
 export const treeLayoutAtom = atom<Record<string, VisualTreeNode>>((get) => {
   const tree = get(historyTreeAtom);
+  // Lane-based columns: the first child continues its parent's column straight
+  // down, later children branch right, and a dead branch's lane is reclaimed by
+  // a later branch instead of sprawling rightward (#304). The renderer positions
+  // cards from `column`; the px x/y here are a coarse fallback for any consumer
+  // that reads them directly.
+  const lanes = assignLanes(tree, "0");
   const result: Record<string, VisualTreeNode> = {};
-  let nextColumn = 0;
-
-  const traverse = (id: string, depth: number, parentColumn: number | null) => {
-    const node = tree[id];
-    if (!node) return;
-
-    // First child continues parent's column straight down, others branch right
-    const col = parentColumn === null ? 0 : parentColumn;
-
+  for (const [id, { depth, column }] of Object.entries(lanes)) {
     result[id] = {
-      ...node,
+      ...tree[id],
       depth,
-      column: col,
-      x: PADDING_LEFT + col * COL_WIDTH,
+      column,
+      x: PADDING_LEFT + column * COL_WIDTH,
       y: PADDING_TOP + depth * ROW_HEIGHT,
     };
-
-    node.childrenIds.forEach((childId, idx) => {
-      let childCol = col;
-      if (idx > 0) {
-        nextColumn++;
-        childCol = nextColumn;
-      }
-      traverse(childId, depth + 1, childCol);
-    });
-  };
-
-  traverse("0", 0, null);
+  }
   return result;
 });
 

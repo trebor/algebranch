@@ -38,37 +38,102 @@ export const TREE_MIN_CARD_PX = 110;
 /** Safety cap (px) so a lone card never balloons on an unusually wide panel. */
 export const TREE_MAX_CARD_PX = 560;
 
-export interface RowCardLayout {
-  /** Left edge (px) of the first card in the row. */
-  startX: number;
-  /** Card width (px) — every card in the row shares it. */
-  cardWidth: number;
-  /** Distance (px) between adjacent card left edges (cardWidth + gap). */
-  step: number;
+/**
+ * Lane-based layout (#304).
+ *
+ * The history tree is a derivation: the *first* child of a node continues that
+ * node's branch straight down; later children open new branches. We want each
+ * branch to live in a fixed vertical **lane** (column) so a derivation reads as
+ * a straight line down, new branches step to the right, and a dead-ended
+ * branch's lane is *reclaimed* for a later branch rather than sprawling right
+ * forever. This is the git-graph "straight branch" model; a tree is its easy
+ * case (no merges, so no forbidden-column edge handling).
+ *
+ * The earlier renderer instead re-packed every node at a given depth evenly
+ * across the panel, so a branch's x jumped left/right with its row's crowding
+ * and cards changed width per row. Fixed lanes kill both: a node's column is a
+ * property of its *branch*, not its row.
+ */
+
+/** A node's place in the lane grid: its row (`depth`) and column (`column`). */
+export interface LaneNode {
+  depth: number;
+  column: number;
 }
 
 /**
- * Lay a row of `rowNodeCount` cards across the *measured* tree container so the
- * row fills it with symmetric {@link TREE_GUTTER_PX} margins (#279). Cards split
- * the usable width (container − two gutters) evenly, separated by
- * {@link TREE_COL_GAP_PX} gaps *between* cards only — so a single-column row's
- * card spans the full gutter-to-gutter width and the left/right margins match.
+ * Assign every node reachable from `rootId` a `depth` (row) and `column` (lane).
  *
- * Earlier the layout assumed a fixed 240px container and capped each card at
- * 228px, so in the ~288px History panel the cards stayed left-anchored and all
- * the slack collected on the right (a fat right margin). Driving off the real
- * width with no fixed card cap (only a generous safety {@link TREE_MAX_CARD_PX})
- * keeps both margins at the gutter. If the cards would fall below
- * {@link TREE_MIN_CARD_PX} (too many columns for the panel) they hold that floor
- * and the row overflows into the existing horizontal scroll; if the safety cap
- * binds, the block is centered so the margins stay symmetric.
+ * A **spine** is a maximal first-child chain — a branch. We walk down from the
+ * root and give every subtree a **contiguous block of columns** that no other
+ * subtree intrudes into: a spine sits in its block's leftmost lane, and its
+ * branches are packed into consecutive sub-blocks to its right. This is what
+ * keeps connectors from reaching across unrelated columns and crossing them
+ * (#304). Two further effects:
+ * - **Make room** — each branch's block is sized to its whole subtree, so a new
+ *   branch shoves its right-siblings (and everything past them) over to fit.
+ * - **Newest hugs** — branches are packed newest-first, so the most recently
+ *   created branch takes the lane next to its parent (its deeper rows leave the
+ *   shallow rows above free for older branches' connectors to pass cleanly).
+ * Columns are never reused across subtrees — the price of no crossings is that a
+ * dead branch's lane stays reserved rather than refilled by a stranger.
  */
-export function rowCardLayout(containerWidth: number, rowNodeCount: number): RowCardLayout {
-  const count = Math.max(1, rowNodeCount);
+export function assignLanes(
+  tree: Record<string, { childrenIds: string[]; timestamp?: number }>,
+  rootId: string,
+): Record<string, LaneNode> {
+  const result: Record<string, LaneNode> = {};
+
+  // Place the spine starting at `startId` with its block's left edge at `base`,
+  // then pack its branches into consecutive blocks to the right. Returns the
+  // total width (lane count) the spine's whole subtree consumes.
+  const place = (startId: string, top: number, base: number): number => {
+    const spineNodes: Array<[string, number]> = [];
+    const branches: Array<{ id: string; depth: number; ts: number }> = [];
+    let id: string | undefined = startId;
+    let depth = top;
+    while (id != null && tree[id]) {
+      spineNodes.push([id, depth]);
+      const kids: string[] = tree[id].childrenIds;
+      for (let i = 1; i < kids.length; i++) {
+        branches.push({ id: kids[i], depth: depth + 1, ts: tree[kids[i]]?.timestamp ?? 0 });
+      }
+      id = kids[0];
+      depth += 1;
+    }
+    for (const [nodeId, nodeDepth] of spineNodes) {
+      result[nodeId] = { depth: nodeDepth, column: base };
+    }
+
+    // Newest first so the latest branch hugs the parent at base + 1; older
+    // siblings take the blocks beyond it.
+    branches.sort((a, b) => b.ts - a.ts);
+    let cursor = base + 1;
+    for (const branch of branches) {
+      cursor += place(branch.id, branch.depth, cursor);
+    }
+    return cursor - base;
+  };
+  place(rootId, 0, 0);
+  return result;
+}
+
+/** How many lanes are sized to fit the measured panel before it scrolls (#304). */
+export const TREE_VISIBLE_LANES = 2;
+
+/**
+ * The single, row-independent card width for the lane layout: sized so
+ * {@link TREE_VISIBLE_LANES} lanes fit the measured panel (clamped to the
+ * card-width bounds). Constant across every row, so columns stay dead straight
+ * and wider trees scroll horizontally rather than re-packing (#304).
+ */
+export function laneCardWidth(containerWidth: number): number {
   const usable = Math.max(TREE_MIN_CARD_PX, containerWidth - TREE_GUTTER_PX * 2);
-  const raw = (usable - (count - 1) * TREE_COL_GAP_PX) / count;
-  const cardWidth = Math.min(TREE_MAX_CARD_PX, Math.max(TREE_MIN_CARD_PX, raw));
-  const blockWidth = count * cardWidth + (count - 1) * TREE_COL_GAP_PX;
-  const startX = TREE_GUTTER_PX + Math.max(0, (usable - blockWidth) / 2);
-  return { startX, cardWidth, step: cardWidth + TREE_COL_GAP_PX };
+  const raw = (usable - (TREE_VISIBLE_LANES - 1) * TREE_COL_GAP_PX) / TREE_VISIBLE_LANES;
+  return Math.min(TREE_MAX_CARD_PX, Math.max(TREE_MIN_CARD_PX, raw));
+}
+
+/** Left edge (px) of a card in the given `column`, lane 0 anchored at the gutter. */
+export function laneX(column: number, cardWidth: number): number {
+  return TREE_GUTTER_PX + column * (cardWidth + TREE_COL_GAP_PX);
 }

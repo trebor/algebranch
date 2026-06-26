@@ -34,7 +34,7 @@ import {
 } from '../hooks/useRovingTabindex';
 import { HandleBadge } from './HandleBadge';
 import { TransitionTooltipCard } from './TransitionTooltipCard';
-import { pxToRem, rowCardLayout, REM_BASE, TREE_GUTTER_PX } from '../utils/treeLayout';
+import { pxToRem, laneCardWidth, laneX, REM_BASE, TREE_GUTTER_PX } from '../utils/treeLayout';
 import type { StepChange } from 'math-engine';
 
 // Measure the panel before first paint on the client (so the tree never flashes
@@ -617,41 +617,17 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   const maxDepth = Math.max(...layoutNodes.map(n => n.depth), 0);
   const cardHeight = 44; // Sleek rectangular height
 
-  // Recalculate dynamic visual nodes coordinates row-by-row!
+  // Position each card from its lane (#304): a fixed, row-independent width and a
+  // column-driven x, so a branch descends in a straight vertical line and a wide
+  // tree scrolls horizontally rather than re-packing each row across the panel.
   const visualNodes = React.useMemo(() => {
-    // 1. Group nodes by depth (row)
-    const nodesByDepth: Record<number, typeof layoutNodes> = {};
-    layoutNodes.forEach(node => {
-      if (!nodesByDepth[node.depth]) {
-        nodesByDepth[node.depth] = [];
-      }
-      nodesByDepth[node.depth].push(node);
-    });
-
-    // 2. Sort each depth left-to-right by their logical column assignment
-    Object.keys(nodesByDepth).forEach(depthStr => {
-      const d = Number(depthStr);
-      nodesByDepth[d].sort((a, b) => a.column - b.column);
-    });
-
-    // 3. Compute dynamic position and width on a row-by-row basis, filling the
-    //    measured panel with symmetric gutters (#279).
-    return layoutNodes.map(node => {
-      const rowNodes = nodesByDepth[node.depth] || [node];
-      const rowNodeCount = rowNodes.length;
-      const sortedIdx = rowNodes.findIndex(n => n.id === node.id);
-
-      const { startX, cardWidth, step } = rowCardLayout(containerWidth, rowNodeCount);
-      const x = startX + sortedIdx * step;
-      const y = 20 + node.depth * 76; // 76px ROW_HEIGHT
-
-      return {
-        ...node,
-        x,
-        y,
-        width: cardWidth,
-      };
-    });
+    const cardWidth = laneCardWidth(containerWidth);
+    return layoutNodes.map(node => ({
+      ...node,
+      x: laneX(node.column, cardWidth),
+      y: 20 + node.depth * 76, // 76px ROW_HEIGHT
+      width: cardWidth,
+    }));
   }, [layoutNodes, containerWidth]);
 
   const visualNodesMap = React.useMemo(() => {

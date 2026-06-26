@@ -372,8 +372,8 @@
       <div class="form-group">
         <div class="section-title">Branch Ratios & Dimensions</div>
         
-        <label for="scaleFactor">Vertical Scale Factor ($f$) <span class="val" id="scaleFactorVal">0.88</span></label>
-        <input type="range" id="scaleFactor" min="0.40" max="1.00" step="0.01" value="0.88">
+        <label for="scaleFactor">Vertical Scale Factor ($f$) <span class="val" id="scaleFactorVal">0.93</span></label>
+        <input type="range" id="scaleFactor" min="0.40" max="1.00" step="0.01" value="0.93">
         
         <label for="marginSize">Canvas Margin (px) <span class="val" id="marginSizeVal">20</span></label>
         <input type="range" id="marginSize" min="0" max="150" step="1" value="20">
@@ -386,8 +386,8 @@
         <label for="sCurveFactor">S-Curve Strength <span class="val" id="sCurveFactorVal">0.78</span></label>
         <input type="range" id="sCurveFactor" min="0.10" max="1.50" step="0.02" value="0.78">
         
-        <label for="departureAngle">Branch Separation Angle <span class="val" id="departureAngleVal">50°</span></label>
-        <input type="range" id="departureAngle" min="15" max="75" step="1" value="50">
+        <label for="departureAngle">Branch Separation Angle <span class="val" id="departureAngleVal">67°</span></label>
+        <input type="range" id="departureAngle" min="15" max="75" step="1" value="67">
       </div>
 
       <!-- Node Circle Sizes -->
@@ -422,11 +422,15 @@
         <div class="section-title">Guides & Options</div>
         <label style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; cursor: pointer; user-select: none; margin-bottom: 0.5rem;">
           <input type="checkbox" id="showCircleGuide" checked style="width: 16px; height: 16px; accent-color: var(--primary-neon); cursor: pointer;">
-          Show Circle Crop Guide
+          Show Debug Guides (crop box, hull, S-curve control points)
         </label>
-        <label style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; cursor: pointer; user-select: none;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; cursor: pointer; user-select: none; margin-bottom: 0.5rem;">
           <input type="checkbox" id="hideText" style="width: 16px; height: 16px; accent-color: var(--primary-neon); cursor: pointer;">
           Hide Text (Textless Mode)
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; cursor: pointer; user-select: none;">
+          <input type="checkbox" id="removeTrunk" checked style="width: 16px; height: 16px; accent-color: var(--primary-neon); cursor: pointer;">
+          Remove Trunk (Stem Below Root)
         </label>
       </div>
 
@@ -612,6 +616,7 @@
       const expr = eqInput.value || "x = 6 × 7";
       const f = parseFloat(scaleFactorSlider.value);
       const showText = !document.getElementById('hideText').checked;
+      const removeTrunk = document.getElementById('removeTrunk').checked;
       const margin = parseInt(marginSizeSlider.value);
       const scurveFactor = parseFloat(sCurveFactorSlider.value);
       const angleDev = parseInt(departureAngleSlider.value);
@@ -695,9 +700,13 @@
         if (n.ry + n.r > ryMax) ryMax = n.ry + n.r;
       });
       
-      if (rxtrunkBase < rxMin) rxMin = rxtrunkBase;
-      if (rxtrunkBase > rxMax) rxMax = rxtrunkBase;
-      if (rytrunkBase > ryMax) ryMax = rytrunkBase;
+      // The trunk extends the bounding box downward; skipping it lets the tree
+      // re-center and fill the space the stem would have reserved.
+      if (!removeTrunk) {
+        if (rxtrunkBase < rxMin) rxMin = rxtrunkBase;
+        if (rxtrunkBase > rxMax) rxMax = rxtrunkBase;
+        if (rytrunkBase > ryMax) ryMax = rytrunkBase;
+      }
       
       // Solve optimal scale factor S and center (u, v) in relative space to fit inscribed circle of radius R_max
       const R_max = 250 - margin;
@@ -724,20 +733,22 @@
         }
         
         // Constrain trunk base line segment (width rRoot centered at rxtrunkBase, at rytrunkBase)
-        const dx_rel = rxtrunkBase - uVal;
-        const dy_rel = rytrunkBase - vVal;
-        const dist_sq = dx_rel * dx_rel + dy_rel * dy_rel;
-        if (dist_sq > 0.001) {
-          const w_half = rRoot / 2;
-          const val = dist_sq * R_max * R_max - dy_rel * dy_rel * w_half * w_half;
-          if (val >= 0) {
-            const sVal = (-Math.abs(dx_rel) * w_half + Math.sqrt(val)) / dist_sq;
-            if (sVal < minS) {
-              minS = sVal;
+        if (!removeTrunk) {
+          const dx_rel = rxtrunkBase - uVal;
+          const dy_rel = rytrunkBase - vVal;
+          const dist_sq = dx_rel * dx_rel + dy_rel * dy_rel;
+          if (dist_sq > 0.001) {
+            const w_half = rRoot / 2;
+            const val = dist_sq * R_max * R_max - dy_rel * dy_rel * w_half * w_half;
+            if (val >= 0) {
+              const sVal = (-Math.abs(dx_rel) * w_half + Math.sqrt(val)) / dist_sq;
+              if (sVal < minS) {
+                minS = sVal;
+              }
             }
           }
         }
-        
+
         return minS;
       }
       
@@ -795,7 +806,9 @@
       const a1R = -angleDev;
       
       // Trunk
-      branches.push({ type: 'trunk', fromNodeId: 'trunkBase', toNodeId: 'root', x1: xTrunkBase, y1: yTrunkBase, w1: Math.round(rRoot * 1.0), x2: xRoot, y2: yRoot, w2: Math.round(rRoot * 0.75) });
+      if (!removeTrunk) {
+        branches.push({ type: 'trunk', fromNodeId: 'trunkBase', toNodeId: 'root', x1: xTrunkBase, y1: yTrunkBase, w1: Math.round(rRoot * 1.0), x2: xRoot, y2: yRoot, w2: Math.round(rRoot * 0.75) });
+      }
       
       // L1 Left
       branches.push({ type: 'scurve', fromNodeId: 'root', toNodeId: 'l1_left', x1: xRoot, y1: yRoot, w1: Math.round(rL1 * 0.9), a1: a1L, x2: l1_left.x, y2: l1_left.y, w2: Math.round(rL1 * 0.55), a2: -90, d1: dCtrl1, d2: dCtrl1 });
@@ -965,11 +978,16 @@
 
       let guideMarkup = "";
       if (showGuide) {
-        let xMin_abs = xTrunkBase - rRoot / 2;
-        let xMax_abs = xTrunkBase + rRoot / 2;
-        let yMin_abs = yTrunkBase;
-        let yMax_abs = yTrunkBase;
-        
+        // Seed the box from the trunk base only when the trunk is drawn; otherwise
+        // the guides bound just the node cluster (matching the layout solver).
+        let xMin_abs = Infinity, xMax_abs = -Infinity, yMin_abs = Infinity, yMax_abs = -Infinity;
+        if (!removeTrunk) {
+          xMin_abs = xTrunkBase - rRoot / 2;
+          xMax_abs = xTrunkBase + rRoot / 2;
+          yMin_abs = yTrunkBase;
+          yMax_abs = yTrunkBase;
+        }
+
         nodes.forEach(n => {
           if (n.x - n.r < xMin_abs) xMin_abs = n.x - n.r;
           if (n.x + n.r > xMax_abs) xMax_abs = n.x + n.r;
@@ -991,8 +1009,10 @@
             hullPts.push({ x: n.x + n.r * Math.cos(a), y: n.y + n.r * Math.sin(a) });
           }
         });
-        hullPts.push({ x: xTrunkBase - rRoot / 2, y: yTrunkBase });
-        hullPts.push({ x: xTrunkBase + rRoot / 2, y: yTrunkBase });
+        if (!removeTrunk) {
+          hullPts.push({ x: xTrunkBase - rRoot / 2, y: yTrunkBase });
+          hullPts.push({ x: xTrunkBase + rRoot / 2, y: yTrunkBase });
+        }
         const hullPath = convexHull(hullPts)
           .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`)
           .join(' ') + ' Z';
@@ -1008,8 +1028,32 @@
   <path class="crop-guide" d="${hullPath}" fill="none" stroke="#7CFC00" stroke-width="1.5" stroke-dasharray="5,4" opacity="0.8" />\n`;
       }
 
+      // S-curve control-point debug overlay. Each scurve ribbon is a cubic bezier
+      // whose handles c1/c2 are offset from the endpoint nodes along a1/a2 by d1/d2
+      // (the S-Curve Strength slider drives d1/d2) — exactly as makeTaperedAngledSCurve
+      // computes them. Draw a dashed handle from each anchor to its control point,
+      // then a dot at the control point: yellow = c1 (off the start node),
+      // cyan = c2 (off the end node).
+      let ctrlPointMarkup = "";
+      if (showGuide) {
+        let dotsMarkup = "";
+        branches.forEach(b => {
+          if (b.type !== 'scurve') return;
+          const th1 = b.a1 * Math.PI / 180;
+          const th2 = b.a2 * Math.PI / 180;
+          const c1x = b.x1 + b.d1 * Math.cos(th1), c1y = b.y1 + b.d1 * Math.sin(th1);
+          const c2x = b.x2 - b.d2 * Math.cos(th2), c2y = b.y2 - b.d2 * Math.sin(th2);
+          dotsMarkup += `
+    <line x1="${b.x1.toFixed(1)}" y1="${b.y1.toFixed(1)}" x2="${c1x.toFixed(1)}" y2="${c1y.toFixed(1)}" stroke="#ffd400" stroke-width="1.25" stroke-dasharray="3,3" opacity="0.7" />
+    <line x1="${b.x2.toFixed(1)}" y1="${b.y2.toFixed(1)}" x2="${c2x.toFixed(1)}" y2="${c2y.toFixed(1)}" stroke="#00e5ff" stroke-width="1.25" stroke-dasharray="3,3" opacity="0.7" />
+    <circle cx="${c1x.toFixed(1)}" cy="${c1y.toFixed(1)}" r="5.5" fill="#ffd400" stroke="#000" stroke-width="1.25" />
+    <circle cx="${c2x.toFixed(1)}" cy="${c2y.toFixed(1)}" r="5.5" fill="#00e5ff" stroke="#000" stroke-width="1.25" />`;
+        });
+        ctrlPointMarkup = `\n  <!-- S-Curve Control Points (debug) -->\n  <g class="ctrl-points">${dotsMarkup}\n  </g>\n`;
+      }
+
       svgMarkup += `    </g>
-  </g>${guideMarkup}
+  </g>${guideMarkup}${ctrlPointMarkup}
 </svg>`;
 
       return svgMarkup;
@@ -1164,8 +1208,9 @@
       if (!svgElement) return buildSVG(false);
 
       const clone = svgElement.cloneNode(true);
-      // Remove all guide elements
-      clone.querySelectorAll('.crop-guide').forEach(g => g.remove());
+      // Strip every debug overlay (crop box / hull / circle guides and the
+      // S-curve control-point dots) so they never bake into an exported asset.
+      clone.querySelectorAll('.crop-guide, .ctrl-points').forEach(g => g.remove());
       // For a transparent export, convert the fake background-coloured gap into
       // real transparency, then drop the opaque background rect itself.
       if (transparent) {
@@ -1259,7 +1304,8 @@
         textScale: parseFloat(textScaleSlider.value),
         theme: activeTheme,
         nodeStrokeWidth: parseFloat(nodeStrokeWidthSlider.value),
-        hideText: document.getElementById('hideText').checked
+        hideText: document.getElementById('hideText').checked,
+        removeTrunk: document.getElementById('removeTrunk').checked
       };
       
       const jsonStr = JSON.stringify(params, null, 2);
@@ -1321,6 +1367,7 @@
     });
     document.getElementById('showCircleGuide').addEventListener('change', updatePreview);
     document.getElementById('hideText').addEventListener('change', updatePreview);
+    document.getElementById('removeTrunk').addEventListener('change', updatePreview);
 
     // Parse URL params on load
     const urlParams = new URLSearchParams(window.location.search);

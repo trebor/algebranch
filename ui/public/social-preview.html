@@ -151,6 +151,10 @@
       flex-direction: column;
       overflow: hidden;
       position: relative;
+      /* The scale()+rotateY tilt pushes the visual right edge ~17px past the
+         flex-end position, leaving the right margin tighter than the left. Pull
+         the mockup in so the outer margins read symmetric. */
+      margin-right: 28px;
       transform: perspective(1200px) rotateY(-12deg) rotateX(3deg) scale(1.03);
       transform-style: preserve-3d;
       transition: transform 0.5s ease;

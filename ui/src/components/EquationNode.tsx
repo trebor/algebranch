@@ -198,6 +198,11 @@ interface EquationNodeProps {
    * fixed slot either) and any handle badge floats over the top instead.
    */
   readonly suppressHandleReserve?: boolean;
+  /**
+   * Wrap the node in a full-width, horizontally centered click target to intercept
+   * gutter clicks under a fraction bar (#313).
+   */
+  readonly fillRowHit?: boolean;
 }
 
 /**
@@ -285,7 +290,13 @@ const cssMax = (...lengths: string[]): string => {
 };
 
 
-export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = false, minPaddingTop = '0px', suppressHandleReserve = false }) => {
+export const EquationNode: React.FC<EquationNodeProps> = ({
+  path,
+  inExponent = false,
+  minPaddingTop = '0px',
+  suppressHandleReserve = false,
+  fillRowHit = false,
+}) => {
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
   const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
@@ -1028,11 +1039,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
         return (
           <div className={`flex flex-col items-center justify-center ${inExponent ? 'mx-[0.05em] my-[0.02em] text-[0.7em] leading-none' : 'mx-[0.1em] my-[0.05em]'}`}>
             <div className={`w-full text-center ${inExponent ? 'pb-[0.02em]' : 'pb-[0.1em]'}`}>
-              <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
+              <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} fillRowHit={true} />
             </div>
             <div className={`w-full border-t ${isStatic ? THEME_GLASS.MATH_BORDER_STATIC : THEME_GLASS.MATH_BORDER_ACTIVE} h-0`} style={getOpStyle(true)} />
             <div className={`w-full text-center ${inExponent ? 'pt-[0.02em]' : 'pt-[0.1em]'}`}>
-              <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} />
+              <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} fillRowHit={true} />
             </div>
           </div>
         );
@@ -1837,7 +1848,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     tooltipVisible = undefined;
   }
 
-  return (
+  const anchored = (
     <Tooltip
       content={tooltipContent}
       position="top"
@@ -1848,5 +1859,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({ path, inExponent = f
     >
       {element}
     </Tooltip>
+  );
+
+  return fillRowHit ? (
+    <div className="w-full flex justify-center" onClick={handleNodeClick} data-fill-row-hit>
+      {anchored}
+    </div>
+  ) : (
+    anchored
   );
 };

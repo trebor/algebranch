@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { Provider, createStore } from 'jotai';
 import { EquationInputModal } from '@/components/EquationInputModal';
 import {
@@ -126,5 +126,55 @@ describe('EquationInputModal', () => {
     );
 
     expect(screen.getByRole('button', { name: /new workspace/i })).toBeTruthy();
+  });
+
+  it('prefills the Workspace Title input field from an edit seed when specified', () => {
+    const store = createStore();
+    store.set(equationEditSeedAtom, { lhs: 'x', relation: '=', rhs: '3', title: 'Custom Title' });
+    store.set(equationInputModalOpenAtom, true);
+    render(
+      <Provider store={store}>
+        <EquationInputModal />
+      </Provider>
+    );
+
+    const titleInput = screen.getByLabelText(/workspace title/i) as HTMLInputElement;
+    expect(titleInput.value).toBe('Custom Title');
+  });
+
+  it('updates the Workspace Title placeholder dynamically as the user types the equation', () => {
+    const store = createStore();
+    store.set(equationInputModalOpenAtom, true);
+    render(
+      <Provider store={store}>
+        <EquationInputModal />
+      </Provider>
+    );
+
+    const titleInput = screen.getByLabelText(/workspace title/i) as HTMLInputElement;
+    expect(titleInput.placeholder).toBe('e.g. Quadratic Formula (optional)');
+
+    const lhs = screen.getByPlaceholderText(/left side/i) as HTMLInputElement;
+    fireEvent.change(lhs, { target: { value: '3 * y' } });
+
+    expect(titleInput.placeholder).toBe('3 * y = ...');
+  });
+
+  it('moves focus to the RHS input when relation operator dropdown is focused and equals key is pressed', () => {
+    const store = createStore();
+    store.set(equationInputModalOpenAtom, true);
+    render(
+      <Provider store={store}>
+        <EquationInputModal />
+      </Provider>
+    );
+
+    const select = screen.getByRole('combobox', { name: /relation operator/i }) as HTMLSelectElement;
+    const rhs = screen.getByPlaceholderText(/right side/i) as HTMLInputElement;
+
+    select.focus();
+    fireEvent.keyDown(select, { key: '=' });
+
+    expect(document.activeElement).toBe(rhs);
   });
 });

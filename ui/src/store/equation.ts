@@ -1590,6 +1590,7 @@ export interface EquationEditSeed {
   lhs: string;
   relation: RelationOperator;
   rhs: string;
+  title?: string;
 }
 
 /**
@@ -1598,15 +1599,15 @@ export interface EquationEditSeed {
  * sides with ` ${relation} `) and splits back on that exact separator, so the
  * side strings round-trip through the same formatter the rest of the app uses.
  */
-const toEquationEditSeed = (eq: Equation): EquationEditSeed => {
+const toEquationEditSeed = (eq: Equation, title?: string): EquationEditSeed => {
   const relation = (eq.relation ?? '=') as RelationOperator;
   const full = equationToString(eq);
   const sep = ` ${relation} `;
   const idx = full.indexOf(sep);
-  if (idx === -1) {
-    return { lhs: full.trim(), relation, rhs: '' };
-  }
-  return { lhs: full.slice(0, idx), relation, rhs: full.slice(idx + sep.length) };
+  const base = idx === -1
+    ? { lhs: full.trim(), relation, rhs: '' }
+    : { lhs: full.slice(0, idx), relation, rhs: full.slice(idx + sep.length) };
+  return { ...base, title };
 };
 
 /**
@@ -1659,7 +1660,11 @@ export const equationEditSeedAtom = atom<EquationEditSeed | null>(null);
 export const openEquationEditorAtom = atom(null, (get, set) => {
   const eq = get(currentEquationAtom);
   if (!eq) return;
-  set(equationEditSeedAtom, toEquationEditSeed(eq));
+  const tabs = get(tabsAtom);
+  const activeId = get(activeTabIdAtom);
+  const activeTab = tabs.find(t => t.id === activeId);
+  const title = activeTab && activeTab.isCustomNamed ? activeTab.name : undefined;
+  set(equationEditSeedAtom, toEquationEditSeed(eq, title));
   set(equationInputModalOpenAtom, true);
 });
 
@@ -1689,7 +1694,7 @@ export const activeWorkspacePristineAtom = atom<boolean>((get) => {
  * Parses up front so an invalid equation throws BEFORE any state is mutated; the
  * dialog catches the throw and surfaces it as a submit error.
  */
-export const submitEquationEditAtom = atom(null, (get, set, eqStr: string) => {
+export const submitEquationEditAtom = atom(null, (get, set, eqStr: string, customName?: string) => {
   const newEq = ensureNodeIds(parseEquation(eqStr));
 
   const tabs = get(tabsAtom);
@@ -1701,7 +1706,8 @@ export const submitEquationEditAtom = atom(null, (get, set, eqStr: string) => {
     const updatedTabs = tabs.map(t => {
       if (t.id !== activeTab.id) return t;
       const isDefaultPlaceholder = t.id === DEFAULT_TAB_ID && t.name === DEFAULT_TAB_NAME;
-      const isCustomNamed = !!t.isCustomNamed && !isDefaultPlaceholder;
+      const isCustomNamed = customName !== undefined ? !!customName.trim() : (!!t.isCustomNamed && !isDefaultPlaceholder);
+      const tabName = customName !== undefined && customName.trim() !== '' ? customName.trim() : (isCustomNamed ? t.name : eqStr);
       return {
         ...t,
         historyTree: {
@@ -1715,7 +1721,7 @@ export const submitEquationEditAtom = atom(null, (get, set, eqStr: string) => {
           },
         },
         currentNodeId: '0',
-        name: isCustomNamed ? t.name : eqStr,
+        name: tabName,
         isCustomNamed,
         isModified: true,
         timestamp: Date.now(),
@@ -1734,7 +1740,7 @@ export const submitEquationEditAtom = atom(null, (get, set, eqStr: string) => {
   } else {
     // createNewSessionAtom appends a new tab and makes it active; its own
     // "Created new workspace" toast is replaced below with edit-specific copy.
-    set(createNewSessionAtom, eqStr);
+    set(createNewSessionAtom, eqStr, customName);
     set(toastAtom, { message: 'Edited copy opened in a new workspace; original kept', key: Date.now() });
   }
 

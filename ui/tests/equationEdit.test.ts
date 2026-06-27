@@ -60,6 +60,19 @@ describe('openEquationEditorAtom — seeds the input dialog from the current equ
 
     expect(store.get(equationEditSeedAtom)).toEqual({ lhs: 'x', relation: '=', rhs: '3' });
   });
+
+  it('seeds custom title if the active workspace tab is custom-named', () => {
+    const store = createStore();
+    const tab = singleNodeTab('a', '3*x=9');
+    tab.isCustomNamed = true;
+    tab.name = 'Custom Name';
+    store.set(rawTabsAtom, [tab]);
+    store.set(rawActiveTabIdAtom, 'a');
+
+    store.set(openEquationEditorAtom);
+
+    expect(store.get(equationEditSeedAtom)).toEqual({ lhs: '3 * x', relation: '=', rhs: '9', title: 'Custom Name' });
+  });
 });
 
 describe('activeWorkspacePristineAtom — drives the adaptive Edit tooltip (#261)', () => {
@@ -114,6 +127,34 @@ describe('submitEquationEditAtom — context-aware edit (#261)', () => {
     const forked = tabs.find(t => t.id === activeId)!;
     expect(Object.keys(forked.historyTree)).toHaveLength(1);
     expect(equationToString(forked.historyTree[forked.currentNodeId].equation)).toBe('x = 9');
+  });
+
+  it('updates the title in-place when pristine and a custom title is supplied', () => {
+    const store = createStore();
+    store.set(rawTabsAtom, [singleNodeTab('a', 'x=0')]);
+    store.set(rawActiveTabIdAtom, 'a');
+
+    store.set(submitEquationEditAtom, 'x = 9', 'My Custom Equation');
+
+    const tabs = store.get(rawTabsAtom);
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].name).toBe('My Custom Equation');
+    expect(tabs[0].isCustomNamed).toBe(true);
+  });
+
+  it('forks a new workspace with a custom title when there is history', () => {
+    const store = createStore();
+    store.set(rawTabsAtom, [twoNodeTab('a')]);
+    store.set(rawActiveTabIdAtom, 'a');
+
+    store.set(submitEquationEditAtom, 'x = 9', 'Forked Title');
+
+    const tabs = store.get(rawTabsAtom);
+    expect(tabs).toHaveLength(2);
+    const activeId = store.get(rawActiveTabIdAtom);
+    const forked = tabs.find(t => t.id === activeId)!;
+    expect(forked.name).toBe('Forked Title');
+    expect(forked.isCustomNamed).toBe(true);
   });
 
   it('throws and leaves tabs unchanged on an invalid equation', () => {

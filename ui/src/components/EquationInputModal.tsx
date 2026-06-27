@@ -43,6 +43,7 @@ export const EquationInputModal: React.FC = () => {
   const [lhsStr, setLhsStr] = React.useState('');
   const [rhsStr, setRhsStr] = React.useState('');
   const [relation, setRelation] = React.useState<RelationOperator>('=');
+  const [titleStr, setTitleStr] = React.useState('');
   // Submit-time failures from resetToEquation (the live validation below is
   // derived from the inputs, so it doesn't live in state).
   const [submitError, setSubmitError] = React.useState<string | null>(null);
@@ -62,6 +63,7 @@ export const EquationInputModal: React.FC = () => {
       setLhsStr(editSeed?.lhs ?? '');
       setRhsStr(editSeed?.rhs ?? '');
       setRelation(editSeed?.relation ?? '=');
+      setTitleStr(editSeed?.title ?? '');
       setIsEditMode(!!editSeed);
       setSubmitError(null);
     }
@@ -106,6 +108,16 @@ export const EquationInputModal: React.FC = () => {
 
   // Show a live validation error, falling back to any submit-time failure.
   const errorStr = validationError ?? submitError;
+
+  // Live preview placeholder for the Workspace Title
+  const placeholderTitle = React.useMemo(() => {
+    const lhsTrim = lhsStr.trim();
+    const rhsTrim = rhsStr.trim();
+    if (!lhsTrim && !rhsTrim) {
+      return 'e.g. Quadratic Formula (optional)';
+    }
+    return `${lhsTrim || '...'} ${relation} ${rhsTrim || '...'}`;
+  }, [lhsStr, rhsStr, relation]);
 
   // Relation operators are owned by the dedicated selector, never the side
   // inputs — strip any the user types/pastes into a side (#34).
@@ -202,10 +214,11 @@ export const EquationInputModal: React.FC = () => {
     if (!lhsStr.trim() || !rhsStr.trim() || validationError) return;
 
     try {
+      const customTitle = titleStr.trim() !== '' ? titleStr.trim() : undefined;
       if (isEditMode) {
         // Context-aware edit (#261): in-place when pristine, fork otherwise.
         // Also moves focus to the new equation's first term (#231 parity).
-        submitEquationEdit(combined);
+        submitEquationEdit(combined, customTitle);
         trackEvent({
           action: 'edit_equation',
           category: 'presets',
@@ -214,7 +227,7 @@ export const EquationInputModal: React.FC = () => {
       } else {
         // resetToEquation also moves keyboard/screen-reader focus to the new
         // equation's first term (#231), covering this modal and the library alike.
-        resetToEquation(combined);
+        resetToEquation(combined, customTitle);
         trackEvent({
           action: 'load_custom_equation',
           category: 'presets',
@@ -274,6 +287,24 @@ export const EquationInputModal: React.FC = () => {
             {/* Form & Input Area (Top) */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1 overflow-y-auto">
               <div className="flex flex-col gap-1.5">
+                <label htmlFor="workspace-title-input" className="text-xs text-white/60 font-semibold select-none">
+                  Workspace Title
+                </label>
+                <input
+                  id="workspace-title-input"
+                  type="text"
+                  value={titleStr}
+                  onChange={(e) => setTitleStr(e.target.value)}
+                  placeholder={placeholderTitle}
+                  className="w-full bg-neutral-950/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/80 focus:ring-1 focus:ring-indigo-500/30 transition-all font-sans"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="words"
+                  spellCheck="false"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-white/60 font-semibold select-none">
                   Equation Input
                 </label>
@@ -298,6 +329,13 @@ export const EquationInputModal: React.FC = () => {
                       onChange={(e) => setRelation(e.target.value as RelationOperator)}
                       aria-label="Relation operator"
                       className={THEME_GLASS.RELATION_SELECT}
+                      onKeyDown={(e) => {
+                        if (e.key === '=' || e.key === '<' || e.key === '>') {
+                          e.preventDefault();
+                          setRelation(e.key as RelationOperator);
+                          rhsRef.current?.focus();
+                        }
+                      }}
                     >
                       {RELATION_OPTIONS.map((op) => (
                         <option key={op} value={op} className="bg-neutral-900 text-white">

@@ -22,7 +22,8 @@ import {
   syncTourToActiveTabAtom,
   activeTabIdAtom,
   tabsAtom,
-  onboardingCompletedAtom
+  onboardingCompletedAtom,
+  safeLocalStorage
 } from '../store/equation';
 import { equationToString } from 'math-engine-client';
 import { prefetchChapterScans } from '../utils/mathScan';
@@ -107,7 +108,7 @@ export const OnboardingTour: React.FC = () => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // Load completed chapters
-      const completedList = localStorage.getItem('algebranch_completed_chapters');
+      const completedList = safeLocalStorage.getItem('algebranch_completed_chapters');
       if (completedList) {
         try {
           // Hydrating React state from localStorage (an external store) on mount
@@ -153,7 +154,7 @@ export const OnboardingTour: React.FC = () => {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setChapterProgress(readOnboardingSteps());
 
-      const completedList = localStorage.getItem('algebranch_completed_chapters');
+      const completedList = safeLocalStorage.getItem('algebranch_completed_chapters');
       if (completedList) {
         try {
           setCompletedChapters(JSON.parse(completedList));
@@ -266,7 +267,7 @@ export const OnboardingTour: React.FC = () => {
     setShowPrompt(false);
     setShowDirectory(false);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('algebranch_onboarding_completed', 'true');
+      safeLocalStorage.setItem('algebranch_onboarding_completed', 'true');
     }
     setCompleted(true);
   }, [setShowPrompt, setShowDirectory, setCompleted]);
@@ -337,7 +338,7 @@ export const OnboardingTour: React.FC = () => {
       if (prev.includes(chapterId)) return prev;
       const next = [...prev, chapterId];
       if (typeof window !== 'undefined') {
-        localStorage.setItem('algebranch_completed_chapters', JSON.stringify(next));
+        safeLocalStorage.setItem('algebranch_completed_chapters', JSON.stringify(next));
       }
       return next;
     });
@@ -352,7 +353,7 @@ export const OnboardingTour: React.FC = () => {
   // Escape / dismiss action, and the buttons inside that modal can share it.
   const handleFinishTour = useCallback(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('algebranch_onboarding_completed', 'true');
+      safeLocalStorage.setItem('algebranch_onboarding_completed', 'true');
     }
     setCompleted(true);
     setStep(null);
@@ -372,7 +373,7 @@ export const OnboardingTour: React.FC = () => {
   if (showPrompt) {
     if (!mounted || typeof document === 'undefined') return null;
     return createPortal(
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 max-lg:pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
+      <div className={`fixed inset-0 z-50 flex items-center justify-center ${THEME_GLASS.TUTORIAL_BACKDROP} p-4 max-lg:pb-[calc(3.5rem+env(safe-area-inset-bottom))]`}>
         <motion.div
           ref={promptDialogRef}
           role="dialog"
@@ -394,7 +395,7 @@ export const OnboardingTour: React.FC = () => {
               />
               <div>
                 <h3 id="onboarding-prompt-title" className="font-bold text-white text-base lg:text-lg">Welcome to Algebranch!</h3>
-                <p className="text-xs text-indigo-300/60 font-medium">Interactive Algebra Tour</p>
+                <p className={THEME_GLASS.TUTORIAL_WELCOME_EYEBROW}>Interactive Algebra Tour</p>
               </div>
             </div>
             <button
@@ -422,21 +423,21 @@ export const OnboardingTour: React.FC = () => {
                     key={chapter.id}
                     ref={index === 0 ? firstChapterButtonRef : undefined}
                     onClick={() => handleStartChapter(chapter.id)}
-                    className={`w-full text-left p-3 rounded-xl border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-white/5 hover:bg-white/10 hover:border-white/10 active:scale-[0.99] transition-all flex items-center justify-between gap-3 cursor-pointer group`}
+                    className={THEME_GLASS.TUTORIAL_CHAPTER_BUTTON}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {/* Checkbox / Status indicator */}
                       <div className="shrink-0">
                         {isCompleted ? (
-                          <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <div className={THEME_GLASS.TUTORIAL_BADGE_SUCCESS}>
                             <CheckCircle2 size={13} />
                           </div>
                         ) : hasProgress ? (
-                          <div className="p-1 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 animate-pulse">
+                          <div className={THEME_GLASS.TUTORIAL_BADGE_ACTIVE}>
                             <Play size={13} />
                           </div>
                         ) : (
-                          <div className={`p-1 rounded-md bg-white/5 text-white/20 border border-white/10`}>
+                          <div className={THEME_GLASS.TUTORIAL_BADGE_MUTED}>
                             <div className="w-3.5 h-3.5" />
                           </div>
                         )}
@@ -448,7 +449,7 @@ export const OnboardingTour: React.FC = () => {
                             {chapter.title}
                           </p>
                           {hasProgress && (
-                            <span className="text-[0.5rem] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 tracking-wider">
+                            <span className={THEME_GLASS.TUTORIAL_RESUME_LABEL}>
                               Resume Step {savedStep + 1}
                             </span>
                           )}
@@ -502,7 +503,7 @@ export const OnboardingTour: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
-            className="absolute inset-0 pointer-events-auto flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            className={`absolute inset-0 pointer-events-auto flex items-center justify-center ${THEME_GLASS.TUTORIAL_BACKDROP} p-4`}
           >
             <ConfettiBurst />
             <motion.div
@@ -513,19 +514,19 @@ export const OnboardingTour: React.FC = () => {
               initial={{ scale: 0.9, y: 12, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-              className={`${THEME_GLASS.PANEL} max-w-sm w-full p-6 flex flex-col items-center gap-4 text-center shadow-[0_0_40px_rgba(52,211,153,0.2)] border border-emerald-500/20`}
+              className={`${THEME_GLASS.PANEL} max-w-sm w-full p-6 flex flex-col items-center gap-4 text-center ${THEME_GLASS.TUTORIAL_CELEBRATION_PANEL}`}
             >
               <motion.div
                 initial={{ scale: 0, rotate: -12 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 14, delay: 0.15 }}
-                className="p-3.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_25px_rgba(52,211,153,0.35)]"
+                className={THEME_GLASS.TUTORIAL_CELEBRATION_TINT}
               >
                 <Trophy size={26} />
               </motion.div>
 
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-bold tracking-wider text-emerald-400/80">
+                <span className={THEME_GLASS.TUTORIAL_SUCCESS_EYEBROW}>
                   Chapter Complete — {activeChapter.title}
                 </span>
                 <h3 id="chapter-complete-title" className="font-bold text-white text-base lg:text-lg">{activeStep.title}</h3>
@@ -626,7 +627,7 @@ export const OnboardingTour: React.FC = () => {
               {/* Node-kind color legend (steps with legend: 'nodeTypes') */}
               {activeStep.legend === 'nodeTypes' && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
-                  <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
+                  <div className={THEME_GLASS.TUTORIAL_SWATCH}>
                     <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-sky-300 font-serif italic font-medium text-xs`}>x</span>
                     <div className="flex flex-col">
                       <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Variable</span>
@@ -634,7 +635,7 @@ export const OnboardingTour: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
+                  <div className={THEME_GLASS.TUTORIAL_SWATCH}>
                     <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-yellow-400/90 font-semibold text-xs`}>3</span>
                     <div className="flex flex-col">
                       <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Constant</span>
@@ -642,7 +643,7 @@ export const OnboardingTour: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
+                  <div className={THEME_GLASS.TUTORIAL_SWATCH}>
                     <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-white/90 font-bold text-xs`}>+</span>
                     <div className="flex flex-col">
                       <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Operator</span>
@@ -650,7 +651,7 @@ export const OnboardingTour: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-zinc-900/60 border border-zinc-800/40 text-zinc-500">
+                  <div className={THEME_GLASS.TUTORIAL_SWATCH_IMMOBILE}>
                     <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_LOCKED} text-xs`}>4</span>
                     <div className="flex flex-col">
                       <span className="font-bold text-zinc-400 text-[0.5625rem] leading-tight font-medium">Immobile</span>
@@ -663,7 +664,7 @@ export const OnboardingTour: React.FC = () => {
               {/* Selection-state color legend (steps with legend: 'sourceTarget') */}
               {activeStep.legend === 'sourceTarget' && (
                 <div className="grid grid-cols-2 gap-2 mt-1">
-                  <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
+                  <div className={THEME_GLASS.TUTORIAL_SWATCH}>
                     <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_SOURCE} text-xs`}>4</span>
                     <div className="flex flex-col">
                       <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Source</span>
@@ -671,7 +672,7 @@ export const OnboardingTour: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className={`flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border ${THEME_GLASS.PANEL_BORDER} text-white/95`}>
+                  <div className={THEME_GLASS.TUTORIAL_SWATCH}>
                     <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_TARGET} text-xs`}>11</span>
                     <div className="flex flex-col">
                       <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Target</span>

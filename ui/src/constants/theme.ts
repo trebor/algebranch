@@ -159,6 +159,18 @@ export const THEME_GLASS = {
   BUTTON_DANGER_FILL: 'bg-rose-600 hover:bg-rose-500 text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer shadow-md shadow-rose-600/20 border border-rose-500/20',
   BUTTON_WARNING_FILL: 'bg-amber-600 hover:bg-amber-500 text-white rounded-xl active:scale-95 transition-all duration-150 cursor-pointer shadow-md shadow-amber-600/20 border border-amber-500/20',
   COACH_CARD: 'w-full p-4 rounded-2xl backdrop-blur-xl bg-[#110f22]/95 border border-indigo-500/30 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col gap-3',
+  TUTORIAL_BACKDROP: 'bg-black/60 backdrop-blur-sm',
+  TUTORIAL_SWATCH: 'flex items-center gap-2 p-1.5 rounded-lg bg-neutral-950/95 border border-white/10 text-white/95',
+  TUTORIAL_SWATCH_IMMOBILE: 'flex items-center gap-2 p-1.5 rounded-lg bg-zinc-900/60 border border-zinc-800/40 text-zinc-500',
+  TUTORIAL_BADGE_SUCCESS: 'p-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+  TUTORIAL_BADGE_ACTIVE: 'p-1 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 animate-pulse',
+  TUTORIAL_BADGE_MUTED: 'p-1 rounded-md bg-white/5 text-white/20 border border-white/10',
+  TUTORIAL_RESUME_LABEL: 'text-[0.5rem] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 tracking-wider',
+  TUTORIAL_CHAPTER_BUTTON: 'w-full text-left p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 active:scale-[0.99] transition-all flex items-center justify-between gap-3 cursor-pointer group',
+  TUTORIAL_CELEBRATION_PANEL: 'shadow-[0_0_40px_rgba(52,211,153,0.2)] border border-emerald-500/20',
+  TUTORIAL_CELEBRATION_TINT: 'p-3.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_25px_rgba(52,211,153,0.35)]',
+  TUTORIAL_SUCCESS_EYEBROW: 'text-xs font-bold tracking-wider text-emerald-400/80',
+  TUTORIAL_WELCOME_EYEBROW: 'text-xs text-indigo-300/60 font-medium',
 
   // --- Page / Main Canvas specific ---
   HEADER_BUTTON: 'flex items-center gap-1.5 p-2 sm:px-3.5 sm:py-1.5 rounded-full border border-white/10 text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 hover:border-indigo-500/35 cursor-pointer shadow-md transition-all duration-300 relative group',
@@ -186,7 +198,7 @@ export const THEME_GLASS = {
   // Onboarding walkthrough coach card container: a dark neutral background
   // to match the chapter-menu cards and welcome modal, highlighting the
   // content area.
-  TOUR_CARD: 'w-full shrink-0 border-t border-white/10 bg-neutral-950/95 rounded-b-2xl z-40 overflow-hidden flex flex-col max-h-[38dvh] sm:max-h-none shadow-lg',
+  TOUR_CARD: 'w-full shrink-0 border-t border-white/10 bg-neutral-950/95 rounded-b-2xl max-lg:rounded-b-none z-40 overflow-hidden flex flex-col max-h-[38dvh] sm:max-h-none shadow-lg',
   EQUALS_SIGN: 'relative text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black transition-all z-10',
   EQUALS_SIGN_INTERACTIVE: 'cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95',
   EQUALS_BADGE: 'absolute -top-2 -right-2 w-5 h-5 rounded-full bg-indigo-600 border border-indigo-400 flex items-center justify-center text-xs leading-none text-white font-bold select-none cursor-pointer shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse z-20',

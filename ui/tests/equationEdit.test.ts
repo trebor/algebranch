@@ -11,6 +11,9 @@ import {
   openEquationEditorAtom,
   submitEquationEditAtom,
   activeWorkspacePristineAtom,
+  parseRawStringToEditSeed,
+  DEFAULT_TAB_ID,
+  DEFAULT_TAB_NAME,
   type WorkspaceTab,
 } from '@/store/equation';
 import { parseEquation, equationToString } from 'math-engine-client';
@@ -123,4 +126,51 @@ describe('submitEquationEditAtom — context-aware edit (#261)', () => {
     expect(tabs).toHaveLength(1);
     expect(equationToString(tabs[0].historyTree[tabs[0].currentNodeId].equation)).toBe('x = 0');
   });
+
+  it('renames tab_initial if it is pristine and named Sample Workspace', () => {
+    const store = createStore();
+    const initialTab: WorkspaceTab = {
+      id: DEFAULT_TAB_ID,
+      name: DEFAULT_TAB_NAME,
+      historyTree: {
+        '0': { id: '0', equation: parseEquation('x + 2 = 5'), parentId: null, childrenIds: [], label: 'Initial', timestamp: 1 },
+      },
+      currentNodeId: '0',
+      isCustomNamed: true,
+      timestamp: 1,
+    };
+    store.set(rawTabsAtom, [initialTab]);
+    store.set(rawActiveTabIdAtom, DEFAULT_TAB_ID);
+
+    store.set(submitEquationEditAtom, 'x = 3');
+
+    const tabs = store.get(rawTabsAtom);
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].id).toBe(DEFAULT_TAB_ID);
+    expect(tabs[0].name).toBe('x = 3');
+    expect(tabs[0].isCustomNamed).toBe(false);
+  });
 });
+
+describe('parseRawStringToEditSeed', () => {
+  it('parses a valid equation string with "=" relation', () => {
+    const seed = parseRawStringToEditSeed('3 * x + 2 = 8');
+    expect(seed).toEqual({ lhs: '3 * x + 2', relation: '=', rhs: '8' });
+  });
+
+  it('parses a string with "<=" relation', () => {
+    const seed = parseRawStringToEditSeed('x <= 4');
+    expect(seed).toEqual({ lhs: 'x', relation: '<=', rhs: '4' });
+  });
+
+  it('handles strings with no relation by putting everything in LHS and setting relation to "="', () => {
+    const seed = parseRawStringToEditSeed('3 * x + 2');
+    expect(seed).toEqual({ lhs: '3 * x + 2', relation: '=', rhs: '' });
+  });
+
+  it('handles strings with trailing/leading spaces correctly', () => {
+    const seed = parseRawStringToEditSeed('  x >= y - 1  ');
+    expect(seed).toEqual({ lhs: 'x', relation: '>=', rhs: 'y - 1' });
+  });
+});
+

@@ -405,8 +405,8 @@ export default function Home() {
   const getRightSidebarLayout = () => {
     if (rightSidebarSize === 'wider') {
       return {
-        panelClasses: 'w-[40rem] translate-x-0 opacity-100 lg:w-[40rem] lg:min-w-[40rem] lg:ml-4 lg:opacity-100',
-        handlePosition: 'right-[41.5rem]',
+        panelClasses: 'w-[30rem] translate-x-0 opacity-100 lg:w-[30rem] lg:min-w-[30rem] lg:ml-4 lg:opacity-100',
+        handlePosition: 'right-[31.5rem]',
       };
     }
     if (rightSidebarSize === 'normal') {

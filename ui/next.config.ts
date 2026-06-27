@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
   transpilePackages: ["math-engine"],
   // Allow hot module replacement (HMR) from mobile devices on the same local network
   allowedDevOrigins: [...localIPs, "localhost:3000"],
+  devIndicators: false,
   env: {
     NEXT_PUBLIC_APP_VERSION: appVersion,
   },

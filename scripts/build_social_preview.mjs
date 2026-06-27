@@ -3,8 +3,15 @@
 
 import { chromium } from 'playwright';
 
-const outPath = '/Users/trebor/src/algebranch/ui/public/social-preview.png';
-const fileUrl = 'file:///Users/trebor/src/algebranch/ui/public/social-preview.html';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
+
+const outPath = path.join(projectRoot, 'ui', 'public', 'social-preview.png');
+const fileUrl = `file://${path.join(projectRoot, 'ui', 'public', 'social-preview.html')}`;
 
 async function generateSocialPreview() {
   console.log(`Generating social preview image -> ${outPath}...`);

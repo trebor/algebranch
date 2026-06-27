@@ -518,7 +518,7 @@ export const hoveredLoopTargetIdAtom = atom<string | null>(null);
 export const exportPreviewActiveAtom = atom(false);
 export const leftSidebarOpenAtom = atom(true);
 
-// Right Sidebar layout size state: 'hidden' | 'normal' (1/3 width, w-80) | 'wider' (2/3 width, w-[40rem])
+// Right Sidebar layout size state: 'hidden' | 'normal' (1/3 width, w-80) | 'wider' (middle width, w-[30rem])
 export const rawRightSidebarSizeAtom = atom<'hidden' | 'normal' | 'wider'>('normal');
 export const previousRightSidebarSizeAtom = atom<'hidden' | 'normal' | 'wider'>('normal');
 

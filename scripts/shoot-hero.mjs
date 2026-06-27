@@ -67,7 +67,7 @@ function parseArgs(argv) {
     if (!tok.startsWith('--')) continue;
     const key = tok.slice(2);
     // Boolean flags take no value.
-    if (key === 'graph' || key === 'open-graph' || key === 'select-leftmost') {
+    if (key === 'graph' || key === 'open-graph' || key === 'select-leftmost' || key === 'wider') {
       args[key] = true;
     } else {
       args[key] = argv[i + 1];
@@ -88,6 +88,7 @@ const openGraph = Boolean(args.graph || args['open-graph']);
 const selectLeftmost = Boolean(args['select-leftmost']);
 // --hover-node <leftmost|loop>: park a node's detail tooltip open in the frame.
 const hoverNode = args['hover-node'];
+const widerSidebar = Boolean(args.wider);
 
 let ws = args.ws;
 if (!ws && args['ws-file']) ws = (await readFile(args['ws-file'], 'utf8')).trim();
@@ -143,6 +144,11 @@ try {
   if (openGraph) {
     await page.keyboard.press('g');
     await page.waitForTimeout(1200);
+  }
+
+  if (widerSidebar) {
+    await page.keyboard.press('h');
+    await page.waitForTimeout(600);
   }
 
   // Scope every node query to the history panel. The equation reader ALSO exposes

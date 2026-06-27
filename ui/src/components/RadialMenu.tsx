@@ -18,6 +18,7 @@ import {
 import { trackEvent } from '../utils/analytics';
 import { ArrowLeftRight, Plus, Minus, Divide } from 'lucide-react';
 import { Tooltip } from './Tooltip';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { THEME_GLASS } from '../constants/theme';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
 import {
@@ -91,9 +92,22 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
   const [spinnerValue, setSpinnerValue] = React.useState(2);
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
   const termInputRef = React.useRef<HTMLInputElement>(null);
+  const spinnerDecreaseRef = React.useRef<HTMLButtonElement>(null);
 
   // Position state for floating menu
   const [position, setPosition] = React.useState<{ x: number; y: number } | null>(null);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setTermInputAction(null);
+    setTermValue('');
+    setErrorStr(null);
+  };
+
+  const containerRef = useFocusTrap<HTMLDivElement>({
+    isOpen: isOpen && position !== null,
+    onClose: handleClose,
+  });
 
   // Calculate position relative to anchor
   React.useEffect(() => {
@@ -122,13 +136,25 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen, setIsOpen]);
 
-  // Focus term input when it appears (not during the tour — the value is
-  // locked, and focusing would pop the keyboard on mobile for nothing)
+  // Focus term input or spinner controls when they appear (not during the tour —
+  // the value is locked, and focusing would pop the keyboard on mobile for nothing)
   React.useEffect(() => {
-    if (termInputAction && termInputRef.current && !isTourActive) {
-      termInputRef.current.focus();
+    if (termInputAction && !isTourActive) {
+      if (termInputAction.type === 'power' || termInputAction.type === 'root') {
+        const decreaseBtn = spinnerDecreaseRef.current;
+        if (decreaseBtn && !decreaseBtn.disabled) {
+          decreaseBtn.focus();
+        } else {
+          // If decrease button is disabled (e.g. initial power value is 2), focus the increase button
+          const container = containerRef.current;
+          const increaseBtn = container?.querySelector('[aria-label="Increase value"]') as HTMLElement | null;
+          increaseBtn?.focus();
+        }
+      } else {
+        termInputRef.current?.focus();
+      }
     }
-  }, [termInputAction, isTourActive]);
+  }, [termInputAction, isTourActive, containerRef]);
 
   // During the tour, only the petal performing the active step's global op is
   // live; the spinner/term petals share one petal per family (sqrt -> nth root).
@@ -220,13 +246,6 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
     }
   };
 
-  const handleClose = () => {
-    setIsOpen(false);
-    setTermInputAction(null);
-    setTermValue('');
-    setErrorStr(null);
-  };
-
   if (!position && isOpen) return null;
 
   return (
@@ -245,6 +264,10 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
 
           {/* Radial Container — positioned at the = sign */}
           <div
+            ref={containerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Equals operations menu"
             className="fixed z-50 pointer-events-none"
             style={{
               left: position.x,
@@ -340,6 +363,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                           <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
                         )}
                         <button
+                          ref={spinnerDecreaseRef}
                           type="button"
                           disabled={spinnerValue <= 2 || isTourActive}
                           onClick={() => setSpinnerValue((v) => Math.max(2, v - 1))}

@@ -12,6 +12,7 @@ import { PreviewEquationNode } from './PreviewEquationNode';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
 import type { ExportFormat } from '../store/equation';
+import { safeCopyText } from '../utils/clipboard';
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
@@ -235,10 +236,12 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
     setOpen(false);
     setMenuPos(null);
     setHovered(false);
-    navigator.clipboard.writeText(getText(format)).then(() => {
-      setCopied(true);
-      trackEvent({ action: trackAction, category: trackCategory, label: `${trackLabel}:${format}` });
-      setTimeout(() => setCopied(false), COPIED_TIMEOUT);
+    safeCopyText(getText(format)).then((success) => {
+      if (success) {
+        setCopied(true);
+        trackEvent({ action: trackAction, category: trackCategory, label: `${trackLabel}:${format}` });
+        setTimeout(() => setCopied(false), COPIED_TIMEOUT);
+      }
     });
   };
 

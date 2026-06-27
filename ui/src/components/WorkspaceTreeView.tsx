@@ -12,6 +12,7 @@ import { CopyFormatMenu } from './CopyFormatMenu';
 import { equationToString, equationToSpeech, getEquationStatus } from 'math-engine-client';
 import { trackEvent } from '../utils/analytics';
 import { sentenceCase } from '../utils/text';
+import { safeCopyText } from '../utils/clipboard';
 import {
   historyTreeAtom,
   currentNodeIdAtom,
@@ -244,8 +245,11 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
         // the focus order (#257). Copies display-ready Unicode (the menu's default).
         e.preventDefault();
         e.stopPropagation();
-        navigator.clipboard?.writeText(equationToFormat(node.equation, 'unicode'));
-        trackEvent({ action: 'copy_step', category: 'history', label: node.id });
+        safeCopyText(equationToFormat(node.equation, 'unicode')).then((success) => {
+          if (success) {
+            trackEvent({ action: 'copy_step', category: 'history', label: node.id });
+          }
+        });
         return;
       case 'Escape':
         if (roving) {

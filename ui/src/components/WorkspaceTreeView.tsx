@@ -1041,7 +1041,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
 
   return (
     <div className={`relative flex-1 flex flex-col min-h-0 group ${className ?? THEME_GLASS.TREE_BG}`}>
-      <div className="absolute top-4 right-4 z-30 contextual-actions flex items-center gap-1.5">
+      <div className="absolute top-3 right-4 z-30 contextual-actions flex items-center gap-1.5">
         <Tooltip content={<HotkeyHint label="Zoom: Normal" keys="Z" />} position="bottom">
           <button
             onClick={() => handleZoomChange('normal')}
@@ -1070,7 +1070,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
           </button>
         </Tooltip>
       </div>
-      <div ref={scrollContainerRef} className="flex-1 overflow-auto pr-1 relative rounded-2xl">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto pr-1 pt-9 relative rounded-2xl">
         <RovingTabindexProvider containerRef={treeContainerRef}>{scaledWrapper}</RovingTabindexProvider>
       </div>
     </div>

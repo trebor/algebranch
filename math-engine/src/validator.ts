@@ -438,6 +438,32 @@ const QUICK_REJECT_GAP = 1e-3;
 const QUICK_REJECT_GUESSES = [1.0, -1.0, 2.0];
 
 /**
+ * Traverses an equation's LHS and RHS and checks if any division denominator
+ * evaluates to a value extremely close to zero (< 1e-9) at the given scope.
+ * This identifies roots that lie on (or close to, due to solver tolerance) poles.
+ */
+const isNearPole = (eq: Equation, scope: Record<string, number>): boolean => {
+  let nearPole = false;
+  const check = (node: math.MathNode) => {
+    if (nearPole) return;
+    if (node.type === 'OperatorNode' && (node as math.OperatorNode).op === '/') {
+      const denom = (node as math.OperatorNode).args[1];
+      try {
+        const val = evaluatePoint(denom, scope);
+        if (typeof val === 'number' && Math.abs(val) < 1e-9) {
+          nearPole = true;
+        }
+      } catch {
+        nearPole = true;
+      }
+    }
+  };
+  eq.lhs.traverse(check);
+  eq.rhs.traverse(check);
+  return nearPole;
+};
+
+/**
  * Cheap reject-only pre-check for equation equivalence (#188). Returns true only
  * when a genuine (converged, finite, real-when-required) root of one side fails
  * the other by more than {@link QUICK_REJECT_GAP} — a definitive non-equivalence
@@ -452,7 +478,7 @@ const quickRejectByRoot = (eq1: Equation, eq2: Equation, variables: string[]): b
       scope[v] = Math.random() * (RANGE_MID_MAX - RANGE_MID_MIN) + RANGE_MID_MIN;
     });
 
-    const sourceViolatesOther = (source: Equation, other: Equation): boolean => {
+    const sourceViolatesOther = (source: Equation, other: Equation, otherIsOriginal: boolean): boolean => {
       const isRealSrc = isEquationReal(source, scope);
       const sourceVars = Array.from(new Set(getVariables(source.lhs).concat(getVariables(source.rhs))));
       for (const solveVar of variables) {
@@ -462,6 +488,7 @@ const quickRejectByRoot = (eq1: Equation, eq2: Equation, variables: string[]): b
           if (root === null || !isValFinite(root) || isValNaN(root)) continue;
           if (isRealSrc && !isReal(root)) continue;
           const localScope = { ...scope, [solveVar]: root };
+          if (otherIsOriginal && isNearPole(other, localScope)) continue;
           const dOther = subV(evaluatePoint(other.lhs, localScope), evaluatePoint(other.rhs, localScope));
           if (isValNaN(dOther) || !isValFinite(dOther)) continue;
           if (absNum(dOther) > QUICK_REJECT_GAP) return true;
@@ -470,7 +497,7 @@ const quickRejectByRoot = (eq1: Equation, eq2: Equation, variables: string[]): b
       return false;
     };
 
-    return sourceViolatesOther(eq1, eq2) || sourceViolatesOther(eq2, eq1);
+    return sourceViolatesOther(eq1, eq2, false) || sourceViolatesOther(eq2, eq1, true);
   } catch {
     return false;
   }
@@ -569,8 +596,12 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
         const roots = roots2[solveVar] || [];
         for (const root of roots) {
           const localScope = { ...scope, [solveVar]: root };
+          if (isNearPole(eq1, localScope)) continue;
           const dTarget = subV(evaluatePoint(eq1.lhs, localScope), evaluatePoint(eq1.rhs, localScope));
-          if (isValNaN(dTarget) || !isValFinite(dTarget) || absNum(dTarget) > 1e-5) {
+          if (isValNaN(dTarget) || !isValFinite(dTarget)) {
+            continue;
+          }
+          if (absNum(dTarget) > 1e-5) {
             return false;
           }
         }

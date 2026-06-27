@@ -1,7 +1,7 @@
 import * as math from 'mathjs';
 import { parseEquation, equationToString, Equation, tryExpandPowerTerm, tryCombinePowerTerms } from '../src/index';
 import { areEquationsEquivalent, generateValidMoves, hasValidMove } from '../src/validator';
-import { getAllPaths } from '../src/tree';
+import { getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath } from '../src/tree';
 import { autoSimplify, getSimplificationForPath } from '../src/simplify';
 
 describe('Math Engine Validator & Simplifier', () => {
@@ -614,6 +614,13 @@ describe('Math Engine Validator & Simplifier', () => {
     const eq5 = parseEquation('0 = (sqrt(-383) - 7) / x - 24');
     const eq6 = parseEquation('(sqrt(-383) - 7) / x = 24');
     expect(areEquationsEquivalent(eq5, eq6)).toBe(true);
+
+    // 5. Check transposition of denominator with removable singularity / pole
+    const eq7 = parseEquation('(-2 * (n ^ 2 - n * 7 / 2 + (7 / 4) ^ 2) + 9 / 8) / (n - 1) = 5 - 2 * n');
+    const eq8 = parseEquation('(-2 * (n ^ 2 - n * 7 / 2 + (7 / 4) ^ 2) + 9 / 8) = (5 - 2 * n) * (n - 1)');
+    expect(areEquationsEquivalent(eq7, eq8)).toBe(true);
+    const moves = generateValidMoves(eq7, 'lhs/1');
+    expect(Object.keys(moves)).toContain('rhs');
   });
 });
 

@@ -66,9 +66,14 @@ import {
   savedSessionsAtom,
   currentSessionIdAtom,
   SavedSession,
+  SerializedHistoryNode,
   serializeTree,
   deserializeTree,
   serializeWorkspaceState,
+  deminifyWorkspace,
+  STORAGE_SCHEMA_VERSION,
+  wrapVersioned,
+  unwrapVersioned,
   getActivePathIds,
   INITIAL_EQUATION_STRING,
   leftSidebarOpenAtom,
@@ -548,36 +553,39 @@ export default function Home() {
         try {
           const savedSessionsRaw = safeLocalStorage.getItem('algebranch_saved_sessions');
           if (savedSessionsRaw) {
-            sessions = JSON.parse(savedSessionsRaw);
-            
-            // Auto-migrate legacy default equation to the new optimized default
-            let migrated = false;
-            sessions = sessions.map(s => {
-              if (s.id === 'session_initial' && s.name === '3 * x + 5 = x + 13') {
-                migrated = true;
-                const initialTree: Record<string, HistoryNode> = {
-                  "0": {
-                    id: "0",
-                    equation: parseEquation(INITIAL_EQUATION_STRING),
-                    parentId: null,
-                    childrenIds: [],
-                    label: "Initial",
+            const payload = unwrapVersioned<SavedSession[]>(savedSessionsRaw);
+            if (payload) {
+              sessions = payload;
+              
+              // Auto-migrate legacy default equation to the new optimized default
+              let migrated = false;
+              sessions = sessions.map(s => {
+                if (s.id === 'session_initial' && s.name === '3 * x + 5 = x + 13') {
+                  migrated = true;
+                  const initialTree: Record<string, HistoryNode> = {
+                    "0": {
+                      id: "0",
+                      equation: parseEquation(INITIAL_EQUATION_STRING),
+                      parentId: null,
+                      childrenIds: [],
+                      label: "Initial",
+                      timestamp: Date.now(),
+                    }
+                  };
+                  return {
+                    id: 'session_initial',
+                    name: 'Sample Workspace',
                     timestamp: Date.now(),
-                  }
-                };
-                return {
-                  id: 'session_initial',
-                  name: 'Sample Workspace',
-                  timestamp: Date.now(),
-                  tree: serializeTree(initialTree),
-                  currentNodeId: "0",
-                };
-              }
-              return s;
-            });
+                    tree: serializeTree(initialTree),
+                    currentNodeId: "0",
+                  };
+                }
+                return s;
+              });
 
-            if (migrated) {
-              safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(sessions));
+              if (migrated) {
+                safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(wrapVersioned(sessions)));
+              }
             }
 
             setSavedSessions(sessions);
@@ -591,14 +599,38 @@ export default function Home() {
         if (cleanStateStr) {
           try {
             const decompressed = await decompressString(cleanStateStr);
-            const { tree, currentNodeId, name } = JSON.parse(decompressed);
-            const { matched } = createSessionFromState({ tree, currentNodeId, name });
-            // Recipient loop (#241): the link restored someone's full derivation —
-            // acknowledge it and teach the share feature at this primed moment.
-            // On a dedupe match (#299) nothing new arrived, so the store already
-            // showed a "you already have this" toast — skip the banner. Once the
-            // recipient has dismissed it (#263), every later share link stays quiet.
-            if (!matched && !isSharedWorkspaceBannerDismissed()) setSharedWorkspaceBanner(true);
+            const envelope = JSON.parse(decompressed);
+            let tree, currentNodeId, name;
+            let isValid = false;
+
+            if (envelope && envelope.v === STORAGE_SCHEMA_VERSION && envelope.t) {
+              try {
+                const deminified = deminifyWorkspace(envelope);
+                tree = deminified.tree;
+                currentNodeId = deminified.currentNodeId;
+                name = deminified.name;
+                isValid = true;
+              } catch (e) {
+                console.error('Failed to deminify workspace payload:', e);
+              }
+            } else if (envelope && envelope.version === STORAGE_SCHEMA_VERSION && envelope.payload) {
+              tree = envelope.payload.tree;
+              currentNodeId = envelope.payload.currentNodeId;
+              name = envelope.payload.name;
+              isValid = true;
+            }
+
+            if (isValid && tree && currentNodeId) {
+              const { matched } = createSessionFromState({ tree, currentNodeId, name });
+              // Recipient loop (#241): the link restored someone's full derivation —
+              // acknowledge it and teach the share feature at this primed moment.
+              // On a dedupe match (#299) nothing new arrived, so the store already
+              // showed a "you already have this" toast — skip the banner. Once the
+              // recipient has dismissed it (#263), every later share link stays quiet.
+              if (!matched && !isSharedWorkspaceBannerDismissed()) setSharedWorkspaceBanner(true);
+            } else {
+              console.warn('Discarded legacy or invalid shared workspace version:', envelope?.version || envelope?.v);
+            }
             // Clear query parameter from the URL to prevent duplicate tabs on page refresh
             window.history.replaceState(null, '', window.location.pathname);
           } catch (err) {
@@ -646,29 +678,32 @@ export default function Home() {
 
           // 4. Legacy migration fallback: Check old workspace storage keys (backward compatibility)
           const savedTreeRaw = safeLocalStorage.getItem('algebranch_history_tree');
-          const savedNodeId = safeLocalStorage.getItem('algebranch_current_node_id');
-          if (savedTreeRaw && savedNodeId) {
-            const parsedRaw = JSON.parse(savedTreeRaw);
-            const deserializedTree = deserializeTree(parsedRaw);
-            setTree(deserializedTree);
-            setCurrentNodeId(savedNodeId);
-            
-            // Migrate legacy workspace into a new session
-            const initialEqStr = equationToString(deserializedTree["0"].equation);
-            const legacySessionId = `session_migrated_${Date.now()}`;
-            const newSession: SavedSession = {
-              id: legacySessionId,
-              name: initialEqStr,
-              timestamp: Date.now(),
-              tree: parsedRaw,
-              currentNodeId: savedNodeId,
-            };
-            const updated = [newSession, ...sessions];
-            setSavedSessions(updated);
-            setCurrentSessionId(legacySessionId);
-            safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updated));
-            safeLocalStorage.setItem('algebranch_current_session_id', legacySessionId);
-            return;
+          const savedNodeIdRaw = safeLocalStorage.getItem('algebranch_current_node_id');
+          if (savedTreeRaw && savedNodeIdRaw) {
+            const treePayload = unwrapVersioned<Record<string, SerializedHistoryNode>>(savedTreeRaw);
+            const nodePayload = unwrapVersioned<string>(savedNodeIdRaw);
+            if (treePayload && nodePayload) {
+              const deserializedTree = deserializeTree(treePayload);
+              setTree(deserializedTree);
+              setCurrentNodeId(nodePayload);
+              
+              // Migrate legacy workspace into a new session
+              const initialEqStr = equationToString(deserializedTree["0"].equation);
+              const legacySessionId = `session_migrated_${Date.now()}`;
+              const newSession: SavedSession = {
+                id: legacySessionId,
+                name: initialEqStr,
+                timestamp: Date.now(),
+                tree: treePayload,
+                currentNodeId: nodePayload,
+              };
+              const updated = [newSession, ...sessions];
+              setSavedSessions(updated);
+              setCurrentSessionId(legacySessionId);
+              safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(wrapVersioned(updated)));
+              safeLocalStorage.setItem('algebranch_current_session_id', legacySessionId);
+              return;
+            }
           }
         } catch (err) {
           console.error('Failed to load history from local storage:', err);
@@ -695,7 +730,7 @@ export default function Home() {
           currentNodeId: "0",
         };
         setSavedSessions([defaultSession]);
-        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify([defaultSession]));
+        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(wrapVersioned([defaultSession])));
         safeLocalStorage.setItem('algebranch_current_session_id', defaultId);
       } catch (err) {
         console.error('Initialization failed:', err);
@@ -757,13 +792,13 @@ export default function Home() {
         }
 
         // Write the list to localStorage
-        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(nextSessions));
+        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(wrapVersioned(nextSessions)));
         return nextSessions;
       });
 
       // Also maintain the legacy/single active workspace key for other references
-      safeLocalStorage.setItem('algebranch_history_tree', JSON.stringify(serialized));
-      safeLocalStorage.setItem('algebranch_current_node_id', currentNodeId);
+      safeLocalStorage.setItem('algebranch_history_tree', JSON.stringify(wrapVersioned(serialized)));
+      safeLocalStorage.setItem('algebranch_current_node_id', JSON.stringify(wrapVersioned(currentNodeId)));
       safeLocalStorage.setItem('algebranch_current_session_id', currentSessionId);
     } catch (err) {
       console.error('Failed to save history to local storage:', err);

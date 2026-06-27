@@ -15,6 +15,8 @@ import {
   createNewSessionAtom,
   toastAtom,
   serializeTree,
+  minifyWorkspace,
+  deminifyWorkspace,
   type SavedSession,
   type SerializedHistoryNode,
   type WorkspaceTab,
@@ -137,5 +139,64 @@ describe('createNewSessionAtom — ?eq= arrival dedupe (#299)', () => {
     store.set(createNewSessionAtom, 'x^2-9=0');
 
     expect(store.get(savedSessionsAtom)).toHaveLength(2);
+  });
+});
+
+describe('minifyWorkspace / deminifyWorkspace round-trip', () => {
+  it('perfectly round-trips a multi-node history tree with structural relationships', () => {
+    const originalTree: Record<string, SerializedHistoryNode> = {
+      '0': { id: '0', equation: '2 * (x + 3) = 10', parentId: null, childrenIds: ['step_1'], label: 'Initial', timestamp: 1000 },
+      'step_1': { id: 'step_1', equation: 'x + 3 = 5', parentId: '0', childrenIds: ['step_2'], label: 'Transpose', timestamp: 2000 },
+      'step_2': { id: 'step_2', equation: 'x = 2', parentId: 'step_1', childrenIds: [], label: 'Simplify', timestamp: 3000 },
+    };
+
+    const minified = minifyWorkspace({
+      tree: originalTree,
+      currentNodeId: 'step_2',
+      name: 'Test Name',
+    });
+
+    // Check minification format / structure
+    expect(minified.v).toBe(1);
+    expect(minified.a).toBe('Test Name');
+    expect(minified.t['0'].e).toBe('2 * (x + 3) = 10');
+    expect(minified.t['0'].p).toBeNull();
+    
+    // Check that ID sequentialization happened
+    const mappedIds = Object.keys(minified.t);
+    expect(mappedIds).toContain('0');
+    expect(mappedIds).toContain('1');
+    expect(mappedIds).toContain('2');
+    expect(mappedIds.some(id => id.startsWith('step_'))).toBe(false);
+
+    // De-minify back to standard representation
+    const restored = deminifyWorkspace(minified);
+    expect(restored.name).toBe('Test Name');
+
+    // Confirm structural integrity and parent-child linkages round-tripped
+    const restoredNodes = Object.values(restored.tree);
+    expect(restoredNodes).toHaveLength(3);
+
+    const rootNode = restoredNodes.find(n => n.parentId === null);
+    expect(rootNode).toBeDefined();
+    expect(rootNode!.equation).toBe('2 * (x + 3) = 10');
+    expect(rootNode!.childrenIds).toHaveLength(1);
+
+    const step1Id = rootNode!.childrenIds[0];
+    const step1Node = restored.tree[step1Id];
+    expect(step1Node).toBeDefined();
+    expect(step1Node.equation).toBe('x + 3 = 5');
+    expect(step1Node.parentId).toBe(rootNode!.id);
+    expect(step1Node.childrenIds).toHaveLength(1);
+
+    const step2Id = step1Node.childrenIds[0];
+    const step2Node = restored.tree[step2Id];
+    expect(step2Node).toBeDefined();
+    expect(step2Node.equation).toBe('x = 2');
+    expect(step2Node.parentId).toBe(step1Node.id);
+    expect(step2Node.childrenIds).toHaveLength(0);
+
+    // Verify current node ID was correctly mapped back to the new step_2 random ID
+    expect(restored.currentNodeId).toBe(step2Node.id);
   });
 });

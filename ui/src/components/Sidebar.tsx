@@ -10,7 +10,7 @@ import { useIsHydrated } from '../hooks/useIsHydrated';
 import { Tooltip } from './Tooltip';
 import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
-import { Equation, parseEquation, ensureNodeIds, deserializeEquation } from 'math-engine-client';
+import { Equation, parseEquation, ensureNodeIds } from 'math-engine-client';
 import {
   resetToEquationStringAtom,
   savedSessionsAtom,
@@ -112,7 +112,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
     let eq: Equation | null = null;
     try {
       const node = session.tree?.[session.currentNodeId] || session.tree?.['0'];
-      if (node) eq = deserializeEquation(node.equation);
+      if (node) eq = ensureNodeIds(parseEquation(node.equation));
     } catch {
       eq = null;
     }

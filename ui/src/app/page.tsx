@@ -114,6 +114,8 @@ import {
   closeTabAtom,
   cycleActiveTabAtom,
   equationInputModalOpenAtom,
+  equationEditSeedAtom,
+  parseRawStringToEditSeed,
   openEquationEditorAtom,
   activeWorkspacePristineAtom,
   shortcutsOverlayOpenAtom,
@@ -319,6 +321,7 @@ export default function Home() {
   const closeTab = useSetAtom(closeTabAtom);
   const cycleActiveTab = useSetAtom(cycleActiveTabAtom);
   const setEquationInputModalOpen = useSetAtom(equationInputModalOpenAtom);
+  const setEquationEditSeed = useSetAtom(equationEditSeedAtom);
   const openEquationEditor = useSetAtom(openEquationEditorAtom);
   const isWorkspacePristine = useAtomValue(activeWorkspacePristineAtom);
   const [shortcutsOverlayOpen, setShortcutsOverlayOpen] = useAtom(shortcutsOverlayOpenAtom);
@@ -642,15 +645,21 @@ export default function Home() {
         const cleanEqStr = readEqParam(window.location.search);
         if (cleanEqStr) {
           try {
+            parseEquation(cleanEqStr);
             // Dedupe (#299): if an untouched workspace for this equation already
             // exists, open it (with a toast) rather than spawning a duplicate.
             createNewSession(cleanEqStr, undefined, { dedupe: true });
             // Clear query parameter from the URL to prevent duplicate tabs on page refresh
             window.history.replaceState(null, '', window.location.pathname);
+            return;
           } catch (err) {
-            console.error('Failed to parse equation from URL query parameter:', err);
+            console.warn('Failed to parse equation from URL query parameter:', err instanceof Error ? err.message : String(err));
+            setToast({ message: 'Invalid shared equation format', key: Date.now() });
+            const seed = parseRawStringToEditSeed(cleanEqStr);
+            setEquationEditSeed(seed);
+            setEquationInputModalOpen(true);
+            window.history.replaceState(null, '', window.location.pathname);
           }
-          return;
         }
         
         // 3. Otherwise, check if there was a saved active session
@@ -745,7 +754,7 @@ export default function Home() {
     };
 
     initialize();
-  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession, createSessionFromState, setSharedWorkspaceBanner, setAppHydrated]);
+  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession, createSessionFromState, setSharedWorkspaceBanner, setAppHydrated, setEquationInputModalOpen, setEquationEditSeed, setToast]);
 
   // Save derivation steps to local storage and update address bar URL reactively
   React.useEffect(() => {

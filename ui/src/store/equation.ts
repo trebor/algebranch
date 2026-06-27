@@ -17,6 +17,8 @@ import { assignLanes } from '../utils/treeLayout';
 
 // Global Initial Value Constants
 export const INITIAL_EQUATION_STRING = '2 * (x + 3) = 10';
+export const DEFAULT_TAB_ID = 'tab_initial';
+export const DEFAULT_TAB_NAME = 'Sample Workspace';
 
 // Tree Interface Definition
 export interface HistoryNode {
@@ -338,8 +340,8 @@ export interface WorkspaceTab {
 // Helper for fallback/static initial tabs
 const getFallbackTabs = (): WorkspaceTab[] => [
   {
-    id: 'tab_initial',
-    name: 'Sample Workspace',
+    id: DEFAULT_TAB_ID,
+    name: DEFAULT_TAB_NAME,
     historyTree: {
       "0": {
         id: "0",
@@ -1608,6 +1610,41 @@ const toEquationEditSeed = (eq: Equation): EquationEditSeed => {
 };
 
 /**
+ * Splits a potentially malformed raw string into LHS / relation / RHS.
+ * Useful when receiving a broken equation from a query parameter to prefill
+ * the input modal in edit mode so the user can fix it.
+ */
+export const parseRawStringToEditSeed = (rawStr: string): EquationEditSeed => {
+  const ops: RelationOperator[] = ['<=', '>=', '=', '<', '>'];
+  let firstOp: RelationOperator | null = null;
+  let firstIdx = -1;
+
+  for (const op of ops) {
+    const idx = rawStr.indexOf(op);
+    if (idx !== -1) {
+      if (firstIdx === -1 || idx < firstIdx) {
+        firstIdx = idx;
+        firstOp = op;
+      }
+    }
+  }
+
+  if (firstIdx === -1 || !firstOp) {
+    return {
+      lhs: rawStr.trim(),
+      relation: '=',
+      rhs: '',
+    };
+  }
+
+  return {
+    lhs: rawStr.slice(0, firstIdx).trim(),
+    relation: firstOp,
+    rhs: rawStr.slice(firstIdx + firstOp.length).trim(),
+  };
+};
+
+/**
  * Atom: the edit-mode seed for the input dialog. Set by `openEquationEditorAtom`
  * and cleared by the dialog on close so a stale seed never leaks into a later
  * blank ("new equation") open.
@@ -1663,6 +1700,8 @@ export const submitEquationEditAtom = atom(null, (get, set, eqStr: string) => {
   if (isPristine && activeTab) {
     const updatedTabs = tabs.map(t => {
       if (t.id !== activeTab.id) return t;
+      const isDefaultPlaceholder = t.id === DEFAULT_TAB_ID && t.name === DEFAULT_TAB_NAME;
+      const isCustomNamed = !!t.isCustomNamed && !isDefaultPlaceholder;
       return {
         ...t,
         historyTree: {
@@ -1676,7 +1715,8 @@ export const submitEquationEditAtom = atom(null, (get, set, eqStr: string) => {
           },
         },
         currentNodeId: '0',
-        name: t.isCustomNamed ? t.name : eqStr,
+        name: isCustomNamed ? t.name : eqStr,
+        isCustomNamed,
         isModified: true,
         timestamp: Date.now(),
       };

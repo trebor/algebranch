@@ -5,7 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { Check } from 'lucide-react';
-import { Equation, deserializeEquation, equationToString } from 'math-engine-client';
+import { Equation, parseEquation, ensureNodeIds, equationToString } from 'math-engine-client';
 import type { SerializedHistoryNode } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { Tooltip } from './Tooltip';
@@ -49,7 +49,7 @@ const previewEquation = (ws: SelectableWorkspace): Equation | null => {
   try {
     const node = ws.tree?.[ws.currentNodeId] ?? ws.tree?.['0'];
     if (!node) return null;
-    return deserializeEquation(node.equation);
+    return ensureNodeIds(parseEquation(node.equation));
   } catch {
     return null;
   }

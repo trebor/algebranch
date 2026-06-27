@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { atom } from 'jotai';
-import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation, compressString } from 'math-engine-client';
+import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, deserializeEquation, SerializedEquation, getFunctionName, flipRelation, compressString } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
 import { applyGlobalOp, GlobalOpParams, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
@@ -32,7 +32,7 @@ export interface HistoryNode {
 
 export interface SerializedHistoryNode {
   id: string;
-  equation: SerializedEquation;
+  equation: string;
   parentId: string | null;
   childrenIds: string[];
   label: string;
@@ -56,7 +56,7 @@ export const serializeTree = (tree: Record<string, HistoryNode>): Record<string,
   Object.keys(tree).forEach(id => {
     serialized[id] = {
       ...tree[id],
-      equation: serializeEquation(tree[id].equation)
+      equation: tree[id].equation ? equationToString(tree[id].equation) : ''
     };
   });
   return serialized;
@@ -67,10 +67,107 @@ export const deserializeTree = (serialized: Record<string, SerializedHistoryNode
   Object.keys(serialized).forEach(id => {
     tree[id] = {
       ...serialized[id],
-      equation: deserializeEquation(serialized[id].equation)
+      equation: ensureNodeIds(parseEquation(serialized[id].equation))
     };
   });
   return tree;
+};
+
+export interface MinifiedNode {
+  i: string; // id
+  e: string; // equation
+  p: string | null; // parentId
+  c: string[]; // childrenIds
+  l: string; // label
+  h?: StepChange; // change (optional)
+}
+
+export interface MinifiedWorkspace {
+  v: number; // version
+  t: Record<string, MinifiedNode>; // tree
+  n: string; // currentNodeId
+  a: string; // name
+}
+
+export const minifyWorkspace = (ws: {
+  tree: Record<string, SerializedHistoryNode>;
+  currentNodeId: string;
+  name: string;
+}): MinifiedWorkspace => {
+  const { tree, currentNodeId, name } = ws;
+  const idMap: Record<string, string> = {};
+  let counter = 0;
+  
+  if ("0" in tree) {
+    idMap["0"] = "0";
+    counter = 1;
+  }
+  
+  Object.keys(tree).forEach(id => {
+    if (id !== "0") {
+      idMap[id] = String(counter++);
+    }
+  });
+
+  const minifiedTree: Record<string, MinifiedNode> = {};
+  Object.keys(tree).forEach(id => {
+    const node = tree[id];
+    const shortId = idMap[id];
+    minifiedTree[shortId] = {
+      i: shortId,
+      e: node.equation,
+      p: node.parentId ? idMap[node.parentId] : null,
+      c: node.childrenIds.map(cid => idMap[cid] || cid),
+      l: node.label,
+      ...(node.change ? { h: node.change } : {})
+    };
+  });
+
+  return {
+    v: STORAGE_SCHEMA_VERSION,
+    t: minifiedTree,
+    n: idMap[currentNodeId] || currentNodeId,
+    a: name
+  };
+};
+
+export const deminifyWorkspace = (minified: MinifiedWorkspace): {
+  tree: Record<string, SerializedHistoryNode>;
+  currentNodeId: string;
+  name: string;
+} => {
+  const { t: minifiedTree, n: shortCurrentNodeId, a: name } = minified;
+  const idMap: Record<string, string> = {};
+  Object.keys(minifiedTree).forEach(shortId => {
+    if (shortId === "0") {
+      idMap["0"] = "0";
+    } else {
+      idMap[shortId] = `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+  });
+
+  const tree: Record<string, SerializedHistoryNode> = {};
+  let baseTime = Date.now() - Object.keys(minifiedTree).length * 1000;
+  
+  Object.keys(minifiedTree).forEach(shortId => {
+    const mNode = minifiedTree[shortId];
+    const fullId = idMap[shortId];
+    tree[fullId] = {
+      id: fullId,
+      equation: mNode.e,
+      parentId: mNode.p ? idMap[mNode.p] : null,
+      childrenIds: mNode.c.map(scid => idMap[scid] || scid),
+      label: mNode.l,
+      timestamp: baseTime += 1000,
+      ...(mNode.h ? { change: mNode.h } : {})
+    };
+  });
+
+  return {
+    tree,
+    currentNodeId: idMap[shortCurrentNodeId] || shortCurrentNodeId,
+    name
+  };
 };
 
 /**
@@ -85,7 +182,8 @@ export const serializeWorkspaceState = async (
 ): Promise<string> => {
   if (!tree || !currentNodeId) return '';
   const serialized = serializeTree(tree);
-  const stateStr = JSON.stringify({ tree: serialized, currentNodeId, name });
+  const minified = minifyWorkspace({ tree: serialized, currentNodeId, name });
+  const stateStr = JSON.stringify(minified);
   return await compressString(stateStr);
 };
 
@@ -294,6 +392,35 @@ export const safeLocalStorage = {
 export const rawTabsAtom = atom<WorkspaceTab[]>(getFallbackTabs());
 export const rawActiveTabIdAtom = atom<string>('tab_initial');
 
+export const STORAGE_SCHEMA_VERSION = 1;
+
+export interface VersionedPayload<T> {
+  version: number;
+  payload: T;
+}
+
+export const wrapVersioned = <T>(payload: T): VersionedPayload<T> => ({
+  version: STORAGE_SCHEMA_VERSION,
+  payload,
+});
+
+export const unwrapVersioned = <T>(jsonStr: string | null): T | null => {
+  if (!jsonStr) return null;
+  const trimmed = jsonStr.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+    return null;
+  }
+  try {
+    const envelope = JSON.parse(trimmed);
+    if (envelope && envelope.version === STORAGE_SCHEMA_VERSION) {
+      return envelope.payload as T;
+    }
+  } catch (err) {
+    console.error('Failed to parse versioned payload:', err);
+  }
+  return null;
+};
+
 // Helper to save tabs to localStorage
 const saveTabsToLocalStorage = (tabs: WorkspaceTab[], activeId: string) => {
   if (typeof window !== 'undefined') {
@@ -302,7 +429,7 @@ const saveTabsToLocalStorage = (tabs: WorkspaceTab[], activeId: string) => {
         ...tab,
         historyTree: serializeTree(tab.historyTree)
       }));
-      safeLocalStorage.setItem('algebranch_workspace_tabs', JSON.stringify(serialized));
+      safeLocalStorage.setItem('algebranch_workspace_tabs', JSON.stringify(wrapVersioned(serialized)));
       safeLocalStorage.setItem('algebranch_active_tab_id', activeId);
     } catch (err) {
       console.error('Failed to save workspace tabs to localStorage:', err);
@@ -317,12 +444,19 @@ export const tabsAtom = atom(
     const prev = get(rawTabsAtom);
     const next = typeof update === 'function' ? update(prev) : update;
     set(rawTabsAtom, next);
-    saveTabsToLocalStorage(next, get(rawActiveTabIdAtom));
+    saveTabsToLocalStorage(next, get(activeTabIdAtom));
   }
 );
 
 export const activeTabIdAtom = atom(
-  (get) => get(rawActiveTabIdAtom),
+  (get) => {
+    const rawActiveId = get(rawActiveTabIdAtom);
+    const tabs = get(rawTabsAtom);
+    if (tabs.length > 0 && !tabs.some(t => t.id === rawActiveId)) {
+      return tabs[0].id;
+    }
+    return rawActiveId;
+  },
   (get, set, update: string | ((prev: string) => string)) => {
     const prev = get(rawActiveTabIdAtom);
     const next = typeof update === 'function' ? update(prev) : update;
@@ -1140,7 +1274,7 @@ export const createNewSessionAtom = atom(
           const root = s.tree[nodeIds[0]];
           if (root.childrenIds && root.childrenIds.length > 0) return false;
           try {
-            return equationToString(deserializeEquation(root.equation)) === candidateEq;
+            return root.equation === candidateEq;
           } catch {
             return false;
           }
@@ -1196,7 +1330,7 @@ export const createNewSessionAtom = atom(
       set(savedSessionsAtom, updatedSessions);
 
       try {
-        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
+        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(wrapVersioned(updatedSessions)));
         safeLocalStorage.setItem('algebranch_current_session_id', newId);
       } catch (err) {
         console.error('Failed to save sessions to localStorage:', err);
@@ -1279,7 +1413,7 @@ export const createSessionFromStateAtom = atom(
       set(savedSessionsAtom, updatedSessions);
 
       try {
-        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
+        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(wrapVersioned(updatedSessions)));
         safeLocalStorage.setItem('algebranch_current_session_id', newId);
       } catch (err) {
         console.error('Failed to save sessions to localStorage:', err);
@@ -1369,7 +1503,7 @@ export const importWorkspacesAtom = atom(
     const { merged, skipped } = mergeWorkspaces(existing, incoming);
     set(savedSessionsAtom, merged);
     try {
-      safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(merged));
+      safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(wrapVersioned(merged)));
     } catch (err) {
       console.error('Failed to persist imported sessions:', err);
     }
@@ -1389,7 +1523,7 @@ export const deleteSessionAtom = atom(
 
     // Save updated sessions to localStorage immediately
     try {
-      safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
+      safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(wrapVersioned(updatedSessions)));
     } catch (err) {
       console.error('Failed to save sessions after deletion:', err);
     }
@@ -1931,22 +2065,24 @@ export const hydrateWorkspaceTabsAtom = atom(
       const savedActiveId = safeLocalStorage.getItem('algebranch_active_tab_id');
       
       if (savedTabs) {
-        const parsed = JSON.parse(savedTabs) as Array<Omit<WorkspaceTab, 'historyTree'> & { historyTree: Record<string, SerializedHistoryNode> }>;
-        const deserialized = parsed.map((tab) => {
-          const tree = deserializeTree(tab.historyTree);
-          return {
-            ...tab,
-            historyTree: tree,
-            sessionId: tab.sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            timestamp: tab.timestamp || getSessionLatestTimestamp(tree)
-          };
-        });
-        set(rawTabsAtom, deserialized);
+        const payload = unwrapVersioned<Array<Omit<WorkspaceTab, 'historyTree'> & { historyTree: Record<string, SerializedHistoryNode> }>>(savedTabs);
+        if (payload) {
+          const deserialized = payload.map((tab) => {
+            const tree = deserializeTree(tab.historyTree);
+            return {
+              ...tab,
+              historyTree: tree,
+              sessionId: tab.sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              timestamp: tab.timestamp || getSessionLatestTimestamp(tree)
+            };
+          });
+          set(rawTabsAtom, deserialized);
 
-        const activeId = savedActiveId || 'tab_initial';
-        const activeTab = deserialized.find((t) => t.id === activeId) || deserialized[0];
-        if (activeTab?.sessionId) {
-          set(rawCurrentSessionIdAtom, activeTab.sessionId);
+          const activeId = savedActiveId || 'tab_initial';
+          const activeTab = deserialized.find((t) => t.id === activeId) || deserialized[0];
+          if (activeTab?.sessionId) {
+            set(rawCurrentSessionIdAtom, activeTab.sessionId);
+          }
         }
       }
       
@@ -2166,7 +2302,7 @@ export const startOnboardingChapterAtom = atom(
       set(hoveredLoopTargetIdAtom, null);
 
       try {
-        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(updatedSessions));
+        safeLocalStorage.setItem('algebranch_saved_sessions', JSON.stringify(wrapVersioned(updatedSessions)));
         safeLocalStorage.setItem('algebranch_current_session_id', sessionId);
       } catch (err) {
         console.error('Failed to save tutorial session to localStorage:', err);
@@ -2201,7 +2337,7 @@ export const setOnboardingStepAtom = atom(
       set(sourcePathAtom, null);
 
       // Remove chapterId from the active tab so it behaves as a normal tab
-      const activeTabId = get(rawActiveTabIdAtom);
+      const activeTabId = get(activeTabIdAtom);
       if (activeTabId) {
         set(tabsAtom, (prev) =>
           prev.map((t) => (t.id === activeTabId ? { ...t, chapterId: undefined } : t))

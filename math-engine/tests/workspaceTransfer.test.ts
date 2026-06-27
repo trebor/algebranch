@@ -21,7 +21,7 @@ const makeSession = (over: Partial<any> = {}): any => ({
   tree: {
     '0': {
       id: '0',
-      equation: { type: 'eq', value: 'x^2=9' },
+      equation: 'x^2=9',
       parentId: null,
       childrenIds: [],
       label: 'Start',
@@ -45,7 +45,7 @@ describe('serializeWorkspacesToJson / parseWorkspacesJson round-trip', () => {
       name: 'Quadratics',
       currentNodeId: '0',
     });
-    expect(parsed.workspaces[0].tree['0'].equation).toEqual({ type: 'eq', value: 'x^2=9' });
+    expect(parsed.workspaces[0].tree['0'].equation).toEqual('x^2=9');
   });
 
   test('excludes tutorial/onboarding (chapterId-bound) sessions from export', () => {
@@ -104,12 +104,12 @@ describe('hashWorkspace', () => {
     const base = makeSession();
     const reordered = makeSession();
     reordered.tree = {
-      '1': { id: '1', equation: { v: 2 }, parentId: '0', childrenIds: [], label: 'B', timestamp: 2 },
-      '0': { id: '0', equation: { v: 1 }, parentId: null, childrenIds: ['1'], label: 'A', timestamp: 1 },
+      '1': { id: '1', equation: 'x=2', parentId: '0', childrenIds: [], label: 'B', timestamp: 2 },
+      '0': { id: '0', equation: 'x=1', parentId: null, childrenIds: ['1'], label: 'A', timestamp: 1 },
     };
     base.tree = {
-      '0': { id: '0', equation: { v: 1 }, parentId: null, childrenIds: ['1'], label: 'A', timestamp: 1 },
-      '1': { id: '1', equation: { v: 2 }, parentId: '0', childrenIds: [], label: 'B', timestamp: 2 },
+      '0': { id: '0', equation: 'x=1', parentId: null, childrenIds: ['1'], label: 'A', timestamp: 1 },
+      '1': { id: '1', equation: 'x=2', parentId: '0', childrenIds: [], label: 'B', timestamp: 2 },
     };
     expect(hashWorkspace(base)).toBe(hashWorkspace(reordered));
   });
@@ -117,7 +117,7 @@ describe('hashWorkspace', () => {
   test('differs when tree content differs', () => {
     const a = makeSession();
     const b = makeSession();
-    b.tree['0'].equation = { type: 'eq', value: 'x=5' };
+    b.tree['0'].equation = 'x=5';
     expect(hashWorkspace(a)).not.toBe(hashWorkspace(b));
   });
 });
@@ -150,7 +150,7 @@ describe('mergeWorkspaces', () => {
   test('same id but different content produces a new copy and preserves the original', () => {
     const existing = [makeSession({ id: 'session_1', name: 'Original' })];
     const variant = makeSession({ id: 'session_1', name: 'Original' });
-    variant.tree['0'].equation = { type: 'eq', value: 'x=42' };
+    variant.tree['0'].equation = 'x=42';
     const { merged, skipped } = mergeWorkspaces(existing, [toExported(variant)]);
 
     expect(skipped).toBe(0);
@@ -168,7 +168,7 @@ describe('mergeWorkspaces', () => {
   test('a genuinely new workspace is appended as-is', () => {
     const existing = [makeSession({ id: 'session_1' })];
     const fresh = makeSession({ id: 'session_2', name: 'Fresh' });
-    fresh.tree['0'].equation = { type: 'eq', value: 'y=2x' };
+    fresh.tree['0'].equation = 'y=2x';
     const { merged, skipped } = mergeWorkspaces(existing, [toExported(fresh)]);
 
     expect(skipped).toBe(0);

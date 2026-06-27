@@ -482,6 +482,20 @@ export default function Home() {
     };
   }, [isEqualsPopoverOpen]);
 
+  // Close the equals info popover on Escape.
+  React.useEffect(() => {
+    if (!isEqualsPopoverOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowEqualsPopover(false);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [isEqualsPopoverOpen]);
+
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
   // Destructure so the ref-typed members (containerRef/contentRef) are kept
   // distinct from the state-typed ones (scale/isScaled); accessing them off a

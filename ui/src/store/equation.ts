@@ -1270,6 +1270,27 @@ export const createNewSessionAtom = atom(
       // workspace that merely started from this equation is never hijacked.
       if (options?.dedupe) {
         const candidateEq = equationToString(newEq);
+
+        // First check open tabs to see if a pristine tab matches this equation
+        const prevTabs = get(tabsAtom);
+        const existingTab = prevTabs.find(t => {
+          const nodeIds = Object.keys(t.historyTree);
+          if (nodeIds.length !== 1) return false;
+          const root = t.historyTree[nodeIds[0]];
+          if (root.childrenIds && root.childrenIds.length > 0) return false;
+          try {
+            return equationToString(root.equation) === candidateEq;
+          } catch {
+            return false;
+          }
+        });
+        if (existingTab) {
+          set(activeTabIdAtom, existingTab.id);
+          set(currentSessionIdAtom, existingTab.sessionId || "");
+          set(toastAtom, { message: "You already have this workspace — opened it.", key: Date.now() });
+          return { matched: true };
+        }
+
         const match = get(savedSessionsAtom).find(s => {
           const nodeIds = Object.keys(s.tree);
           if (nodeIds.length !== 1) return false;
@@ -1361,12 +1382,24 @@ export const createSessionFromStateAtom = atom(
       const fallbackName = rootNode ? equationToString(rootNode.equation) : "Shared Workspace";
       const tabName = name || fallbackName;
 
-      // Share-link arrival dedupe (#299): if this exact workspace (same name +
+      // Share-link arrival dedupe (#299): if this exact workspace (same
       // derivation tree, by content hash) is already saved, open the existing
-      // one instead of creating a duplicate tab. `tabName` is hashed because that
-      // is the name a freshly-created session would store, so it matches.
-      const candidateHash = hashWorkspace({ name: tabName, currentNodeId, tree: serializedTree });
-      const match = get(savedSessionsAtom).find(s => hashWorkspace(s) === candidateHash);
+      // one instead of creating a duplicate tab.
+      const candidateHash = hashWorkspace({ name: tabName, currentNodeId, tree: serializedTree }, { ignoreName: true });
+
+      // First check open tabs to see if we already have this exact workspace open
+      const prevTabs = get(tabsAtom);
+      const existingTab = prevTabs.find(t =>
+        hashWorkspace({ name: t.name, currentNodeId: t.currentNodeId, tree: serializeTree(t.historyTree) }, { ignoreName: true }) === candidateHash
+      );
+      if (existingTab) {
+        set(activeTabIdAtom, existingTab.id);
+        set(currentSessionIdAtom, existingTab.sessionId || "");
+        set(toastAtom, { message: "You already have this workspace — opened it.", key: Date.now() });
+        return { matched: true };
+      }
+
+      const match = get(savedSessionsAtom).find(s => hashWorkspace(s, { ignoreName: true }) === candidateHash);
       if (match) {
         set(loadSessionAtom, match.id);
         set(toastAtom, { message: "You already have this workspace — opened it.", key: Date.now() });
@@ -1383,7 +1416,6 @@ export const createSessionFromStateAtom = atom(
         timestamp: Date.now()
       };
 
-      const prevTabs = get(tabsAtom);
       const isOnlyDefaultTab = prevTabs.length === 1 && prevTabs[0].id === 'tab_initial' && !prevTabs[0].isModified;
       if (isOnlyDefaultTab) {
         set(tabsAtom, [newTab]);
@@ -1444,12 +1476,21 @@ export const loadSessionAtom = atom(
     // clicking the tab strip, which is a separate path we leave alone.)
     set(requestTreeRefocusAtom);
 
-    // Check if a tab with this sessionId is already open
+    // Check if a tab with this sessionId or content hash is already open
     const prevTabs = get(tabsAtom);
-    const existingTab = prevTabs.find(t => t.sessionId === sessionId);
+    const sessionHash = hashWorkspace(session, { ignoreName: true });
+    const existingTab = prevTabs.find(t =>
+      t.sessionId === sessionId ||
+      hashWorkspace({ name: t.name, currentNodeId: t.currentNodeId, tree: serializeTree(t.historyTree) }, { ignoreName: true }) === sessionHash
+    );
     if (existingTab) {
       set(activeTabIdAtom, existingTab.id);
-      set(currentSessionIdAtom, sessionId);
+      set(currentSessionIdAtom, existingTab.sessionId || "");
+      try {
+        safeLocalStorage.setItem('algebranch_current_session_id', existingTab.sessionId || "");
+      } catch (err) {
+        console.error('Failed to save current session ID to localStorage:', err);
+      }
       return;
     }
 
@@ -1943,6 +1984,7 @@ export const addTabAtom = atom(
           historyTree: clonedHistoryTree,
           currentNodeId: activeTab.currentNodeId,
           isCustomNamed: activeTab.isCustomNamed,
+          isModified: true,
           sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           timestamp: Date.now()
         };

@@ -35,7 +35,7 @@ export const ImportWorkspacesModal: React.FC = () => {
 
   // Content hashes already in the library, so we can flag duplicates inline.
   const existingHashes = useMemo(
-    () => new Set(savedSessions.map(hashWorkspace)),
+    () => new Set(savedSessions.map(s => hashWorkspace(s))),
     [savedSessions],
   );
 

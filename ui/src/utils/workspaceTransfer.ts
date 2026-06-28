@@ -157,9 +157,65 @@ const djb2 = (str: string): string => {
  */
 export const hashWorkspace = (
   workspace: Pick<ExportedWorkspace, 'name' | 'currentNodeId' | 'tree'>,
+  options?: { ignoreName?: boolean }
 ): string => {
   const { name, currentNodeId, tree } = workspace;
-  return djb2(JSON.stringify(canonicalize({ name, currentNodeId, tree })));
+
+  const idMap: Record<string, string> = {};
+  let counter = 0;
+
+  const traverse = (id: string) => {
+    if (idMap[id] !== undefined) return;
+    idMap[id] = String(counter++);
+    const node = tree[id];
+    if (node && node.childrenIds) {
+      node.childrenIds.forEach(traverse);
+    }
+  };
+
+  const rootId = ("0" in tree) ? "0" : Object.keys(tree)[0];
+  if (rootId) {
+    traverse(rootId);
+  }
+
+  Object.keys(tree).sort().forEach(id => {
+    if (idMap[id] === undefined) {
+      traverse(id);
+    }
+  });
+
+  const canonicalTree: Record<string, {
+    equation: string;
+    parentId: string | null;
+    childrenIds: string[];
+    label: string;
+    change?: unknown;
+  }> = {};
+
+  Object.keys(tree).forEach(id => {
+    const node = tree[id];
+    const mappedId = idMap[id] || id;
+    canonicalTree[mappedId] = {
+      equation: node.equation,
+      parentId: node.parentId ? idMap[node.parentId] || null : null,
+      childrenIds: (node.childrenIds || []).map(cid => idMap[cid] || cid),
+      label: node.label || '',
+      ...(node.change ? { change: node.change } : {})
+    };
+  });
+
+  const canonicalWorkspace = options?.ignoreName
+    ? {
+        currentNodeId: idMap[currentNodeId] || currentNodeId,
+        tree: canonicalTree
+      }
+    : {
+        name,
+        currentNodeId: idMap[currentNodeId] || currentNodeId,
+        tree: canonicalTree
+      };
+
+  return djb2(JSON.stringify(canonicalize(canonicalWorkspace)));
 };
 
 const makeImportedId = (existing: Set<string>): string => {
@@ -191,7 +247,7 @@ export const mergeWorkspaces = (
   incoming: ExportedWorkspace[],
 ): MergeResult => {
   const usedIds = new Set(existing.map(s => s.id));
-  const contentHashes = new Set(existing.map(hashWorkspace));
+  const contentHashes = new Set(existing.map(s => hashWorkspace(s)));
   const merged = [...existing];
   let skipped = 0;
 

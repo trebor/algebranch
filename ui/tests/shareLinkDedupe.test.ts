@@ -13,15 +13,18 @@ import {
   currentSessionIdAtom,
   createSessionFromStateAtom,
   createNewSessionAtom,
+  loadSessionAtom,
   toastAtom,
   serializeTree,
   minifyWorkspace,
   deminifyWorkspace,
+  addTabAtom,
   type SavedSession,
   type SerializedHistoryNode,
   type WorkspaceTab,
 } from '@/store/equation';
 import { parseEquation } from 'math-engine-client';
+import { hashWorkspace } from '@/utils/workspaceTransfer';
 
 const DEDUPE_TOAST = 'You already have this workspace — opened it.';
 
@@ -140,6 +143,179 @@ describe('createNewSessionAtom — ?eq= arrival dedupe (#299)', () => {
 
     expect(store.get(savedSessionsAtom)).toHaveLength(2);
   });
+
+  it('switches to the existing pristine tab if a pristine tab with the same equation is already loaded', () => {
+    const store = createStore();
+    const existingTab: WorkspaceTab = {
+      id: 'tab-existing',
+      name: 'x^2-9=0',
+      historyTree: {
+        '0': { id: '0', equation: parseEquation('x^2-9=0'), parentId: null, childrenIds: [], label: 'Initial', timestamp: 1 }
+      },
+      currentNodeId: '0',
+      sessionId: 'session-existing',
+      timestamp: 1
+    };
+
+    store.set(rawTabsAtom, [emptyTab('scratch'), existingTab]);
+    store.set(rawActiveTabIdAtom, 'scratch');
+
+    const result = store.set(createNewSessionAtom, 'x^2-9=0', undefined, { dedupe: true });
+
+    expect(result).toEqual({ matched: true });
+    expect(store.get(rawTabsAtom)).toHaveLength(2);
+    expect(store.get(rawActiveTabIdAtom)).toBe('tab-existing');
+    expect(store.get(currentSessionIdAtom)).toBe('session-existing');
+    expect(store.get(toastAtom)?.message).toBe(DEDUPE_TOAST);
+  });
+});
+
+describe('createSessionFromStateAtom — workspace tab dedupe', () => {
+  it('switches to the existing tab if that exact workspace (by content hash) is already loaded', () => {
+    const store = createStore();
+    const tree = pristineTree('x^2-9=0');
+    const existingTab: WorkspaceTab = {
+      id: 'tab-existing',
+      name: 'My Derivation',
+      historyTree: {
+        '0': { id: '0', equation: parseEquation('x^2-9=0'), parentId: null, childrenIds: [], label: 'Initial', timestamp: 1 }
+      },
+      currentNodeId: '0',
+      sessionId: 'session-existing',
+      timestamp: 1
+    };
+
+    store.set(rawTabsAtom, [emptyTab('scratch'), existingTab]);
+    store.set(rawActiveTabIdAtom, 'scratch');
+
+    const result = store.set(createSessionFromStateAtom, {
+      tree,
+      currentNodeId: '0',
+      name: 'My Derivation',
+    });
+
+    expect(result).toEqual({ matched: true });
+    expect(store.get(rawTabsAtom)).toHaveLength(2);
+    expect(store.get(rawActiveTabIdAtom)).toBe('tab-existing');
+    expect(store.get(currentSessionIdAtom)).toBe('session-existing');
+    expect(store.get(toastAtom)?.message).toBe(DEDUPE_TOAST);
+  });
+
+  it('switches to the existing tab if the tree structure matches, even if the name is different', () => {
+    const store = createStore();
+    const tree = pristineTree('x^2-9=0');
+    const existingTab: WorkspaceTab = {
+      id: 'tab-existing',
+      name: 'Custom Name',
+      historyTree: {
+        '0': { id: '0', equation: parseEquation('x^2-9=0'), parentId: null, childrenIds: [], label: 'Initial', timestamp: 1 }
+      },
+      currentNodeId: '0',
+      sessionId: 'session-existing',
+      timestamp: 1
+    };
+
+    store.set(rawTabsAtom, [emptyTab('scratch'), existingTab]);
+    store.set(rawActiveTabIdAtom, 'scratch');
+
+    const result = store.set(createSessionFromStateAtom, {
+      tree,
+      currentNodeId: '0',
+      name: 'Arriving Name',
+    });
+
+    expect(result).toEqual({ matched: true });
+    expect(store.get(rawTabsAtom)).toHaveLength(2);
+    expect(store.get(rawActiveTabIdAtom)).toBe('tab-existing');
+    expect(store.get(currentSessionIdAtom)).toBe('session-existing');
+    expect(store.get(toastAtom)?.message).toBe(DEDUPE_TOAST);
+  });
+
+  it('deduplicates correctly even when incoming workspace has random step IDs and fresh timestamps from a share link', () => {
+    const store = createStore();
+    
+    const existingTab: WorkspaceTab = {
+      id: 'tab-existing',
+      name: 'Solve Equation',
+      historyTree: {
+        '0': { id: '0', equation: parseEquation('2 * (x + 3) = 10'), parentId: null, childrenIds: ['step_1'], label: 'Initial', timestamp: 1000 },
+        'step_1': { id: 'step_1', equation: parseEquation('x + 3 = 5'), parentId: '0', childrenIds: ['step_2'], label: 'Transpose', timestamp: 2000 },
+        'step_2': { id: 'step_2', equation: parseEquation('x = 2'), parentId: 'step_1', childrenIds: [], label: 'Simplify', timestamp: 3000 },
+      },
+      currentNodeId: 'step_2',
+      sessionId: 'session-existing',
+      timestamp: 3000
+    };
+
+    store.set(rawTabsAtom, [emptyTab('scratch'), existingTab]);
+    store.set(rawActiveTabIdAtom, 'scratch');
+
+    const minified = minifyWorkspace({
+      tree: serializeTree(existingTab.historyTree),
+      currentNodeId: 'step_2',
+      name: 'Solve Equation'
+    });
+
+    const decompressedRestored = deminifyWorkspace(minified);
+
+    const result = store.set(createSessionFromStateAtom, {
+      tree: decompressedRestored.tree,
+      currentNodeId: decompressedRestored.currentNodeId,
+      name: decompressedRestored.name,
+    });
+
+    expect(result).toEqual({ matched: true });
+    expect(store.get(rawTabsAtom)).toHaveLength(2);
+    expect(store.get(rawActiveTabIdAtom)).toBe('tab-existing');
+    expect(store.get(currentSessionIdAtom)).toBe('session-existing');
+    expect(store.get(toastAtom)?.message).toBe(DEDUPE_TOAST);
+  });
+});
+
+describe('loadSessionAtom — history/library tab dedupe', () => {
+  it('switches to the existing tab if it has the same content hash, even with a different sessionId', () => {
+    const store = createStore();
+    
+    const targetSession: SavedSession = {
+      id: 'session-target',
+      name: 'x^2-9=0',
+      timestamp: 1,
+      tree: pristineTree('x^2-9=0'),
+      currentNodeId: '0'
+    };
+
+    const existingTab: WorkspaceTab = {
+      id: 'tab-existing',
+      name: 'x^2-9=0',
+      historyTree: {
+        '0': { id: '0', equation: parseEquation('x^2-9=0'), parentId: null, childrenIds: [], label: 'Initial', timestamp: 1 }
+      },
+      currentNodeId: '0',
+      sessionId: 'session-existing',
+      timestamp: 1
+    };
+
+    store.set(rawTabsAtom, [emptyTab('scratch'), existingTab]);
+    store.set(rawActiveTabIdAtom, 'scratch');
+    store.set(savedSessionsAtom, [targetSession]);
+
+    // Load the target session
+    store.set(loadSessionAtom, 'session-target');
+
+    // It should switch to the existing tab instead of creating a new one
+    expect(store.get(rawTabsAtom)).toHaveLength(2);
+    expect(store.get(rawActiveTabIdAtom)).toBe('tab-existing');
+    expect(store.get(currentSessionIdAtom)).toBe('session-existing');
+  });
+});
+
+describe('hashWorkspace name sensitivity', () => {
+  it('differs when name is different', () => {
+    const tree = pristineTree('x^2-9=0');
+    const hash1 = hashWorkspace({ name: 'A', currentNodeId: '0', tree });
+    const hash2 = hashWorkspace({ name: 'B', currentNodeId: '0', tree });
+    expect(hash1).not.toBe(hash2);
+  });
 });
 
 describe('minifyWorkspace / deminifyWorkspace round-trip', () => {
@@ -198,5 +374,36 @@ describe('minifyWorkspace / deminifyWorkspace round-trip', () => {
 
     // Verify current node ID was correctly mapped back to the new step_2 random ID
     expect(restored.currentNodeId).toBe(step2Node.id);
+  });
+});
+
+describe('addTabAtom — cloning behaviour', () => {
+  it('marks a cloned tab as modified so that it will be saved', () => {
+    const store = createStore();
+    const existingTab: WorkspaceTab = {
+      id: 'tab-existing',
+      name: 'Solve Equation',
+      historyTree: {
+        '0': { id: '0', equation: parseEquation('x^2-9=0'), parentId: null, childrenIds: [], label: 'Initial', timestamp: 1 }
+      },
+      currentNodeId: '0',
+      sessionId: 'session-existing',
+      timestamp: 1
+    };
+
+    store.set(rawTabsAtom, [existingTab]);
+    store.set(rawActiveTabIdAtom, 'tab-existing');
+
+    // Run addTabAtom without parameters to trigger cloning path
+    store.set(addTabAtom);
+
+    const tabs = store.get(rawTabsAtom);
+    expect(tabs).toHaveLength(2);
+
+    const clonedTab = tabs.find(t => t.id !== 'tab-existing');
+    expect(clonedTab).toBeDefined();
+    expect(clonedTab!.name).toBe('Solve Equation (Copy)');
+    expect(clonedTab!.isModified).toBe(true);
+    expect(clonedTab!.sessionId).not.toBe('session-existing');
   });
 });

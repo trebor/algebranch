@@ -47,6 +47,7 @@ import { useKeyboardShortcuts, ShortcutConfig } from '../hooks/useKeyboardShortc
 import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
 import { HelpModal } from '../components/HelpModal';
 import { buildEquationUrl, buildWorkspaceUrl } from '../utils/feedbackUrl';
+import { safeCopyText } from '../utils/clipboard';
 import {
   currentEquationAtom,
   liveAnnouncementAtom,
@@ -1258,11 +1259,12 @@ export default function Home() {
       leader: 'c',
       key: 'd',
       action: () => {
-        navigator.clipboard
-          .writeText(formatDerivation(tree, currentNodeId, 'plain'))
-          .then(() => {
-            setToast({ message: 'Derivation copied', key: Date.now() });
-            trackEvent({ action: 'shortcut_copy_derivation', category: 'keyboard' });
+        safeCopyText(formatDerivation(tree, currentNodeId, 'plain'))
+          .then((success) => {
+            if (success) {
+              setToast({ message: 'Derivation copied', key: Date.now() });
+              trackEvent({ action: 'shortcut_copy_derivation', category: 'keyboard' });
+            }
           })
           .catch((err) => console.error('Failed to copy derivation:', err));
       },
@@ -1275,11 +1277,12 @@ export default function Home() {
       key: 'e',
       action: () => {
         if (!currentEq) return;
-        navigator.clipboard
-          .writeText(equationToFormat(currentEq, 'plain'))
-          .then(() => {
-            setToast({ message: 'Equation copied', key: Date.now() });
-            trackEvent({ action: 'shortcut_copy_equation', category: 'keyboard' });
+        safeCopyText(equationToFormat(currentEq, 'plain'))
+          .then((success) => {
+            if (success) {
+              setToast({ message: 'Equation copied', key: Date.now() });
+              trackEvent({ action: 'shortcut_copy_equation', category: 'keyboard' });
+            }
           })
           .catch((err) => console.error('Failed to copy equation:', err));
       },
@@ -1296,9 +1299,11 @@ export default function Home() {
           const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName);
           const url = buildWorkspaceUrl(window.location.origin, compressed);
           if (!url) return;
-          await navigator.clipboard.writeText(url);
-          setToast({ message: 'Workspace link copied', key: Date.now() });
-          trackEvent({ action: 'shortcut_share_workspace', category: 'keyboard' });
+          const success = await safeCopyText(url);
+          if (success) {
+            setToast({ message: 'Workspace link copied', key: Date.now() });
+            trackEvent({ action: 'shortcut_share_workspace', category: 'keyboard' });
+          }
         } catch (err) {
           console.error('Failed to copy workspace link:', err);
         }
@@ -1315,11 +1320,12 @@ export default function Home() {
         if (!currentEq) return;
         const url = buildEquationUrl(window.location.origin, equationToString(currentEq));
         if (!url) return;
-        navigator.clipboard
-          .writeText(url)
-          .then(() => {
-            setToast({ message: 'Equation link copied', key: Date.now() });
-            trackEvent({ action: 'shortcut_share_equation', category: 'keyboard' });
+        safeCopyText(url)
+          .then((success) => {
+            if (success) {
+              setToast({ message: 'Equation link copied', key: Date.now() });
+              trackEvent({ action: 'shortcut_share_equation', category: 'keyboard' });
+            }
           })
           .catch((err) => console.error('Failed to copy equation link:', err));
       },
@@ -1863,7 +1869,7 @@ export default function Home() {
                         e.stopPropagation();
                         setDeleteConfirmationModalOpen(true);
                       }}
-                      disabled={savedSessions.length <= 1}
+                      disabled={isHydrated ? savedSessions.length <= 1 : undefined}
                       className={THEME_GLASS.ICON_BUTTON_DANGER}
                       aria-label="Delete workspace permanently"
                     >

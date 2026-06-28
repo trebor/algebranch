@@ -8,6 +8,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import { Undo2, LayoutGrid, Library, GitFork, Redo2 } from 'lucide-react';
 import { historyTreeAtom, currentNodeIdAtom, activeBottomSheetAtom } from '../store/equation';
 import { Tooltip } from './Tooltip';
+import { useIsHydrated } from '../hooks/useIsHydrated';
 
 /**
  * BottomNav — Fixed bottom navigation bar for mobile.
@@ -19,6 +20,7 @@ import { Tooltip } from './Tooltip';
  * - Center "=" button dispatches 'open-radial-menu' custom event
  * - Undo/Redo navigate the history tree linearly
  * - Workspace and History toggle their respective bottom sheets
+ * - Undo/Redo are disabled until hydration completes to avoid mismatch
  */
 
 export const BottomNav: React.FC = () => {
@@ -29,6 +31,7 @@ export const BottomNav: React.FC = () => {
 
   // Undo: navigate to parent node
   const currentNode = tree[currentNodeId];
+  const isHydrated = useIsHydrated();
   const canUndo = !!currentNode?.parentId;
 
   const handleUndo = useCallback(() => {
@@ -69,7 +72,7 @@ export const BottomNav: React.FC = () => {
           icon={<Undo2 size={24} />}
           label="Undo"
           tooltip="Undo step"
-          disabled={!canUndo}
+          disabled={isHydrated ? !canUndo : undefined}
           onClick={handleUndo}
         />
 
@@ -105,7 +108,7 @@ export const BottomNav: React.FC = () => {
           icon={<Redo2 size={24} />}
           label="Redo"
           tooltip="Redo step"
-          disabled={!canRedo}
+          disabled={isHydrated ? !canRedo : undefined}
           onClick={handleRedo}
         />
       </div>

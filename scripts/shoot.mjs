@@ -79,6 +79,13 @@ try {
   // Suppress the first-visit onboarding tour (it overlays the equation) by
   // pre-seeding the localStorage flag the app checks on mount. Runs before any
   // page script on every navigation. Opt out with --show-onboarding.
+  // Pre-seed localStorage to avoid blocking/cluttering overlays.
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('algebranch_consent', 'granted');
+    } catch { /* localStorage may be blocked */ }
+  });
+
   if (!args['show-onboarding']) {
     await page.addInitScript(() => {
       try {

@@ -107,24 +107,18 @@ export function useFocusTrap<T extends HTMLElement>({
       const active = document.activeElement;
 
       if (!container.contains(active)) {
-        // Focus is outside the dialog. Only recapture when it landed on nothing
-        // (body/null) so we don't yank focus from a legitimately separate,
-        // non-modal surface that's still on screen.
-        if (active === document.body || active === null) {
-          e.preventDefault();
-          (e.shiftKey ? last : first).focus();
-        }
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
         return;
       }
 
-      if (e.shiftKey) {
-        if (active === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else if (active === last) {
+      const index = items.indexOf(active as HTMLElement);
+      if (index > -1) {
         e.preventDefault();
-        first.focus();
+        const nextIndex = e.shiftKey
+          ? (index - 1 + items.length) % items.length
+          : (index + 1) % items.length;
+        items[nextIndex].focus();
       }
     };
 

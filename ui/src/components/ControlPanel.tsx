@@ -26,6 +26,7 @@ import {
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { RotateCcw, ChevronLeft, ChevronRight, GitFork } from 'lucide-react';
 import { useIsMobile } from '../hooks/useBreakpoint';
+import { useIsHydrated } from '../hooks/useIsHydrated';
 
 interface ControlPanelProps {
   onCloseMobile?: () => void;
@@ -48,6 +49,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
   const setRightSidebarOpen = useSetAtom(rightSidebarOpenAtom);
   const setResetHistoryModalOpen = useSetAtom(resetHistoryModalOpenAtom);
   const setExportPreview = useSetAtom(exportPreviewActiveAtom);
+  const isHydrated = useIsHydrated();
 
   const exportScope = getDerivationScope(tree, currentNodeId);
 
@@ -127,7 +129,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
             iconSize={16}
             variant="panel"
             tooltip={<HotkeyHint label="Copy full derivation" sequence={['C', 'D']} />}
-            disabled={Object.keys(tree).length <= 1}
+            disabled={isHydrated ? Object.keys(tree).length <= 1 : undefined}
             trackAction="copy_derivation"
             trackCategory="history"
             trackLabel={currentNodeId}
@@ -138,7 +140,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
           <Tooltip content={<HotkeyHint label="Undo step" keys="⌘Z" />}>
             <button
               onClick={handleUndo}
-              disabled={!canUndo}
+              disabled={isHydrated ? !canUndo : undefined}
               className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
               aria-label="Undo step"
             >
@@ -148,7 +150,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
           <Tooltip content={<HotkeyHint label="Redo step" keys="⌘⇧Z" />}>
             <button
               onClick={handleRedo}
-              disabled={!canRedo}
+              disabled={isHydrated ? !canRedo : undefined}
               className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
               aria-label="Redo step"
             >
@@ -159,7 +161,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
           <Tooltip content="Reset history">
             <button
               onClick={handleResetAll}
-              disabled={Object.keys(tree).length <= 1}
+              disabled={isHydrated ? Object.keys(tree).length <= 1 : undefined}
               className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-red-400 hover:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5 ${THEME_TRANSITIONS.FAST} cursor-pointer`}
               aria-label="Reset history"
             >
@@ -187,6 +189,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
   const setSourcePath = useSetAtom(sourcePathAtom);
   const setHoverPath = useSetAtom(hoverPathAtom);
   const setResetHistoryModalOpen = useSetAtom(resetHistoryModalOpenAtom);
+  const isHydrated = useIsHydrated();
 
   const activeNode = tree[currentNodeId];
   const canUndo = activeNode && activeNode.parentId !== null;
@@ -278,7 +281,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             iconSize={16}
             variant="panel"
             tooltip={<HotkeyHint label="Copy full derivation" sequence={['C', 'D']} />}
-            disabled={sortedNodes.length <= 1}
+            disabled={isHydrated ? sortedNodes.length <= 1 : undefined}
             trackAction="copy_derivation"
             trackCategory="history"
             trackLabel={currentNodeId}
@@ -288,7 +291,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
           />
           <button
             onClick={handleUndo}
-            disabled={!canUndo}
+            disabled={isHydrated ? !canUndo : undefined}
             className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer`}
             title="Undo (⌘Z)"
             aria-label="Undo step"
@@ -297,7 +300,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
           </button>
           <button
             onClick={handleRedo}
-            disabled={!canRedo}
+            disabled={isHydrated ? !canRedo : undefined}
             className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-white disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer`}
             title="Redo (⌘⇧Z)"
             aria-label="Redo step"
@@ -306,7 +309,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
           </button>
           <button
             onClick={handleResetAll}
-            disabled={sortedNodes.length <= 1}
+            disabled={isHydrated ? sortedNodes.length <= 1 : undefined}
             className={`p-1.5 rounded-lg border ${THEME_GLASS.PANEL_BORDER} text-red-400 hover:text-red-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 active:scale-95 transition-all cursor-pointer`}
             title="Reset All"
             aria-label="Reset history"

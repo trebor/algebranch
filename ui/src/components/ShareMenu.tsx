@@ -10,6 +10,7 @@ import { HotkeyHint } from './HotkeyHint';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { trackEvent } from '../utils/analytics';
+import { safeCopyText } from '../utils/clipboard';
 
 const COPIED_TIMEOUT = 2000;
 const MENU_CLOSE_GRACE = 500;
@@ -127,9 +128,11 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
     setHintConsumed(true);
     try {
       const shareUrl = equationString ? `${baseUrl()}?eq=${encodeSafe(equationString)}` : baseUrl();
-      navigator.clipboard.writeText(shareUrl).then(() => {
-        flashCopied();
-        trackEvent({ action: 'share_equation_link', category: 'interaction' });
+      safeCopyText(shareUrl).then((success) => {
+        if (success) {
+          flashCopied();
+          trackEvent({ action: 'share_equation_link', category: 'interaction' });
+        }
       });
     } catch (err) {
       console.error('Failed to copy share link:', err);
@@ -143,9 +146,11 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
     try {
       const compressed = await getCompressedWorkspace();
       const shareUrl = `${baseUrl()}?ws=${compressed}`;
-      navigator.clipboard.writeText(shareUrl).then(() => {
-        flashCopied();
-        trackEvent({ action: 'share_workspace_link', category: 'interaction' });
+      safeCopyText(shareUrl).then((success) => {
+        if (success) {
+          flashCopied();
+          trackEvent({ action: 'share_workspace_link', category: 'interaction' });
+        }
       });
     } catch (err) {
       console.error('Failed to copy share link:', err);

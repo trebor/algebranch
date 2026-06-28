@@ -73,9 +73,9 @@ Clicking the circled `=` operator opens the global operations menu, letting you 
 *   Contains 83 preset equations organized into five categories:
     1.  Linear & Basic Algebra
     2.  Quadratics & Polynomials
-    3.  Rational & Radical Equations
-    4.  Systems of Equations
-    5.  Inequalities
+    3.  Fractions, Radicals & Rationals
+    4.  Transcendental (Logs & Trig)
+    5.  Formulas (Physics, Geometry & Science)
 
 ### Workspaces & Tabs
 *   Keep multiple derivations active at the same time in separate workspace tabs.
@@ -95,7 +95,7 @@ Clicking the circled `=` operator opens the global operations menu, letting you 
 
 ### Keyboard Shortcuts
 
-Single-key shortcuts work whenever you are *not* typing in a text field. Press `?` at any time to open the in-app shortcuts overlay.
+Single-key shortcuts work whenever you are *not* typing in a text field. Press `?` at any time to open the Help menu.
 
 | Key | Action |
 | --- | --- |
@@ -105,6 +105,7 @@ Single-key shortcuts work whenever you are *not* typing in a text field. Press `
 | `Z` | Cycle history tree zoom level |
 | `G` | Toggle the variable-relationship graph |
 | `S` | Swap the two sides of the equation |
+| `X` | Toggle Read view |
 | `=` | Open the global equals menu (apply an operation to both sides) |
 | `Esc` | Clear the current selection |
 | `N` | New workspace |
@@ -113,7 +114,8 @@ Single-key shortcuts work whenever you are *not* typing in a text field. Press `
 | `A` | About Algebranch |
 | `F` | Send feedback |
 | `,` | Open settings |
-| `?` | Show the keyboard-shortcuts overlay |
+| `K` | Show the keyboard-shortcuts overlay |
+| `?` | Open Help (documentation links & shortcuts prompt) |
 
 Copy and share live under the `C` leader — press `C`, then a second key:
 

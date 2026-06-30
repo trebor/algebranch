@@ -168,6 +168,33 @@ body {
   50% { transform: scale(1.06); opacity: 0.65; }
 }
 
+/* Defensive fallback (#326 follow-up): if the app never hydrates — e.g. a
+   privacy extension injects a CSP that blocks the JS bundle, leaving an eternal
+   "Initializing…" spinner — reveal a help overlay using *pure CSS*. In that
+   scenario no JS runs (not even an inline watchdog) and <noscript> does not
+   render (scripting is "enabled", just CSP-blocked), but the stylesheet still
+   loads — so a delayed CSS animation is the only thing that can surface a
+   message. The animation only *reveals* it; React hides it again (sets the
+   `hidden` attribute via markAppHydrated) the instant it hydrates, so a normal
+   load never shows it. `display` is intentionally NOT set here so that the UA
+   `[hidden] { display: none }` rule wins when React cancels it. */
+@keyframes app-stall-reveal {
+  to { opacity: 1; visibility: visible; }
+}
+.app-stall-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  /* Legibility colours live here (not only in the notice's inline styles) so the
+     message stays readable even if the same CSP also strips inline styles. */
+  background: #0a0a0a;
+  color: #ededed;
+  opacity: 0;
+  visibility: hidden;
+  /* Wait out a slow-but-fine load before assuming the app is blocked. */
+  animation: app-stall-reveal 0.25s ease-out 6s forwards;
+}
+
 /* Custom responsive visibility class for contextual action buttons */
 .contextual-actions {
   opacity: 0.25;

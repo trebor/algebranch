@@ -5,13 +5,17 @@
 
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Copy, Check, ChevronDown } from 'lucide-react';
+import { useSetAtom } from 'jotai';
+import { Copy, Check, ChevronDown, ImageDown, Type, Sigma, Code } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { Equation } from 'math-engine-client';
 import { Tooltip } from './Tooltip';
 import { PreviewEquationNode } from './PreviewEquationNode';
+import { ImageExportDialog } from './ImageExportDialog';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
 import type { ExportFormat } from '../store/equation';
+import { toastAtom } from '../store/equation';
 import { safeCopyText } from '../utils/clipboard';
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
@@ -22,12 +26,24 @@ const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayou
 // typeset header preview, and outside-click/Escape dismissal so each copy site
 // is a one-liner. Mirrors the ShareMenu split-button (#241).
 
-// Ordered simplest → most complex: plain ASCII, then pretty Unicode, then LaTeX markup.
-const FORMAT_OPTIONS: { format: ExportFormat; label: string }[] = [
-  { format: 'plain', label: 'Plain text' },
-  { format: 'unicode', label: 'Unicode' },
-  { format: 'latex', label: 'LaTeX' },
+// Ordered simplest → most complex: plain ASCII, then pretty Unicode, then LaTeX
+// markup. The icons echo that progression — a plain "T", a math sigma for the
+// pretty-symbol render, and a code glyph for the markup (lucide ships no LaTeX
+// brand mark, so Code stands in for "this is markup").
+const FORMAT_OPTIONS: { format: ExportFormat; label: string; Icon: LucideIcon }[] = [
+  { format: 'plain', label: 'Plain text', Icon: Type },
+  { format: 'unicode', label: 'Unicode', Icon: Sigma },
+  { format: 'latex', label: 'LaTeX', Icon: Code },
 ];
+
+// Confirmation toast per format — the menu closes on select and the per-step
+// split-button can disappear with the hover, so the check icon alone isn't a
+// reliable signal that the copy happened.
+const COPY_TOAST: Record<ExportFormat, string> = {
+  plain: 'Copied as plain text',
+  unicode: 'Copied as Unicode',
+  latex: 'Copied as LaTeX',
+};
 
 // Display-ready Unicode is what the cards render, so it's the least-surprising
 // thing a one-click primary copy hands you (#243).
@@ -85,6 +101,12 @@ interface CopyFormatMenuProps {
   /** Equation to render typeset in the menu header — names *which* equation is copied (#243). */
   scopeEquation?: Equation;
   /**
+   * When provided, the menu gains a "Save as image…" entry that opens the PNG
+   * export dialog for this single equation (#335). Omit in multi-equation contexts
+   * (e.g. full-derivation copy) where a single-equation image makes no sense.
+   */
+  imageEquation?: Equation;
+  /**
    * Fired while the trigger is hovered or the menu is open (#46), so a caller can
    * illuminate the export path in the tree. Kept as a callback to keep this
    * component decoupled from app state.
@@ -114,12 +136,15 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   stopPropagation,
   scopeLabel,
   scopeEquation,
+  imageEquation,
   onPreviewChange,
   onOpenChange,
   focusable = true,
 }) => {
   const triggerTabIndex = focusable ? undefined : -1;
+  const setToast = useSetAtom(toastAtom);
   const [open, setOpen] = React.useState(false);
+  const [imageOpen, setImageOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
@@ -239,6 +264,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
     safeCopyText(getText(format)).then((success) => {
       if (success) {
         setCopied(true);
+        setToast({ message: COPY_TOAST[format], key: Date.now() });
         trackEvent({ action: trackAction, category: trackCategory, label: `${trackLabel}:${format}` });
         setTimeout(() => setCopied(false), COPIED_TIMEOUT);
       }
@@ -335,7 +361,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
               )}
             </div>
           )}
-          {FORMAT_OPTIONS.map(({ format, label }) => (
+          {FORMAT_OPTIONS.map(({ format, label, Icon }) => (
             <button
               key={format}
               type="button"
@@ -343,11 +369,37 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
               onClick={(e) => handleSelect(e, format)}
               className={`${THEME_GLASS.COPY_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
             >
+              <Icon size={13} className={THEME_GLASS.COPY_MENU_ITEM_ICON} />
               {label}
             </button>
           ))}
+          {imageEquation && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={(e) => {
+                if (stopPropagation) e.stopPropagation();
+                clearCloseTimer();
+                setOpen(false);
+                setMenuPos(null);
+                setHovered(false);
+                setImageOpen(true);
+              }}
+              className={`${THEME_GLASS.COPY_MENU_ITEM} ${THEME_TRANSITIONS.FAST} border-t border-white/5`}
+            >
+              <ImageDown size={13} className={THEME_GLASS.COPY_MENU_ITEM_ICON} />
+              Save as image…
+            </button>
+          )}
         </div>,
         document.body
+      )}
+      {imageEquation && (
+        <ImageExportDialog
+          equation={imageEquation}
+          isOpen={imageOpen}
+          onClose={() => setImageOpen(false)}
+        />
       )}
     </div>
   );

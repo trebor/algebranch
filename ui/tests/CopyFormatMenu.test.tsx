@@ -4,8 +4,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { getDefaultStore } from 'jotai';
 import { CopyFormatMenu } from '@/components/CopyFormatMenu';
-import { equationToFormat } from '@/store/equation';
+import { equationToFormat, toastAtom } from '@/store/equation';
 import { parseEquation } from 'math-engine-client';
 
 function mockClipboard() {
@@ -62,6 +63,16 @@ describe('CopyFormatMenu', () => {
     expect(within(menu).getByRole('menuitem', { name: /latex/i })).toBeInTheDocument();
   });
 
+  it('renders an icon alongside each format label', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
+    const menu = screen.getByRole('menu');
+    for (const name of [/plain text/i, /unicode/i, /latex/i]) {
+      const item = within(menu).getByRole('menuitem', { name });
+      expect(item.querySelector('svg')).not.toBeNull();
+    }
+  });
+
   it('selecting a format row copies that format', async () => {
     renderMenu();
     await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
@@ -72,6 +83,25 @@ describe('CopyFormatMenu', () => {
     );
     // Menu closes after a selection.
     expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('shows a toast confirming the copy when a format is selected', async () => {
+    const store = getDefaultStore();
+    store.set(toastAtom, null);
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /latex/i }));
+
+    await waitFor(() => expect(store.get(toastAtom)?.message).toMatch(/latex/i));
+  });
+
+  it('the one-click primary copy also confirms with a toast', async () => {
+    const store = getDefaultStore();
+    store.set(toastAtom, null);
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /^copy equation$/i }));
+
+    await waitFor(() => expect(store.get(toastAtom)?.message).toBeTruthy());
   });
 
   it('Escape closes an open menu', async () => {
@@ -133,6 +163,30 @@ describe('CopyFormatMenu', () => {
     const menu = screen.getByRole('menu');
     expect(menu).toBeInTheDocument();
     expect(menu.parentElement).toBe(document.body);
+  });
+
+  it('omits the image entry by default and shows it when imageEquation is given', async () => {
+    const { rerender } = renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
+    expect(screen.queryByRole('menuitem', { name: /save as image/i })).toBeNull();
+
+    await userEvent.keyboard('{Escape}');
+    rerender(
+      <CopyFormatMenu
+        getText={(format) => equationToFormat(eq, format)}
+        variant="panel"
+        trackAction="copy_step"
+        trackCategory="history"
+        trackLabel="node-1"
+        imageEquation={eq}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /save as image/i }));
+
+    // The image export dialog opens; the format menu closes.
+    expect(await screen.findByRole('dialog', { name: /save as image/i })).toBeInTheDocument();
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 
   it('calls onOpenChange when opening and closing the menu', async () => {

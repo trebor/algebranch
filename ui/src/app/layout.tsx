@@ -10,7 +10,9 @@ import { Provider as JotaiProvider } from "jotai";
 import { ReducedMotionProvider } from "../components/ReducedMotionProvider";
 import { ChromeScaleProvider } from "../components/ChromeScaleProvider";
 import { ConsentManager } from "../components/ConsentManager";
-import { shouldRenderDebugOverlay } from "../utils/debugOverlay";
+import { shouldRenderDebugOverlay, buildDebugOverlayScript } from "../utils/debugOverlay";
+import { AppUnavailableNotice } from "../components/AppUnavailableNotice";
+import { STALL_OVERLAY_ID } from "../utils/hydrationSentinel";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -92,77 +94,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         {debugOverlay && (
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.addEventListener('error', function(event) {
-                var container = document.getElementById('mobile-debug-container');
-                if (!container) {
-                  container = document.createElement('div');
-                  container.id = 'mobile-debug-container';
-                  container.style.position = 'fixed';
-                  container.style.top = '0';
-                  container.style.left = '0';
-                  container.style.right = '0';
-                  container.style.bottom = '0';
-                  container.style.zIndex = '999999';
-                  container.style.backgroundColor = 'rgba(0,0,0,0.95)';
-                  container.style.color = '#ff6b6b';
-                  container.style.padding = '20px';
-                  container.style.fontFamily = 'monospace';
-                  container.style.overflow = 'auto';
-                  container.style.fontSize = '12px';
-                  container.style.whiteSpace = 'pre-wrap';
-                  document.body.appendChild(container);
-                }
-                var errDiv = document.createElement('div');
-                errDiv.style.borderBottom = '1px solid #333';
-                errDiv.style.paddingBottom = '10px';
-                errDiv.style.marginBottom = '10px';
-                
-                if (event.target && event.target.tagName) {
-                  if (event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK') {
-                    var url = event.target.src || event.target.href;
-                    errDiv.innerText = 'RESOURCE FAILED TO LOAD: ' + url + '\\nTag: ' + event.target.tagName;
-                    container.appendChild(errDiv);
-                  }
-                  return;
-                }
-                
-                errDiv.innerText = 'ERROR: ' + event.message + '\\nSource: ' + event.filename + ':' + event.lineno + ':' + event.colno + '\\nStack: ' + (event.error ? event.error.stack : 'N/A');
-                container.appendChild(errDiv);
-              }, true);
-
-              window.addEventListener('unhandledrejection', function(event) {
-                var container = document.getElementById('mobile-debug-container');
-                if (!container) {
-                  container = document.createElement('div');
-                  container.id = 'mobile-debug-container';
-                  container.style.position = 'fixed';
-                  container.style.top = '0';
-                  container.style.left = '0';
-                  container.style.right = '0';
-                  container.style.bottom = '0';
-                  container.style.zIndex = '999999';
-                  container.style.backgroundColor = 'rgba(0,0,0,0.95)';
-                  container.style.color = '#ff6b6b';
-                  container.style.padding = '20px';
-                  container.style.fontFamily = 'monospace';
-                  container.style.overflow = 'auto';
-                  container.style.fontSize = '12px';
-                  container.style.whiteSpace = 'pre-wrap';
-                  document.body.appendChild(container);
-                }
-                var errDiv = document.createElement('div');
-                errDiv.style.borderBottom = '1px solid #333';
-                errDiv.style.paddingBottom = '10px';
-                errDiv.style.marginBottom = '10px';
-                errDiv.innerText = 'UNHANDLED REJECTION: ' + event.reason + '\\nStack: ' + (event.reason && event.reason.stack ? event.reason.stack : 'N/A');
-                container.appendChild(errDiv);
-              });
-            `
-          }}
-        />
+          <script dangerouslySetInnerHTML={{ __html: buildDebugOverlayScript() }} />
         )}
         <JotaiProvider>
           {/* Reactively respect the OS prefers-reduced-motion setting for every
@@ -202,6 +134,28 @@ export default function RootLayout({
             </Script>
           </>
         )}
+
+        {/* Layer 1 — scripting genuinely disabled (browser setting, or a
+            NoScript mode that turns scripting off rather than CSP-blocking it).
+            Only renders when the UA reports scripting disabled; its <style>
+            hides the spinner and the CSS stall overlay so exactly one message
+            shows in that case. */}
+        <noscript>
+          <style>{`[data-initializing-spinner],#${STALL_OVERLAY_ID}{display:none !important}`}</style>
+          <div style={{ position: "fixed", inset: 0, zIndex: 2147483647 }}>
+            <AppUnavailableNotice />
+          </div>
+        </noscript>
+
+        {/* Layer 2 — app JS blocked or hydration stalled (e.g. an extension
+            injects a CSP that blocks the bundle, so scripting is "enabled" but
+            nothing runs and <noscript> never shows). Revealed by a pure-CSS
+            delayed animation (.app-stall-overlay) since no JS — not even an
+            inline watchdog — can run; React hides it via markAppHydrated() the
+            moment it successfully hydrates, so a healthy load never shows it. */}
+        <div id={STALL_OVERLAY_ID} className="app-stall-overlay">
+          <AppUnavailableNotice />
+        </div>
       </body>
     </html>
   );

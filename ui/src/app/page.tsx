@@ -140,6 +140,7 @@ import { useEquationTreeFocus } from '../hooks/useEquationTreeFocus';
 import { trackEvent } from '../utils/analytics';
 import { fetchMathScan } from '../utils/mathScan';
 import { safeStorage } from '../utils/safeStorage';
+import { markAppHydrated } from '../utils/hydrationSentinel';
 
 
 // Single shared safe storage wrapper (try/catch + in-memory fallback). Aliased
@@ -725,6 +726,9 @@ export default function Home() {
         // Signal global hydration so mount-time consumers (onboarding auto-resume)
         // can safely mutate persisted workspace state without clobbering it.
         setAppHydrated(true);
+        // Stand the hydration watchdog down (and hide its overlay if a slow load
+        // already tripped it) now that the app is actually up.
+        markAppHydrated();
       }
     };
 
@@ -1858,7 +1862,7 @@ export default function Home() {
                 {modeAnnouncement}
               </div>
               {!isHydrated ? (
-                <div className="flex flex-col items-center justify-center gap-3 select-none">
+                <div data-initializing-spinner className="flex flex-col items-center justify-center gap-3 select-none">
                   <div className={`h-8 w-8 border-4 ${THEME_GLASS.SPINNER}`} />
                   <span className="text-sm font-medium text-indigo-300/80 animate-pulse tracking-wide">Initializing workspace...</span>
                   {initError && (

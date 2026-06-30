@@ -2,12 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-The monorepo uses a single unified version across all workspaces; the root
-`package.json` is the source of truth. Releases are tagged `vX.Y.Z`.
-
-## [Unreleased]
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
+and the monorepo uses a single unified version across all workspaces; the root
+`package.json` is the source of truth and releases are tagged `vX.Y.Z`. From
+v1.0.0 onward, entries are generated automatically from conventional commits by
+[release-please](https://github.com/googleapis/release-please) (#337).
 
 ## [1.0.0] - 2026-06-28
 
@@ -31,5 +30,4 @@ This release establishes the baseline feature set for interactive algebraic mani
 - **Motion Controls**: Built-in support for reduced motion preferences, disabling canvas transitions automatically when requested by the OS.
 - **Visual Design**: Sleek dark mode styling and responsive scaling using Framer Motion.
 
-[Unreleased]: https://github.com/trebor/algebranch/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/trebor/algebranch/releases/tag/v1.0.0

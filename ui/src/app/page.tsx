@@ -99,6 +99,8 @@ import {
   activeTabIdAtom,
   activeBottomSheetAtom,
   radialMenuOpenAtom,
+  radialInitialActionAtom,
+  RadialInitialAction,
   swapSidesAtom,
   addTabAtom,
   onboardingChapterIdAtom,
@@ -287,6 +289,7 @@ export default function Home() {
 
   const [activeBottomSheet, setActiveBottomSheet] = useAtom(activeBottomSheetAtom);
   const [radialMenuOpen, setRadialMenuOpen] = useAtom(radialMenuOpenAtom);
+  const setRadialInitialAction = useSetAtom(radialInitialActionAtom);
   const onboardingChapterId = useAtomValue(onboardingChapterIdAtom);
   const onboardingGlobalOp = useAtomValue(onboardingGlobalOpAtom);
   // During the tour the equals sign is locked except on global-op steps
@@ -998,6 +1001,17 @@ export default function Home() {
     };
   }, [currentEq, sourcePath, syncMathState, clearMathState, setTargetPaths, setMathLoading]);
 
+  // Hotkey path for equals operations (#322): open the radial menu straight into
+  // an op's input panel, mirroring the bare-`=` guards (no equation / locked
+  // tour). The menu reads radialInitialActionAtom on open and clears it.
+  const openEqualsOp = (type: RadialInitialAction) => {
+    if (!currentEq || equalsLocked) return;
+    dismissEqualsHint();
+    setRadialInitialAction(type);
+    setRadialMenuOpen(true);
+    trackEvent({ action: `shortcut_equals_${type}`, category: 'keyboard' });
+  };
+
   // Keyboard Shortcuts (Issue #17, expanded in #126). Defined as a single
   // source-of-truth array so the live handler and the `?` cheat-sheet overlay
   // render from the same bindings and can't drift.
@@ -1426,6 +1440,67 @@ export default function Home() {
       description: 'Apply an operation to both sides',
       category: 'Equation',
       keyLabel: '=',
+    },
+    // Direct hotkeys into each equals operation's input panel (#322). `+` and
+    // `*` sit behind Shift on US main rows but are bare on numpads, so each gets
+    // a hidden bare alias; international layouts that move these are out of scope.
+    {
+      key: '+',
+      shift: true,
+      action: () => openEqualsOp('add'),
+      description: 'Add to both sides',
+      category: 'Both sides',
+      keyLabel: '+',
+    },
+    {
+      key: '+',
+      action: () => openEqualsOp('add'),
+      description: 'Add to both sides',
+      category: 'Both sides',
+      hidden: true,
+    },
+    {
+      key: '-',
+      action: () => openEqualsOp('sub'),
+      description: 'Subtract from both sides',
+      category: 'Both sides',
+      keyLabel: '−',
+    },
+    {
+      key: '*',
+      shift: true,
+      action: () => openEqualsOp('mul'),
+      description: 'Multiply both sides',
+      category: 'Both sides',
+      keyLabel: '×',
+    },
+    {
+      key: '*',
+      action: () => openEqualsOp('mul'),
+      description: 'Multiply both sides',
+      category: 'Both sides',
+      hidden: true,
+    },
+    {
+      key: '/',
+      action: () => openEqualsOp('div'),
+      description: 'Divide both sides',
+      category: 'Both sides',
+      keyLabel: '÷',
+    },
+    {
+      key: 'p',
+      action: () => openEqualsOp('power'),
+      description: 'Raise both sides to a power',
+      category: 'Both sides',
+      keyLabel: 'p',
+    },
+    {
+      key: 'r',
+      action: () => openEqualsOp('root'),
+      description: 'Take a root of both sides',
+      category: 'Both sides',
+      keyLabel: 'r',
     },
     {
       // Settings on bare `,`, echoing the universal ⌘, convention in the app's

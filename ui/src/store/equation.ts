@@ -5,7 +5,7 @@ import { atom } from 'jotai';
 import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, deserializeEquation, SerializedEquation, getFunctionName, flipRelation, compressString } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
-import { applyGlobalOp, GlobalOpParams, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
+import { applyGlobalOp, GlobalOpParams, GlobalOpType, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
 import type * as math from 'mathjs';
 import { mjs } from 'math-engine';
 import { Preset, PRESET_LIST } from '../constants/presets';
@@ -673,6 +673,24 @@ export const immersiveAtom = atom(false);
 export type BottomSheetType = 'workspace' | 'history' | 'library' | null;
 export const activeBottomSheetAtom = atom<BottomSheetType>(null);
 export const radialMenuOpenAtom = atom(false);
+
+/**
+ * Input-bearing global operations a hotkey can jump the radial menu straight
+ * into, bypassing the petal ring (#322). `swap` is excluded — it applies
+ * instantly (bare `s`) and needs no input panel.
+ */
+export type RadialInitialAction = Extract<
+  GlobalOpType,
+  'add' | 'sub' | 'mul' | 'div' | 'power' | 'root'
+>;
+
+/**
+ * When set, the radial menu opens directly into this operation's input panel
+ * instead of the petal ring — the hotkey path for equals operations (#322). The
+ * menu consumes and clears it on open so a subsequent bare-`=` returns to the
+ * ring.
+ */
+export const radialInitialActionAtom = atom<RadialInitialAction | null>(null);
 
 
 export interface ReducibleActionInfo {

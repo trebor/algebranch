@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { Provider, createStore } from 'jotai';
 import React, { useRef } from 'react';
 import { RadialMenu } from '@/components/RadialMenu';
-import { radialMenuOpenAtom } from '@/store/equation';
+import { radialMenuOpenAtom, radialInitialActionAtom } from '@/store/equation';
 
 function RadialMenuHarness() {
   const anchor = useRef<HTMLDivElement>(null);
@@ -117,6 +117,41 @@ describe('RadialMenu Focus Trap', () => {
     // Shift+Tab wrap-around: Input -> Back to menu -> Apply -> Input
     await user.tab({ shift: true });
     expect(backBtn).toHaveFocus();
+  });
+
+  it('opens straight into the term input when armed with an initial op (hotkey path)', async () => {
+    const store = createStore();
+    store.set(radialInitialActionAtom, 'add');
+    store.set(radialMenuOpenAtom, true);
+    render(
+      <Provider store={store}>
+        <RadialMenuHarness />
+      </Provider>
+    );
+
+    // The term input is shown directly — no petal click needed — and focused.
+    const input = screen.getByPlaceholderText('e.g. 5x');
+    expect(input).toHaveFocus();
+    // The petal ring is bypassed.
+    expect(screen.queryByRole('button', { name: /Swap left and right sides/i })).toBeNull();
+    // The intent atom is consumed so a later bare-= open returns to the ring.
+    expect(store.get(radialInitialActionAtom)).toBeNull();
+  });
+
+  it('opens straight into the spinner when armed with power (hotkey path)', async () => {
+    const store = createStore();
+    store.set(radialInitialActionAtom, 'power');
+    store.set(radialMenuOpenAtom, true);
+    render(
+      <Provider store={store}>
+        <RadialMenuHarness />
+      </Provider>
+    );
+
+    const increaseBtn = screen.getByRole('button', { name: /Increase value/i });
+    expect(increaseBtn).toHaveFocus();
+    expect(screen.queryByRole('button', { name: /Swap left and right sides/i })).toBeNull();
+    expect(store.get(radialInitialActionAtom)).toBeNull();
   });
 
   it('traps focus within the spinner form when a power operation is selected', async () => {

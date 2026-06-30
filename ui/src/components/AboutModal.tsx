@@ -14,12 +14,12 @@ import { consentAtom } from '../store/consent';
 import { THEME_GLASS } from '../constants/theme';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import {
-  APP_VERSION,
   COPYRIGHT_NOTICE,
   THIRD_PARTY_ATTRIBUTIONS,
   GPL_LICENSE_TEXT,
   GITHUB_REPO_URL
 } from '../constants/about';
+import { APP_VERSION } from '../constants/version';
 
 export const AboutModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(aboutModalOpenAtom);

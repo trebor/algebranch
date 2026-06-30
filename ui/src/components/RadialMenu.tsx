@@ -10,6 +10,7 @@ import {
   applyGlobalOpAtom,
   swapSidesAtom,
   radialMenuOpenAtom,
+  radialInitialActionAtom,
   onboardingChapterIdAtom,
   onboardingGlobalOpAtom,
   settingsAtom,
@@ -74,6 +75,7 @@ interface RadialMenuProps {
  */
 export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
   const [isOpen, setIsOpen] = useAtom(radialMenuOpenAtom);
+  const [initialAction, setInitialAction] = useAtom(radialInitialActionAtom);
   const applyGlobalOp = useSetAtom(applyGlobalOpAtom);
   const swapSides = useSetAtom(swapSidesAtom);
   const isTourActive = !!useAtomValue(onboardingChapterIdAtom);
@@ -102,6 +104,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
     setTermInputAction(null);
     setTermValue('');
     setErrorStr(null);
+    setInitialAction(null);
   };
 
   const containerRef = useFocusTrap<HTMLDivElement>({
@@ -121,6 +124,24 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
   }, [isOpen, anchorRef]);
 
 
+  // Hotkey path (#322): when armed via radialInitialActionAtom, skip the petal
+  // ring and open straight into that op's input panel — the same state a petal
+  // click would set. Consume the atom so a later bare-`=` returns to the ring.
+  // Suppressed during the tour, which drives its own petal. This syncs internal
+  // panel state to an external open-intent trigger (the keypress), the
+  // documented legitimate use for setState-in-effect.
+  React.useEffect(() => {
+    if (!isOpen || !initialAction || isTourActive) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTermInputAction(
+      initialAction === 'power' || initialAction === 'root'
+        ? { type: initialAction, power: 2 }
+        : { type: initialAction },
+    );
+    if (initialAction === 'power' || initialAction === 'root') setSpinnerValue(2);
+    setInitialAction(null);
+  }, [isOpen, initialAction, isTourActive, setInitialAction]);
+
   // Close on Escape
   React.useEffect(() => {
     if (!isOpen) return;
@@ -130,11 +151,12 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
         setTermInputAction(null);
         setTermValue('');
         setErrorStr(null);
+        setInitialAction(null);
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [isOpen, setIsOpen]);
+  }, [isOpen, setIsOpen, setInitialAction]);
 
   // Focus term input or spinner controls when they appear (not during the tour —
   // the value is locked, and focusing would pop the keyboard on mobile for nothing)

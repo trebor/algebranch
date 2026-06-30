@@ -37,5 +37,6 @@ jobs:
           custom-pr-sign-comment: "I have read the CLA Document and I hereby sign the CLA"
           custom-notsigned-prcomment: "Thank you for your contribution to Algebranch. Before it can be merged, please read our [Contributor License Agreement](https://github.com/trebor/algebranch/blob/main/CLA.md) and sign it by posting the following comment on this pull request:"
           custom-allsigned-prcomment: "All contributors have signed the CLA. ✍️ ✅"
-          # Bots that never need to sign.
-          allowlist: trebor,dependabot[bot],github-actions[bot]
+          # Bots that never need to sign. algebranch-release-please[bot] opens the
+          # automated release PRs (#337); it isn't a human contributor, so exempt it.
+          allowlist: trebor,dependabot[bot],github-actions[bot],algebranch-release-please[bot]

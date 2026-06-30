@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "framer-motion": "^12.40.0",
+    "html-to-image": "^1.11.13",
     "jotai": "^2.11.0",
     "lucide-react": "^0.474.0",
     "math-engine": "file:../math-engine",

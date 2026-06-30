@@ -393,3 +393,49 @@ export const THEME_GLASS = {
   GRAPH_TOOLTIP_ROW_INACTIVE: 'flex items-center gap-1.5 text-white/40 opacity-35 scale-95 origin-left transition-all duration-150',
   GRAPH_TOOLTIP_ROW_DEFAULT: 'flex items-center gap-1.5 text-white/90 transition-all duration-150',
 } as const;
+
+// --- Equation preview palettes (#335 image export) ---
+// PreviewEquationNode reads its leaf colours from a palette (via context) so it can
+// render legibly on the chosen export background. The DARK palette holds the exact
+// in-app colours, so it is the default and nothing in the app changes; the LIGHT
+// palette is used when exporting on a white or transparent background.
+export interface EquationPreviewPalette {
+  /** Numeric constants. */
+  number: string;
+  /** Variable / symbol glyphs. */
+  variable: string;
+  /** Operator symbols and radical strokes. */
+  operator: string;
+  /** Generic function names, e.g. log(. */
+  fnName: string;
+  /** Parenthesis strokes and function-call parens. */
+  paren: string;
+  /** Fraction vinculum border colour. */
+  fractionBar: string;
+  /** Radical vinculum border colour. */
+  radicalBar: string;
+  /** The relation symbol (=, <, …) drawn between the two sides. */
+  relation: string;
+}
+
+export const EQUATION_PREVIEW_PALETTE_DARK: EquationPreviewPalette = {
+  number: 'text-yellow-500/80',
+  variable: 'text-sky-400/80',
+  operator: 'text-indigo-400/60',
+  fnName: 'text-purple-400/60',
+  paren: 'text-white/20',
+  fractionBar: 'border-white/10',
+  radicalBar: 'border-white/15',
+  relation: 'text-indigo-300',
+};
+
+export const EQUATION_PREVIEW_PALETTE_LIGHT: EquationPreviewPalette = {
+  number: 'text-amber-600',
+  variable: 'text-sky-700',
+  operator: 'text-indigo-600',
+  fnName: 'text-purple-600',
+  paren: 'text-slate-400',
+  fractionBar: 'border-slate-500',
+  radicalBar: 'border-slate-500',
+  relation: 'text-indigo-600',
+};

@@ -135,6 +135,30 @@ describe('CopyFormatMenu', () => {
     expect(menu.parentElement).toBe(document.body);
   });
 
+  it('omits the image entry by default and shows it when imageEquation is given', async () => {
+    const { rerender } = renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
+    expect(screen.queryByRole('menuitem', { name: /save as image/i })).toBeNull();
+
+    await userEvent.keyboard('{Escape}');
+    rerender(
+      <CopyFormatMenu
+        getText={(format) => equationToFormat(eq, format)}
+        variant="panel"
+        trackAction="copy_step"
+        trackCategory="history"
+        trackLabel="node-1"
+        imageEquation={eq}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /save as image/i }));
+
+    // The image export dialog opens; the format menu closes.
+    expect(await screen.findByRole('dialog', { name: /save as image/i })).toBeInTheDocument();
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
   it('calls onOpenChange when opening and closing the menu', async () => {
     const onOpenChange = vi.fn();
     render(

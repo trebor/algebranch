@@ -5,10 +5,11 @@
 
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Copy, Check, ChevronDown } from 'lucide-react';
+import { Copy, Check, ChevronDown, ImageDown } from 'lucide-react';
 import type { Equation } from 'math-engine-client';
 import { Tooltip } from './Tooltip';
 import { PreviewEquationNode } from './PreviewEquationNode';
+import { ImageExportDialog } from './ImageExportDialog';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
 import type { ExportFormat } from '../store/equation';
@@ -85,6 +86,12 @@ interface CopyFormatMenuProps {
   /** Equation to render typeset in the menu header — names *which* equation is copied (#243). */
   scopeEquation?: Equation;
   /**
+   * When provided, the menu gains a "Save as image…" entry that opens the PNG
+   * export dialog for this single equation (#335). Omit in multi-equation contexts
+   * (e.g. full-derivation copy) where a single-equation image makes no sense.
+   */
+  imageEquation?: Equation;
+  /**
    * Fired while the trigger is hovered or the menu is open (#46), so a caller can
    * illuminate the export path in the tree. Kept as a callback to keep this
    * component decoupled from app state.
@@ -114,12 +121,14 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   stopPropagation,
   scopeLabel,
   scopeEquation,
+  imageEquation,
   onPreviewChange,
   onOpenChange,
   focusable = true,
 }) => {
   const triggerTabIndex = focusable ? undefined : -1;
   const [open, setOpen] = React.useState(false);
+  const [imageOpen, setImageOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
@@ -346,8 +355,33 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
               {label}
             </button>
           ))}
+          {imageEquation && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={(e) => {
+                if (stopPropagation) e.stopPropagation();
+                clearCloseTimer();
+                setOpen(false);
+                setMenuPos(null);
+                setHovered(false);
+                setImageOpen(true);
+              }}
+              className={`${THEME_GLASS.COPY_MENU_ITEM} ${THEME_TRANSITIONS.FAST} flex items-center gap-2 border-t border-white/5`}
+            >
+              <ImageDown size={13} className="shrink-0 text-indigo-300/80" />
+              Save as image…
+            </button>
+          )}
         </div>,
         document.body
+      )}
+      {imageEquation && (
+        <ImageExportDialog
+          equation={imageEquation}
+          isOpen={imageOpen}
+          onClose={() => setImageOpen(false)}
+        />
       )}
     </div>
   );

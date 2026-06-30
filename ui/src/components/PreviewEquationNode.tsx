@@ -10,6 +10,7 @@ import { currentEquationAtom } from '../store/equation';
 import { Equation, getNodeByPath, getFunctionName, formatNumber } from 'math-engine-client';
 import { OPERATOR_DISPLAY, splitSubscript } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
+import { useEquationPreviewPalette } from './EquationPreviewPaletteContext';
 import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
 
 /**
@@ -79,6 +80,9 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
   const eq = customEquation ?? currentEq;
   const roving = useOptionalRovingTabindex();
   const explore = React.useContext(ExploreContext);
+  // Leaf glyph colours, swapped to a light palette by the image-export container
+  // when rendering on a white/transparent background (#335). Defaults to dark.
+  const palette = useEquationPreviewPalette();
 
   const node = React.useMemo(() => {
     if (customNode) return customNode;
@@ -112,14 +116,14 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
   const renderContent = () => {
     if (node.type === 'ConstantNode') {
       const constNode = node as math.ConstantNode;
-      return <span className="font-semibold text-yellow-500/80">{formatNumber(constNode.value)}</span>;
+      return <span className={`font-semibold ${palette.number}`}>{formatNumber(constNode.value)}</span>;
     }
 
     if (node.type === 'SymbolNode') {
       const symbolNode = node as math.SymbolNode;
       const { head, sub } = splitSubscript(symbolNode.name);
       return (
-        <span className="italic font-serif text-sky-400/80 font-medium">
+        <span className={`italic font-serif font-medium ${palette.variable}`}>
           {head}
           {sub !== null && <sub className={THEME_GLASS.MATH_SUBSCRIPT}>{sub}</sub>}
         </span>
@@ -137,7 +141,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
                 bottom: '0.2em'
               }}
             >
-              <LeftParenSVG className="w-full h-full text-white/20" />
+              <LeftParenSVG className={`w-full h-full ${palette.paren}`} />
             </div>
           </div>
           <div className="px-[0.05em]">
@@ -156,7 +160,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
                 bottom: '0.2em'
               }}
             >
-              <RightParenSVG className="w-full h-full text-white/20" />
+              <RightParenSVG className={`w-full h-full ${palette.paren}`} />
             </div>
           </div>
         </div>
@@ -178,7 +182,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
           (child as math.OperatorNode).op === '-';
         return (
           <div className="flex items-center gap-[0.05em]">
-            <span className="text-indigo-400/60 font-bold select-none">{opSymbol}</span>
+            <span className={`font-bold select-none ${palette.operator}`}>{opSymbol}</span>
             {childNeedsParens ? (
               <div className="flex items-stretch px-[0.05em] relative">
                 <div className="relative w-[0.32em] select-none shrink-0">
@@ -189,7 +193,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
                       bottom: '0.2em'
                     }}
                   >
-                    <LeftParenSVG className="w-full h-full text-white/20" />
+                    <LeftParenSVG className={`w-full h-full ${palette.paren}`} />
                   </div>
                 </div>
                 <div className="px-[0.05em]">
@@ -208,7 +212,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
                       bottom: '0.2em'
                     }}
                   >
-                    <RightParenSVG className="w-full h-full text-white/20" />
+                    <RightParenSVG className={`w-full h-full ${palette.paren}`} />
                   </div>
                 </div>
               </div>
@@ -236,7 +240,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
                 customEquation={customEquation}
               />
             </div>
-            <div className="w-full border-t border-white/10 h-0" />
+            <div className={`w-full border-t h-0 ${palette.fractionBar}`} />
             <div className={`w-full text-center ${inExponent ? 'pt-[0.02em]' : 'pt-[0.1em]'}`}>
               <PreviewEquationNode
                 path={customNode ? undefined : `${path}/1`}
@@ -284,7 +288,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
             inExponent={inExponent}
             customEquation={customEquation}
           />
-          <span className="text-indigo-400/60 font-medium text-[0.85em] select-none">{opSymbol}</span>
+          <span className={`font-medium text-[0.85em] select-none ${palette.operator}`}>{opSymbol}</span>
           <PreviewEquationNode
             path={customNode ? undefined : `${path}/1`}
             customNode={customNode ? (node as math.OperatorNode).args[1] : undefined}
@@ -326,7 +330,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className="absolute inset-0 w-full h-full text-indigo-400/60"
+                className={`absolute inset-0 w-full h-full ${palette.operator}`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
@@ -339,7 +343,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
                 />
               </svg>
             </div>
-            <div className="border-t border-white/15 pt-[0.15em] pb-[0.05em] px-[0.15em] rounded-tr-[0.2em] flex items-center">
+            <div className={`border-t ${palette.radicalBar} pt-[0.15em] pb-[0.05em] px-[0.15em] rounded-tr-[0.2em] flex items-center`}>
               <PreviewEquationNode
                 path={customNode ? undefined : `${path}/0`}
                 customNode={customNode ? (node as math.FunctionNode).args[0] : undefined}
@@ -358,7 +362,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className="absolute inset-0 w-full h-full text-indigo-400/60"
+                className={`absolute inset-0 w-full h-full ${palette.operator}`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
@@ -371,7 +375,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
                 />
               </svg>
             </div>
-            <div className="border-t border-white/15 pt-[0.15em] pb-[0.05em] px-[0.15em] rounded-tr-[0.2em] flex items-center">
+            <div className={`border-t ${palette.radicalBar} pt-[0.15em] pb-[0.05em] px-[0.15em] rounded-tr-[0.2em] flex items-center`}>
               <PreviewEquationNode
                 path={customNode ? undefined : `${path}/0`}
                 customNode={customNode ? (node as math.FunctionNode).args[0] : undefined}
@@ -386,15 +390,15 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
       // Default fallback function renderer
       return (
         <div className="flex items-center gap-[0.05em]">
-          <span className="text-purple-400/60 font-medium text-[0.9em]">{nameStr}</span>
-          <span className="text-white/20 mr-[0.05em]">(</span>
+          <span className={`font-medium text-[0.9em] ${palette.fnName}`}>{nameStr}</span>
+          <span className={`mr-[0.05em] ${palette.paren}`}>(</span>
           <PreviewEquationNode
             path={customNode ? undefined : `${path}/0`}
             customNode={customNode ? (node as math.FunctionNode).args[0] : undefined}
             inExponent={inExponent}
             customEquation={customEquation}
           />
-          <span className="text-white/20 ml-[0.05em]">)</span>
+          <span className={`ml-[0.05em] ${palette.paren}`}>)</span>
         </div>
       );
     }

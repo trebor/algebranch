@@ -40,3 +40,9 @@ jobs:
           # Bots that never need to sign. algebranch-release-please[bot] opens the
           # automated release PRs (#337); it isn't a human contributor, so exempt it.
           allowlist: trebor,dependabot[bot],github-actions[bot],algebranch-release-please[bot]
+          # Don't lock conversations after merge (the action's default). Locking
+          # merged PRs makes release-please's post-release "released in vX.Y.Z"
+          # comment fail (#337), turning every release run red. The marginal
+          # protection (freezing a merged PR against signature-invalidating
+          # commits) isn't worth that; main is already guarded by the validate gate.
+          lock-pullrequest-aftermerge: false

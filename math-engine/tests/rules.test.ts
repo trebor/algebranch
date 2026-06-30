@@ -1,7 +1,7 @@
 import * as math from 'mathjs';
 import { HIGH_SCHOOL_IDENTITIES } from '../src/rules';
 import { matchPattern, instantiatePattern } from '../src/matcher';
-import { parseEquation, replaceNodeAtPath, areEquationsEquivalent } from '../src';
+import { parseEquation, replaceNodeAtPath, areEquationsEquivalent, getReducibleOptions, equationToString } from '../src';
 
 const cleanString = (node: math.MathNode) => node.toString().replace(/\s+/g, '');
 
@@ -103,7 +103,8 @@ const ALL_RULE_TEST_CASES: RuleTestCase[] = [
   { ruleId: 'repeated_addition_5_right', input: '(x + 3) * 5', expected: '(x+3)+(x+3)+(x+3)+(x+3)+(x+3)' },
   { ruleId: 'repeated_addition_5_reverse', input: '(x + 3) + (x + 3) + (x + 3) + (x + 3) + (x + 3)', expected: '5*(x+3)' },
   { ruleId: 'fraction_decompose', input: 'x / 5', expected: 'x*(1/5)' },
-  { ruleId: 'fraction_compose', input: 'x * (1 / 5)', expected: 'x/5' }
+  { ruleId: 'fraction_compose', input: 'x * (1 / 5)', expected: 'x/5' },
+  { ruleId: 'self_quotient', input: 'x / x', expected: '1' }
 ];
 
 describe('Exhaustive Bidirectional Identity Rules Verification', () => {
@@ -143,5 +144,32 @@ describe('Exhaustive Bidirectional Identity Rules Verification', () => {
       }
       expect(isEquiv).toBe(true);
     });
+  });
+});
+
+describe('Self-Quotient Identity (x/x -> 1)', () => {
+  const selfQuotientOption = (input: string) =>
+    Object.values(getReducibleOptions(parseEquation(input)))
+      .flat()
+      .find((r) => r.label === 'Self-Quotient is One');
+
+  test('fires on a bare variable quotient x/x', () => {
+    const option = selfQuotientOption('y = x / x');
+    expect(option).toBeDefined();
+    expect(equationToString(option!.simplified)).toBe('y = 1');
+  });
+
+  test('fires on a structurally identical compound quotient (a+b)/(a+b)', () => {
+    const option = selfQuotientOption('y = (a + b) / (a + b)');
+    expect(option).toBeDefined();
+    expect(equationToString(option!.simplified)).toBe('y = 1');
+  });
+
+  test('does NOT fire on a quotient of distinct operands x/y', () => {
+    expect(selfQuotientOption('z = x / y')).toBeUndefined();
+  });
+
+  test('does NOT fire on division by zero x/0 (operands are not identical)', () => {
+    expect(selfQuotientOption('y = x / 0')).toBeUndefined();
   });
 });

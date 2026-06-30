@@ -711,6 +711,14 @@ const RAW_RULES: RawRule[] = [
     targetPatternStr: '_A / _B',
     description: 'Combines multiplication by a reciprocal into a division.',
   },
+  {
+    id: 'self_quotient',
+    name: 'Self-Quotient is One',
+    category: 'Basic Arithmetic',
+    sourcePatternStr: '_A / _A',
+    targetPatternStr: '1',
+    description: 'Any expression divided by itself is 1 (undefined where the expression is 0).',
+  },
 ];
 
 export const HIGH_SCHOOL_IDENTITIES: RewriteRule[] = RAW_RULES.map((rule) => {

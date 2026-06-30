@@ -8,6 +8,16 @@ and the monorepo uses a single unified version across all workspaces; the root
 v1.0.0 onward, entries are generated automatically from conventional commits by
 [release-please](https://github.com/googleapis/release-please) (#337).
 
+## [1.1.0](https://github.com/trebor/algebranch/compare/v1.0.0...v1.1.0) (2026-06-30)
+
+
+### Features
+
+* **math-engine:** self-quotient identity x/x -&gt; 1 ([#328](https://github.com/trebor/algebranch/issues/328)) ([#334](https://github.com/trebor/algebranch/issues/334)) ([606a218](https://github.com/trebor/algebranch/commit/606a2187da4395db8f2606e28893f23c956303d9))
+* **ui:** degrade gracefully when extensions block the app bundle ([#326](https://github.com/trebor/algebranch/issues/326) follow-up) ([#330](https://github.com/trebor/algebranch/issues/330)) ([5082daa](https://github.com/trebor/algebranch/commit/5082daaf718142109bc3467b67fdf3d50035f877))
+* **ui:** gracefully degrade under blocking browser extensions ([#326](https://github.com/trebor/algebranch/issues/326)) ([#329](https://github.com/trebor/algebranch/issues/329)) ([7f88690](https://github.com/trebor/algebranch/commit/7f886906df9af09a30b820b8d29e1e2ec9bb7638))
+* **ui:** hotkeys for equals operations ([#322](https://github.com/trebor/algebranch/issues/322)) ([#332](https://github.com/trebor/algebranch/issues/332)) ([c48685b](https://github.com/trebor/algebranch/commit/c48685b0d93c157e854ed220b6fc1b32b32e5682))
+
 ## [1.0.0] - 2026-06-28
 
 Initial public, open-source release of Algebranch — an interactive algebraic

@@ -60,6 +60,13 @@ This section is the **canonical commit/merge protocol** for every agent in this 
 3. Commit only after the user explicitly approves.
 4. Never `git push`, `gh pr merge`, or merge directly without approval. Once commits are approved, offer to finalize: open/merge the PR, delete the feature branch, and clean up.
 
+**Publishing to production ("Publish it")** — where "ship it" finishes a branch, **"Publish it"** is the trigger to cut a release and ship it live to https://algebranch.com. A few invariants always hold:
+- **Publishing = promoting `main → production`** (Vercel deploys from `production`, not `main`). This is **gated**: never push or merge to `production` without explicit, per-release approval. A release does *not* require an associated milestone — milestones group a themed batch toward a shipping boundary (as the launch did), but routine releases don't need one; the recurring gate is the human's approval on the promotion.
+- The monorepo carries a **single unified version**; root `package.json` is the source of truth, surfaced in-app via `next.config.ts` → `ui/src/constants/version.ts` (so **do not** hand-edit any version string in `ui/src`).
+- The curated `CHANGELOG.md` section is the release notes / "what's new", mirrored into the GitHub release.
+
+The mechanics of bumping the version, finalizing the changelog, tagging, and cutting the GitHub release are moving to commit-driven automation (release-please) — see #337. Until that lands, perform those steps by hand following the invariants above, and keep the `main → production` promotion manual and approved.
+
 ## Local dev server
 
 **The human owns the local dev servers** — they start, stop, and restart them. Each agent's worktree runs its dev server on a dedicated port:

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-export const APP_VERSION = '1.0.0';
 export const COPYRIGHT_NOTICE = '© 2026 Robert Harris';
 export const GITHUB_REPO_URL = 'https://github.com/trebor/algebranch';
 export const DOCS_URL = `${GITHUB_REPO_URL}/blob/main/docs/index.md`;

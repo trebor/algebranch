@@ -62,10 +62,15 @@ This section is the **canonical commit/merge protocol** for every agent in this 
 
 **Publishing to production ("Publish it")** — where "ship it" finishes a branch, **"Publish it"** is the trigger to cut a release and ship it live to https://algebranch.com. A few invariants always hold:
 - **Publishing = promoting `main → production`** (Vercel deploys from `production`, not `main`). This is **gated**: never push or merge to `production` without explicit, per-release approval. A release does *not* require an associated milestone — milestones group a themed batch toward a shipping boundary (as the launch did), but routine releases don't need one; the recurring gate is the human's approval on the promotion.
-- The monorepo carries a **single unified version**; root `package.json` is the source of truth, surfaced in-app via `next.config.ts` → `ui/src/constants/version.ts` (so **do not** hand-edit any version string in `ui/src`).
-- The curated `CHANGELOG.md` section is the release notes / "what's new", mirrored into the GitHub release.
+- The monorepo carries a **single unified version**; root `package.json` is the source of truth, surfaced in-app via `next.config.ts` → `ui/src/constants/version.ts` (so **do not** hand-edit any version string in `ui/src` — or, now, any `package.json` version: release-please owns all three).
+- `CHANGELOG.md` is the release notes / "what's new", mirrored into the GitHub release.
 
-The mechanics of bumping the version, finalizing the changelog, tagging, and cutting the GitHub release are moving to commit-driven automation (release-please) — see #337. Until that lands, perform those steps by hand following the invariants above, and keep the `main → production` promotion manual and approved.
+Versioning, changelog, tag, and GitHub release are **automated by release-please** (#337); promotion to production stays **manual and human-gated**. The two stages:
+
+1. **Cut the release (automated).** release-please (`.github/workflows/release-please.yml`, config in `release-please-config.json` + `.release-please-manifest.json`) watches `main` and keeps an open **release PR** that bumps the unified version across all three `package.json`s and regenerates `CHANGELOG.md` from the conventional commits since the last tag. Reviewing and **merging that release PR** tags `vX.Y.Z` and cuts the GitHub release with the changelog as notes — no hand-editing of versions or the changelog. The release PR opens as a GitHub App (secrets `RELEASE_PLEASE_APP_ID` / `RELEASE_PLEASE_APP_PRIVATE_KEY`) so it triggers the `validate` CI gate like any other PR; if those secrets are missing or invalid the workflow fails loud rather than opening a CI-less release PR.
+2. **Promote to production (manual, gated).** "Publish it" then means promoting `main → production`. release-please **never** touches `production` — Vercel deploys from `production`, so a merge of the release PR does **not** ship anything live. The human approves the `main → production` promotion per release; that approval is the recurring gate.
+
+So the agent's role at release time is to **drive the release PR** (ensure commits are conventional, confirm the proposed version/changelog look right, get approval to merge it), then — separately and only with explicit approval — perform the `main → production` promotion.
 
 ## Local dev server
 

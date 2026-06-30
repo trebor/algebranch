@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Robert Harris
+name: Release Please
+
+# Commit-driven releases (#337). On every push to main, release-please reads the
+# conventional-commit history and maintains an open "release PR" that bumps the
+# unified monorepo version (root package.json, with ui + math-engine in lockstep)
+# and regenerates CHANGELOG.md. Merging that PR tags vX.Y.Z and cuts the GitHub
+# release. It stops there: promoting main -> production stays a manual, approved
+# step (see AGENTS.md "Publishing to production").
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A GITHUB_TOKEN-created PR does NOT trigger other workflows (GitHub's anti-
+# recursion rule), so the required `validate` check would never run on the
+# release PR and it could never merge. So we open the PR as a GitHub App, whose
+# PRs trigger CI normally. The App ID + private key live in repo secrets
+# RELEASE_PLEASE_APP_ID / RELEASE_PLEASE_APP_PRIVATE_KEY; if either is missing or
+# invalid the mint step fails loud (and release-please never runs) rather than
+# silently degrading to a CI-less release PR.
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Mint GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+
+      - name: Release Please
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}

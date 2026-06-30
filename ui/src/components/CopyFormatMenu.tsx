@@ -5,7 +5,9 @@
 
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Copy, Check, ChevronDown, ImageDown } from 'lucide-react';
+import { useSetAtom } from 'jotai';
+import { Copy, Check, ChevronDown, ImageDown, Type, Sigma, Code } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { Equation } from 'math-engine-client';
 import { Tooltip } from './Tooltip';
 import { PreviewEquationNode } from './PreviewEquationNode';
@@ -13,6 +15,7 @@ import { ImageExportDialog } from './ImageExportDialog';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
 import type { ExportFormat } from '../store/equation';
+import { toastAtom } from '../store/equation';
 import { safeCopyText } from '../utils/clipboard';
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
@@ -23,12 +26,24 @@ const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayou
 // typeset header preview, and outside-click/Escape dismissal so each copy site
 // is a one-liner. Mirrors the ShareMenu split-button (#241).
 
-// Ordered simplest → most complex: plain ASCII, then pretty Unicode, then LaTeX markup.
-const FORMAT_OPTIONS: { format: ExportFormat; label: string }[] = [
-  { format: 'plain', label: 'Plain text' },
-  { format: 'unicode', label: 'Unicode' },
-  { format: 'latex', label: 'LaTeX' },
+// Ordered simplest → most complex: plain ASCII, then pretty Unicode, then LaTeX
+// markup. The icons echo that progression — a plain "T", a math sigma for the
+// pretty-symbol render, and a code glyph for the markup (lucide ships no LaTeX
+// brand mark, so Code stands in for "this is markup").
+const FORMAT_OPTIONS: { format: ExportFormat; label: string; Icon: LucideIcon }[] = [
+  { format: 'plain', label: 'Plain text', Icon: Type },
+  { format: 'unicode', label: 'Unicode', Icon: Sigma },
+  { format: 'latex', label: 'LaTeX', Icon: Code },
 ];
+
+// Confirmation toast per format — the menu closes on select and the per-step
+// split-button can disappear with the hover, so the check icon alone isn't a
+// reliable signal that the copy happened.
+const COPY_TOAST: Record<ExportFormat, string> = {
+  plain: 'Copied as plain text',
+  unicode: 'Copied as Unicode',
+  latex: 'Copied as LaTeX',
+};
 
 // Display-ready Unicode is what the cards render, so it's the least-surprising
 // thing a one-click primary copy hands you (#243).
@@ -127,6 +142,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   focusable = true,
 }) => {
   const triggerTabIndex = focusable ? undefined : -1;
+  const setToast = useSetAtom(toastAtom);
   const [open, setOpen] = React.useState(false);
   const [imageOpen, setImageOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -248,6 +264,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
     safeCopyText(getText(format)).then((success) => {
       if (success) {
         setCopied(true);
+        setToast({ message: COPY_TOAST[format], key: Date.now() });
         trackEvent({ action: trackAction, category: trackCategory, label: `${trackLabel}:${format}` });
         setTimeout(() => setCopied(false), COPIED_TIMEOUT);
       }
@@ -344,7 +361,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
               )}
             </div>
           )}
-          {FORMAT_OPTIONS.map(({ format, label }) => (
+          {FORMAT_OPTIONS.map(({ format, label, Icon }) => (
             <button
               key={format}
               type="button"
@@ -352,6 +369,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
               onClick={(e) => handleSelect(e, format)}
               className={`${THEME_GLASS.COPY_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
             >
+              <Icon size={13} className={THEME_GLASS.COPY_MENU_ITEM_ICON} />
               {label}
             </button>
           ))}
@@ -367,9 +385,9 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
                 setHovered(false);
                 setImageOpen(true);
               }}
-              className={`${THEME_GLASS.COPY_MENU_ITEM} ${THEME_TRANSITIONS.FAST} flex items-center gap-2 border-t border-white/5`}
+              className={`${THEME_GLASS.COPY_MENU_ITEM} ${THEME_TRANSITIONS.FAST} border-t border-white/5`}
             >
-              <ImageDown size={13} className="shrink-0 text-indigo-300/80" />
+              <ImageDown size={13} className={THEME_GLASS.COPY_MENU_ITEM_ICON} />
               Save as image…
             </button>
           )}

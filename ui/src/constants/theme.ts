@@ -213,7 +213,8 @@ export const THEME_GLASS = {
   EQUALS_POPOVER_BTN: 'mt-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-[0.5625rem] font-bold rounded-lg self-end transition-all cursor-pointer shadow-md shadow-indigo-600/20 border border-indigo-400/20',
   // Copy-as-format menu (#46): popover offering Plain / LaTeX / Unicode export.
   COPY_MENU: 'z-50 w-44 p-1 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-0.5 text-left',
-  COPY_MENU_ITEM: 'flex items-center justify-between gap-2 w-full px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none',
+  COPY_MENU_ITEM: 'flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none',
+  COPY_MENU_ITEM_ICON: 'shrink-0 text-indigo-300/80',
   // Header naming the export scope (#46, option B): an eyebrow label over the
   // nicely-rendered destination expression, so it's clear what will be copied.
   COPY_MENU_HEADER: 'flex flex-col gap-0.5 px-2.5 pt-1.5 pb-2 mb-0.5 border-b border-white/10 select-none',

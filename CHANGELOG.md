@@ -8,6 +8,13 @@ and the monorepo uses a single unified version across all workspaces; the root
 v1.0.0 onward, entries are generated automatically from conventional commits by
 [release-please](https://github.com/googleapis/release-please) (#337).
 
+## [1.2.0](https://github.com/trebor/algebranch/compare/v1.1.0...v1.2.0) (2026-06-30)
+
+
+### Features
+
+* **ui:** export an equation as a PNG image ([#335](https://github.com/trebor/algebranch/issues/335)) ([#336](https://github.com/trebor/algebranch/issues/336)) ([174b0f8](https://github.com/trebor/algebranch/commit/174b0f88d6a38d5378244c6d878c7e30e59d5eb3))
+
 ## [1.1.0](https://github.com/trebor/algebranch/compare/v1.0.0...v1.1.0) (2026-06-30)
 
 

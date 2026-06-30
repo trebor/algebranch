@@ -30,6 +30,7 @@ import { ExploreEquationTree } from '../components/ExploreEquationTree';
 import { ShareMenu } from '../components/ShareMenu';
 import { HeaderOverflowMenu } from '../components/HeaderOverflowMenu';
 import { SharedWorkspaceBanner } from '../components/SharedWorkspaceBanner';
+import { StorageDegradedBanner } from '../components/StorageDegradedBanner';
 import {
   sharedWorkspaceBannerAtom,
   isSharedWorkspaceBannerDismissed,
@@ -138,39 +139,12 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useEquationTreeFocus } from '../hooks/useEquationTreeFocus';
 import { trackEvent } from '../utils/analytics';
 import { fetchMathScan } from '../utils/mathScan';
+import { safeStorage } from '../utils/safeStorage';
 
 
-// Safe wrapper around window.localStorage to prevent DOMException / SecurityError crashes on mobile browsers (incognito, LAN HTTP, etc.)
-const safeLocalStorage = {
-  getItem: (key: string): string | null => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        return window.localStorage.getItem(key);
-      }
-    } catch (e) {
-      console.warn('localStorage.getItem access denied:', e);
-    }
-    return null;
-  },
-  setItem: (key: string, value: string): void => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(key, value);
-      }
-    } catch (e) {
-      console.warn('localStorage.setItem access denied:', e);
-    }
-  },
-  removeItem: (key: string): void => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem(key);
-      }
-    } catch (e) {
-      console.warn('localStorage.removeItem access denied:', e);
-    }
-  }
-};
+// Single shared safe storage wrapper (try/catch + in-memory fallback). Aliased
+// to the historical `safeLocalStorage` name so every call site below is unchanged.
+const safeLocalStorage = safeStorage;
 
 // Layout effect on the client, plain effect on the server — avoids the SSR
 // useLayoutEffect warning while still measuring before paint in the browser.
@@ -2111,6 +2085,7 @@ export default function Home() {
 
             <OnboardingTour />
             <SharedWorkspaceBanner />
+            <StorageDegradedBanner />
           </div>
         </main>
 

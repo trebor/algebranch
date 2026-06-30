@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { atom } from 'jotai';
+import { safeStorage } from '../utils/safeStorage';
 
 /**
  * Raised when the app boots from a `?ws=` share link (#241). Drives the
@@ -24,24 +25,10 @@ export const SHARED_WORKSPACE_BANNER_DISMISSED_KEY =
  * share-link load time to gate raising the banner. Guarded so a disabled or
  * throwing localStorage (private mode, SSR) just reports "not dismissed".
  */
-export const isSharedWorkspaceBannerDismissed = (): boolean => {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      return window.localStorage.getItem(SHARED_WORKSPACE_BANNER_DISMISSED_KEY) === 'true';
-    }
-  } catch (e) {
-    console.warn('localStorage.getItem access denied:', e);
-  }
-  return false;
-};
+export const isSharedWorkspaceBannerDismissed = (): boolean =>
+  safeStorage.getItem(SHARED_WORKSPACE_BANNER_DISMISSED_KEY) === 'true';
 
 /** Persist the dismissal so future share links don't re-raise the banner. */
 export const markSharedWorkspaceBannerDismissed = (): void => {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(SHARED_WORKSPACE_BANNER_DISMISSED_KEY, 'true');
-    }
-  } catch (e) {
-    console.warn('localStorage.setItem access denied:', e);
-  }
+  safeStorage.setItem(SHARED_WORKSPACE_BANNER_DISMISSED_KEY, 'true');
 };

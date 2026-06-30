@@ -10,6 +10,7 @@ import { Provider as JotaiProvider } from "jotai";
 import { ReducedMotionProvider } from "../components/ReducedMotionProvider";
 import { ChromeScaleProvider } from "../components/ChromeScaleProvider";
 import { ConsentManager } from "../components/ConsentManager";
+import { shouldRenderDebugOverlay } from "../utils/debugOverlay";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -75,6 +76,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  // The fullscreen error-dump overlay below is a dev/debug aid only; in
+  // production it would turn an extension-blocked resource into a scary broken
+  // screen (#326), so it is suppressed there unless explicitly opted in.
+  const debugOverlay = shouldRenderDebugOverlay(
+    process.env.NODE_ENV,
+    process.env.NEXT_PUBLIC_DEBUG_OVERLAY,
+  );
 
   return (
     <html
@@ -83,6 +91,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        {debugOverlay && (
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -154,6 +163,7 @@ export default function RootLayout({
             `
           }}
         />
+        )}
         <JotaiProvider>
           {/* Reactively respect the OS prefers-reduced-motion setting for every
               framer-motion animation (#145); CSS animations are handled by the

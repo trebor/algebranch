@@ -11,6 +11,7 @@ import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { trackEvent } from '../utils/analytics';
 import { safeCopyText } from '../utils/clipboard';
+import { safeStorage } from '../utils/safeStorage';
 
 const COPIED_TIMEOUT = 2000;
 const MENU_CLOSE_GRACE = 500;
@@ -49,13 +50,9 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
   const [copied, setCopied] = React.useState(false);
   // Has the one-time hint already been spent? Seed from the persisted flag so it
   // never re-fires across reloads; treat unavailable storage as "spent" (no hint).
-  const [hintConsumed, setHintConsumed] = React.useState<boolean>(() => {
-    try {
-      return localStorage.getItem(SHARE_HINT_FLAG) === 'true';
-    } catch {
-      return true;
-    }
-  });
+  const [hintConsumed, setHintConsumed] = React.useState<boolean>(
+    () => safeStorage.getItem(SHARE_HINT_FLAG) === 'true',
+  );
   const reducedMotion = useReducedMotion();
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -95,11 +92,9 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
   // While the pulse is live, persist the one-time flag and auto-dismiss it.
   React.useEffect(() => {
     if (!showHint) return;
-    try {
-      localStorage.setItem(SHARE_HINT_FLAG, 'true');
-    } catch {
-      // Private mode / disabled storage — the pulse still shows this session.
-    }
+    // Private mode / disabled storage degrades to in-memory, so the pulse still
+    // won't re-fire this session even when the persistent write is rejected.
+    safeStorage.setItem(SHARE_HINT_FLAG, 'true');
     const t = setTimeout(() => setHintConsumed(true), HINT_DURATION);
     return () => clearTimeout(t);
   }, [showHint]);

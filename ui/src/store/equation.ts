@@ -14,6 +14,7 @@ import { ONBOARDING_CHAPTERS } from '../constants/onboarding';
 import { sentenceCase } from '../utils/text';
 import { mergeWorkspaces, hashWorkspace, ExportedWorkspace } from '../utils/workspaceTransfer';
 import { assignLanes } from '../utils/treeLayout';
+import { safeStorage } from '../utils/safeStorage';
 
 // Global Initial Value Constants
 export const INITIAL_EQUATION_STRING = '2 * (x + 3) = 10';
@@ -358,37 +359,10 @@ const getFallbackTabs = (): WorkspaceTab[] => [
   }
 ];
 
-// Safe wrapper around window.localStorage to prevent DOMException / SecurityError crashes on mobile browsers (incognito, LAN HTTP, etc.)
-export const safeLocalStorage = {
-  getItem: (key: string): string | null => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        return window.localStorage.getItem(key);
-      }
-    } catch (e) {
-      console.warn('localStorage.getItem access denied:', e);
-    }
-    return null;
-  },
-  setItem: (key: string, value: string): void => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(key, value);
-      }
-    } catch (e) {
-      console.warn('localStorage.setItem access denied:', e);
-    }
-  },
-  removeItem: (key: string): void => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem(key);
-      }
-    } catch (e) {
-      console.warn('localStorage.removeItem access denied:', e);
-    }
-  }
-};
+// Single shared safe storage wrapper (try/catch + in-memory fallback). Exported
+// under the historical `safeLocalStorage` name so every call site below — and
+// external importers like OnboardingTour — stay unchanged.
+export const safeLocalStorage = safeStorage;
 
 // Internal raw atoms (always initialized to static fallback to prevent Next.js SSR hydration mismatches)
 export const rawTabsAtom = atom<WorkspaceTab[]>(getFallbackTabs());

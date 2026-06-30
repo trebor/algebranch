@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
+import { safeStorage } from './safeStorage';
+
 export type ConsentState = 'unset' | 'granted' | 'denied';
 
 const STORAGE_KEY = 'algebranch_consent';
 
 interface WindowWithGtag {
-  localStorage?: {
-    getItem(key: string): string | null;
-    setItem(key: string, value: string): void;
-  };
   gtag?: (command: string, action: string, params: Record<string, unknown>) => void;
 }
 
@@ -24,29 +22,15 @@ const getWindow = (): WindowWithGtag | undefined => {
 };
 
 export const getConsentFromStorage = (): ConsentState => {
-  try {
-    const win = getWindow();
-    if (win && win.localStorage) {
-      const val = win.localStorage.getItem(STORAGE_KEY);
-      if (val === 'granted' || val === 'denied') {
-        return val;
-      }
-    }
-  } catch (e) {
-    console.warn('localStorage.getItem access denied:', e);
+  const val = safeStorage.getItem(STORAGE_KEY);
+  if (val === 'granted' || val === 'denied') {
+    return val;
   }
   return 'unset';
 };
 
 export const saveConsentToStorage = (state: ConsentState): void => {
-  try {
-    const win = getWindow();
-    if (win && win.localStorage) {
-      win.localStorage.setItem(STORAGE_KEY, state);
-    }
-  } catch (e) {
-    console.warn('localStorage.setItem access denied:', e);
-  }
+  safeStorage.setItem(STORAGE_KEY, state);
 };
 
 export const updateGtagConsent = (state: 'granted' | 'denied'): void => {

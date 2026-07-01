@@ -26,6 +26,7 @@ import {
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { RotateCcw, ChevronLeft, ChevronRight, GitFork } from 'lucide-react';
 import { useIsMobile } from '../hooks/useBreakpoint';
+import { useIsShortScreen } from '../hooks/useIsShortScreen';
 import { useIsHydrated } from '../hooks/useIsHydrated';
 
 interface ControlPanelProps {
@@ -41,6 +42,9 @@ interface ControlPanelProps {
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBorder, regionId }) => {
   const isMobile = useIsMobile();
+  // On short (mobile-landscape) viewports the header's generous spacing steals
+  // scarce vertical room from the tree (#325); tighten it there.
+  const isShort = useIsShortScreen();
   const headingId = React.useId();
   const [tree] = useAtom(historyTreeAtom);
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
@@ -105,14 +109,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
       // tabIndex=-1 only on the skip-link target instance, so the "Skip to
       // history" link can land focus here without adding a Tab stop (#257).
       tabIndex={regionId ? -1 : undefined}
-      className={`w-full h-full flex flex-col gap-4 outline-none ${
+      className={`w-full h-full flex flex-col outline-none ${isShort ? 'gap-2' : 'gap-4'} ${
         isMobile || noBorder
           ? 'p-0 bg-transparent'
           : `${THEME_GLASS.PANEL} p-4`
       }`}
     >
       {/* Sidebar Header with Timeline Actions */}
-      <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER} pb-4 shrink-0`}>
+      <div className={`flex items-center justify-between border-b ${THEME_GLASS.PANEL_BORDER} ${isShort ? 'pb-2' : 'pb-4'} shrink-0`}>
         <Tooltip content={<HotkeyHint label="Toggle Sidebar" keys="H" />} position="left" autoAlign={false}>
           <h2
             id={headingId}

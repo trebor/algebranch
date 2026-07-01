@@ -93,6 +93,64 @@ describe('history-tree persistence preserves node ids across the tree (#344)', (
     expect(xChild).toBe(xParent);
   });
 
+  it('encodes `?ws=` equations compactly (string + preorder id list), not full AST', () => {
+    const { tree } = liveTree();
+    const minified = minifyWorkspace({ tree: serializeTree(tree), currentNodeId: '1', name: 'Test' });
+
+    for (const node of Object.values(minified.t)) {
+      const e = node.e;
+      // Compact form: { s: string, k: string[] } — NOT the verbose Serialized
+      // equation (which would carry `lhs`/`rhs` AST objects) that bloats links.
+      expect(typeof e).not.toBe('string');
+      expect(e).toHaveProperty('s');
+      expect(e).toHaveProperty('k');
+      expect(e).not.toHaveProperty('lhs');
+      const compact = e as { s: string; k: string[] };
+      expect(typeof compact.s).toBe('string');
+      expect(Array.isArray(compact.k)).toBe(true);
+      // One id per node in the equation's preorder — a plausible non-empty count.
+      expect(compact.k.length).toBeGreaterThan(0);
+      // Ids are remapped to short tree-shared tokens, not verbose `node_<hash>_<n>`.
+      for (const k of compact.k) {
+        expect(k.startsWith('node_')).toBe(false);
+        expect(k.length).toBeLessThanOrEqual(3);
+      }
+    }
+
+    // The compact payload must be dramatically smaller than the full-AST JSON.
+    const compactBytes = JSON.stringify(minified).length;
+    const astBytes = JSON.stringify(serializeTree(tree)).length;
+    expect(compactBytes).toBeLessThan(astBytes / 2);
+  });
+
+  it('preserves ids through the compact `?ws=` codec across node types (sqrt, power, unary minus)', () => {
+    // The compact codec re-attaches ids onto `parse(equationToString(eq))`, so it
+    // only works if that round-trip reproduces the same preorder for every node
+    // type. Build a step that introduces a FunctionNode, an exponent and a
+    // negative, then assert a surviving symbol keeps its id across the round-trip.
+    const parent = ensureNodeIds(parseEquation('sqrt(x^2) - 4 = -y'));
+    const child = ensureNodeIds(applyGlobalOp(parent, { type: 'add', term: '4' }));
+    const xId = symbolId(parent, 'x');
+    expect(xId).toBeDefined();
+    expect(symbolId(child, 'x')).toBe(xId);
+
+    const tree: Record<string, HistoryNode> = {
+      '0': { id: '0', equation: parent, parentId: null, childrenIds: ['1'], label: 'Initial', timestamp: 1 },
+      '1': { id: '1', equation: child, parentId: '0', childrenIds: [], label: 'Add 4', timestamp: 2 },
+    };
+
+    const restored = deserializeTree(
+      deminifyWorkspace(minifyWorkspace({ tree: serializeTree(tree), currentNodeId: '1', name: 'T' })).tree,
+    );
+    const nodes = Object.values(restored);
+    const p = nodes.find((n) => n.parentId === null)!;
+    const c = nodes.find((n) => n.parentId === p.id)!;
+
+    // Surviving `x` shares one (remapped) id across both nodes after the round-trip.
+    expect(symbolId(p.equation, 'x')).toBeDefined();
+    expect(symbolId(c.equation, 'x')).toBe(symbolId(p.equation, 'x'));
+  });
+
   it('bumps the persisted schema version (old clients must reject the new equation format)', () => {
     // The equation encoding changed from a plain string to an id-bearing AST; a
     // version bump lets an older client cleanly reject a payload it can't parse.

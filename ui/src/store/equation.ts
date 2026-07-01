@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { atom } from 'jotai';
-import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation, compressString } from 'math-engine-client';
+import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getChildren, stripRedundantParentheses, getFunctionName, flipRelation, compressString } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
 import { applyGlobalOp, GlobalOpParams, GlobalOpType, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
@@ -103,9 +103,61 @@ export const deserializeTree = (serialized: Record<string, SerializedHistoryNode
 export const serializedEquationToString = (eq: SerializedEquation | string): string =>
   typeof eq === 'string' ? eq : equationToString(deserializeEquation(eq));
 
+/**
+ * Compact, id-preserving equation encoding for `?ws=` share links (#344). The
+ * full AST-as-JSON keeps node ids but bloats the link (~11× the raw bytes);
+ * instead we persist the compact equation *string* plus the node ids in the
+ * exact preorder `ensureNodeIds` assigns them, and re-attach those ids on load.
+ * Structure round-trips through `equationToString`/`parseEquation` (as the legacy
+ * string format already proved) — only the ids needed carrying, and this carries
+ * them cheaply, so the FLIP slide still matches surviving terms after a reload.
+ */
+export interface CompactEquation {
+  s: string; // equationToString (carries structure + relation)
+  k: string[]; // node ids in canonical preorder (lhs then rhs)
+}
+
+/** Strip redundant parens exactly as `ensureNodeIds` does, so the preorder aligns. */
+const cleanSides = (eq: Equation): Equation => ({
+  lhs: stripRedundantParentheses(eq.lhs, null, false),
+  rhs: stripRedundantParentheses(eq.rhs, null, false),
+  relation: eq.relation,
+});
+
+/** Nodes of a cleaned equation in `ensureNodeIds`' preorder: full lhs, then full rhs. */
+const preorderNodes = (cleaned: Equation): math.MathNode[] => {
+  const out: math.MathNode[] = [];
+  const walk = (node: math.MathNode) => {
+    if (!node) return;
+    out.push(node);
+    getChildren(node).forEach(walk);
+  };
+  walk(cleaned.lhs);
+  walk(cleaned.rhs);
+  return out;
+};
+
+/** Encode a live equation into the compact `{ s, k }` share-link form. */
+export const toCompactEquation = (eq: Equation): CompactEquation => ({
+  s: equationToString(eq),
+  k: preorderNodes(cleanSides(eq)).map(n => (n as unknown as { id: string }).id),
+});
+
+/**
+ * Rebuild a live equation from the compact form, re-attaching the stored ids in
+ * preorder onto the freshly parsed structure so cross-node continuity survives.
+ */
+export const fromCompactEquation = (c: CompactEquation): Equation => {
+  const cleaned = cleanSides(parseEquation(c.s));
+  preorderNodes(cleaned).forEach((node, i) => {
+    (node as unknown as { id: string }).id = c.k[i];
+  });
+  return cleaned;
+};
+
 export interface MinifiedNode {
   i: string; // id
-  e: SerializedEquation | string; // equation (id-bearing AST; legacy links carry a string) — #344
+  e: CompactEquation | string; // equation — compact id-preserving form; legacy links carry a string (#344)
   p: string | null; // parentId
   c: string[]; // childrenIds
   l: string; // label
@@ -139,13 +191,38 @@ export const minifyWorkspace = (ws: {
     }
   });
 
+  // Remap the verbose math-node ids (`node_<hash>_<n>`, ~14 chars) to short
+  // base36 tokens shared across the whole tree (#344). The id *values* are
+  // arbitrary — the FLIP slide only needs the same logical term to carry the
+  // same token across nodes — so a shared first-seen map keeps cross-node
+  // continuity while shrinking "the id log", and needs no reverse map on load.
+  const midMap = new Map<string, string>();
+  let midCounter = 0;
+  const shortMathId = (id: string): string => {
+    let short = midMap.get(id);
+    if (short === undefined) {
+      short = (midCounter++).toString(36);
+      midMap.set(id, short);
+    }
+    return short;
+  };
+
   const minifiedTree: Record<string, MinifiedNode> = {};
   Object.keys(tree).forEach(id => {
     const node = tree[id];
     const shortId = idMap[id];
+    let e: CompactEquation | string;
+    if (typeof node.equation === 'string') {
+      // Legacy string node passes through untouched.
+      e = node.equation;
+    } else {
+      // Compact the id-bearing AST into `{ s, k }` with short, tree-shared ids.
+      const compact = toCompactEquation(deserializeEquation(node.equation));
+      e = { s: compact.s, k: compact.k.map(shortMathId) };
+    }
     minifiedTree[shortId] = {
       i: shortId,
-      e: node.equation,
+      e,
       p: node.parentId ? idMap[node.parentId] : null,
       c: node.childrenIds.map(cid => idMap[cid] || cid),
       l: node.label,
@@ -184,7 +261,11 @@ export const deminifyWorkspace = (minified: MinifiedWorkspace): {
     const fullId = idMap[shortId];
     tree[fullId] = {
       id: fullId,
-      equation: mNode.e,
+      // Expand the compact `{ s, k }` back into the id-bearing AST (#344); a
+      // legacy string node (old `?ws=` link) passes straight through.
+      equation: typeof mNode.e === 'string'
+        ? mNode.e
+        : serializeEquation(fromCompactEquation(mNode.e)),
       parentId: mNode.p ? idMap[mNode.p] : null,
       childrenIds: mNode.c.map(scid => idMap[scid] || scid),
       label: mNode.l,

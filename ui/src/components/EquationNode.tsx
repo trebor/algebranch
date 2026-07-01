@@ -231,6 +231,86 @@ const canToggleRoot = (eq: math.MathNode | unknown): boolean => {
 };
 
 /**
+ * True when an nthRoot's index is "tall" — a fraction or a nested radical — i.e. much
+ * taller than the crook's default slot. Such an index grows the node box to stay
+ * contained (#201) and must be lifted so its bottom rests on the crook rather than the
+ * radical's vertex. Detected on the paren-unwrapped index child.
+ */
+const hasTallRootIndex = (node: math.MathNode | null | undefined): boolean => {
+  if (!node || node.type !== 'FunctionNode') return false;
+  const fn = node as math.FunctionNode;
+  if (getFunctionName(fn) !== 'nthRoot' || fn.args.length < 2) return false;
+  let idx: math.MathNode = fn.args[1];
+  while (idx && idx.type === 'ParenthesisNode') idx = (idx as math.ParenthesisNode).content;
+  if (!idx) return false;
+  return (
+    (idx.type === 'OperatorNode' && (idx as math.OperatorNode).op === '/') ||
+    (idx.type === 'FunctionNode' && ['sqrt', 'nthRoot'].includes(getFunctionName(idx as math.FunctionNode)))
+  );
+};
+
+/**
+ * Radical stroke geometry (0..100 viewBox). The arm spans the FULL height — the vertex
+ * is pinned to the very bottom (RADICAL_VERTEX_Y = 100) and the arm rises to the very
+ * top (RADICAL_ARM_TOP_Y = 0). The crook tick is drawn at a chosen y; the tick→vertex
+ * descent is the "dip" below the crook. A plain radical / short digit index keeps the
+ * classic notch at RADICAL_DEFAULT_CROOK_Y. A tall index (fraction/radical) instead
+ * seats at RADICAL_CROOK_FRACTION (#201): a 0.75 crook leaves the dip beneath it at 1/4
+ * of the height, giving the index 3/4 of the height above and wasting less space. The
+ * same fraction drives both the tick and where the tall index's bottom is seated, so
+ * glyph and index always agree. (The stroke's round caps sit at y=0/100, so the SVG is
+ * overflow-visible to keep them from clipping.)
+ */
+const RADICAL_VERTEX_Y = 100;
+const RADICAL_ARM_TOP_Y = 0;
+const RADICAL_DEFAULT_CROOK_Y = 55;
+const RADICAL_CROOK_FRACTION = 75 / 100;
+const radicalPath = (crookY: number): string =>
+  `M 1,${crookY} L 3.5,${crookY} L 7.5,${RADICAL_VERTEX_Y} L 12,${RADICAL_ARM_TOP_Y}`;
+
+/**
+ * Breathing room (em) a tall index keeps at its nestled corner (#201). A SINGLE inset
+ * drives both the gap above the index (below the arm's top) and the gap to its right
+ * (before the rising arm), so equidistance is structural — change this one value and
+ * both gaps move together — instead of two hand-tuned margins that drift apart across
+ * font sizes. The index's lower-left corner stays pinned in the crook; the box grows up
+ * and left into the pocket, which naturally widens upward.
+ */
+const INDEX_INSET_EM = 0.2;
+
+/**
+ * Horizontal distance (em) from the index column's right edge to the arm where it
+ * crosses the crook line. The index lives in its own column immediately left of the
+ * 0.7em radical SVG; the arm runs from the vertex (7.5,100) to the top-right (12,0), so
+ * at the crook height it sits at this x (of 12) within that column. This is the gap the
+ * index must close to reach the arm at its binding lower-right corner — the arm is a
+ * diagonal, so the gap is tightest there and opens up above it. Deriving the right
+ * margin from this constant (INDEX_INSET_EM minus this base) keeps the right gap equal
+ * to the top gap by construction.
+ */
+// Where the arm sits horizontally at the crook line, straight from the SVG path: the arm
+// runs from the vertex (7.5,100) to the top-right (12,0), so at the crook height it is at
+// this x (of 12). This is the true reference for the index's right alignment — the
+// `crookdebug` overlay draws a vertical line here so it can be eyeballed.
+const RADICAL_ARM_X_AT_CROOK = 7.5 + (12 - 7.5) * (1 - RADICAL_CROOK_FRACTION);
+// The index column's right edge is flush with the 0.7em radical SVG's left edge, so with
+// no horizontal pull the index falls this far (em) short of the arm at the crook. Derived
+// from the coordinate above, not measured — the vertical debug line confirms it. Pulling
+// the index right by (inset − base) leaves exactly `inset` of gap, so the right gap
+// equals the top and bottom gaps by construction: one dial (INDEX_INSET_EM) moves all.
+const RADICAL_SVG_WIDTH_EM = 0.7;
+const INDEX_ARM_GAP_BASE_EM = RADICAL_SVG_WIDTH_EM * (RADICAL_ARM_X_AT_CROOK / 12);
+const INDEX_ARM_RIGHT_MARGIN_EM = INDEX_INSET_EM - INDEX_ARM_GAP_BASE_EM;
+
+/**
+ * Debug aid (#201): append `?crookdebug` to the URL to overlay the index target box
+ * (the region above the crook where a tall index should nestle) and the crook line,
+ * so the geometry can be eyeballed against the rendered index. Off in normal use.
+ */
+const DEBUG_CROOK =
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('crookdebug');
+
+/**
  * Layout design tokens for node dimensions.
  *
  * Two unit systems are at play (#121):
@@ -497,6 +577,69 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   }, [currentEq, path]);
 
   const nodeId = node ? (node as unknown as { id?: string }).id || '' : '';
+
+  // Tall root-index placement (#201). A fraction/radical index grows the node box and
+  // must be lifted so it floats just above the radical's crook, not down at its vertex.
+  // The crook is at RADICAL_CROOK_FRACTION of the radical's height, so the gap beneath
+  // the index (down to the vertex) is a function of the index's own height. That height
+  // varies (a fraction vs a nested radical), so we measure the rendered index and express
+  // the gap in em — scale-invariant, so the nestle holds at every auto-scale.
+  const rootIndexIsTall = hasTallRootIndex(node);
+  const indexSlotRef = React.useRef<HTMLDivElement>(null);
+  const [indexBox, setIndexBox] = React.useState({ minW: 0, minH: 0, seatBottomEm: INDEX_INSET_EM });
+  React.useLayoutEffect(() => {
+    const col = indexSlotRef.current;
+    if (!rootIndexIsTall || !col) {
+      setIndexBox({ minW: 0, minH: 0, seatBottomEm: INDEX_INSET_EM });
+      return;
+    }
+    // Crook-relative seating (#201). The index is absolutely positioned so its bottom
+    // rides the crook line (`bottom: (1−crookFraction) of the row height`), which tracks
+    // the crook no matter what drives the row height — the index itself OR a taller
+    // radicand. Absolute content contributes no size to its column, so we measure the
+    // rendered index and reserve that footprint back.
+    //
+    // The index keeps its normal handle band (a FIXED-rem top reserve, like every other
+    // node), so we must split the two unit systems: the em EXPRESSION seats in the pocket
+    // and stays scale-invariant, while the fixed-rem handle reserve pokes ABOVE the
+    // radical top into the root's handle band. We read the child node's real top/bottom
+    // padding off the DOM (whatever it is — full handle reserve, or just nodePy when the
+    // index has no handles) and subtract it, so the pocket is sized to the bare
+    // expression, not the padded box.
+    //   • minWidth keeps the node box wrapped around the index — including its handle band
+    //     (#198), which also grows the box leftward for wide indices.
+    //   • minHeight sizes the pocket to the bare expression + one bottom inset, so the
+    //     expression's TOP sits flush with the radical top and its BOTTOM an inset off the
+    //     crook. This reserved height also makes the row height "definite" so the % seat
+    //     resolves.
+    //   • seatBottomEm offsets the box bottom by the child's bottom padding so the
+    //     EXPRESSION (not the padded box edge) lands an inset above the crook.
+    const measure = () => {
+      const wrapper = col.firstElementChild as HTMLElement | null;
+      const childEl = wrapper?.querySelector('[data-eq-node]') as HTMLElement | null;
+      const fontSize = parseFloat(getComputedStyle(col).fontSize);
+      if (!wrapper || !childEl || !fontSize) return;
+      const cs = getComputedStyle(childEl);
+      const padTop = parseFloat(cs.paddingTop) || 0;
+      const padBottom = parseFloat(cs.paddingBottom) || 0;
+      const exprEm = (childEl.offsetHeight - padTop - padBottom) / fontSize;
+      const padBottomEm = padBottom / fontSize;
+      const minW = Math.max(0, wrapper.offsetWidth / fontSize + INDEX_ARM_RIGHT_MARGIN_EM);
+      const minH = (exprEm + INDEX_INSET_EM) / RADICAL_CROOK_FRACTION;
+      const seatBottomEm = INDEX_INSET_EM - padBottomEm;
+      setIndexBox((prev) =>
+        Math.abs(prev.minW - minW) > 0.001 ||
+        Math.abs(prev.minH - minH) > 0.001 ||
+        Math.abs(prev.seatBottomEm - seatBottomEm) > 0.001
+          ? { minW, minH, seatBottomEm }
+          : prev,
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(col.firstElementChild ?? col);
+    return () => observer.disconnect();
+  }, [rootIndexIsTall, node]);
 
   const getChildId = (index: number): string => {
     if (!node) return `${path}/${index}`;
@@ -1109,37 +1252,94 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         }
         return (
           <div className="flex items-stretch -ml-[0.1em] -mr-[0.2em] relative">
-            {showIndex && (
-              // The index is a normal flow item (not absolutely positioned) so the
+            {DEBUG_CROOK && rootIndexIsTall && (
+              // Crook line: where the index's bottom should seat. The index slot itself
+              // is ring-outlined below, so its lower-right corner should land on this
+              // line, nestled against the rising arm.
+              <div
+                className="pointer-events-none absolute left-0 right-0 z-50 border-t-2 border-emerald-400/90"
+                style={{ top: `${RADICAL_CROOK_FRACTION * 100}%` }}
+              />
+            )}
+            {showIndex && (rootIndexIsTall ? (
+              // Tall index (fraction/nested radical), crook-relative seating (#201).
+              // The column is a full-height flex item (stretches to the row); the index
+              // content inside is absolutely positioned with its expression bottom an inset
+              // above the crook line (`bottom: (1−crookFraction) of the height`), so it
+              // rides the crook whether the index or a taller radicand drives the height.
+              // The column reserves the index's measured footprint (minWidth/minHeight
+              // from the effect above) so the node box still wraps it (#198) and the row
+              // grows tall enough to hold it. The index keeps its normal handle band —
+              // that fixed-rem top reserve pokes ABOVE the radical top into the root's
+              // handle band, while the em expression stays seated in the pocket (the
+              // effect splits the two so scale-invariance survives).
+              <div
+                ref={indexSlotRef}
+                className="relative shrink-0 z-10"
+                style={{ minWidth: `${indexBox.minW}em`, minHeight: `${indexBox.minH}em` }}
+              >
+                <div
+                  data-crookdebug={DEBUG_CROOK ? 'index' : undefined}
+                  className={`absolute ${DEBUG_CROOK ? 'ring-2 ring-red-500/90' : ''}`}
+                  style={{
+                    // right/bottom are in the COLUMN's em (this wrapper's font-size), so
+                    // the inset math lands at the intended scale. The 0.5em shrink lives
+                    // on the inner element only.
+                    right: `${INDEX_ARM_RIGHT_MARGIN_EM}em`,
+                    bottom: `calc(${((1 - RADICAL_CROOK_FRACTION) * 100).toFixed(4)}% + ${indexBox.seatBottomEm.toFixed(4)}em)`,
+                  }}
+                >
+                  <div className="text-[0.5em]" style={getOpStyle()}>
+                    <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Short digit index: a normal flow item (not absolutely positioned) so the
               // node box grows to contain it instead of spilling past the left edge
-              // (#198). It is bottom-anchored in a fixed 0.96em slot (items-end) so
-              // its glyph sits in the radical's crook at a stable height; the negative
-              // right margin nestles it against the rising stroke. suppressHandleReserve
-              // drops the fixed-rem handle band that would otherwise dwarf the tiny
-              // 0.55em index — so a handle-bearing index (e.g. a substitutable term)
-              // stays compact instead of ballooning out the top of the box.
-              <div className="relative self-start shrink-0 flex items-end h-[0.96em] -mr-[0.35em] translate-y-[0.05em] z-10">
-                <div className="text-[0.55em] scale-90" style={getOpStyle()}>
+              // (#198). Bottom-anchored (items-end) so its glyph sits at a stable height;
+              // the negative right margin nestles it against the rising stroke.
+              <div className="relative self-start shrink-0 flex items-end min-h-[0.96em] -mr-[0.35em] z-10 translate-y-[0.05em]">
+                <div className="text-[0.5em]" style={getOpStyle()}>
                   <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} suppressHandleReserve />
                 </div>
               </div>
-            )}
-            <div className="relative w-[0.7em] select-none shrink-0 mr-[-1px]">
+            ))}
+            <div
+              className="relative select-none shrink-0 mr-[-1px]"
+              style={{ width: `${RADICAL_SVG_WIDTH_EM}em` }}
+              data-crookdebug={DEBUG_CROOK && rootIndexIsTall ? 'svg' : undefined}
+            >
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className={`absolute inset-0 w-full h-full ${isStatic ? THEME_GLASS.MATH_FN_ROOT_STATIC : THEME_GLASS.MATH_FN_ROOT_ACTIVE}`}
+                className={`absolute inset-0 w-full h-full overflow-visible ${isStatic ? THEME_GLASS.MATH_FN_ROOT_STATIC : THEME_GLASS.MATH_FN_ROOT_ACTIVE}`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
                 style={getOpStyle()}
               >
                 <path
-                  d="M 1,55 L 3.5,55 L 7.5,98 L 12,1"
+                  d={radicalPath(rootIndexIsTall ? Math.round(RADICAL_CROOK_FRACTION * 100) : RADICAL_DEFAULT_CROOK_Y)}
                   vectorEffect="non-scaling-stroke"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
+                {DEBUG_CROOK && rootIndexIsTall && (
+                  // Vertical reference in the SAME coord space as the arm, so it is
+                  // guaranteed to sit on the arm at the crook (they cross at y = crook).
+                  // This is the target the index's right edge is inset from — its right gap
+                  // to this line should match its bottom gap to the green crook line.
+                  <line
+                    x1={RADICAL_ARM_X_AT_CROOK}
+                    y1={0}
+                    x2={RADICAL_ARM_X_AT_CROOK}
+                    y2={100}
+                    stroke="#38bdf8"
+                    strokeWidth={2}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                )}
               </svg>
             </div>
             <div className={`border-t pt-[0.15em] pb-[0.05em] px-[0.15em] rounded-tr-[0.2em] flex items-center ${isStatic ? THEME_GLASS.MATH_BORDER_FN_STATIC : THEME_GLASS.MATH_BORDER_FN_ACTIVE}`} style={getOpStyle(true)}>
@@ -1152,18 +1352,21 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       if (nameStr === 'sqrt') {
         return (
           <div className="flex items-stretch -ml-[0.1em] -mr-[0.2em] relative">
-            <div className="relative w-[0.7em] select-none shrink-0 mr-[-1px]">
+            <div
+              className="relative select-none shrink-0 mr-[-1px]"
+              style={{ width: `${RADICAL_SVG_WIDTH_EM}em` }}
+            >
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className={`absolute inset-0 w-full h-full ${isStatic ? THEME_GLASS.MATH_FN_ROOT_STATIC : THEME_GLASS.MATH_FN_ROOT_ACTIVE}`}
+                className={`absolute inset-0 w-full h-full overflow-visible ${isStatic ? THEME_GLASS.MATH_FN_ROOT_STATIC : THEME_GLASS.MATH_FN_ROOT_ACTIVE}`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
                 style={getOpStyle()}
               >
                 <path
-                  d="M 1,55 L 3.5,55 L 7.5,98 L 12,1"
+                  d={radicalPath(RADICAL_DEFAULT_CROOK_Y)}
                   vectorEffect="non-scaling-stroke"
                   strokeLinecap="round"
                   strokeLinejoin="round"

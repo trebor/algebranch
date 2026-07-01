@@ -6,6 +6,10 @@
 // unit-tested directly; `SavedSession`/`SerializedHistoryNode` come in as
 // type-only imports (erased at runtime), so this module never pulls the store.
 import type { SavedSession, SerializedHistoryNode } from '../store/equation';
+// Type-only (erased at runtime), so this stays free of the engine at runtime;
+// imported from `math-engine` rather than the ui-only `math-engine-client` alias
+// so the cross-workspace jest test (math-engine/tests) can resolve it too (#344).
+import type { SerializedEquation, SerializedNode } from 'math-engine';
 
 /** Marker so a file is unambiguously an Algebranch workspace export. */
 export const WORKSPACE_FILE_APP = 'algebranch';
@@ -151,9 +155,30 @@ const djb2 = (str: string): string => {
 };
 
 /**
+ * Strip every `id` off a serialized AST node (#344). Node ids are volatile
+ * identity fields — since the persisted format now carries them, the content
+ * hash must ignore them so the same equation hashes equally whether its ids were
+ * assigned fresh (`ensureNodeIds`) or carried forward from a share link.
+ */
+const stripNodeIds = (node: SerializedNode): SerializedNode => {
+  const stripped: SerializedNode = { ...node };
+  delete stripped.id;
+  if (node.args) stripped.args = node.args.map(stripNodeIds);
+  if (node.content) stripped.content = stripNodeIds(node.content);
+  return stripped;
+};
+
+/** Canonical, id-free form of a node's equation for hashing; legacy strings pass through. */
+const canonicalEquation = (eq: SerializedEquation | string): SerializedEquation | string =>
+  typeof eq === 'string'
+    ? eq
+    : { lhs: stripNodeIds(eq.lhs), rhs: stripNodeIds(eq.rhs), ...(eq.relation ? { relation: eq.relation } : {}) };
+
+/**
  * Content hash of a workspace, ignoring volatile identity fields (`id`,
- * `timestamp`) and node-key ordering. Two workspaces with the same name and the
- * same derivation tree hash equally; this is the basis for the import dedupe.
+ * `timestamp`, and per-node AST ids) and node-key ordering. Two workspaces with
+ * the same name and the same derivation tree hash equally; this is the basis for
+ * the import dedupe.
  */
 export const hashWorkspace = (
   workspace: Pick<ExportedWorkspace, 'name' | 'currentNodeId' | 'tree'>,
@@ -185,7 +210,7 @@ export const hashWorkspace = (
   });
 
   const canonicalTree: Record<string, {
-    equation: string;
+    equation: SerializedEquation | string;
     parentId: string | null;
     childrenIds: string[];
     label: string;
@@ -196,7 +221,7 @@ export const hashWorkspace = (
     const node = tree[id];
     const mappedId = idMap[id] || id;
     canonicalTree[mappedId] = {
-      equation: node.equation,
+      equation: canonicalEquation(node.equation),
       parentId: node.parentId ? idMap[node.parentId] || null : null,
       childrenIds: (node.childrenIds || []).map(cid => idMap[cid] || cid),
       label: node.label || '',

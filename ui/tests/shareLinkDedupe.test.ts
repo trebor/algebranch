@@ -18,6 +18,7 @@ import {
   serializeTree,
   minifyWorkspace,
   deminifyWorkspace,
+  STORAGE_SCHEMA_VERSION,
   addTabAtom,
   type SavedSession,
   type SerializedHistoryNode,
@@ -332,8 +333,10 @@ describe('minifyWorkspace / deminifyWorkspace round-trip', () => {
       name: 'Test Name',
     });
 
-    // Check minification format / structure
-    expect(minified.v).toBe(1);
+    // Check minification format / structure. This tree is built with legacy
+    // string equations (not serializeTree output), so minify passes them through
+    // verbatim — exercising the back-compat path. The stamped version is current.
+    expect(minified.v).toBe(STORAGE_SCHEMA_VERSION);
     expect(minified.a).toBe('Test Name');
     expect(minified.t['0'].e).toBe('2 * (x + 3) = 10');
     expect(minified.t['0'].p).toBeNull();

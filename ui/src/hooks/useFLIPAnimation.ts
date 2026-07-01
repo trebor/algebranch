@@ -134,7 +134,7 @@ export function useFLIPAnimation(
       void container.getBoundingClientRect();
       toPlay.forEach((el) => {
         el.style.transform = '';
-        el.style.transition = `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+        el.style.transition = `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
 
         // Hand styling back to React once the slide finishes.
         const cleanup = (e: TransitionEvent) => {

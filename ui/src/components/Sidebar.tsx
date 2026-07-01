@@ -22,6 +22,7 @@ import {
   equationInputModalOpenAtom,
   onboardingShowDirectoryAtom,
   SavedSession,
+  deserializeNodeEquation,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
@@ -112,7 +113,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
     let eq: Equation | null = null;
     try {
       const node = session.tree?.[session.currentNodeId] || session.tree?.['0'];
-      if (node) eq = ensureNodeIds(parseEquation(node.equation));
+      if (node) eq = deserializeNodeEquation(node.equation);
     } catch {
       eq = null;
     }

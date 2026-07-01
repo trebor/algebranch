@@ -73,7 +73,7 @@ import {
   deserializeTree,
   serializeWorkspaceState,
   deminifyWorkspace,
-  STORAGE_SCHEMA_VERSION,
+  SUPPORTED_SCHEMA_VERSIONS,
   wrapVersioned,
   unwrapVersioned,
   getActivePathIds,
@@ -585,7 +585,7 @@ export default function Home() {
             let tree, currentNodeId, name;
             let isValid = false;
 
-            if (envelope && envelope.v === STORAGE_SCHEMA_VERSION && envelope.t) {
+            if (envelope && SUPPORTED_SCHEMA_VERSIONS.has(envelope.v) && envelope.t) {
               try {
                 const deminified = deminifyWorkspace(envelope);
                 tree = deminified.tree;
@@ -595,7 +595,7 @@ export default function Home() {
               } catch (e) {
                 console.error('Failed to deminify workspace payload:', e);
               }
-            } else if (envelope && envelope.version === STORAGE_SCHEMA_VERSION && envelope.payload) {
+            } else if (envelope && SUPPORTED_SCHEMA_VERSIONS.has(envelope.version) && envelope.payload) {
               tree = envelope.payload.tree;
               currentNodeId = envelope.payload.currentNodeId;
               name = envelope.payload.name;

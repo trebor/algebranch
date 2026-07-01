@@ -41,6 +41,7 @@ import {
   pxToRem,
   laneCardWidth,
   laneX,
+  overviewTargetWidth,
   REM_BASE,
   TREE_GUTTER_PX,
   TREE_CARD_HEIGHT_PX,
@@ -53,6 +54,7 @@ import {
   TREE_LOOP_ARCH_OFFSET_PX,
   TREE_ZOOM_MIN_DIFF_PX,
 } from '../utils/treeLayout';
+import { treeNodeStyle } from '../utils/treeNodeStyle';
 import type { StepChange } from 'math-engine';
 
 // Measure the panel before first paint on the client (so the tree never flashes
@@ -209,6 +211,11 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
   // Activating a loop bubble jumps to the ancestor it points back to; a regular
   // step selects itself.
   const selectId = loopAncestor ? loopAncestor.id : node.id;
+
+  // Card + badge styling resolved by state priority (loop > current > on-path >
+  // default). `isActive` is active-path membership; the current node ranks above
+  // it, so the whole root→cursor column reads as one without dulling the cursor.
+  const nodeStyle = treeNodeStyle({ isLoopHighlight, isCurrent, isOnPath: isActive });
 
   // Stable ref: registers this step with the roving controller (the current step
   // is `primary`, so it is the tree's default Tab entry) and tracks the current
@@ -405,22 +412,10 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
         {...interactiveProps}
         onMouseEnter={() => onHoverLoop(node.id)}
         onMouseLeave={() => onHoverLoop(null)}
-        className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${
-          isLoopHighlight
-            ? THEME_GLASS.TREE_NODE_LOOP
-            : isCurrent
-            ? THEME_GLASS.TREE_NODE_ACTIVE
-            : THEME_GLASS.TREE_NODE_DEFAULT
-        } ${exportPreviewActive && !isActive ? THEME_GLASS.COPY_PREVIEW_DIMMED : ''} ${interactive ? '' : 'cursor-default'}`}
+        className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${nodeStyle.card} ${exportPreviewActive && !isActive ? THEME_GLASS.COPY_PREVIEW_DIMMED : ''} ${interactive ? '' : 'cursor-default'}`}
       >
         {/* Step index badge on top-left */}
-        <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center font-bold shadow transition-all duration-300 ${
-          isLoopHighlight
-            ? THEME_GLASS.TREE_NODE_BADGE_LOOP
-            : isCurrent
-            ? THEME_GLASS.TREE_NODE_BADGE_ACTIVE
-            : THEME_GLASS.TREE_NODE_BADGE_DEFAULT
-        }`}>
+        <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center font-bold shadow transition-all duration-300 ${nodeStyle.badge}`}>
           {stepNum}
         </span>
 
@@ -660,15 +655,17 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   // Position each card from its lane (#304): a fixed, row-independent width and a
   // column-driven x, so a branch descends in a straight vertical line and a wide
   // tree scrolls horizontally rather than re-packing each row across the panel.
+  // Fixed, row-independent lane card width, shared by card positioning and the
+  // overview zoom's lane-span target (#304, #305).
+  const cardWidth = laneCardWidth(TREE_STANDARD_CONTENT_WIDTH);
   const visualNodes = React.useMemo(() => {
-    const cardWidth = laneCardWidth(TREE_STANDARD_CONTENT_WIDTH);
     return layoutNodes.map(node => ({
       ...node,
       x: laneX(node.column, cardWidth),
       y: TREE_TOP_OFFSET_PX + node.depth * TREE_ROW_HEIGHT_PX,
       width: cardWidth,
     }));
-  }, [layoutNodes]);
+  }, [layoutNodes, cardWidth]);
 
   const visualNodesMap = React.useMemo(() => {
     const map: Record<string, typeof visualNodes[0]> = {};
@@ -712,9 +709,12 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
 
   // Compute Zoom Scale Factor
   const zoomScale = React.useMemo(() => {
-    if (zoomMode === 'fit-width') {
-      const diff = svgWidth - containerWidth;
-      return diff <= TREE_ZOOM_MIN_DIFF_PX ? 1.0 : Math.min(1.0, containerWidth / svgWidth);
+    if (zoomMode === 'overview') {
+      // Fit a fixed lane span (clamped to the tree width) rather than the whole
+      // tree — wider trees keep readable cards and scroll horizontally (#305).
+      const target = overviewTargetWidth(svgWidth, cardWidth);
+      const diff = target - containerWidth;
+      return diff <= TREE_ZOOM_MIN_DIFF_PX ? 1.0 : Math.min(1.0, containerWidth / target);
     }
     if (zoomMode === 'full-tree') {
       const widthDiff = svgWidth - containerWidth;
@@ -725,7 +725,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
       return Math.min(1.0, wScale, hScale);
     }
     return 1.0;
-  }, [zoomMode, containerWidth, containerHeight, svgWidth, svgHeight]);
+  }, [zoomMode, containerWidth, containerHeight, svgWidth, svgHeight, cardWidth]);
 
   // Compute the path of ancestor node IDs from the root up to the active node pointer
   const activePathSet = React.useMemo(() => {
@@ -1056,11 +1056,11 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
             <ZoomIn size={14} />
           </button>
         </Tooltip>
-        <Tooltip content={<HotkeyHint label="Zoom: Fit Width" keys="Z" />} position="bottom">
+        <Tooltip content={<HotkeyHint label="Zoom: Overview" keys="Z" />} position="bottom">
           <button
-            onClick={() => handleZoomChange('fit-width')}
-            className={zoomMode === 'fit-width' ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
-            aria-label="Zoom: Fit Width"
+            onClick={() => handleZoomChange('overview')}
+            className={zoomMode === 'overview' ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
+            aria-label="Zoom: Overview"
           >
             <Search size={14} />
           </button>

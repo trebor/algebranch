@@ -1021,8 +1021,8 @@ export default function Home() {
       key: 'z',
       action: () => {
         setZoomMode((current) => {
-          if (current === 'normal') return 'fit-width';
-          if (current === 'fit-width') return 'full-tree';
+          if (current === 'normal') return 'overview';
+          if (current === 'overview') return 'full-tree';
           return 'normal';
         });
         trackEvent({

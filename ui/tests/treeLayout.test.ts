@@ -5,7 +5,10 @@ import {
   assignLanes,
   laneCardWidth,
   laneX,
+  laneSpanWidth,
+  overviewTargetWidth,
   TREE_VISIBLE_LANES,
+  TREE_OVERVIEW_LANES,
   TREE_GUTTER_PX,
   TREE_COL_GAP_PX,
   TREE_MIN_CARD_PX,
@@ -189,5 +192,46 @@ describe('lane geometry: fixed card width, straight columns, scroll for overflow
     // The old per-row repack made width depend on the row's node count; lanes do not.
     expect(laneCardWidth(288)).toBe(laneCardWidth(288));
     expect(laneCardWidth(600)).toBeGreaterThan(laneCardWidth(288));
+  });
+});
+
+describe('overview zoom targets a fixed lane span, not the whole tree width (#305)', () => {
+  const cw = laneCardWidth(288);
+
+  it('spans N lanes as both gutters plus N cards and N-1 inter-card gaps', () => {
+    // laneSpanWidth mirrors how svgWidth is built for an exactly-N-column tree:
+    // the rightmost card's left edge (laneX) + its width + the right gutter.
+    for (const n of [1, 2, 3, 5]) {
+      const viaLaneX = laneX(n - 1, cw) + cw + TREE_GUTTER_PX;
+      expect(laneSpanWidth(n, cw)).toBeCloseTo(viaLaneX);
+    }
+    // Explicit form: 2 gutters + n cards + (n-1) gaps.
+    expect(laneSpanWidth(3, cw)).toBeCloseTo(
+      TREE_GUTTER_PX * 2 + 3 * cw + 2 * TREE_COL_GAP_PX,
+    );
+  });
+
+  it('a single lane spans just the card between its two gutters (no gap)', () => {
+    expect(laneSpanWidth(1, cw)).toBeCloseTo(TREE_GUTTER_PX * 2 + cw);
+  });
+
+  it('the middle zoom targets three lanes', () => {
+    expect(TREE_OVERVIEW_LANES).toBe(3);
+  });
+
+  it('caps a wide tree at the three-lane span so extra columns scroll rather than shrink', () => {
+    // A tree far wider than three lanes: overview should fit only three lanes
+    // (readable scale + horizontal scroll), NOT the full width (which would be
+    // the old fit-width behavior and shrink everything).
+    const wideSvg = laneSpanWidth(8, cw);
+    expect(overviewTargetWidth(wideSvg, cw)).toBeCloseTo(laneSpanWidth(TREE_OVERVIEW_LANES, cw));
+    expect(overviewTargetWidth(wideSvg, cw)).toBeLessThan(wideSvg);
+  });
+
+  it('falls back to the tree width when the tree is narrower than three lanes', () => {
+    // A 2-column tree has nothing past lane 1, so overview must not zoom out to a
+    // phantom third lane — it degrades to fit-width (target = svgWidth).
+    const narrowSvg = laneSpanWidth(2, cw);
+    expect(overviewTargetWidth(narrowSvg, cw)).toBeCloseTo(narrowSvg);
   });
 });

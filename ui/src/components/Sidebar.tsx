@@ -11,6 +11,7 @@ import { Tooltip } from './Tooltip';
 import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
 import { Equation, parseEquation, ensureNodeIds } from 'math-engine-client';
+import { CATEGORY_EXAMPLES } from '../constants/presets';
 import {
   resetToEquationStringAtom,
   savedSessionsAtom,
@@ -153,7 +154,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
             Define Equation
           </span>
           <div className="grid grid-cols-2 gap-2">
-            <Tooltip content={<HotkeyHint label="Enter your own equation in a new workspace" keys="N" />} position="bottom" autoAlign={false} wrapperClassName="w-full">
+            <Tooltip content={<HotkeyHint label="Enter equation in new workspace" keys="N" />} position="bottom" autoAlign={false} wrapperClassName="w-full">
               <button
                 type="button"
                 onClick={() => {
@@ -502,9 +503,10 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
           // While searching, every matching category is open so results are
           // visible without manual expansion.
           const isExpanded = isSearching || !!expandedCategories[group.category];
-          return (
-            <div key={group.category} className="flex flex-col gap-1.5 mb-1.5 shrink-0">
-              {/* Category Header */}
+          const example = CATEGORY_EXAMPLES[group.category];
+          // Category header — hovering previews a typical equation from the
+          // section (raw syntax, so it doubles as an input-syntax hint, #245).
+          const categoryHeader = (
               <button
                 onClick={() => toggleCategory(group.category)}
                 className={`w-full flex items-center justify-between py-2 px-3 text-xs font-bold tracking-wider ${THEME_GLASS.CATEGORY_HEADER}`}
@@ -522,6 +524,20 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
                   {group.presets.length}
                 </span>
               </button>
+          );
+          return (
+            <div key={group.category} className="flex flex-col gap-1.5 mb-1.5 shrink-0">
+              {/* Category Header */}
+              {example ? (
+                <Tooltip
+                  content={<span>e.g. <span className="font-mono">{example}</span></span>}
+                  position="right"
+                  autoAlign={false}
+                  wrapperClassName="w-full"
+                >
+                  {categoryHeader}
+                </Tooltip>
+              ) : categoryHeader}
 
               {/* Category Items (Collapsible) */}
               {isExpanded && (

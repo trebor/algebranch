@@ -586,36 +586,52 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // the gap in em — scale-invariant, so the nestle holds at every auto-scale.
   const rootIndexIsTall = hasTallRootIndex(node);
   const indexSlotRef = React.useRef<HTMLDivElement>(null);
-  const [indexBox, setIndexBox] = React.useState({ minW: 0, minH: 0 });
+  const [indexBox, setIndexBox] = React.useState({ minW: 0, minH: 0, seatBottomEm: INDEX_INSET_EM });
   React.useLayoutEffect(() => {
     const col = indexSlotRef.current;
     if (!rootIndexIsTall || !col) {
-      setIndexBox({ minW: 0, minH: 0 });
+      setIndexBox({ minW: 0, minH: 0, seatBottomEm: INDEX_INSET_EM });
       return;
     }
     // Crook-relative seating (#201). The index is absolutely positioned so its bottom
     // rides the crook line (`bottom: (1−crookFraction) of the row height`), which tracks
     // the crook no matter what drives the row height — the index itself OR a taller
     // radicand. Absolute content contributes no size to its column, so we measure the
-    // rendered index and reserve that footprint back:
-    //   • minWidth keeps the node box wrapped around the index (no left spill, #198);
-    //   • minHeight forces the row tall enough that the pocket above the crook
-    //     (crookFraction of the height) holds the index with a bottom inset only — the
-    //     index's TOP sits flush with the top of the radical, reclaiming the former top
-    //     gap. That reserved height is also what makes the row height "definite" so the
-    //     % seat below resolves. Em-based, so the nestle is scale-invariant at every
-    //     auto-scale.
+    // rendered index and reserve that footprint back.
+    //
+    // The index keeps its normal handle band (a FIXED-rem top reserve, like every other
+    // node), so we must split the two unit systems: the em EXPRESSION seats in the pocket
+    // and stays scale-invariant, while the fixed-rem handle reserve pokes ABOVE the
+    // radical top into the root's handle band. We read the child node's real top/bottom
+    // padding off the DOM (whatever it is — full handle reserve, or just nodePy when the
+    // index has no handles) and subtract it, so the pocket is sized to the bare
+    // expression, not the padded box.
+    //   • minWidth keeps the node box wrapped around the index — including its handle band
+    //     (#198), which also grows the box leftward for wide indices.
+    //   • minHeight sizes the pocket to the bare expression + one bottom inset, so the
+    //     expression's TOP sits flush with the radical top and its BOTTOM an inset off the
+    //     crook. This reserved height also makes the row height "definite" so the % seat
+    //     resolves.
+    //   • seatBottomEm offsets the box bottom by the child's bottom padding so the
+    //     EXPRESSION (not the padded box edge) lands an inset above the crook.
     const measure = () => {
-      const content = col.firstElementChild as HTMLElement | null;
+      const wrapper = col.firstElementChild as HTMLElement | null;
+      const childEl = wrapper?.querySelector('[data-eq-node]') as HTMLElement | null;
       const fontSize = parseFloat(getComputedStyle(col).fontSize);
-      if (!content || !fontSize) return;
-      const wEm = content.offsetWidth / fontSize;
-      const hEm = content.offsetHeight / fontSize;
-      const minW = Math.max(0, wEm + INDEX_ARM_RIGHT_MARGIN_EM);
-      const minH = (hEm + INDEX_INSET_EM) / RADICAL_CROOK_FRACTION;
+      if (!wrapper || !childEl || !fontSize) return;
+      const cs = getComputedStyle(childEl);
+      const padTop = parseFloat(cs.paddingTop) || 0;
+      const padBottom = parseFloat(cs.paddingBottom) || 0;
+      const exprEm = (childEl.offsetHeight - padTop - padBottom) / fontSize;
+      const padBottomEm = padBottom / fontSize;
+      const minW = Math.max(0, wrapper.offsetWidth / fontSize + INDEX_ARM_RIGHT_MARGIN_EM);
+      const minH = (exprEm + INDEX_INSET_EM) / RADICAL_CROOK_FRACTION;
+      const seatBottomEm = INDEX_INSET_EM - padBottomEm;
       setIndexBox((prev) =>
-        Math.abs(prev.minW - minW) > 0.001 || Math.abs(prev.minH - minH) > 0.001
-          ? { minW, minH }
+        Math.abs(prev.minW - minW) > 0.001 ||
+        Math.abs(prev.minH - minH) > 0.001 ||
+        Math.abs(prev.seatBottomEm - seatBottomEm) > 0.001
+          ? { minW, minH, seatBottomEm }
           : prev,
       );
     };
@@ -1248,13 +1264,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
             {showIndex && (rootIndexIsTall ? (
               // Tall index (fraction/nested radical), crook-relative seating (#201).
               // The column is a full-height flex item (stretches to the row); the index
-              // content inside is absolutely positioned with its bottom on the crook line
-              // (`bottom: (1−crookFraction) of the height`, plus an inset gap), so it
+              // content inside is absolutely positioned with its expression bottom an inset
+              // above the crook line (`bottom: (1−crookFraction) of the height`), so it
               // rides the crook whether the index or a taller radicand drives the height.
               // The column reserves the index's measured footprint (minWidth/minHeight
               // from the effect above) so the node box still wraps it (#198) and the row
-              // grows tall enough to hold it. suppressHandleReserve drops the fixed-rem
-              // handle band that would otherwise dwarf the tiny 0.5em index.
+              // grows tall enough to hold it. The index keeps its normal handle band —
+              // that fixed-rem top reserve pokes ABOVE the radical top into the root's
+              // handle band, while the em expression stays seated in the pocket (the
+              // effect splits the two so scale-invariance survives).
               <div
                 ref={indexSlotRef}
                 className="relative shrink-0 z-10"
@@ -1268,11 +1286,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                     // the inset math lands at the intended scale. The 0.5em shrink lives
                     // on the inner element only.
                     right: `${INDEX_ARM_RIGHT_MARGIN_EM}em`,
-                    bottom: `calc(${((1 - RADICAL_CROOK_FRACTION) * 100).toFixed(4)}% + ${INDEX_INSET_EM}em)`,
+                    bottom: `calc(${((1 - RADICAL_CROOK_FRACTION) * 100).toFixed(4)}% + ${indexBox.seatBottomEm.toFixed(4)}em)`,
                   }}
                 >
                   <div className="text-[0.5em]" style={getOpStyle()}>
-                    <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} suppressHandleReserve />
+                    <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} />
                   </div>
                 </div>
               </div>

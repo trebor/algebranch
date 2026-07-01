@@ -586,30 +586,40 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // the gap in em — scale-invariant, so the nestle holds at every auto-scale.
   const rootIndexIsTall = hasTallRootIndex(node);
   const indexSlotRef = React.useRef<HTMLDivElement>(null);
-  const [crookDipEm, setCrookDipEm] = React.useState(0);
+  const [indexBox, setIndexBox] = React.useState({ minW: 0, minH: 0 });
   React.useLayoutEffect(() => {
-    const el = indexSlotRef.current;
-    if (!rootIndexIsTall || !el) {
-      setCrookDipEm(0);
+    const col = indexSlotRef.current;
+    if (!rootIndexIsTall || !col) {
+      setIndexBox({ minW: 0, minH: 0 });
       return;
     }
+    // Crook-relative seating (#201). The index is absolutely positioned so its bottom
+    // rides the crook line (`bottom: (1−crookFraction) of the row height`), which tracks
+    // the crook no matter what drives the row height — the index itself OR a taller
+    // radicand. Absolute content contributes no size to its column, so we measure the
+    // rendered index and reserve that footprint back:
+    //   • minWidth keeps the node box wrapped around the index (no left spill, #198);
+    //   • minHeight forces the row tall enough that the pocket above the crook
+    //     (crookFraction of the height) holds the index with one inset of breathing room
+    //     top and bottom — which is what makes the height "definite" so the % seat above
+    //     resolves. Both are em, so the nestle is scale-invariant at every auto-scale.
     const measure = () => {
-      const fontSize = parseFloat(getComputedStyle(el).fontSize);
-      if (!fontSize) return;
-      const indexHeightEm = el.offsetHeight / fontSize;
-      // The index's margin is treated as outside the box on every side, so its bottom
-      // floats one inset ABOVE the crook (matching the top and right gaps), not on it.
-      // Span above the box bottom = top margin + height; we want the box bottom an inset
-      // above the crook, so solving the crook-fraction geometry gives this dip below.
-      const dip =
-        ((1 - RADICAL_CROOK_FRACTION) / RADICAL_CROOK_FRACTION) *
-          (indexHeightEm + 2 * INDEX_INSET_EM) +
-        INDEX_INSET_EM;
-      setCrookDipEm((prev) => (Math.abs(prev - dip) > 0.001 ? dip : prev));
+      const content = col.firstElementChild as HTMLElement | null;
+      const fontSize = parseFloat(getComputedStyle(col).fontSize);
+      if (!content || !fontSize) return;
+      const wEm = content.offsetWidth / fontSize;
+      const hEm = content.offsetHeight / fontSize;
+      const minW = Math.max(0, wEm + INDEX_ARM_RIGHT_MARGIN_EM);
+      const minH = (hEm + 2 * INDEX_INSET_EM) / RADICAL_CROOK_FRACTION;
+      setIndexBox((prev) =>
+        Math.abs(prev.minW - minW) > 0.001 || Math.abs(prev.minH - minH) > 0.001
+          ? { minW, minH }
+          : prev,
+      );
     };
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(el);
+    observer.observe(col.firstElementChild ?? col);
     return () => observer.disconnect();
   }, [rootIndexIsTall, node]);
 
@@ -1233,40 +1243,48 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                 style={{ top: `${RADICAL_CROOK_FRACTION * 100}%` }}
               />
             )}
-            {showIndex && (
-              // The index is a normal flow item (not absolutely positioned) so the
-              // node box grows to contain it instead of spilling past the left edge
-              // (#198). It is bottom-anchored in the crook (items-end) so its glyph
-              // sits at a stable height; the negative right margin nestles it against
-              // the rising stroke. suppressHandleReserve drops the fixed-rem handle
-              // band that would otherwise dwarf the tiny 0.55em index. The slot uses a
-              // MIN height, not a fixed one (#201): a short index keeps the 0.96em
-              // crook nestle, while a tall index (fraction/radical) grows the slot —
-              // and thus the whole node box — upward to contain itself instead of
-              // poking out the top, and it stays em-based so it scales uniformly with
-              // the expression at every auto-scale. A tall index also gets a measured
-              // bottom margin (crookDipEm) that lifts its bottom off the row bottom
-              // (the radical's vertex) exactly onto the crook line — see the top-level
-              // measurement effect for the geometry.
+            {showIndex && (rootIndexIsTall ? (
+              // Tall index (fraction/nested radical), crook-relative seating (#201).
+              // The column is a full-height flex item (stretches to the row); the index
+              // content inside is absolutely positioned with its bottom on the crook line
+              // (`bottom: (1−crookFraction) of the height`, plus an inset gap), so it
+              // rides the crook whether the index or a taller radicand drives the height.
+              // The column reserves the index's measured footprint (minWidth/minHeight
+              // from the effect above) so the node box still wraps it (#198) and the row
+              // grows tall enough to hold it. suppressHandleReserve drops the fixed-rem
+              // handle band that would otherwise dwarf the tiny 0.5em index.
               <div
                 ref={indexSlotRef}
-                data-crookdebug={DEBUG_CROOK && rootIndexIsTall ? 'index' : undefined}
-                className={`relative self-start shrink-0 flex items-end min-h-[0.96em] -mr-[0.35em] z-10 ${rootIndexIsTall ? '' : 'translate-y-[0.05em]'} ${DEBUG_CROOK && rootIndexIsTall ? 'ring-2 ring-red-500/90' : ''}`}
-                style={
-                  rootIndexIsTall
-                    ? {
-                        marginTop: `${INDEX_INSET_EM}em`,
-                        marginRight: `${INDEX_ARM_RIGHT_MARGIN_EM}em`,
-                        marginBottom: `${crookDipEm}em`,
-                      }
-                    : undefined
-                }
+                className="relative shrink-0 z-10"
+                style={{ minWidth: `${indexBox.minW}em`, minHeight: `${indexBox.minH}em` }}
               >
+                <div
+                  data-crookdebug={DEBUG_CROOK ? 'index' : undefined}
+                  className={`absolute ${DEBUG_CROOK ? 'ring-2 ring-red-500/90' : ''}`}
+                  style={{
+                    // right/bottom are in the COLUMN's em (this wrapper's font-size), so
+                    // the inset math lands at the intended scale. The 0.5em shrink lives
+                    // on the inner element only.
+                    right: `${INDEX_ARM_RIGHT_MARGIN_EM}em`,
+                    bottom: `calc(${((1 - RADICAL_CROOK_FRACTION) * 100).toFixed(4)}% + ${INDEX_INSET_EM}em)`,
+                  }}
+                >
+                  <div className="text-[0.5em]" style={getOpStyle()}>
+                    <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} suppressHandleReserve />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Short digit index: a normal flow item (not absolutely positioned) so the
+              // node box grows to contain it instead of spilling past the left edge
+              // (#198). Bottom-anchored (items-end) so its glyph sits at a stable height;
+              // the negative right margin nestles it against the rising stroke.
+              <div className="relative self-start shrink-0 flex items-end min-h-[0.96em] -mr-[0.35em] z-10 translate-y-[0.05em]">
                 <div className="text-[0.5em]" style={getOpStyle()}>
                   <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} suppressHandleReserve />
                 </div>
               </div>
-            )}
+            ))}
             <div
               className="relative select-none shrink-0 mr-[-1px]"
               style={{ width: `${RADICAL_SVG_WIDTH_EM}em` }}

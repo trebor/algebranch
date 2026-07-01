@@ -12,6 +12,15 @@ import { OPERATOR_DISPLAY, splitSubscript } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
 import { useEquationPreviewPalette } from './EquationPreviewPaletteContext';
 import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
+import {
+  hasTallRootIndex,
+  radicalPath,
+  RADICAL_DEFAULT_CROOK_Y,
+  RADICAL_CROOK_FRACTION,
+  INDEX_INSET_EM,
+  RADICAL_SVG_WIDTH_EM,
+  INDEX_ARM_RIGHT_MARGIN_EM,
+} from './radicalGeometry';
 
 /**
  * Exploration mode (#270): when present, the otherwise read-only preview renderer
@@ -128,6 +137,42 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
     },
     [roving, isStop, path],
   );
+
+  // Tall root-index placement (#356), ported from the live renderer (#201). A
+  // fraction/nested-radical index is seated crook-relative: its content is absolutely
+  // positioned so its bottom rides the crook line, and the column reserves the measured
+  // footprint (minWidth/minHeight) so the node box still wraps it (#198) and the row
+  // grows tall enough to hold it. The preview has no handles and no auto-scaler, so this
+  // is the live renderer's logic minus the handle-band unit-splitting: we measure the
+  // absolute wrapper directly (no `[data-eq-node]` padding to subtract) and seat at the
+  // plain INDEX_INSET_EM.
+  const rootIndexIsTall = hasTallRootIndex(node);
+  const indexSlotRef = React.useRef<HTMLDivElement>(null);
+  const [indexBox, setIndexBox] = React.useState({ minW: 0, minH: 0 });
+  React.useLayoutEffect(() => {
+    const col = indexSlotRef.current;
+    if (!rootIndexIsTall || !col) {
+      setIndexBox({ minW: 0, minH: 0 });
+      return;
+    }
+    const measure = () => {
+      const wrapper = col.firstElementChild as HTMLElement | null;
+      const fontSize = parseFloat(getComputedStyle(col).fontSize);
+      if (!wrapper || !fontSize) return;
+      const exprEm = wrapper.offsetHeight / fontSize;
+      const minW = Math.max(0, wrapper.offsetWidth / fontSize + INDEX_ARM_RIGHT_MARGIN_EM);
+      const minH = (exprEm + INDEX_INSET_EM) / RADICAL_CROOK_FRACTION;
+      setIndexBox((prev) =>
+        Math.abs(prev.minW - minW) > 0.001 || Math.abs(prev.minH - minH) > 0.001
+          ? { minW, minH }
+          : prev,
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(col.firstElementChild ?? col);
+    return () => observer.disconnect();
+  }, [rootIndexIsTall, node]);
 
   if (!node) return null;
 
@@ -337,9 +382,46 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
         }
         return (
           <div className="flex items-stretch mx-[0.1em] relative">
-            <div className="relative w-[0.7em] select-none shrink-0 mr-[-1px]">
-              {showIndex && (
-                <div className="absolute right-full top-0 -mt-[0.2em] -mr-[0.3em] text-[0.55em] scale-90 z-10">
+            {showIndex && (rootIndexIsTall ? (
+              // Tall index (fraction/nested radical), crook-relative seating (#356,
+              // mirroring the live renderer's #201). The column is a full-height flex
+              // item (stretches to the row); the index content inside is absolutely
+              // positioned with its bottom an inset above the crook line
+              // (`bottom: (1−crookFraction) of the height`), so it rides the crook
+              // whether the index or a taller radicand drives the height. The column
+              // reserves the index's measured footprint (minWidth/minHeight from the
+              // effect above) so the node box still wraps it (#198). The 0.5em shrink
+              // lives on the inner element only — NOT the positioned wrapper, or the em
+              // offsets would halve.
+              <div
+                ref={indexSlotRef}
+                className="relative shrink-0 z-10"
+                style={{ minWidth: `${indexBox.minW}em`, minHeight: `${indexBox.minH}em` }}
+              >
+                <div
+                  className="absolute"
+                  style={{
+                    right: `${INDEX_ARM_RIGHT_MARGIN_EM}em`,
+                    bottom: `calc(${((1 - RADICAL_CROOK_FRACTION) * 100).toFixed(4)}% + ${INDEX_INSET_EM.toFixed(4)}em)`,
+                  }}
+                >
+                  <div className="text-[0.5em]">
+                    <PreviewEquationNode
+                      path={customNode ? undefined : `${path}/1`}
+                      customNode={customNode ? (node as math.FunctionNode).args[1] : undefined}
+                      inExponent={inExponent}
+                      customEquation={customEquation}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Short digit index: a normal flow item (not absolutely positioned) so the
+              // node box grows to contain it instead of spilling past the left edge
+              // (#198). Bottom-anchored (items-end) so its glyph sits at a stable height;
+              // the negative right margin nestles it against the rising stroke.
+              <div className="relative self-start shrink-0 flex items-end min-h-[0.96em] -mr-[0.35em] z-10 translate-y-[0.05em]">
+                <div className="text-[0.5em]">
                   <PreviewEquationNode
                     path={customNode ? undefined : `${path}/1`}
                     customNode={customNode ? (node as math.FunctionNode).args[1] : undefined}
@@ -347,17 +429,22 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
                     customEquation={customEquation}
                   />
                 </div>
-              )}
+              </div>
+            ))}
+            <div
+              className="relative select-none shrink-0 mr-[-1px]"
+              style={{ width: `${RADICAL_SVG_WIDTH_EM}em` }}
+            >
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className={`absolute inset-0 w-full h-full ${palette.operator}`}
+                className={`absolute inset-0 w-full h-full overflow-visible ${palette.operator}`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
               >
                 <path
-                  d="M 1,55 L 3.5,55 L 7.5,98 L 12,1"
+                  d={radicalPath(rootIndexIsTall ? Math.round(RADICAL_CROOK_FRACTION * 100) : RADICAL_DEFAULT_CROOK_Y)}
                   vectorEffect="non-scaling-stroke"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -379,17 +466,20 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
       if (nameStr === 'sqrt') {
         return (
           <div className="flex items-stretch mx-[0.1em] relative">
-            <div className="relative w-[0.7em] select-none shrink-0 mr-[-1px]">
+            <div
+              className="relative select-none shrink-0 mr-[-1px]"
+              style={{ width: `${RADICAL_SVG_WIDTH_EM}em` }}
+            >
               <svg
                 viewBox="0 0 12 100"
                 preserveAspectRatio="none"
-                className={`absolute inset-0 w-full h-full ${palette.operator}`}
+                className={`absolute inset-0 w-full h-full overflow-visible ${palette.operator}`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
               >
                 <path
-                  d="M 1,55 L 3.5,55 L 7.5,98 L 12,1"
+                  d={radicalPath(RADICAL_DEFAULT_CROOK_Y)}
                   vectorEffect="non-scaling-stroke"
                   strokeLinecap="round"
                   strokeLinejoin="round"

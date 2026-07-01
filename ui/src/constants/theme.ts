@@ -18,7 +18,7 @@ export const THEME_ANIMATIONS = {
     duration: 0.35, // Premium, extremely responsive duration
     bounce: 0.2,   // Light organic bounce
   },
-  TRANSITION_DURATION_MS: 350, // Central 350ms animation constant
+  TRANSITION_DURATION_MS: 500, // Node-slide (FLIP) duration — slower so the motion reads clearly (#234)
 } as const;
 
 export const THEME_GLASS = {

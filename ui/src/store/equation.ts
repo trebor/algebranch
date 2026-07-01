@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { atom } from 'jotai';
-import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, deserializeEquation, SerializedEquation, getFunctionName, flipRelation, compressString } from 'math-engine-client';
+import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getFunctionName, flipRelation, compressString } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
 import { applyGlobalOp, GlobalOpParams, GlobalOpType, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
@@ -35,7 +35,14 @@ export interface HistoryNode {
 
 export interface SerializedHistoryNode {
   id: string;
-  equation: string;
+  /**
+   * The node's equation, id-preserving (#344). Current format is the AST-as-JSON
+   * `SerializedEquation`, which carries every math-node `id` so a term keeps one
+   * id across the whole tree on reload — the property the FLIP slide (#234)
+   * relies on. A plain `string` is the legacy format written by older clients
+   * (`equationToString`); `deserializeTree` still loads it for back-compat.
+   */
+  equation: SerializedEquation | string;
   parentId: string | null;
   childrenIds: string[];
   label: string;
@@ -57,28 +64,48 @@ export interface SavedSession {
 export const serializeTree = (tree: Record<string, HistoryNode>): Record<string, SerializedHistoryNode> => {
   const serialized: Record<string, SerializedHistoryNode> = {};
   Object.keys(tree).forEach(id => {
+    // Persist the id-bearing AST so every math-node id survives the reload and
+    // the FLIP slide (#234) still matches surviving terms across the tree (#344).
     serialized[id] = {
       ...tree[id],
-      equation: tree[id].equation ? equationToString(tree[id].equation) : ''
+      equation: tree[id].equation ? serializeEquation(tree[id].equation) : ''
     };
   });
   return serialized;
 };
+
+/**
+ * Rebuild a persisted node equation into a live AST (#344). New id-preserving
+ * payload (`SerializedEquation`): rebuild it verbatim, keeping node ids so
+ * cross-node FLIP continuity holds. Legacy string payload (older clients / old
+ * `?ws=` links): fall back to parse + `ensureNodeIds`, matching pre-#344
+ * behaviour (no cross-node id continuity, but it still loads).
+ */
+export const deserializeNodeEquation = (eq: SerializedEquation | string): Equation =>
+  typeof eq === 'string' ? ensureNodeIds(parseEquation(eq)) : deserializeEquation(eq);
 
 export const deserializeTree = (serialized: Record<string, SerializedHistoryNode>): Record<string, HistoryNode> => {
   const tree: Record<string, HistoryNode> = {};
   Object.keys(serialized).forEach(id => {
     tree[id] = {
       ...serialized[id],
-      equation: ensureNodeIds(parseEquation(serialized[id].equation))
+      equation: deserializeNodeEquation(serialized[id].equation),
     };
   });
   return tree;
 };
 
+/**
+ * Plain-string form of a persisted node equation, whether it's the new
+ * id-bearing AST or a legacy string (#344). Used where a serialized equation is
+ * compared as text (e.g. the `?eq=` pristine-dedupe).
+ */
+export const serializedEquationToString = (eq: SerializedEquation | string): string =>
+  typeof eq === 'string' ? eq : equationToString(deserializeEquation(eq));
+
 export interface MinifiedNode {
   i: string; // id
-  e: string; // equation
+  e: SerializedEquation | string; // equation (id-bearing AST; legacy links carry a string) — #344
   p: string | null; // parentId
   c: string[]; // childrenIds
   l: string; // label
@@ -368,7 +395,15 @@ export const safeLocalStorage = safeStorage;
 export const rawTabsAtom = atom<WorkspaceTab[]>(getFallbackTabs());
 export const rawActiveTabIdAtom = atom<string>('tab_initial');
 
-export const STORAGE_SCHEMA_VERSION = 1;
+// v2 (#344): history nodes persist their equation as an id-bearing AST
+// (`SerializedEquation`) instead of a plain string, so FLIP node ids survive a
+// reload. New writes stamp v2; readers still accept v1 (legacy string equations)
+// via SUPPORTED_SCHEMA_VERSIONS. The bump also lets an *older* client cleanly
+// reject a v2 payload whose equation shape it can't parse.
+export const STORAGE_SCHEMA_VERSION = 2;
+
+/** Persisted-format versions this client can still read (newest write is STORAGE_SCHEMA_VERSION). */
+export const SUPPORTED_SCHEMA_VERSIONS = new Set([1, 2]);
 
 export interface VersionedPayload<T> {
   version: number;
@@ -388,7 +423,7 @@ export const unwrapVersioned = <T>(jsonStr: string | null): T | null => {
   }
   try {
     const envelope = JSON.parse(trimmed);
-    if (envelope && envelope.version === STORAGE_SCHEMA_VERSION) {
+    if (envelope && SUPPORTED_SCHEMA_VERSIONS.has(envelope.version)) {
       return envelope.payload as T;
     }
   } catch (err) {
@@ -1289,7 +1324,7 @@ export const createNewSessionAtom = atom(
           const root = s.tree[nodeIds[0]];
           if (root.childrenIds && root.childrenIds.length > 0) return false;
           try {
-            return root.equation === candidateEq;
+            return serializedEquationToString(root.equation) === candidateEq;
           } catch {
             return false;
           }

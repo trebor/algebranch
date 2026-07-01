@@ -37,6 +37,10 @@ const ALL_RULE_TEST_CASES: RuleTestCase[] = [
   { ruleId: 'exponent_power_of_quotient_reverse', input: 'x^3 / y^3', expected: '(x/y)^3' },
   { ruleId: 'exponent_negative', input: 'x^-3', expected: '1/x^3' },
   { ruleId: 'exponent_negative_reverse', input: '1 / x^3', expected: 'x^(-3)' },
+  { ruleId: 'exponent_self_power', input: 'x^x', expected: 'e^(x*log(x))' },
+  { ruleId: 'exponent_self_power_reverse', input: 'e^(x * log(x))', expected: 'x^x' },
+  { ruleId: 'exponent_radical_product', input: 'sqrt(x * y)', expected: 'sqrt(x)*sqrt(y)' },
+  { ruleId: 'exponent_radical_product_reverse', input: 'sqrt(x) * sqrt(y)', expected: 'sqrt(x*y)' },
 
   // 3. Logarithm Rules
   { ruleId: 'log_product', input: 'log(x * y)', expected: 'log(x)+log(y)' },
@@ -144,6 +148,61 @@ describe('Exhaustive Bidirectional Identity Rules Verification', () => {
       }
       expect(isEquiv).toBe(true);
     });
+  });
+});
+
+describe('Self-Power Identity (x^x -> e^(x log x))', () => {
+  const optionByLabel = (input: string, label: string) =>
+    Object.values(getReducibleOptions(parseEquation(input)))
+      .flat()
+      .find((r) => r.label === label);
+
+  test('offers the exp/log form on a self-power x^x', () => {
+    const option = optionByLabel('y = x^x', 'Self-Power to Exponential');
+    expect(option).toBeDefined();
+    expect(equationToString(option!.simplified)).toBe('y = e ^ (x * log(x))');
+  });
+
+  test('offers the reverse: collapses e^(x log x) back to x^x', () => {
+    const option = optionByLabel('y = e^(x * log(x))', 'Exponential to Self-Power');
+    expect(option).toBeDefined();
+    expect(equationToString(option!.simplified)).toBe('y = x ^ x');
+  });
+
+  test('round-trips x^x -> e^(x log x) -> x^x', () => {
+    const forward = optionByLabel('y = x^x', 'Self-Power to Exponential')!;
+    const back = Object.values(getReducibleOptions(forward.simplified))
+      .flat()
+      .find((r) => r.label === 'Exponential to Self-Power');
+    expect(back).toBeDefined();
+    expect(equationToString(back!.simplified)).toBe('y = x ^ x');
+  });
+
+  test('does NOT fire when base and exponent differ (x^y)', () => {
+    expect(optionByLabel('z = x^y', 'Self-Power to Exponential')).toBeUndefined();
+  });
+});
+
+describe('Radical of a Product Identity (sqrt(xy) -> sqrt(x) sqrt(y))', () => {
+  const optionByLabel = (input: string, label: string) =>
+    Object.values(getReducibleOptions(parseEquation(input)))
+      .flat()
+      .find((r) => r.label === label);
+
+  test('splits a radical over a product', () => {
+    const option = optionByLabel('z = sqrt(x * y)', 'Radical of a Product');
+    expect(option).toBeDefined();
+    expect(equationToString(option!.simplified)).toBe('z = sqrt(x) * sqrt(y)');
+  });
+
+  test('combines two radicals under one root (reverse)', () => {
+    const option = optionByLabel('z = sqrt(x) * sqrt(y)', 'Combine Radicals');
+    expect(option).toBeDefined();
+    expect(equationToString(option!.simplified)).toBe('z = sqrt(x * y)');
+  });
+
+  test('does NOT fire on a radical over a sum sqrt(x + y)', () => {
+    expect(optionByLabel('z = sqrt(x + y)', 'Radical of a Product')).toBeUndefined();
   });
 });
 

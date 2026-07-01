@@ -41,6 +41,7 @@ import {
   pxToRem,
   laneCardWidth,
   laneX,
+  overviewTargetWidth,
   REM_BASE,
   TREE_GUTTER_PX,
   TREE_CARD_HEIGHT_PX,
@@ -660,15 +661,17 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   // Position each card from its lane (#304): a fixed, row-independent width and a
   // column-driven x, so a branch descends in a straight vertical line and a wide
   // tree scrolls horizontally rather than re-packing each row across the panel.
+  // Fixed, row-independent lane card width, shared by card positioning and the
+  // overview zoom's lane-span target (#304, #305).
+  const cardWidth = laneCardWidth(TREE_STANDARD_CONTENT_WIDTH);
   const visualNodes = React.useMemo(() => {
-    const cardWidth = laneCardWidth(TREE_STANDARD_CONTENT_WIDTH);
     return layoutNodes.map(node => ({
       ...node,
       x: laneX(node.column, cardWidth),
       y: TREE_TOP_OFFSET_PX + node.depth * TREE_ROW_HEIGHT_PX,
       width: cardWidth,
     }));
-  }, [layoutNodes]);
+  }, [layoutNodes, cardWidth]);
 
   const visualNodesMap = React.useMemo(() => {
     const map: Record<string, typeof visualNodes[0]> = {};
@@ -712,9 +715,12 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
 
   // Compute Zoom Scale Factor
   const zoomScale = React.useMemo(() => {
-    if (zoomMode === 'fit-width') {
-      const diff = svgWidth - containerWidth;
-      return diff <= TREE_ZOOM_MIN_DIFF_PX ? 1.0 : Math.min(1.0, containerWidth / svgWidth);
+    if (zoomMode === 'overview') {
+      // Fit a fixed lane span (clamped to the tree width) rather than the whole
+      // tree — wider trees keep readable cards and scroll horizontally (#305).
+      const target = overviewTargetWidth(svgWidth, cardWidth);
+      const diff = target - containerWidth;
+      return diff <= TREE_ZOOM_MIN_DIFF_PX ? 1.0 : Math.min(1.0, containerWidth / target);
     }
     if (zoomMode === 'full-tree') {
       const widthDiff = svgWidth - containerWidth;
@@ -725,7 +731,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
       return Math.min(1.0, wScale, hScale);
     }
     return 1.0;
-  }, [zoomMode, containerWidth, containerHeight, svgWidth, svgHeight]);
+  }, [zoomMode, containerWidth, containerHeight, svgWidth, svgHeight, cardWidth]);
 
   // Compute the path of ancestor node IDs from the root up to the active node pointer
   const activePathSet = React.useMemo(() => {
@@ -1056,11 +1062,11 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
             <ZoomIn size={14} />
           </button>
         </Tooltip>
-        <Tooltip content={<HotkeyHint label="Zoom: Fit Width" keys="Z" />} position="bottom">
+        <Tooltip content={<HotkeyHint label="Zoom: Overview" keys="Z" />} position="bottom">
           <button
-            onClick={() => handleZoomChange('fit-width')}
-            className={zoomMode === 'fit-width' ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
-            aria-label="Zoom: Fit Width"
+            onClick={() => handleZoomChange('overview')}
+            className={zoomMode === 'overview' ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
+            aria-label="Zoom: Overview"
           >
             <Search size={14} />
           </button>

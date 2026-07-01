@@ -557,7 +557,11 @@ export const activeTabIdAtom = atom(
   }
 );
 
-export type ZoomMode = 'normal' | 'fit-width' | 'full-tree';
+// 'overview' fits a fixed lane span (TREE_OVERVIEW_LANES), the middle rung of
+// the Normal → Overview → Full-tree zoom ladder (#305). It replaced the old
+// 'fit-width', which fit the whole tree width and — in the narrow panel where
+// width binds — collapsed onto the same scale as 'full-tree'.
+export type ZoomMode = 'normal' | 'overview' | 'full-tree';
 
 /** In-memory map tracking the ZoomMode for each workspace tab during the session */
 export const workspaceZoomModesAtom = atom<Record<string, ZoomMode>>({});

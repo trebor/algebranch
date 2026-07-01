@@ -151,6 +151,37 @@ export function laneX(column: number, cardWidth: number): number {
   return TREE_GUTTER_PX + column * (cardWidth + TREE_COL_GAP_PX);
 }
 
+/**
+ * How many lanes the middle ("overview") zoom mode fits across the panel (#305).
+ *
+ * The three modes form a progressive ladder — Normal (1 lane) → Overview (this
+ * many) → Full tree (all lanes). The old middle mode fit the *whole* tree width,
+ * which — in the narrow 1/3 panel where width almost always binds — landed on the
+ * same scale as Full tree, wasting a button. Fitting a fixed lane span instead
+ * gives a genuine third step: readable cards with horizontal scroll for the rest.
+ */
+export const TREE_OVERVIEW_LANES = 3;
+
+/**
+ * Pixel width spanned by `lanes` cards laid out from the gutter — both outer
+ * gutters, `lanes` cards, and the `lanes - 1` inter-card gaps between them. This
+ * mirrors how `svgWidth` is built for a tree exactly `lanes` columns wide, so an
+ * N-lane span and an N-column tree's width agree.
+ */
+export function laneSpanWidth(lanes: number, cardWidth: number): number {
+  return TREE_GUTTER_PX * 2 + lanes * cardWidth + Math.max(0, lanes - 1) * TREE_COL_GAP_PX;
+}
+
+/**
+ * The width the overview zoom fits into: the {@link TREE_OVERVIEW_LANES}-lane
+ * span, but never wider than the tree itself (`svgWidth`). A tree narrower than
+ * the overview span thus degrades to fit-width rather than zooming out to a
+ * phantom lane; a wider tree caps at the span so its extra columns scroll.
+ */
+export function overviewTargetWidth(svgWidth: number, cardWidth: number): number {
+  return Math.min(svgWidth, laneSpanWidth(TREE_OVERVIEW_LANES, cardWidth));
+}
+
 /** Vertical distance tolerance (px) to identify collateral loop nodes on the same row. */
 export const TREE_COLLATERAL_TOLERANCE_PX = 10;
 

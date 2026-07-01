@@ -1851,7 +1851,7 @@ export default function Home() {
                   <Tooltip
                     content={
                       <HotkeyHint
-                        label={explorationMode ? 'Interactive view — transform the equation' : 'Read view — step through the equation'}
+                        label={explorationMode ? 'Interactive view' : 'Read view'}
                         keys="X"
                       />
                     }

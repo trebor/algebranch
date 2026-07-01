@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import type * as math from 'mathjs';
-import { mjs } from './mathjs';
+import { mjs, isReservedConstantName } from './mathjs';
 import { Equation, getChildren, ensureNodeIds, cloneWithChildren, replaceNodeAtPath } from './tree';
 import { getVariables, getFunctionName } from './validator';
 
@@ -46,7 +46,7 @@ export const getIsolatedDefinition = (
   const isBareVar = (n: math.MathNode): n is math.SymbolNode => {
     if (n.type !== 'SymbolNode') return false;
     const name = (n as math.SymbolNode).name;
-    return name !== 'pi' && name !== 'e';
+    return !isReservedConstantName(name);
   };
 
   const lhs = unwrapParens(eq.lhs);

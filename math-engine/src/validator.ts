@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import type * as math from 'mathjs';
-import { mjs } from './mathjs';
+import { mjs, IMAGINARY_UNIT, IMAGINARY_VALUE, isReservedConstantName } from './mathjs';
 import {
   Interval,
   createInterval,
@@ -113,7 +113,7 @@ export const getVariables = (node: math.MathNode): string[] => {
     if (!n) return;
     if (n.type === 'SymbolNode') {
       const name = (n as math.SymbolNode).name;
-      if (name !== 'pi' && name !== 'e') {
+      if (!isReservedConstantName(name)) {
         vars.add(name);
       }
       return;
@@ -142,6 +142,13 @@ export const evaluateInterval = (node: math.MathNode, scope: Record<string, Inte
     const symbolNode = node as math.SymbolNode;
     if (symbolNode.name === 'pi') return createInterval(CONST_PI, CONST_PI);
     if (symbolNode.name === 'e') return createInterval(CONST_E, CONST_E);
+    // The imaginary unit has no real interval. Throwing here makes the interval
+    // solver return 'inconclusive', so equivalence for any equation containing
+    // `ⅈ` falls back to the complex-aware point evaluator rather than pretending
+    // the token is a real variable. (#105)
+    if (symbolNode.name === IMAGINARY_UNIT) {
+      throw new Error('Imaginary unit has no real interval; deferring to point evaluation');
+    }
     if (symbolNode.name in scope) return scope[symbolNode.name];
     throw new Error(`Symbol ${symbolNode.name} not in scope`);
   }
@@ -228,6 +235,7 @@ export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>
     const symbolNode = node as math.SymbolNode;
     if (symbolNode.name === 'pi') return CONST_PI;
     if (symbolNode.name === 'e') return CONST_E;
+    if (symbolNode.name === IMAGINARY_UNIT) return IMAGINARY_VALUE;
     if (symbolNode.name in scope) return scope[symbolNode.name];
     throw new Error(`Symbol ${symbolNode.name} not in scope`);
   }

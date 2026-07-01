@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import type * as math from 'mathjs';
-import { mjs, fractionMath } from './mathjs';
+import { mjs, fractionMath, isReservedConstantName } from './mathjs';
 import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, ensureNodeIds } from './tree';
 import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions, getQuadraticStandardForm, getVariables, tryExtractQuadraticExpr } from './validator';
 import { HIGH_SCHOOL_IDENTITIES } from './rules';
@@ -67,7 +67,7 @@ export const isConstantSubtree = (node: math.MathNode): boolean => {
   if (node.type === 'ConstantNode') return true;
   if (node.type === 'SymbolNode') {
     const name = (node as math.SymbolNode).name;
-    return name === 'pi' || name === 'e';
+    return isReservedConstantName(name);
   }
   if (node.type === 'ParenthesisNode') {
     return isConstantSubtree((node as math.ParenthesisNode).content);

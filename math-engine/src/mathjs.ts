@@ -89,3 +89,35 @@ export const mjs = create(dependencies);
  * float. Shares the same dependency set as {@link mjs}.
  */
 export const fractionMath = create(dependencies, { number: 'Fraction' });
+
+/**
+ * The imaginary-unit token (#105). It is the distinct Unicode codepoint
+ * U+2148 `ⅈ` ("DOUBLE-STRUCK ITALIC SMALL I"), deliberately NOT the ASCII
+ * letter `i` — that stays free as an ordinary variable (counters, indices, the
+ * summation index of #182). mathjs's default `parse.isAlpha` already accepts
+ * this codepoint, so `parse('ⅈ')` yields a `SymbolNode` named `ⅈ` while `i`
+ * stays a variable; no `isAlpha` extension is needed. Disambiguation is by
+ * input channel (a palette button inserts the glyph), never by spelling.
+ *
+ * Caveat handled elsewhere: Unicode NFKC normalization collapses `ⅈ` → ASCII
+ * `i`, which would erase the distinction — so no `.normalize('NFKC')` may run on
+ * the equation string in the input / share-link pipeline.
+ */
+export const IMAGINARY_UNIT = 'ⅈ';
+
+/**
+ * The value of the imaginary unit, the Complex `0 + 1i`. Obtained from the
+ * bundled `sqrt` (mathjs pulls the `Complex` data type in transitively via the
+ * `sqrt`/`pow` dependencies), so no explicit `complexDependencies` wiring is
+ * required. Used by the point evaluator to resolve the `ⅈ` symbol.
+ */
+export const IMAGINARY_VALUE = mjs.sqrt(-1);
+
+/**
+ * Whether a symbol name refers to a built-in mathematical constant rather than a
+ * free variable. Centralizes the `pi` / `e` / imaginary-unit special-casing that
+ * the variable-collection and constant-subtree sites share, so the imaginary
+ * unit is uniformly excluded from the solve variables. (#105)
+ */
+export const isReservedConstantName = (name: string): boolean =>
+  name === 'pi' || name === 'e' || name === IMAGINARY_UNIT;

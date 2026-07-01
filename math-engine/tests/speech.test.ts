@@ -94,4 +94,13 @@ describe('nodeToSpeech — single subtree for per-term aria-labels (#256)', () =
   it('speaks a sqrt term', () => {
     expect(nodeToSpeech(node('sqrt(x) = 0'))).toBe('the square root of x');
   });
+
+  // The imaginary unit ⅈ (U+2148) is spoken as "i" — its conventional
+  // pronunciation — rather than the raw glyph, which TTS would mangle. (#105)
+  it('speaks the imaginary unit as "i"', () => {
+    expect(nodeToSpeech(node('x = ⅈ'))).toBe('x');
+    expect(speak('x = ⅈ')).toBe('x equals i');
+    expect(speak('x = 2*ⅈ')).toBe('x equals 2 times i');
+    expect(speak('x = 3 + 2*ⅈ')).toBe('x equals 3 plus 2 times i');
+  });
 });

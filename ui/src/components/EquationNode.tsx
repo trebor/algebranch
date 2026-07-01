@@ -28,7 +28,7 @@ import {
   isTreeAnimatingAtom,
   ReducibleActionInfo,
 } from '../store/equation';
-import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, greekNameFor } from '../constants/mathSymbols';
+import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, greekNameFor, isImaginaryUnit } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
 import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech } from 'math-engine-client';
@@ -999,6 +999,17 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
 
     if (node.type === 'SymbolNode') {
       const symbolNode = node as math.SymbolNode;
+      // The imaginary unit renders as an UPRIGHT roman i (ISO-80000-2), which is
+      // what visually distinguishes the constant ⅈ from the italic variable i —
+      // we draw our own `i` rather than relying on the app font shipping the
+      // U+2148 glyph (avoids tofu, keeps the render style free to change). (#105)
+      if (isImaginaryUnit(symbolNode.name)) {
+        return (
+          <span className={`not-italic font-serif ${isStatic ? THEME_GLASS.MATH_VAR_STATIC : THEME_GLASS.MATH_VAR_ACTIVE} font-medium`}>
+            i
+          </span>
+        );
+      }
       const { head, sub } = splitSubscript(symbolNode.name);
       return (
         <span className={`italic font-serif ${isStatic ? THEME_GLASS.MATH_VAR_STATIC : THEME_GLASS.MATH_VAR_ACTIVE} font-medium`}>

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import type * as math from 'mathjs';
+import { IMAGINARY_UNIT } from './mathjs';
 import { Equation, RelationOperator } from './tree';
 import { formatNumber } from './index';
 
@@ -119,8 +120,13 @@ const superscriptInt = (node: math.MathNode): string | null => {
     .join('');
 };
 
-const renderSymbol = (name: string, format: Format): string =>
-  format === 'latex' ? GREEK_LATEX[name] ?? name : GREEK_UNICODE[name] ?? name;
+const renderSymbol = (name: string, format: Format): string => {
+  // The imaginary unit is an upright roman i (ISO-80000-2). In LaTeX that is
+  // `\mathrm{i}`; plain LaTeX cannot typeset the raw U+2148 glyph. Unicode
+  // output keeps the semantically-correct codepoint, which re-parses cleanly. (#105)
+  if (name === IMAGINARY_UNIT) return format === 'latex' ? '\\mathrm{i}' : name;
+  return format === 'latex' ? GREEK_LATEX[name] ?? name : GREEK_UNICODE[name] ?? name;
+};
 
 // Renders `child` as it appears under a binary parent of precedence `parentPrec`,
 // adding parentheses only when the child would otherwise reassociate.

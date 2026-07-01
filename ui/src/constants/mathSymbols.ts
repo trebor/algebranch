@@ -13,6 +13,18 @@
 // swap to "·" (U+00B7 MIDDLE DOT) here if a smaller mid-dot is preferred.
 export const MULTIPLY_SYMBOL = '⋅';
 
+// The imaginary-unit token (#105): the distinct Unicode codepoint U+2148 'ⅈ'
+// ("DOUBLE-STRUCK ITALIC SMALL I"), NOT the ASCII letter `i` (which stays a
+// free variable). Kept in lockstep with the engine's `IMAGINARY_UNIT`; this
+// module stays import-free (see the drift guard in the glyph-parity test), so
+// the shared value is asserted equal there rather than imported here.
+export const IMAGINARY_UNIT = 'ⅈ';
+
+// Whether a SymbolNode name is the imaginary unit. It renders via its own
+// upright-roman-i path (ISO-80000-2) rather than through the Greek/subscript
+// maps, so callers gate that special-casing on this predicate.
+export const isImaginaryUnit = (name: string): boolean => name === IMAGINARY_UNIT;
+
 // True minus sign (U+2212) rather than the hyphen-minus.
 export const MINUS_SYMBOL = '−';
 

@@ -62,9 +62,17 @@ export const BottomNav: React.FC = () => {
     setActiveBottomSheet((prev) => (prev === 'history' ? null : 'history'));
   }, [setActiveBottomSheet]);
 
+  // The nav is z-55, above every bottom sheet (z-50), so an open sheet would be
+  // painted *under* it (#325). Slide the nav out of view whenever any sheet is
+  // open — reclaiming the band and removing the overlap — via the existing
+  // transform transition (idempotent with immersive mode's identical slide-away).
+  const sheetOpen = activeBottomSheet !== null;
+
   return (
     <nav
-      className="app-bottom-nav fixed bottom-0 left-0 right-0 z-55 lg:hidden bg-[#110f22]/90 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ease-in-out"
+      className={`app-bottom-nav fixed bottom-0 left-0 right-0 z-55 lg:hidden bg-[#110f22]/90 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ease-in-out ${
+        sheetOpen ? 'translate-y-full pointer-events-none' : ''
+      }`}
     >
       <div className="bottom-nav-row flex items-end justify-around h-[var(--bottom-nav-height)] px-2">
         {/* Undo */}

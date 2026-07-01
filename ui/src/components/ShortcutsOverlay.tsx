@@ -27,6 +27,18 @@ const detectIsMac = (): boolean => {
   return /mac|iphone|ipad|ipod/i.test(probe);
 };
 
+/**
+ * The keycap text for a binding: an explicit {@link ShortcutConfig.keyLabel}
+ * override when set (e.g. `?`, `×`), otherwise the shared `formatShortcut`
+ * rendering (single letters upper-cased, modifiers shown explicitly). Used by
+ * both the list rows and the footer reopen hint so their keycaps can't drift.
+ */
+const keycapLabel = (shortcut: ShortcutConfig, isMac: boolean): string =>
+  shortcut.keyLabel ?? formatShortcut(shortcut, isMac);
+
+/** Stable id of the binding that toggles this overlay (its reopen key). */
+const REOPEN_SHORTCUT_ID = 'shortcuts-overlay';
+
 interface CategoryGroup {
   category: string;
   items: ShortcutConfig[];
@@ -61,6 +73,13 @@ export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts })
   const [isOpen, setIsOpen] = useAtom(shortcutsOverlayOpenAtom);
   const isMac = React.useMemo(() => detectIsMac(), []);
   const groups = React.useMemo(() => groupByCategory(shortcuts), [shortcuts]);
+
+  // The reopen-key hint reads its keycap from the overlay's own binding, so it
+  // stays in sync with the source-of-truth array instead of a hardcoded letter.
+  const reopenShortcut = React.useMemo(
+    () => shortcuts.find((s) => s.id === REOPEN_SHORTCUT_ID),
+    [shortcuts],
+  );
 
   const handleClose = React.useCallback(() => setIsOpen(false), [setIsOpen]);
 
@@ -138,7 +157,7 @@ export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts })
                           </span>
                         ) : (
                           <kbd className={THEME_GLASS.SHORTCUT_KEYCAP}>
-                            {shortcut.keyLabel ?? formatShortcut(shortcut, isMac)}
+                            {keycapLabel(shortcut, isMac)}
                           </kbd>
                         )}
                       </div>
@@ -148,10 +167,13 @@ export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts })
               ))}
             </div>
 
-            {/* Footer hint */}
-            <div className={`border-t border-white/5 pt-4 mt-4 text-xs ${THEME_GLASS.TEXT_MUTED} select-none`}>
-              Press <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>k</kbd> any time to reopen this list.
-            </div>
+            {/* Footer hint — keycap derived from the reopen binding (see
+                reopenShortcut) so it can't drift from the actual shortcut. */}
+            {reopenShortcut && (
+              <div className={`border-t border-white/5 pt-4 mt-4 text-xs ${THEME_GLASS.TEXT_MUTED} select-none`}>
+                Press <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>{keycapLabel(reopenShortcut, isMac)}</kbd> any time to reopen this list.
+              </div>
+            )}
           </motion.div>
         </div>
       )}

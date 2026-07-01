@@ -30,6 +30,13 @@ export interface ShortcutConfig {
   shift?: boolean;
   /** When `true`, requires the Alt / Option modifier. */
   alt?: boolean;
+  /**
+   * Stable identifier for referencing one specific binding from the UI — e.g. the
+   * shortcuts overlay's footer looking up its own reopen key so the hint stays in
+   * sync with the binding instead of hardcoding the letter. Optional; most
+   * bindings never need it.
+   */
+  id?: string;
   /** Callback executed when the shortcut fires. */
   action: () => void;
   /** Human-readable label (shown in the shortcuts cheat-sheet overlay). */

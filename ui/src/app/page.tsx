@@ -1408,11 +1408,13 @@ export default function Home() {
       keyLabel: '?',
     },
     {
+      // `id` lets the overlay's footer look up its own reopen key; no keyLabel
+      // needed — bare `k` formats to the `K` keycap like every other letter.
       key: 'k',
+      id: 'shortcuts-overlay',
       action: toggleShortcuts,
       description: 'Show keyboard shortcuts',
       category: 'Help',
-      keyLabel: 'k',
     },
     {
       key: 'a',
@@ -1493,14 +1495,12 @@ export default function Home() {
       action: () => openEqualsOp('power'),
       description: 'Raise both sides to a power',
       category: 'Both sides',
-      keyLabel: 'p',
     },
     {
       key: 'r',
       action: () => openEqualsOp('root'),
       description: 'Take a root of both sides',
       category: 'Both sides',
-      keyLabel: 'r',
     },
     {
       // Settings on bare `,`, echoing the universal ⌘, convention in the app's

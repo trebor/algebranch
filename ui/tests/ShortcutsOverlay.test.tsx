@@ -100,6 +100,35 @@ describe('ShortcutsOverlay', () => {
     expect(store.get(helpModalOpenAtom)).toBe(true);
   });
 
+  it('renders the reopen-key footer hint from the source-of-truth binding, formatted like every other keycap (#245)', () => {
+    const store = createStore();
+    store.set(shortcutsOverlayOpenAtom, true);
+
+    render(
+      <Provider store={store}>
+        <ShortcutsOverlay
+          shortcuts={[
+            {
+              key: 'j',
+              id: 'shortcuts-overlay',
+              action: () => {},
+              description: 'Show keyboard shortcuts',
+              category: 'Help',
+            },
+          ]}
+        />
+      </Provider>
+    );
+
+    // Both the list row and the footer hint derive their keycap from the same
+    // binding: the actual key ('j', proving the footer isn't hardcoded to 'k'),
+    // uppercased by formatShortcut like every other letter keycap in the app.
+    const keycaps = Array.from(document.querySelectorAll('kbd')).map((k) => k.textContent);
+    expect(keycaps.filter((c) => c === 'J')).toHaveLength(2);
+    expect(keycaps).not.toContain('j');
+    expect(keycaps).not.toContain('k');
+  });
+
   it('closes shortcuts overlay when k is pressed', async () => {
     const store = createStore();
     store.set(shortcutsOverlayOpenAtom, true);

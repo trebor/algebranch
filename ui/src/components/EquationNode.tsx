@@ -600,9 +600,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     // rendered index and reserve that footprint back:
     //   • minWidth keeps the node box wrapped around the index (no left spill, #198);
     //   • minHeight forces the row tall enough that the pocket above the crook
-    //     (crookFraction of the height) holds the index with one inset of breathing room
-    //     top and bottom — which is what makes the height "definite" so the % seat above
-    //     resolves. Both are em, so the nestle is scale-invariant at every auto-scale.
+    //     (crookFraction of the height) holds the index with a bottom inset only — the
+    //     index's TOP sits flush with the top of the radical, reclaiming the former top
+    //     gap. That reserved height is also what makes the row height "definite" so the
+    //     % seat below resolves. Em-based, so the nestle is scale-invariant at every
+    //     auto-scale.
     const measure = () => {
       const content = col.firstElementChild as HTMLElement | null;
       const fontSize = parseFloat(getComputedStyle(col).fontSize);
@@ -610,7 +612,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       const wEm = content.offsetWidth / fontSize;
       const hEm = content.offsetHeight / fontSize;
       const minW = Math.max(0, wEm + INDEX_ARM_RIGHT_MARGIN_EM);
-      const minH = (hEm + 2 * INDEX_INSET_EM) / RADICAL_CROOK_FRACTION;
+      const minH = (hEm + INDEX_INSET_EM) / RADICAL_CROOK_FRACTION;
       setIndexBox((prev) =>
         Math.abs(prev.minW - minW) > 0.001 || Math.abs(prev.minH - minH) > 0.001
           ? { minW, minH }

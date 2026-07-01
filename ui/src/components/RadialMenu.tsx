@@ -19,6 +19,7 @@ import {
 import { trackEvent } from '../utils/analytics';
 import { ArrowLeftRight, Plus, Minus, Divide } from 'lucide-react';
 import { Tooltip } from './Tooltip';
+import { HotkeyHint } from './HotkeyHint';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { THEME_GLASS } from '../constants/theme';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
@@ -50,18 +51,21 @@ interface RadialPetal {
   icon: (iconPx: number) => React.ReactNode;
   label: string;
   tooltip: string;
+  /** Keycap shown in the tooltip — the literal key you press to fire this op,
+   *  e.g. `*`/`/` rather than the `×`/`÷` operation glyphs (#245). */
+  hotkey: string;
   action: RadialAction;
   color: string;
 }
 
 const PETALS: RadialPetal[] = [
-  { icon: (px) => <ArrowLeftRight size={px} />, label: '↔', tooltip: 'Swap left and right sides', action: { type: 'swap' }, color: 'text-amber-400' },
-  { icon: () => <span className="text-sm font-bold">xⁿ</span>, label: 'xⁿ', tooltip: 'Raise both sides to nth power', action: { type: 'power', power: 2 }, color: 'text-teal-400' },
-  { icon: (px) => <Plus size={px} />, label: '+', tooltip: 'Add term to both sides', action: { type: 'add' }, color: 'text-indigo-400' },
-  { icon: (px) => <Minus size={px} />, label: '−', tooltip: 'Subtract term from both sides', action: { type: 'sub' }, color: 'text-violet-400' },
-  { icon: () => <span className="text-xl font-bold leading-none">{MULTIPLY_SYMBOL}</span>, label: MULTIPLY_SYMBOL, tooltip: 'Multiply both sides by term', action: { type: 'mul' }, color: 'text-rose-400' },
-  { icon: (px) => <Divide size={px} />, label: '÷', tooltip: 'Divide both sides by term', action: { type: 'div' }, color: 'text-pink-400' },
-  { icon: () => <span className="text-sm font-bold">ⁿ√</span>, label: 'ⁿ√', tooltip: 'Take nth root of both sides', action: { type: 'root', power: 2 }, color: 'text-emerald-400' },
+  { icon: (px) => <ArrowLeftRight size={px} />, label: '↔', tooltip: 'Swap left and right sides', hotkey: 'S', action: { type: 'swap' }, color: 'text-amber-400' },
+  { icon: () => <span className="text-sm font-bold">xⁿ</span>, label: 'xⁿ', tooltip: 'Raise both sides to nth power', hotkey: 'P', action: { type: 'power', power: 2 }, color: 'text-teal-400' },
+  { icon: (px) => <Plus size={px} />, label: '+', tooltip: 'Add term to both sides', hotkey: '+', action: { type: 'add' }, color: 'text-indigo-400' },
+  { icon: (px) => <Minus size={px} />, label: '−', tooltip: 'Subtract term from both sides', hotkey: '-', action: { type: 'sub' }, color: 'text-violet-400' },
+  { icon: () => <span className="text-xl font-bold leading-none">{MULTIPLY_SYMBOL}</span>, label: MULTIPLY_SYMBOL, tooltip: 'Multiply both sides by term', hotkey: '*', action: { type: 'mul' }, color: 'text-rose-400' },
+  { icon: (px) => <Divide size={px} />, label: '÷', tooltip: 'Divide both sides by term', hotkey: '/', action: { type: 'div' }, color: 'text-pink-400' },
+  { icon: () => <span className="text-sm font-bold">ⁿ√</span>, label: 'ⁿ√', tooltip: 'Take nth root of both sides', hotkey: 'R', action: { type: 'root', power: 2 }, color: 'text-emerald-400' },
 ];
 
 interface RadialMenuProps {
@@ -322,7 +326,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
               return (
                 <Tooltip
                   key={petal.label}
-                  content={petal.tooltip}
+                  content={<HotkeyHint label={petal.tooltip} keys={petal.hotkey} />}
                   position="top"
                 >
                   <motion.button

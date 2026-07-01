@@ -1466,7 +1466,8 @@ export default function Home() {
       action: () => openEqualsOp('sub'),
       description: 'Subtract from both sides',
       category: 'Both sides',
-      keyLabel: '−',
+      // Literal key you press (hyphen-minus), not the `−` operation glyph.
+      keyLabel: '-',
     },
     {
       key: '*',
@@ -1474,7 +1475,9 @@ export default function Home() {
       action: () => openEqualsOp('mul'),
       description: 'Multiply both sides',
       category: 'Both sides',
-      keyLabel: '×',
+      // Keycap shows the literal key you press (`*`), not the `×` operation
+      // glyph; keyLabel also suppresses the misleading Shift on US main rows.
+      keyLabel: '*',
     },
     {
       key: '*',
@@ -1488,7 +1491,8 @@ export default function Home() {
       action: () => openEqualsOp('div'),
       description: 'Divide both sides',
       category: 'Both sides',
-      keyLabel: '÷',
+      // Literal key you press (`/`), not the `÷` operation glyph.
+      keyLabel: '/',
     },
     {
       key: 'p',

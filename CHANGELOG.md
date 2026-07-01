@@ -8,6 +8,25 @@ and the monorepo uses a single unified version across all workspaces; the root
 v1.0.0 onward, entries are generated automatically from conventional commits by
 [release-please](https://github.com/googleapis/release-please) (#337).
 
+## [1.3.0](https://github.com/trebor/algebranch/compare/v1.2.0...v1.3.0) (2026-07-01)
+
+
+### Features
+
+* **a11y:** flatten associative operator chains in exploration reading ([#355](https://github.com/trebor/algebranch/issues/355)) ([6f4715b](https://github.com/trebor/algebranch/commit/6f4715bb1302b3ea0f6ae5ac998ee18c3be752ac)), closes [#290](https://github.com/trebor/algebranch/issues/290)
+* **math-engine:** self-power and radical-of-product identity rules ([#350](https://github.com/trebor/algebranch/issues/350)) ([645b95c](https://github.com/trebor/algebranch/commit/645b95c9cf7163f87ed7d77f73b61de0e1812e67))
+* **tree:** overview zoom (3-lane middle mode) + active-path emphasis ([#305](https://github.com/trebor/algebranch/issues/305)) ([#361](https://github.com/trebor/algebranch/issues/361)) ([5e16c70](https://github.com/trebor/algebranch/commit/5e16c70679b588ef74e79241af1c92c7fb123326))
+
+
+### Bug Fixes
+
+* **math-engine:** stop flaky rejection of denominator-cleared moves ([#347](https://github.com/trebor/algebranch/issues/347)) ([#348](https://github.com/trebor/algebranch/issues/348)) ([3a0fa6d](https://github.com/trebor/algebranch/commit/3a0fa6d9f508f4d73eed59a2259f5ae560a14213))
+* **ui:** full-screen bottom sheets with consistent dismissal in mobile landscape ([#351](https://github.com/trebor/algebranch/issues/351)) ([f31c185](https://github.com/trebor/algebranch/commit/f31c185db8b50115b68b78aaafb7a19b11aa74a7))
+* **ui:** port tall nth-root index seating to the preview renderer ([#356](https://github.com/trebor/algebranch/issues/356)) ([#358](https://github.com/trebor/algebranch/issues/358)) ([1c881cb](https://github.com/trebor/algebranch/commit/1c881cbab6ed21c82cb728560e3a5b5476e37df3))
+* **ui:** preserve node ids across reload so the slide animation survives ([#344](https://github.com/trebor/algebranch/issues/344)) ([#345](https://github.com/trebor/algebranch/issues/345)) ([6215f03](https://github.com/trebor/algebranch/commit/6215f0390119879274f00629f6899892cf0f3e82))
+* **ui:** seat the tall nth-root index cleanly in the crook ([#201](https://github.com/trebor/algebranch/issues/201)) ([#357](https://github.com/trebor/algebranch/issues/357)) ([e2b1260](https://github.com/trebor/algebranch/commit/e2b12601a3dbe4d4a7868ff8bf2bd3058844887d))
+* **ui:** tooltip overflow + keycap consistency, plus library & equals-menu tooltips ([#245](https://github.com/trebor/algebranch/issues/245)) ([#352](https://github.com/trebor/algebranch/issues/352)) ([0470c3a](https://github.com/trebor/algebranch/commit/0470c3a2e95219b1e15bf131d900102bfe6ea792))
+
 ## [1.2.0](https://github.com/trebor/algebranch/compare/v1.1.0...v1.2.0) (2026-06-30)
 
 

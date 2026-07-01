@@ -7,7 +7,7 @@ import React from 'react';
 import { useAtomValue } from 'jotai';
 import type * as math from 'mathjs';
 import { currentEquationAtom } from '../store/equation';
-import { Equation, getNodeByPath, getFunctionName, formatNumber } from 'math-engine-client';
+import { Equation, getNodeByPath, getFunctionName, formatNumber, isCommutativeChainLink } from 'math-engine-client';
 import { OPERATOR_DISPLAY, splitSubscript } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
 import { useEquationPreviewPalette } from './EquationPreviewPaletteContext';
@@ -97,7 +97,28 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
   // A node is an exploration stop (#270) when the explore tree is active and we have
   // a live path to key it by. Parentheses stay transparent — drilling skips straight
   // to their content, so a listener never hits a redundant "the quantity" stop.
-  const isStop = explore.active && !!roving && !!path && !!node && node.type !== 'ParenthesisNode';
+  // An arbitrary same-operator link in an associative chain (the inner `+` of
+  // `a+b+c` = `+[+[a,b],c]`) is likewise skipped, so a flat chain reads as a run of
+  // siblings under one "sum"/"product" rather than surfacing the parser's nesting
+  // as a synthetic middle stop (#290). The chain-link test needs the immediate
+  // parent, which is the node one path segment up.
+  const parentNode = React.useMemo(() => {
+    if (!path) return null;
+    const slash = path.lastIndexOf('/');
+    if (slash < 0) return null; // a side root (lhs/rhs) has no parent
+    try {
+      return getNodeByPath(eq, path.slice(0, slash));
+    } catch {
+      return null;
+    }
+  }, [eq, path]);
+  const isStop =
+    explore.active &&
+    !!roving &&
+    !!path &&
+    !!node &&
+    node.type !== 'ParenthesisNode' &&
+    !isCommutativeChainLink(node, parentNode);
 
   const registerExploreItem = React.useCallback(
     (el: HTMLElement | null) => {

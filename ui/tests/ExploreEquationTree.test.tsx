@@ -167,3 +167,69 @@ describe('Read view — live-region structural reading (#270)', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 });
+
+describe('Read view — flatten associative operator chains (#290)', () => {
+  afterEach(cleanup);
+
+  // Walk Home→End and collect the spoken stop at each cursor position.
+  const walk = (eqText: string): string[] => {
+    const store = makeStore(eqText);
+    renderExplore(store);
+    const app = screen.getByRole('application');
+    act(() => app.focus());
+    fireEvent.keyDown(app, { key: 'Home' });
+    const stops = [liveText()];
+    for (;;) {
+      const prev = liveText();
+      fireEvent.keyDown(app, { key: 'ArrowRight' });
+      const next = liveText();
+      if (next === prev) break; // clamped at End
+      stops.push(next);
+    }
+    return stops as string[];
+  };
+
+  it('reads a sum chain as flat siblings — no synthetic "a plus b" middle stop', () => {
+    // a+b+c parses to +[+[a,b],c]; the inner + is a parser artifact, not a stop.
+    expect(walk('a+b+c=0')).toEqual(['a plus b plus c', 'a', 'b', 'c', '0']);
+  });
+
+  it('reads a product chain as flat factors — no synthetic "x times y" middle stop', () => {
+    expect(walk('x*y*z=0')).toEqual(['x times y times z', 'x', 'y', 'z', '0']);
+  });
+
+  it('flattens a longer chain fully', () => {
+    expect(walk('a+b+c+d=0')).toEqual(['a plus b plus c plus d', 'a', 'b', 'c', 'd', '0']);
+  });
+
+  it('keeps a non-associative subtraction chain grouped (must NOT flatten)', () => {
+    // a-b-c = -[-[a,b],c]; the (a-b) subterm stays its own stop.
+    expect(walk('a-b-c=0')).toEqual(['a minus b minus c', 'a minus b', 'a', 'b', 'c', '0']);
+  });
+
+  it('flattens a REDUNDANT same-operator paren (parseEquation strips it — it is one flat sum)', () => {
+    // a+(b+c): the parens don't change meaning for an associative op, so
+    // parseEquation removes them and the chain flattens like any other sum.
+    expect(walk('a+(b+c)=0')).toEqual(['a plus b plus c', 'a', 'b', 'c', '0']);
+  });
+
+  it('keeps a MEANINGFUL paren as its own stop (grouping that changes meaning survives)', () => {
+    // a*(b+c): the paren matters (it gates distribution), so parseEquation keeps
+    // the ParenthesisNode and the inner sum stays a navigable stop.
+    expect(walk('a*(b+c)=0')).toEqual(['a times the quantity b plus c', 'a', 'b plus c', 'b', 'c', '0']);
+  });
+
+  it('Down from the sum drills straight to the first term, Up returns to the sum', () => {
+    const store = makeStore('a+b+c=0');
+    renderExplore(store);
+    const app = screen.getByRole('application');
+    act(() => app.focus());
+    expect(liveText()).toBe('a plus b plus c');
+    fireEvent.keyDown(app, { key: 'ArrowDown' }); // into the first term (no middle stop)
+    expect(liveText()).toBe('a');
+    fireEvent.keyDown(app, { key: 'ArrowRight' });
+    expect(liveText()).toBe('b');
+    fireEvent.keyDown(app, { key: 'ArrowUp' }); // back out to the whole sum, not "a plus b"
+    expect(liveText()).toBe('a plus b plus c');
+  });
+});

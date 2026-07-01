@@ -25,6 +25,7 @@ export {
   equationToUnicode,
   equationToSpeech,
   nodeToSpeech,
+  isCommutativeChainLink,
   formatNumber,
   flipRelation,
   ensureNodeIds,

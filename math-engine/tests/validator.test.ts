@@ -624,6 +624,41 @@ describe('Math Engine Validator & Simplifier', () => {
   });
 });
 
+describe('generateValidMoves — pole-robust sampling (#347)', () => {
+  // Deterministic PRNG so the "many runs" stress test is fully reproducible:
+  // stubbing Math.random pins the exact stream of sampled points, turning a
+  // formerly-intermittent flake into a hard red/green signal.
+  const mulberry32 = (seed: number): (() => number) => {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  };
+
+  let randomSpy: jest.SpyInstance | undefined;
+  afterEach(() => {
+    randomSpy?.mockRestore();
+    randomSpy = undefined;
+  });
+
+  // The equivalence validator samples random midpoints in [1, 5]; a draw that
+  // lands within ~0.045 of the removable pole at n = 1 makes the 0/0 LHS
+  // (`(-2*(...)+9/8)/(n-1)`) numerically reject the transposed `rhs` candidate,
+  // intermittently dropping the move. Across a seeded stream of draws the move
+  // must be offered on *every* run.
+  test('always offers the rhs transposition despite the removable pole at n = 1', () => {
+    const eq = parseEquation('(-2 * (n ^ 2 - n * 7 / 2 + (7 / 4) ^ 2) + 9 / 8) / (n - 1) = 5 - 2 * n');
+    randomSpy = jest.spyOn(Math, 'random').mockImplementation(mulberry32(0x51ab1e));
+    for (let i = 0; i < 500; i++) {
+      const moves = generateValidMoves(eq, 'lhs/1');
+      expect(Object.keys(moves)).toContain('rhs');
+    }
+  });
+});
+
 describe('hasValidMove — short-circuit existence check (#188)', () => {
   // hasValidMove must agree exactly with "generateValidMoves produced ≥1 move"
   // for every path, since it only short-circuits the existence query (it must not

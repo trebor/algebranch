@@ -38,6 +38,18 @@ const RANGE_MID_MIN = 1.0;
 const RANGE_MID_MAX = 5.0;
 const HALF_WIDTH = 0.05;
 
+// Denominator-magnitude tolerances for pole detection. POINT_POLE_EPSILON is the
+// tight default screen. ROOT_POLE_GUARD is the wider band used when a *root* of
+// one form is checked against the other: clearing a denominator (x/(n-1) → x)
+// introduces spurious roots that sit on the removed pole, and the Newton solver
+// lands on them to ~1e-8 — comfortably outside the 1e-9 default but still on the
+// pole. Testing such a root against the divided form divides float noise by a
+// near-zero denominator, ballooning the residual and rejecting an equivalent
+// pair. Skipping roots within ROOT_POLE_GUARD of a pole drops those phantom
+// witnesses (the divided form is undefined there, so they prove nothing). (#347)
+const POINT_POLE_EPSILON = 1e-9;
+const ROOT_POLE_GUARD = 1e-5;
+
 // Inequality region sampling: points are drawn symmetrically about zero so both
 // sides of a solution boundary are exercised. Samples within REGION_BOUNDARY_SKIP
 // of a boundary are ignored (their truth value is dominated by float error), and
@@ -438,20 +450,43 @@ const QUICK_REJECT_GAP = 1e-3;
 const QUICK_REJECT_GUESSES = [1.0, -1.0, 2.0];
 
 /**
- * Traverses an equation's LHS and RHS and checks if any division denominator
- * evaluates to a value extremely close to zero (< 1e-9) at the given scope.
- * This identifies roots that lie on (or close to, due to solver tolerance) poles.
+ * Traverses an equation's LHS and RHS and checks whether any division sits on a
+ * *removable* singularity at the given scope — i.e. a subexpression `n/d` where
+ * both `d` and `n` evaluate to within `threshold` of zero (an indeterminate
+ * `0/0`). Such points are the phantom roots that denominator clearing leaves
+ * behind: `(…)/(n-1) → …` introduces a spurious root at `n=1`, where the divided
+ * form is `0/0` and any residual is pure float noise divided by a near-zero
+ * denominator, so it can't witness non-equivalence.
+ *
+ * A *genuine* pole (`c/d` with `c≠0`, `d→0`) is deliberately NOT reported: it
+ * blows up to `±∞`, which is a legitimate proof of non-equivalence that the
+ * caller's finiteness check should reject (e.g. `x/0 = 2`). Only the `0/0` case
+ * is skipped.
+ *
+ * The default `POINT_POLE_EPSILON` is the tight screen; the phantom-root guards
+ * pass the wider {@link ROOT_POLE_GUARD} band, since the Newton solver lands a
+ * short distance (~1e-8) from the pole rather than exactly on it (#347).
  */
-const isNearPole = (eq: Equation, scope: Record<string, number>): boolean => {
+const isNearPole = (
+  eq: Equation,
+  scope: Record<string, number>,
+  threshold: number = POINT_POLE_EPSILON
+): boolean => {
   let nearPole = false;
   const check = (node: math.MathNode) => {
     if (nearPole) return;
     if (node.type === 'OperatorNode' && (node as math.OperatorNode).op === '/') {
-      const denom = (node as math.OperatorNode).args[1];
+      const [num, denom] = (node as math.OperatorNode).args;
       try {
-        const val = evaluatePoint(denom, scope);
-        if (typeof val === 'number' && Math.abs(val) < 1e-9) {
-          nearPole = true;
+        const dVal = evaluatePoint(denom, scope);
+        if (typeof dVal === 'number' && Math.abs(dVal) < threshold) {
+          // Denominator vanishes; only a coincident vanishing numerator (0/0)
+          // marks a removable pole worth skipping. A live numerator means a
+          // genuine ±∞ pole — leave it for the caller's finiteness check.
+          const nVal = evaluatePoint(num, scope);
+          if (typeof nVal === 'number' && Math.abs(nVal) < threshold) {
+            nearPole = true;
+          }
         }
       } catch {
         nearPole = true;
@@ -478,7 +513,7 @@ const quickRejectByRoot = (eq1: Equation, eq2: Equation, variables: string[]): b
       scope[v] = Math.random() * (RANGE_MID_MAX - RANGE_MID_MIN) + RANGE_MID_MIN;
     });
 
-    const sourceViolatesOther = (source: Equation, other: Equation, otherIsOriginal: boolean): boolean => {
+    const sourceViolatesOther = (source: Equation, other: Equation): boolean => {
       const isRealSrc = isEquationReal(source, scope);
       const sourceVars = Array.from(new Set(getVariables(source.lhs).concat(getVariables(source.rhs))));
       for (const solveVar of variables) {
@@ -488,7 +523,11 @@ const quickRejectByRoot = (eq1: Equation, eq2: Equation, variables: string[]): b
           if (root === null || !isValFinite(root) || isValNaN(root)) continue;
           if (isRealSrc && !isReal(root)) continue;
           const localScope = { ...scope, [solveVar]: root };
-          if (otherIsOriginal && isNearPole(other, localScope)) continue;
+          // A root of `source` that lands on a pole of `other` is a phantom
+          // introduced by denominator clearing — `other` is undefined there, so
+          // it can't witness non-equivalence. Skip it in both directions, with
+          // the wider band (the solver lands ~1e-8 from the pole). See #347.
+          if (isNearPole(other, localScope, ROOT_POLE_GUARD)) continue;
           const dOther = subV(evaluatePoint(other.lhs, localScope), evaluatePoint(other.rhs, localScope));
           if (isValNaN(dOther) || !isValFinite(dOther)) continue;
           if (absNum(dOther) > QUICK_REJECT_GAP) return true;
@@ -497,7 +536,7 @@ const quickRejectByRoot = (eq1: Equation, eq2: Equation, variables: string[]): b
       return false;
     };
 
-    return sourceViolatesOther(eq1, eq2, false) || sourceViolatesOther(eq2, eq1, true);
+    return sourceViolatesOther(eq1, eq2) || sourceViolatesOther(eq2, eq1);
   } catch {
     return false;
   }
@@ -584,6 +623,7 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
         const roots = roots1[solveVar] || [];
         for (const root of roots) {
           const localScope = { ...scope, [solveVar]: root };
+          if (isNearPole(eq2, localScope, ROOT_POLE_GUARD)) continue;
           const dTarget = subV(evaluatePoint(eq2.lhs, localScope), evaluatePoint(eq2.rhs, localScope));
           if (isValNaN(dTarget) || !isValFinite(dTarget) || absNum(dTarget) > 1e-5) {
             return false;
@@ -596,7 +636,7 @@ export const areEquationsEquivalentPoint = (eq1: Equation, eq2: Equation, variab
         const roots = roots2[solveVar] || [];
         for (const root of roots) {
           const localScope = { ...scope, [solveVar]: root };
-          if (isNearPole(eq1, localScope)) continue;
+          if (isNearPole(eq1, localScope, ROOT_POLE_GUARD)) continue;
           const dTarget = subV(evaluatePoint(eq1.lhs, localScope), evaluatePoint(eq1.rhs, localScope));
           if (isValNaN(dTarget) || !isValFinite(dTarget)) {
             continue;

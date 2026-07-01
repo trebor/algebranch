@@ -657,3 +657,18 @@ export const PRESET_LIST: Preset[] = [
     category: 'Formulas (Physics, Geometry & Science)',
   },
 ];
+
+/**
+ * One representative example equation per library category (#245), shown in the
+ * category header's hover tooltip so users get a preview of what a section holds
+ * — and osmotic guidance on the input syntax (explicit `*`, `^`, `sqrt(...)`).
+ * Kept as the raw input string on purpose: it teaches what to type. Coverage of
+ * every {@link PRESET_LIST} category is guarded by categoryExamples.test.ts.
+ */
+export const CATEGORY_EXAMPLES: Record<string, string> = {
+  'Linear & Basic Algebra': '2 * x + 4 = 10',
+  'Quadratics & Polynomials': 'x^2 - 4 = 0',
+  'Fractions, Radicals & Rationals': 'sqrt(x) + 2 = 5',
+  'Transcendental (Logs & Trig)': 'sin(phi)^2 + cos(phi)^2 = 1',
+  'Formulas (Physics, Geometry & Science)': 'E = m * c^2',
+};

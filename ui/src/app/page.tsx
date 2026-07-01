@@ -1408,11 +1408,13 @@ export default function Home() {
       keyLabel: '?',
     },
     {
+      // `id` lets the overlay's footer look up its own reopen key; no keyLabel
+      // needed — bare `k` formats to the `K` keycap like every other letter.
       key: 'k',
+      id: 'shortcuts-overlay',
       action: toggleShortcuts,
       description: 'Show keyboard shortcuts',
       category: 'Help',
-      keyLabel: 'k',
     },
     {
       key: 'a',
@@ -1464,7 +1466,8 @@ export default function Home() {
       action: () => openEqualsOp('sub'),
       description: 'Subtract from both sides',
       category: 'Both sides',
-      keyLabel: '−',
+      // Literal key you press (hyphen-minus), not the `−` operation glyph.
+      keyLabel: '-',
     },
     {
       key: '*',
@@ -1472,7 +1475,9 @@ export default function Home() {
       action: () => openEqualsOp('mul'),
       description: 'Multiply both sides',
       category: 'Both sides',
-      keyLabel: '×',
+      // Keycap shows the literal key you press (`*`), not the `×` operation
+      // glyph; keyLabel also suppresses the misleading Shift on US main rows.
+      keyLabel: '*',
     },
     {
       key: '*',
@@ -1486,21 +1491,20 @@ export default function Home() {
       action: () => openEqualsOp('div'),
       description: 'Divide both sides',
       category: 'Both sides',
-      keyLabel: '÷',
+      // Literal key you press (`/`), not the `÷` operation glyph.
+      keyLabel: '/',
     },
     {
       key: 'p',
       action: () => openEqualsOp('power'),
       description: 'Raise both sides to a power',
       category: 'Both sides',
-      keyLabel: 'p',
     },
     {
       key: 'r',
       action: () => openEqualsOp('root'),
       description: 'Take a root of both sides',
       category: 'Both sides',
-      keyLabel: 'r',
     },
     {
       // Settings on bare `,`, echoing the universal ⌘, convention in the app's
@@ -1851,7 +1855,7 @@ export default function Home() {
                   <Tooltip
                     content={
                       <HotkeyHint
-                        label={explorationMode ? 'Interactive view — transform the equation' : 'Read view — step through the equation'}
+                        label={explorationMode ? 'Interactive view' : 'Read view'}
                         keys="X"
                       />
                     }

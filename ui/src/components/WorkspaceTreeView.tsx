@@ -54,6 +54,7 @@ import {
   TREE_LOOP_ARCH_OFFSET_PX,
   TREE_ZOOM_MIN_DIFF_PX,
 } from '../utils/treeLayout';
+import { treeNodeStyle } from '../utils/treeNodeStyle';
 import type { StepChange } from 'math-engine';
 
 // Measure the panel before first paint on the client (so the tree never flashes
@@ -210,6 +211,11 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
   // Activating a loop bubble jumps to the ancestor it points back to; a regular
   // step selects itself.
   const selectId = loopAncestor ? loopAncestor.id : node.id;
+
+  // Card + badge styling resolved by state priority (loop > current > on-path >
+  // default). `isActive` is active-path membership; the current node ranks above
+  // it, so the whole root→cursor column reads as one without dulling the cursor.
+  const nodeStyle = treeNodeStyle({ isLoopHighlight, isCurrent, isOnPath: isActive });
 
   // Stable ref: registers this step with the roving controller (the current step
   // is `primary`, so it is the tree's default Tab entry) and tracks the current
@@ -406,22 +412,10 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
         {...interactiveProps}
         onMouseEnter={() => onHoverLoop(node.id)}
         onMouseLeave={() => onHoverLoop(null)}
-        className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${
-          isLoopHighlight
-            ? THEME_GLASS.TREE_NODE_LOOP
-            : isCurrent
-            ? THEME_GLASS.TREE_NODE_ACTIVE
-            : THEME_GLASS.TREE_NODE_DEFAULT
-        } ${exportPreviewActive && !isActive ? THEME_GLASS.COPY_PREVIEW_DIMMED : ''} ${interactive ? '' : 'cursor-default'}`}
+        className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${nodeStyle.card} ${exportPreviewActive && !isActive ? THEME_GLASS.COPY_PREVIEW_DIMMED : ''} ${interactive ? '' : 'cursor-default'}`}
       >
         {/* Step index badge on top-left */}
-        <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center font-bold shadow transition-all duration-300 ${
-          isLoopHighlight
-            ? THEME_GLASS.TREE_NODE_BADGE_LOOP
-            : isCurrent
-            ? THEME_GLASS.TREE_NODE_BADGE_ACTIVE
-            : THEME_GLASS.TREE_NODE_BADGE_DEFAULT
-        }`}>
+        <span className={`absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center font-bold shadow transition-all duration-300 ${nodeStyle.badge}`}>
           {stepNum}
         </span>
 

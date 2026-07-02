@@ -31,6 +31,14 @@ describe('describeTransposition — both-sides operations', () => {
     expect(change!.text).toBe('add 4 to both sides');
   });
 
+  it('minuend (head of a subtraction chain) across = becomes "subtract N from both sides" (#354)', () => {
+    // a - b - c = d : the head `a` (lhs/0/0, left child of the innermost binary
+    // minus) is a positive leading term, so moving it across `=` subtracts it.
+    const change = describeTransposition(eq('a - b - c = d'), 'lhs/0/0', 'rhs');
+    expect(change).toMatchObject({ kind: 'bothSides', op: 'subtract', operand: 'a' });
+    expect(change!.text).toBe('subtract a from both sides');
+  });
+
   it('factor across = becomes "divide both sides by N"', () => {
     // 3 * x = 15 : the 3 (lhs/0)
     const change = describeTransposition(eq('3 * x = 15'), 'lhs/0', 'rhs');

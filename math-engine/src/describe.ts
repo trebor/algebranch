@@ -169,8 +169,10 @@ export const describeTransposition = (
       op = 'subtract';
       break;
     case '-':
-      // Right child (subtrahend) → add to both sides. Minuend is rarer; defer.
-      op = childIndex === 1 ? 'add' : null;
+      // Right child (subtrahend, a negative term) → add it to both sides. Left
+      // child (minuend, a positive leading term — e.g. the head of `a - b - c`)
+      // → subtract it from both sides (#354).
+      op = childIndex === 1 ? 'add' : 'subtract';
       break;
     case '*':
       op = 'divide';

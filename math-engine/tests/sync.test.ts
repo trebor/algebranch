@@ -11,6 +11,7 @@ import {
   serializeEquation,
   deserializeEquation,
   equationToString,
+  areEquationsEquivalent,
 } from '../src';
 import { isCommutativeChainLink } from '../src/explore';
 import type { Equation } from '../src';
@@ -152,6 +153,39 @@ describe('activePaths — commutative chain-link suppression (#353)', () => {
     const result = computeMathSync(parseEquation('2 + 3 + x = 10'), null);
     expect(result.activePaths).not.toContain('lhs/0');
     expect(Object.keys(result.reduciblePaths)).toContain('lhs/0');
+  });
+
+  // #354 — the head (leftmost) term of a subtraction chain is transposable, the
+  // same way a sum's head is. The asymmetry was that move generation synthesized
+  // the head-term move for `+` chains but dropped it for `-` chains.
+  test('a-b-c: the head term `a` is offered, like a sum head', () => {
+    // `a-b-c=d` = `-[-[a,b],c]`; lhs/0/0 is the head term `a`.
+    expect(wouldMove('a - b - c = d', 'lhs/0/0')).toBe(true);
+    expect(activeSet('a - b - c = d').has('lhs/0/0')).toBe(true);
+    // Symmetric with the sum, whose head was already offered.
+    expect(activeSet('a + b + c = d').has('lhs/0/0')).toBe(true);
+  });
+
+  test('a-b+c: the head term of a mixed -/+ chain is offered', () => {
+    expect(activeSet('a - b + c = d').has('lhs/0/0')).toBe(true);
+  });
+
+  test('the head move subtracts the term from both sides (-b - c = d - a)', () => {
+    const src = parseEquation('a - b - c = d');
+    const moves = generateValidMoves(src, 'lhs/0/0'); // source = head `a`
+    const across = moves['rhs']; // cross-equals move lands on the RHS root
+    expect(across).toBeDefined();
+    expect(areEquationsEquivalent(src, across)).toBe(true);
+    expect(areEquationsEquivalent(parseEquation('-b - c = d - a'), across)).toBe(true);
+  });
+
+  test('inequality: moving the head keeps the relation direction (subtraction never flips)', () => {
+    const src = parseEquation('a - b - c < d');
+    const moves = generateValidMoves(src, 'lhs/0/0');
+    const across = moves['rhs'];
+    expect(across).toBeDefined();
+    expect(across.relation).toBe('<');
+    expect(areEquationsEquivalent(src, across)).toBe(true);
   });
 
   test('an arbitrary chain link is not offered as a drop target either', () => {

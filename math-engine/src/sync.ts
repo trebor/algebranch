@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import { Equation, SerializedEquation, getAllPaths, serializeEquation } from './tree';
+import { Equation, SerializedEquation, getAllPaths, getNodeByPath, serializeEquation } from './tree';
 import { generateValidMoves, hasValidMove } from './validator';
 import { getReducibleOptions } from './simplify';
+import { isCommutativeChainLink } from './explore';
 
 /**
  * The sync-state payload the UI store consumes each time the equation (or the
@@ -36,11 +37,36 @@ export interface MathSyncResult {
  * @param sourcePath the selected source term whose drop targets to compute, or
  *                   null when nothing is selected (then `targetPaths` is empty)
  */
+/**
+ * True when the node at `path` in `eq` is an arbitrary same-operator chain link
+ * (`a+b+c` = `+[+[a,b],c]`, the inner `+`). Associativity makes that grouping a
+ * parser artifact, not a meaningful subterm, so it must be neither selectable nor
+ * a drop target — the interaction analog of the exploration-stop suppression in
+ * #290 (#353). The immediate parent is the node one path segment up (null for a
+ * side root). Resolution failures return false: an unresolvable path is not a
+ * link, and callers should keep it rather than abort.
+ */
+const isChainLinkPath = (eq: Equation, path: string): boolean => {
+  try {
+    const slash = path.lastIndexOf('/');
+    const parent = slash < 0 ? null : getNodeByPath(eq, path.slice(0, slash));
+    return isCommutativeChainLink(getNodeByPath(eq, path), parent);
+  } catch {
+    return false;
+  }
+};
+
 export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSyncResult => {
   // 1. Active paths: nodes that can be moved/transformed.
   const activePaths: string[] = [];
   for (const path of getAllPaths(eq)) {
     try {
+      // An arbitrary chain link is never selectable/boxable. Its terms stay
+      // addressable, and any legitimate reduction (e.g. `2+3`->`5`) is unaffected
+      // because reduciblePaths (step 2) is a separate channel.
+      if (isChainLinkPath(eq, path)) {
+        continue;
+      }
       // Existence-only short-circuit: step 1 only needs "has ≥1 move", so this
       // stops at the first valid move rather than building the full map (#188).
       if (hasValidMove(eq, path)) {
@@ -70,6 +96,14 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
       const moves = generateValidMoves(eq, sourcePath);
       delete moves[sourcePath];
       for (const k of Object.keys(moves)) {
+        // Symmetry with step 1: an arbitrary chain link isn't a valid drop target
+        // either — dropping onto the `(a+b)` of `a+b+c` only reshuffles the chain
+        // (`a+b+c` -> `a+c+b`) and boxes the artifact group via isTarget. Skip it;
+        // its terms remain valid targets (#353). Target keys are matched against the
+        // rendered `eq`, the same tree the UI keys isTarget on.
+        if (isChainLinkPath(eq, k)) {
+          continue;
+        }
         targetPaths[k] = serializeEquation(moves[k]);
       }
     } catch {

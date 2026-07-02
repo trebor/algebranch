@@ -439,16 +439,30 @@ export const complexToNode = (value: number | { re: number; im: number; isComple
     : new mjs.OperatorNode('+', 'add', [reNode, imaginaryTerm(im)]);
 };
 
+const cleanNodeStr = (node: math.MathNode): string => node.toString().replace(/[\s()]/g, '');
+
 /**
  * Fold a constant subtree that contains ⅈ into `a + b·ⅈ` standard form — the
  * minimal complex-arithmetic simplification (ⅈ² → −1, power cycling, combining
- * like imaginary terms). Fires only when the number of ⅈ occurrences strictly
- * drops, so it collapses genuine arithmetic (ⅈ·3·ⅈ → −3, 2ⅈ + 3ⅈ → 5ⅈ) without
- * ever firing as a pure commutative reorder (ⅈ·3 → 3·ⅈ) or on an already-standard
- * term. Returns null for a variable-bearing or ⅈ-free node (the latter is left
- * to the ordinary real simplifier). (#105)
+ * like imaginary terms). Returns the folded node plus the label the move should
+ * carry, or null when nothing changes.
+ *
+ * The label tracks the exact/decimal split so the folded move honors the same
+ * gates a real simplification would (#105):
+ *  - Integer result (ⅈ·3·ⅈ → −3, 2ⅈ + 3ⅈ → 5ⅈ) → an exact `Simplify`. Fires only
+ *    on a genuine collapse (fewer ⅈ, or a structurally smaller tree for power
+ *    cycling like ⅈ³ → −ⅈ), so it never fires as a bare commutative reorder
+ *    (ⅈ·3 → 3·ⅈ) or on an already-standard term.
+ *  - Non-integer result (5·ⅈ/3 → 1.666…·ⅈ) → `Evaluate to Decimal`, so it is
+ *    gated exactly like the real decimal evaluation and never rides in under
+ *    `Simplify`. Fires whenever the decimal form differs from the input.
+ *
+ * Returns null for a variable-bearing or ⅈ-free node (the latter is left to the
+ * ordinary real simplifier).
  */
-export const trySimplifyComplexConstant = (node: math.MathNode): math.MathNode | null => {
+export const trySimplifyComplexConstant = (
+  node: math.MathNode,
+): { node: math.MathNode; label: 'Simplify' | 'Evaluate to Decimal' } | null => {
   if (countImaginaryUnits(node) === 0) return null;
   if (!isConstantSubtree(node)) return null;
 
@@ -458,19 +472,24 @@ export const trySimplifyComplexConstant = (node: math.MathNode): math.MathNode |
   } catch {
     return null;
   }
-  const re = typeof value === 'number' ? value : value.re;
-  const im = typeof value === 'number' ? 0 : value.im;
+  const re = snapReal(typeof value === 'number' ? value : value.re);
+  const im = snapReal(typeof value === 'number' ? 0 : value.im);
   if (!Number.isFinite(re) || !Number.isFinite(im) || Number.isNaN(re) || Number.isNaN(im)) return null;
 
   const out = complexToNode(value);
-  // Fire only on a genuine simplification: fewer ⅈ occurrences (ⅈ² → −1,
-  // combining like terms) OR a structurally smaller result (power cycling like
-  // ⅈ³ → −ⅈ keeps one ⅈ but drops the exponent). This rejects a bare
-  // commutative reorder (ⅈ·3 → 3·ⅈ) and an already-standard term.
-  const collapsesUnits = countImaginaryUnits(out) < countImaginaryUnits(node);
-  const shrinks = countNodes(out) < countNodes(node);
-  if (!collapsesUnits && !shrinks) return null;
-  return out;
+  const isExact = Number.isInteger(re) && Number.isInteger(im);
+
+  if (isExact) {
+    const collapsesUnits = countImaginaryUnits(out) < countImaginaryUnits(node);
+    const shrinks = countNodes(out) < countNodes(node);
+    if (!collapsesUnits && !shrinks) return null;
+    return { node: out, label: 'Simplify' };
+  }
+
+  // Decimal result: offer it as a gated "Evaluate to Decimal" whenever it
+  // actually changes the expression.
+  if (cleanNodeStr(out) === cleanNodeStr(node)) return null;
+  return { node: out, label: 'Evaluate to Decimal' };
 };
 
 /**
@@ -1653,13 +1672,13 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
       const node = getNodeByPath(eq, path);
       const folded = trySimplifyComplexConstant(node);
       if (folded) {
-        const newEq = replaceNodeAtPath(eq, path, folded);
+        const newEq = replaceNodeAtPath(eq, path, folded.node);
         if (areEquationsEquivalent(eq, newEq)) {
           rawReductions.push({
             path,
             simplified: newEq,
             type: 'reduce',
-            label: 'Simplify',
+            label: folded.label,
           });
         }
       }

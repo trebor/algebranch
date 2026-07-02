@@ -5,9 +5,14 @@ import { parseEquation, getReducibleOptions, areEquationsEquivalent } from '../s
 import { trySimplifyComplexConstant } from '../src/simplify';
 import { mjs } from '../src/mathjs';
 
+const fold = (expr: string) => trySimplifyComplexConstant(mjs.parse(expr));
 const simp = (expr: string) => {
-  const out = trySimplifyComplexConstant(mjs.parse(expr));
-  return out ? out.toString() : null;
+  const out = fold(expr);
+  return out ? out.node.toString() : null;
+};
+const labelOf = (expr: string) => {
+  const out = fold(expr);
+  return out ? out.label : null;
 };
 
 const findSimplify = (eqStr: string, resultRhs: string) => {
@@ -55,6 +60,21 @@ describe('simplify a constant ℂ-subtree to standard form', () => {
     test('does not fire when there is a free variable', () => {
       expect(simp('x * ⅈ')).toBeNull();
     });
+
+    test('routes a decimal result through "Evaluate to Decimal", never "Simplify"', () => {
+      // 5·ⅈ/3 = 1.666…·ⅈ decimalizes the exact 5/3 — that is the decimal
+      // evaluation, so it must carry the gated label, not "Simplify". (#105)
+      expect(labelOf('5 * ⅈ / 3')).toBe('Evaluate to Decimal');
+      expect(labelOf('ⅈ / 3')).toBe('Evaluate to Decimal');
+    });
+
+    test('an exact (integer) fold is a plain "Simplify"', () => {
+      expect(labelOf('ⅈ * 3 * ⅈ')).toBe('Simplify');
+      expect(labelOf('2 * ⅈ + 3 * ⅈ')).toBe('Simplify');
+      // A fraction that reduces to an integer coefficient stays exact.
+      expect(simp('10 * ⅈ / 2')).toBe('5 * ⅈ');
+      expect(labelOf('10 * ⅈ / 2')).toBe('Simplify');
+    });
   });
 
   describe('surfaced as a reducible move', () => {
@@ -63,6 +83,21 @@ describe('simplify a constant ℂ-subtree to standard form', () => {
       expect(opt).toBeDefined();
       expect(opt!.label).toBe('Simplify');
       expect(areEquationsEquivalent(eq, opt!.simplified)).toBe(true);
+    });
+
+    test('offers 5·ⅈ/3 as a gated "Evaluate to Decimal" move', () => {
+      // So the decimal setting governs it exactly like a real decimal eval — the
+      // UI hides it when decimals are off and shows it when they are on. (#105)
+      const eq = parseEquation('x = 5 * ⅈ / 3');
+      const reductions = getReducibleOptions(eq);
+      const opt = Object.values(reductions).flat().find((r) => r.label === 'Evaluate to Decimal');
+      expect(opt).toBeDefined();
+      expect(areEquationsEquivalent(eq, opt!.simplified)).toBe(true);
+      // ...and none of the offered moves decimalize under a "Simplify" label.
+      const simplifyDecimals = Object.values(reductions)
+        .flat()
+        .filter((r) => r.label === 'Simplify' && /\d\.\d/.test(r.simplified.rhs.toString()));
+      expect(simplifyDecimals).toEqual([]);
     });
   });
 });

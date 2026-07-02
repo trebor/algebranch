@@ -393,7 +393,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     setHoveredOption(null);
     setHoverReducePath(null);
     setHoverReduceIndex(null);
-  }, [cancelMenuClose, setHoverReducePath, setHoverReduceIndex]);
+    // Touch has no hover-leave: opening the menu (via a tap on the handle)
+    // synthesizes a mouseenter that pins hoverPath to this node, highlighting it,
+    // and no leave ever fires. Every dismiss path routes through closeMenu — the
+    // handle re-tap, an outside tap, Escape, applying an option — so clearing
+    // hoverPath here returns the node to neutral however the menu is dismissed,
+    // not just on a second handle tap (#388). Hover devices keep their real
+    // enter/leave, so this is touch-only.
+    if (!canHover) setHoverPath(null);
+  }, [cancelMenuClose, canHover, setHoverPath, setHoverReducePath, setHoverReduceIndex]);
   // Leaving the handle or the menu schedules a close after a grace period; moving
   // onto the other one cancels it. This is the entire open/close model — no global
   // tooltip state involved, so nothing external can dismiss the menu mid-traversal.
@@ -2080,7 +2088,18 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
               </div>
             );
             const previewEl = (
-              <div className="relative w-full">
+              <div
+                className="relative w-full"
+                data-testid="menu-preview"
+                // The preview is read-only, but the menu is portaled to
+                // document.body while React events still bubble through the
+                // component tree — so an unguarded tap here reaches the node's
+                // own onClick and selects the term behind the menu (the option
+                // rows already stopPropagation for the same reason). Swallow the
+                // press so tapping the preview does nothing (#388).
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className={previewOption ? '' : 'invisible'}>
                   <ScaledEquationFit
                     key={`${path}:${openMenuType}`}

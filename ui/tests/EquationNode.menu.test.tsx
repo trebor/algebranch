@@ -11,6 +11,7 @@ import {
   rawActiveTabIdAtom,
   candidatePathsAtom,
   reduciblePathsAtom,
+  sourcePathAtom,
   type WorkspaceTab,
 } from '@/store/equation';
 import { parseEquation } from 'math-engine-client';
@@ -281,6 +282,25 @@ describe('single-option handle opens the menu too (#369)', () => {
 
     const options = screen.getAllByRole('menuitem');
     expect(options).toHaveLength(1);
+  });
+
+  it('absorbs a tap on the preview instead of leaking it to the node behind (#388)', () => {
+    const store = makeSingleOptionStore();
+    renderTree(store);
+    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    mouseClick(handle);
+
+    // Opening the menu selects nothing.
+    expect(store.get(sourcePathAtom)).toBeNull();
+
+    // The menu is portaled to document.body, but React events still bubble
+    // through the *component* tree — so a tap on the read-only preview would
+    // otherwise reach the node's own onClick and select the term behind the
+    // menu. The preview must swallow the tap.
+    fireEvent.click(screen.getByTestId('menu-preview'));
+
+    expect(store.get(sourcePathAtom)).toBeNull();
+    expect(screen.getByRole('menu')).toBeInTheDocument();
   });
 
   it('auto-previews the sole option (no "hover to preview" placeholder)', () => {

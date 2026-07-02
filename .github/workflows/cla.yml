@@ -24,7 +24,14 @@ jobs:
     steps:
       - name: "CLA Assistant"
         if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event_name == 'pull_request_target'
-        uses: contributor-assistant/github-action@v2.6.1
+        # Own fork of upstream contributor-assistant/github-action, which was
+        # archived 2026-03-23 frozen on the deprecated Node 20 runtime (#154).
+        # This pin is upstream v2.6.1 — the exact code this repo has run for
+        # months — with a single one-line change: action.yml runtime node20 ->
+        # node24. dist/index.js (the executed bundle) is byte-identical to
+        # v2.6.1 (git blob 00fffc31…64adf6), so nothing runs on this privileged
+        # pull_request_target step that we haven't frozen and verified ourselves.
+        uses: trebor/cla-github-action@82dc579d8d8562a3c2de5808a7e341b699b534e9 # v2.6.1 + node24
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

@@ -30,8 +30,11 @@ describe('extend to ℂ — sqrt of a negative', () => {
     test('pulls the imaginary unit out of a negative square root', () => {
       expect(extend('sqrt(-4)')).toBe('sqrt(4) * ⅈ');
       expect(extend('sqrt(-8)')).toBe('sqrt(8) * ⅈ');
-      expect(extend('sqrt(-1)')).toBe('sqrt(1) * ⅈ');
       expect(extend('sqrt(-11)')).toBe('sqrt(11) * ⅈ');
+    });
+
+    test('collapses √−1 straight to ⅈ (no degenerate √1 intermediate)', () => {
+      expect(extend('sqrt(-1)')).toBe('ⅈ');
     });
 
     test('returns null for a non-negative radicand (nothing to extend)', () => {
@@ -51,6 +54,12 @@ describe('extend to ℂ — sqrt of a negative', () => {
       const { opt } = findExtend('x = sqrt(-4)');
       expect(opt).toBeDefined();
       expect(opt!.simplified.rhs.toString()).toBe('sqrt(4) * ⅈ');
+    });
+
+    test('offers √−1 → ⅈ directly on a unit radicand', () => {
+      const { opt } = findExtend('x = sqrt(-1)');
+      expect(opt).toBeDefined();
+      expect(opt!.simplified.rhs.toString()).toBe('ⅈ');
     });
 
     test('the move preserves equivalence (√−4 and √4·ⅈ are the same value)', () => {

@@ -378,6 +378,12 @@ export const tryExtendToComplex = (node: math.MathNode): math.MathNode | null =>
   }
   if (!posRadicand) return null;
 
+  // √−1 collapses straight to ⅈ — the √1 factor would be a pure-noise
+  // intermediate. Any other radicand keeps its residual real √A for a
+  // following Simplify step (√−4 → √4·ⅈ → 2·ⅈ).
+  const posVal = Number(posRadicand.compile().evaluate());
+  if (posVal === 1) return new mjs.SymbolNode(IMAGINARY_UNIT);
+
   return new mjs.OperatorNode('*', 'multiply', [
     new mjs.FunctionNode('sqrt', [posRadicand]),
     new mjs.SymbolNode(IMAGINARY_UNIT),

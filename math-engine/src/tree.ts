@@ -321,6 +321,66 @@ export const stripRedundantParentheses = (
   return node;
 };
 
+/** The associative/commutative operators whose chains have a canonical shape. */
+const ASSOCIATIVE_OPS = new Set(['+', '*']);
+
+const isAssociativeChainNode = (node: math.MathNode): node is math.OperatorNode =>
+  node.type === 'OperatorNode' &&
+  ASSOCIATIVE_OPS.has((node as math.OperatorNode).op) &&
+  (node as math.OperatorNode).args.length === 2;
+
+const canonicalizeNode = (node: math.MathNode): math.MathNode => {
+  if (isAssociativeChainNode(node)) {
+    const op = node.op;
+    const operands: math.MathNode[] = [];
+    const links: math.MathNode[] = [];
+    // Flatten the maximal same-operator chain. Operands are collected in
+    // document order (each recursively canonicalized); the chain's own binary
+    // link nodes are collected post-order — innermost first — so reusing them
+    // left-to-right returns an already-left-nested chain unchanged.
+    const collect = (n: math.MathNode): void => {
+      if (isAssociativeChainNode(n) && n.op === op) {
+        collect(n.args[0]);
+        collect(n.args[1]);
+        links.push(n);
+      } else {
+        operands.push(canonicalizeNode(n));
+      }
+    };
+    collect(node);
+
+    let acc = operands[0];
+    for (let i = 1; i < operands.length; i++) {
+      // A binary chain of n operands always has exactly n-1 link nodes, so a
+      // link is always available; reusing it preserves the container's id.
+      acc = cloneWithChildren(links[i - 1], [acc, operands[i]]);
+    }
+    return acc;
+  }
+
+  const children = getChildren(node);
+  if (children.length === 0) return node;
+  return cloneWithChildren(node, children.map(canonicalizeNode));
+};
+
+/**
+ * Rebuilds every maximal same-operator associative chain (`+`/`*`) into the
+ * parser's canonical LEFT-nested shape (#378). Move construction can wrap a
+ * dragged term onto a chain operand and emit a RIGHT-nested pair
+ * (`b*(c*a)` instead of `(b*c)*a`) — a shape no other code path produces, which
+ * strands the chain's terms in path/active-set computation and leaves the new
+ * wrapper id-less. Flattening then left-folding restores canonical nesting.
+ * Operand ids are preserved, and the chain's link nodes are reused as
+ * containers, so an already-canonical chain is returned structurally identical.
+ * Run {@link ensureNodeIds} afterwards to backfill ids on any freshly created
+ * link node.
+ */
+export const canonicalizeAssociativeChains = (eq: Equation): Equation => ({
+  lhs: canonicalizeNode(eq.lhs),
+  rhs: canonicalizeNode(eq.rhs),
+  relation: eq.relation,
+});
+
 export const ensureNodeIds = (eq: Equation): Equation => {
   // Strip redundant parenthesis across LHS and RHS trees
   const cleanedLhs = stripRedundantParentheses(eq.lhs, null, false);

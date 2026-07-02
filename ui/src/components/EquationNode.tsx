@@ -31,7 +31,7 @@ import {
 import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, symbolHintFor, isImaginaryUnit } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
 import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
-import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech } from 'math-engine-client';
+import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech, flattenAssociativeChain } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
 import { describeTransposition, describeReduction, describeSubstitution, describeCollapse } from 'math-engine';
 import { ArrowLeftRight, Zap, Split, RefreshCw, Replace, TriangleAlert, ArrowRight } from 'lucide-react';
@@ -1170,6 +1170,64 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         getNodePadding(`${path}/0`).paddingTop,
         getNodePadding(`${path}/1`).paddingTop,
       );
+
+      // Flatten a maximal associative chain (`a+b+c` = `+[+[a,b],c]`) into even
+      // siblings instead of surfacing the parser's arbitrary left-nested pairs, so
+      // the visual render matches the flat structure Exploration mode already reads
+      // (#290) and Interaction mode already treats as addressable (#353 WA). A chain
+      // ROOT is an associative +/* operator whose parent is NOT the same op and
+      // which actually chains (a same-op child).
+      const isAssocOp = opNode.op === '+' || opNode.op === '*';
+      const parentSlash = path.lastIndexOf('/');
+      let parentOp: string | null = null;
+      if (parentSlash >= 0) {
+        try {
+          const p = getNodeByPath(currentEq, path.slice(0, parentSlash));
+          if (p.type === 'OperatorNode') parentOp = (p as math.OperatorNode).op;
+        } catch { /* no resolvable parent */ }
+      }
+      const chainsSameOp = opNode.args.some(
+        (a) => a.type === 'OperatorNode' && (a as math.OperatorNode).op === opNode.op,
+      );
+
+      if (isAssocOp && parentOp !== opNode.op && chainsSameOp) {
+        const { operandPaths, linkPaths } = flattenAssociativeChain(opNode, path);
+        // Non-regression guard: a collapsed link node may carry a handle (e.g. the
+        // `2+3`->`5` reduce on `2+3+x` lives on the inner `+`). Flattening would
+        // orphan it, so fall back to the nested render when any link is
+        // handle-bearing. Re-homing the fold handle onto a flattened chain is a
+        // separate follow-up.
+        const linkHasHandle = linkPaths.some(
+          (lp) => (reduciblePaths[lp]?.length ?? 0) > 0 || (substitutionPaths[lp]?.length ?? 0) > 0,
+        );
+        if (!linkHasHandle) {
+          const chainRowTop = cssMax(...operandPaths.map((op) => getNodePadding(op).paddingTop));
+          // Key each operand by its stable node id (not its path, which shifts when
+          // a term transposes) so React identity — and thus FLIP move continuity —
+          // survives a move, matching getChildId's id-keying on the binary render.
+          const operandKey = (operandPath: string): string => {
+            try {
+              return (getNodeByPath(currentEq, operandPath) as unknown as { id?: string }).id || operandPath;
+            } catch {
+              return operandPath;
+            }
+          };
+          return (
+            <div className="flex items-center gap-[0.2em] flex-nowrap justify-center py-[0.05em]">
+              {operandPaths.map((operandPath, i) => (
+                <React.Fragment key={operandKey(operandPath)}>
+                  {i > 0 && (
+                    <span style={{ paddingTop: chainRowTop, paddingBottom: `${layout.nodePy}em`, display: 'inline-flex', alignItems: 'center' }}>
+                      <span className={`font-medium select-none text-[0.85em] ${isStatic ? THEME_GLASS.MATH_OP_STATIC : THEME_GLASS.MATH_OP_ACTIVE}`} style={getOpStyle()}>{opSymbol}</span>
+                    </span>
+                  )}
+                  <EquationNode path={operandPath} inExponent={inExponent} minPaddingTop={chainRowTop} />
+                </React.Fragment>
+              ))}
+            </div>
+          );
+        }
+      }
 
       return (
         <div className="flex items-center gap-[0.2em] flex-nowrap justify-center py-[0.05em]">

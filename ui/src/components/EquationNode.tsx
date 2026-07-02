@@ -34,7 +34,7 @@ import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
 import { describeTransposition, describeReduction, describeSubstitution, describeCollapse } from 'math-engine';
-import { ArrowLeftRight, Zap, Split, RefreshCw, Replace, TriangleAlert } from 'lucide-react';
+import { ArrowLeftRight, Zap, Split, RefreshCw, Replace, TriangleAlert, ArrowRight } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
 import { useMathScale } from '../hooks/useMathScale';
@@ -1688,74 +1688,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
               </span>
             ) : null;
 
-            // Single-option handle: a plain hover preview tooltip; click applies.
-            if (single) {
-              const singleTooltip = (
-                <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
-                  <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">{single.label}</span>
-                  {single.subLabel && (
-                    <span className={`text-xs ${THEME_GLASS.TEXT_MUTED} select-none`}>{single.subLabel}</span>
-                  )}
-                  {single.assumptions && single.assumptions.length > 0 && (
-                    <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} select-none`}>
-                      <TriangleAlert size={11} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
-                      <span>assuming {single.assumptions.join(', ')}</span>
-                    </span>
-                  )}
-                  <div className="w-full border-t border-white/10 my-1" />
-                  <ScaledEquationFit measureEq={single.equation} className="max-w-[280px] sm:max-w-[340px]">
-                    {renderEquationPreviewRow(single.equation, false)}
-                  </ScaledEquationFit>
-                </div>
-              );
-              return (
-                <Tooltip
-                  key={stack.type}
-                  content={singleTooltip}
-                  position="top"
-                  // Suppress while the tree is mid-slide (#234): a freshly-revealed
-                  // handle under the cursor must not auto-pop its tooltip over a
-                  // term that is still moving.
-                  visible={isTreeAnimating ? false : undefined}
-                  className="max-w-[300px] sm:max-w-[360px]"
-                >
-                  <button
-                    className={buttonClass}
-                    style={buttonStyle}
-                    // Roving item folded into the expression's single Tab stop
-                    // (#257): tabIndex is controller-driven, and in transposition
-                    // mode the handle leaves the roving set (toolbar inert).
-                    ref={handleRef}
-                    tabIndex={handleTabIndex}
-                    onKeyDown={(e) => handleRovingKeyDown(e, stack.type)}
-                    aria-label={single.label || config.singularLabel}
-                    onMouseEnter={(e) => {
-                      e.stopPropagation();
-                      if (stack.type !== 'substitute') {
-                        setHoverReducePath(path);
-                        setHoverReduceIndex(actions.indexOf(single.originalOption as ReducibleActionInfo));
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.stopPropagation();
-                      if (stack.type !== 'substitute') {
-                        setHoverReducePath(null);
-                        setHoverReduceIndex(null);
-                      }
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      single.onApply();
-                    }}
-                  >
-                    {buttonInner}
-                  </button>
-                </Tooltip>
-              );
-            }
-
-            // Multi-option handle: opens a self-contained hover popover (rendered
-            // once, below). Deliberately not a Tooltip, so it's immune to the global
+            // Every handle — single- or multi-option — opens the same
+            // self-contained popover (#369). Uniform gesture: hover/click both
+            // reveal the chooser, so a click never silently mutates the equation.
+            // Deliberately not a Tooltip, so it's immune to the global
             // single-active-tooltip churn that was dismissing it mid-traversal.
             return (
               <span key={stack.type} className="relative inline-flex">
@@ -1766,7 +1702,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                 // arrow keys rove, Escape closes the menu or releases focus.
                 ref={handleRef}
                 tabIndex={handleTabIndex}
-                aria-label={`Show ${config.pluralLabel}`}
+                // A single-option handle keeps its descriptive option label as its
+                // accessible name (better for screen readers than "Show
+                // simplification"); multi-option handles read "Show {plural}".
+                aria-label={single ? (single.label || config.singularLabel) : `Show ${config.pluralLabel}`}
                 aria-haspopup="menu"
                 aria-expanded={openMenuType === stack.type}
                 onMouseEnter={(e) => {
@@ -1802,18 +1741,26 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
           })}
           {openMenuType && menuAnchor && typeof document !== 'undefined' && (() => {
             const stack = interactionStacks.find((s) => s.type === openMenuType);
-            if (!stack || stack.options.length < 2) return null;
+            if (!stack || stack.options.length < 1) return null;
             const config = STACK_CONFIG[stack.type];
+            const isSingle = stack.options.length === 1;
             const optionLabelClass = stack.type === 'substitute' ? THEME_GLASS.CHOOSER_OPTION_SUBSTITUTE :
               stack.type === 'reduce' ? THEME_GLASS.CHOOSER_OPTION_SIMPLIFY :
               stack.type === 'distribute' ? THEME_GLASS.CHOOSER_OPTION_DISTRIBUTE :
               THEME_GLASS.CHOOSER_OPTION_IDENTITY;
-            // The preview tracks the hovered row; before any hover it stays empty
-            // (with a hint) so it never implies a one-click default.
-            const previewOption = hoveredOption && hoveredOption.type === stack.type
-              ? stack.options[hoveredOption.index]
-              : null;
-            const headerEl = (
+            // Multi-option: the preview tracks the hovered row and stays empty
+            // (with a hint) before any hover, so it never implies a one-click
+            // default. Single-option: nothing to disambiguate, so preview the sole
+            // option straight away — a fast read-then-confirm, not a hunt (#369).
+            const previewOption = isSingle
+              ? stack.options[0]
+              : (hoveredOption && hoveredOption.type === stack.type
+                ? stack.options[hoveredOption.index]
+                : null);
+            // A single-option menu drops the header: it would only echo the sole
+            // row's label ("Simplify" over "Simplify") (#369). The count header
+            // earns its place only when it's actually counting.
+            const headerEl = isSingle ? null : (
               <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-85 px-1.5">
                 {stack.options.length} {config.pluralLabel} Available
               </span>
@@ -1822,7 +1769,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
               <div
                 role="menu"
                 aria-label={`${stack.options.length} ${config.pluralLabel} available`}
-                className="flex flex-col w-full divide-y divide-white/5"
+                className="flex flex-col w-full gap-1"
                 onMouseLeave={() => setHoveredOption(null)}
               >
                 {stack.options.map((opt, i) => (
@@ -1835,7 +1782,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                     ref={(el) => { menuOptionRefs.current[i] = el; }}
                     tabIndex={i === menuActiveIndex ? 0 : -1}
                     onKeyDown={handleMenuKeyDown}
-                    className={`w-full min-w-0 text-left px-1.5 py-1.5 flex flex-col gap-0.5 cursor-pointer ${THEME_GLASS.LIST_ITEM_HOVER}`}
+                    // `group` drives the trailing arrow's hover/focus brightening.
+                    className={`group w-full min-w-0 text-left px-2 py-1.5 flex items-center gap-2 cursor-pointer ${THEME_GLASS.CHOOSER_OPTION_ROW}`}
                     onMouseEnter={() => {
                       setHoveredOption({ type: stack.type, index: i });
                       if (stack.type !== 'substitute') {
@@ -1853,14 +1801,23 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                       closeMenu();
                     }}
                   >
-                    <span className={`block truncate leading-snug ${optionLabelClass}`}>{opt.label}</span>
-                    {opt.subLabel && <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED}`}>{opt.subLabel}</span>}
-                    {opt.assumptions && opt.assumptions.length > 0 && (
-                      <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} mt-0.5`}>
-                        <TriangleAlert size={11} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
-                        <span>assuming {opt.assumptions.join(', ')}</span>
-                      </span>
-                    )}
+                    <span className="flex flex-col gap-0.5 min-w-0 flex-1">
+                      <span className={`block truncate leading-snug ${optionLabelClass}`}>{opt.label}</span>
+                      {opt.subLabel && <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED}`}>{opt.subLabel}</span>}
+                      {opt.assumptions && opt.assumptions.length > 0 && (
+                        <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} mt-0.5`}>
+                          <TriangleAlert size={11} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
+                          <span>assuming {opt.assumptions.join(', ')}</span>
+                        </span>
+                      )}
+                    </span>
+                    {/* Trailing "apply" cue — signals the row is a pressable action. */}
+                    <ArrowRight
+                      size={14}
+                      aria-hidden="true"
+                      data-testid="option-apply-cue"
+                      className={`shrink-0 ${THEME_GLASS.CHOOSER_OPTION_ARROW}`}
+                    />
                   </button>
                 ))}
               </div>
@@ -1894,9 +1851,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
             // them, not the preview: menu-above => preview on top; menu-below =>
             // preview on the bottom. The header always hugs the list.
             const placeAbove = menuAnchor.placement === 'above';
-            const sections = placeAbove
+            const sections = (placeAbove
               ? [previewEl, headerEl, listEl]
-              : [headerEl, listEl, previewEl];
+              : [headerEl, listEl, previewEl]
+            ).filter(Boolean);
 
             return createPortal(
               <div

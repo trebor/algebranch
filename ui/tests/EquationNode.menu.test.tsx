@@ -42,6 +42,33 @@ function makeMultiOptionStore() {
   return store;
 }
 
+// A node carrying exactly ONE reduce option on one path → a single-option
+// handle. It now opens the same popover menu as a multi-option handle rather
+// than applying on click (#369).
+function makeSingleOptionStore() {
+  const store = createStore();
+  const eq = parseEquation('x+8=0');
+  const tab: WorkspaceTab = {
+    id: 'a',
+    name: 'w',
+    historyTree: {
+      '0': { id: '0', equation: eq, parentId: null, childrenIds: [], label: 'Initial', timestamp: 1 },
+    },
+    currentNodeId: '0',
+    isCustomNamed: true,
+    timestamp: 1,
+  };
+  store.set(rawTabsAtom, [tab]);
+  store.set(rawActiveTabIdAtom, 'a');
+  store.set(candidatePathsAtom, new Set(['lhs/1']));
+  store.set(reduciblePathsAtom, {
+    'lhs/1': [
+      { equation: parseEquation('x=-8'), type: 'reduce', label: 'Simplify Alpha' },
+    ] as never,
+  });
+  return store;
+}
+
 function renderTree(store: ReturnType<typeof createStore>) {
   return render(
     <Provider store={store}>
@@ -167,6 +194,26 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
     expect(tabbable).toHaveLength(1);
   });
 
+  it('keeps the count header for a multi-option menu', () => {
+    const store = makeMultiOptionStore();
+    renderTree(store);
+    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    mouseClick(handle);
+
+    expect(screen.getByText(/simplifications available/i)).toBeInTheDocument();
+  });
+
+  it('gives every option row an apply cue so it reads as a button (#369)', () => {
+    const store = makeMultiOptionStore();
+    renderTree(store);
+    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    mouseClick(handle);
+
+    // One trailing "apply" affordance per option row.
+    const cues = screen.getAllByTestId('option-apply-cue');
+    expect(cues).toHaveLength(2);
+  });
+
   it('renders preview sizers even when no option is hovered (preventing size jumps)', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
@@ -176,14 +223,86 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
     // Verify the "Hover an option to preview" hint is present
     expect(screen.getByText(/hover an option to preview/i)).toBeInTheDocument();
 
+    // (see the single-option describe block below for its counterpart assertions)
+
     // Verify that the invisible sizers are present in the DOM to reserve space
     const sizers = screen.getAllByTestId('preview-sizer', { suggest: false }).concat(
       screen.queryAllByText((content, element) => {
+        // Guard for string className: SVG elements (e.g. the option apply-cue
+        // arrow) expose an SVGAnimatedString, not a string, so .includes would throw.
         return element?.getAttribute('aria-hidden') === 'true' &&
-               element?.className?.includes('invisible') &&
+               typeof element?.className === 'string' &&
+               element.className.includes('invisible') &&
                (content.includes('-8') || content.includes('8'));
       })
     );
     expect(sizers.length).toBeGreaterThan(0);
+  });
+});
+
+describe('single-option handle opens the menu too (#369)', () => {
+  afterEach(cleanup);
+
+  it('opens the popover menu on click instead of applying immediately', () => {
+    const store = makeSingleOptionStore();
+    renderTree(store);
+    // A single-option handle carries its option label as its accessible name.
+    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    expect(handle).toHaveAttribute('aria-haspopup', 'menu');
+
+    mouseClick(handle);
+
+    const options = screen.getAllByRole('menuitem');
+    expect(options).toHaveLength(1);
+  });
+
+  it('auto-previews the sole option (no "hover to preview" placeholder)', () => {
+    const store = makeSingleOptionStore();
+    renderTree(store);
+    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    mouseClick(handle);
+
+    // The menu is open...
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    // ...and with nothing to disambiguate, the one option is previewed straight
+    // away — no "hover to preview" placeholder.
+    expect(screen.queryByText(/hover an option to preview/i)).not.toBeInTheDocument();
+  });
+
+  it('applies and closes when the sole option is activated', () => {
+    const store = makeSingleOptionStore();
+    renderTree(store);
+    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    mouseClick(handle);
+
+    fireEvent.click(screen.getByRole('menuitem', { name: /simplify alpha/i }));
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
+  });
+
+  it('omits the redundant header for a single-option menu', () => {
+    const store = makeSingleOptionStore();
+    renderTree(store);
+    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    mouseClick(handle);
+
+    // The row still names the action...
+    expect(screen.getByRole('menuitem', { name: /simplify alpha/i })).toBeInTheDocument();
+    // ...but the standalone "Simplify" header is gone — it only echoed the row.
+    expect(screen.queryByText('Simplify', { exact: true })).not.toBeInTheDocument();
+    // ...and the sole row still carries the apply cue.
+    expect(screen.getAllByTestId('option-apply-cue')).toHaveLength(1);
+  });
+
+  it('opens via keyboard and moves focus to the sole option', () => {
+    const store = makeSingleOptionStore();
+    renderTree(store);
+    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    act(() => handle.focus());
+
+    keyboardClick(handle);
+
+    const options = screen.getAllByRole('menuitem');
+    expect(options).toHaveLength(1);
+    expect(document.activeElement).toBe(options[0]);
   });
 });

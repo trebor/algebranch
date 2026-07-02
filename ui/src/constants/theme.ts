@@ -365,6 +365,14 @@ export const THEME_GLASS = {
   CHOOSER_OPTION_IDENTITY: 'font-mono text-xs text-indigo-300',
   CHOOSER_OPTION_SUBSTITUTE: 'font-mono text-xs text-teal-300',
 
+  // Resting button chrome for chooser rows (#369): a subtle filled, bordered,
+  // rounded surface so each option reads as a pressable control before any
+  // hover — not a heading. Hover/focus brightens the fill and border.
+  CHOOSER_OPTION_ROW:
+    'rounded-md bg-white/[0.06] border border-white/10 hover:bg-indigo-600/25 hover:border-indigo-400/50 focus-visible:bg-indigo-600/25 focus-visible:border-indigo-400/60 transition-colors',
+  // Trailing "apply" arrow: muted at rest, brightens with its row.
+  CHOOSER_OPTION_ARROW: 'text-white/35 group-hover:text-indigo-200 group-focus-visible:text-indigo-200 transition-colors',
+
   // --- RadialMenu specific ---
   RADIAL_CENTER: 'w-14 h-14 rounded-full bg-indigo-600/30 border-2 border-indigo-400/50 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)] pointer-events-auto cursor-pointer z-10',
   RADIAL_PETAL: 'w-12 h-12 rounded-full backdrop-blur-xl bg-neutral-900/80 border border-white/15 shadow-lg shadow-black/40 flex items-center justify-center pointer-events-auto transition-colors',

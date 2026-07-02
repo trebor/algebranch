@@ -493,6 +493,60 @@ export const trySimplifyComplexConstant = (
 };
 
 /**
+ * Rationalize a complex denominator by multiplying through by its conjugate:
+ *   1 / (2 + ⅈ)     -> (2 − ⅈ) / 5
+ *   5 / (2 + ⅈ)     -> 2 − ⅈ           (numeric fraction reduces)
+ *   1 / (2·ⅈ)       -> −ⅈ / 2
+ * The denominator must be a constant subtree evaluating to a complex number
+ * a + b·ⅈ with integer a, b and b ≠ 0 (a real denominator is the province of the
+ * real radical rationalizer). Multiplying top and bottom by the conjugate
+ * a − b·ⅈ makes the denominator the real a² + b²; the result is reduced to lowest
+ * terms. Parallels tryRationalizeDenominator over ℂ (#105, #66).
+ */
+export const tryRationalizeComplexDenominator = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'OperatorNode') return null;
+  const opNode = node as math.OperatorNode;
+  if (opNode.op !== '/' || opNode.args.length !== 2) return null;
+
+  const numerator = opNode.args[0];
+  const denominator = unwrapParens(opNode.args[1]);
+
+  if (countImaginaryUnits(denominator) === 0 || !isConstantSubtree(denominator)) return null;
+
+  let dval: number | { re: number; im: number; isComplex?: boolean };
+  try {
+    dval = evaluatePoint(denominator, {});
+  } catch {
+    return null;
+  }
+  if (typeof dval === 'number' || !dval.isComplex) return null;
+  const a = snapReal(dval.re);
+  const b = snapReal(dval.im);
+  if (!Number.isInteger(a) || !Number.isInteger(b) || b === 0) return null;
+
+  const denomInt = a * a + b * b; // (a + b·ⅈ)(a − b·ⅈ)
+
+  const numInner = unwrapParens(numerator);
+  if (numInner.type === 'ConstantNode' && Number.isInteger((numInner as math.ConstantNode).value)) {
+    // c·(a − b·ⅈ) / (a² + b²), reduced to lowest terms.
+    const c = (numInner as math.ConstantNode).value as number;
+    let reNum = c * a;
+    let imNum = -c * b;
+    const g = gcdInt(gcdInt(reNum, imNum), denomInt) || 1;
+    reNum /= g;
+    imNum /= g;
+    const d = denomInt / g;
+    const numNode = complexToNode({ re: reNum, im: imNum });
+    return d === 1 ? numNode : new mjs.OperatorNode('/', 'divide', [numNode, new mjs.ConstantNode(d)]);
+  }
+
+  // General numerator: num · (a − b·ⅈ) / (a² + b²), left unreduced.
+  const conjugate = complexToNode({ re: a, im: -b });
+  const numNode = new mjs.OperatorNode('*', 'multiply', [numerator, conjugate]);
+  return new mjs.OperatorNode('/', 'divide', [numNode, new mjs.ConstantNode(denomInt)]);
+};
+
+/**
  * Parse a single additive term into a radical and its numeric coefficient:
  *   sqrt(2)        -> { coeff: 1,  root: sqrt(2) }
  *   3 * sqrt(2)    -> { coeff: 3,  root: sqrt(2) }
@@ -1679,6 +1733,25 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
             simplified: newEq,
             type: 'reduce',
             label: folded.label,
+          });
+        }
+      }
+    } catch {}
+
+    // Rationalize a complex denominator by multiplying through by the conjugate
+    // (1/(2+ⅈ) → (2−ⅈ)/5). Exact form, so — like the real rationalizer — it is
+    // ungated. (#105)
+    try {
+      const node = getNodeByPath(eq, path);
+      const rationalized = tryRationalizeComplexDenominator(node);
+      if (rationalized) {
+        const newEq = replaceNodeAtPath(eq, path, rationalized);
+        if (areEquationsEquivalent(eq, newEq)) {
+          rawReductions.push({
+            path,
+            simplified: newEq,
+            type: 'reduce',
+            label: 'Rationalize Denominator',
           });
         }
       }

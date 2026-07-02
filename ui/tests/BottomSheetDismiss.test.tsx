@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, cleanup, screen, fireEvent } from '@testing-library/react';
+import { render, cleanup, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BottomSheet } from '@/components/BottomSheet';
 import { SHORT_SCREEN_QUERY } from '@/hooks/useIsShortScreen';
 
@@ -45,7 +45,10 @@ describe('BottomSheet dismissal consistency (#325)', () => {
       </BottomSheet>,
     );
     await screen.findByText('content');
-    expect(document.activeElement).toBe(sheetEl());
+    // Focus lands asynchronously (rAF → mounted → focus effect, BottomSheet.tsx),
+    // so poll for it rather than sampling one frame — a single sync assert races
+    // the rAF→focus chain and flakes on loaded CI runners (#359).
+    await waitFor(() => expect(document.activeElement).toBe(sheetEl()));
   });
 
   it('does not close when the title bar is clicked', async () => {

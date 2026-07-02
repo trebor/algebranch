@@ -833,17 +833,24 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     peekedRef.current = false;
     lastPointerTypeRef.current = e.pointerType;
     clearPeekTimer();
-    // Only a fresh pick-up qualifies: a movable term, nothing selected yet, and
-    // not a static/locked node. Panning that starts off a candidate never arms.
-    if (isStatic || sourcePath || !isCandidate) {
+    // Two long-press peeks share this press, both touch-only:
+    //  • a fresh pick-up — a movable term with nothing selected yet — previews its
+    //    Select, and the same press can drag-nudge if it moves (#386).
+    //  • a target (a source IS selected) previews the Move it would apply — peek
+    //    only, never a drag.
+    // Anything else (static/locked, or a non-target while a source is held) arms
+    // neither; a pan that starts off such a node stays inert.
+    const canDrag = !isStatic && !sourcePath && isCandidate;
+    const canPeek = e.pointerType === 'touch' && (canDrag || isTarget);
+    if (!canDrag && !canPeek) {
       dragStartRef.current = null;
       return;
     }
-    dragStartRef.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
-    // Touch only: arm the long-press peek. If the finger stays put until the
-    // timer fires we reveal the preview, disarm the nudge (null dragStartRef),
-    // and flag the release's click for swallowing so the peek never selects.
-    if (e.pointerType === 'touch') {
+    dragStartRef.current = canDrag ? { x: e.clientX, y: e.clientY, id: e.pointerId } : null;
+    // If the finger stays put until the timer fires we reveal the preview, disarm
+    // the nudge (null dragStartRef), and flag the release's click for swallowing so
+    // the peek never doubles as a select/apply.
+    if (canPeek) {
       peekTimerRef.current = setTimeout(() => {
         peekTimerRef.current = null;
         dragStartRef.current = null;
@@ -888,6 +895,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     dragStartRef.current = null;
     // Lifting the finger ends the peek: the preview shows only while held.
     setIsPeeking((was) => (was ? false : was));
+    // Touch has no mouseleave to pair with the mouseenter a tap synthesized, so
+    // hoverPath would stay pinned to this node and leave it the lone highlighted
+    // term — a "semi-selected" limbo after release. Reset to neutral on lift so
+    // every candidate is offered again (#388). Hover devices keep their real
+    // enter/leave, so this is touch-only.
+    if (lastPointerTypeRef.current === 'touch') {
+      setHoverPath(null);
+    }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -2167,7 +2182,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       : undefined;
     tooltipContent = (
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
-        <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">Preview Move</span>
+        <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">
+          {/* Same touch/hover split as the Select peek: on touch the preview is a
+              peek and the tap that follows applies, so name that gesture ("Tap to
+              move"); on hover the pointer is live, so "Preview Move" (#388). */}
+          {canHover ? 'Preview Move' : 'Tap to move'}
+        </span>
         {transpositionAssumptions && transpositionAssumptions.length > 0 && (
           <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} select-none`}>
             <TriangleAlert size={11} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
@@ -2180,12 +2200,21 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         </ScaledEquationFit>
       </div>
     );
-    tooltipVisible = undefined;
+    // Hover devices keep the uncontrolled hover-driven reveal. On touch a tap
+    // synthesizes a mouseenter but never a leave, so an uncontrolled tip would
+    // flash on tap and stick — drive it from the explicit long-press peek instead.
+    tooltipVisible = canHover ? undefined : isPeeking;
     tooltipClassName = 'max-w-[300px] sm:max-w-[360px]';
   } else if (!sourcePath && isCandidate) {
     tooltipContent = (
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
-        <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">Select Term</span>
+        <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">
+          {/* On touch the peek is a preview, not the action — the tap that follows
+              is. Name that next gesture so a user who peeks then lifts knows to tap
+              to commit; on hover the pointer is already there, so "Select Term"
+              reads as the live affordance (#388). */}
+          {canHover ? 'Select Term' : 'Tap to select'}
+        </span>
         <div className="w-full border-t border-white/10 my-1" />
         <ScaledEquationFit className="max-w-[280px] sm:max-w-[340px]">
           <div className="text-[1.3em]"><PreviewEquationNode path={path} /></div>

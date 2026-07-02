@@ -11,7 +11,9 @@ import {
   rawActiveTabIdAtom,
   candidatePathsAtom,
   reduciblePathsAtom,
+  targetPathsAtom,
   sourcePathAtom,
+  hoverPathAtom,
   dragNudgeAtom,
   type WorkspaceTab,
 } from '@/store/equation';
@@ -64,6 +66,26 @@ function makeHandleStore() {
   return store;
 }
 
+// `x + 3 = 7` with `3` (lhs/1) already picked as the source and `rhs` a valid
+// move target — the state in which a target node offers its "Preview Move".
+function makeTargetStore() {
+  const store = makeStore();
+  store.set(sourcePathAtom, 'lhs/1');
+  store.set(targetPathsAtom, { rhs: parseEquation('x = 7 - 3') } as never);
+  return store;
+}
+
+const renderPath = (store: ReturnType<typeof createStore>, p: string) =>
+  render(
+    <Provider store={store}>
+      <RovingTabindexProvider>
+        <div role="tree" aria-label="Equation">
+          <EquationNode path={p} />
+        </div>
+      </RovingTabindexProvider>
+    </Provider>,
+  );
+
 const renderLhs = (store: ReturnType<typeof createStore>) =>
   render(
     <Provider store={store}>
@@ -102,7 +124,7 @@ afterEach(() => {
 });
 
 describe('EquationNode touch node long-press peek (#388)', () => {
-  it('a long-press on a candidate reveals the Select-Term tooltip without selecting it', async () => {
+  it('a long-press on a candidate reveals the peek tooltip without selecting it', async () => {
     installMatchMedia(false); // phone: no hover
     const store = makeStore();
     const { container } = renderLhs(store);
@@ -111,8 +133,9 @@ describe('EquationNode touch node long-press peek (#388)', () => {
     // Finger down, held still — no move. After the long-press delay the peek shows.
     pointer(term, 'pointerdown', 100, 100);
 
-    // The Select-Term preview appears (real timers: the ~500ms hold elapses).
-    expect(await screen.findByText('Select Term', undefined, { timeout: 2000 })).toBeInTheDocument();
+    // The peek preview appears (real timers: the ~500ms hold elapses). On touch the
+    // label coaches the follow-up gesture — "Tap to select", not "Select Term".
+    expect(await screen.findByText('Tap to select', undefined, { timeout: 2000 })).toBeInTheDocument();
     // A peek must never select the term.
     expect(store.get(sourcePathAtom)).toBeNull();
   });
@@ -124,10 +147,10 @@ describe('EquationNode touch node long-press peek (#388)', () => {
     const term = nodeAt(container, 'lhs/1');
 
     pointer(term, 'pointerdown', 100, 100);
-    await screen.findByText('Select Term', undefined, { timeout: 2000 });
+    await screen.findByText('Tap to select', undefined, { timeout: 2000 });
 
     pointer(term, 'pointerup', 100, 100);
-    await waitFor(() => expect(screen.queryByText('Select Term')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('Tap to select')).not.toBeInTheDocument());
   });
 
   it('a press-and-move is a drag-nudge, not a peek — the tooltip never shows', () => {
@@ -146,7 +169,7 @@ describe('EquationNode touch node long-press peek (#388)', () => {
     // The move routes to the drag-nudge (which selects the source, per #386) and
     // the long-press peek never fires — no Select-Term preview flashes.
     expect(store.get(dragNudgeAtom)).toEqual({ path: 'lhs/1' });
-    expect(screen.queryByText('Select Term')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tap to select')).not.toBeInTheDocument();
   });
 
   it('a long-press does not select even when the release fires a trailing click', async () => {
@@ -156,7 +179,7 @@ describe('EquationNode touch node long-press peek (#388)', () => {
     const term = nodeAt(container, 'lhs/1');
 
     pointer(term, 'pointerdown', 100, 100);
-    await screen.findByText('Select Term', undefined, { timeout: 2000 });
+    await screen.findByText('Tap to select', undefined, { timeout: 2000 });
     pointer(term, 'pointerup', 100, 100);
     // A long-press on touch commonly still emits a click on release; it must be
     // swallowed so the peek never doubles as a selection.
@@ -179,7 +202,71 @@ describe('EquationNode touch node long-press peek (#388)', () => {
     fireEvent.click(term);
 
     expect(store.get(sourcePathAtom)).toBe('lhs/1');
-    expect(screen.queryByText('Select Term')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tap to select')).not.toBeInTheDocument();
+  });
+
+  it('lifting the finger after a touch press clears the hover highlight (returns to neutral)', () => {
+    installMatchMedia(false);
+    const store = makeStore();
+    const { container } = renderLhs(store);
+    const term = nodeAt(container, 'lhs/1');
+
+    // A tap synthesizes a mouseenter (which sets hoverPath) but never the matching
+    // mouseleave, so without an explicit reset the node stays the sole highlighted
+    // term after release — a "semi-selected" limbo. The lift must return the board
+    // to neutral: nothing hovered, every candidate offered again (#388).
+    fireEvent.mouseEnter(term);
+    pointer(term, 'pointerdown', 100, 100);
+    expect(store.get(hoverPathAtom)).toBe('lhs/1');
+
+    pointer(term, 'pointerup', 100, 100);
+    expect(store.get(hoverPathAtom)).toBeNull();
+  });
+});
+
+describe('EquationNode touch target move-preview peek (#388)', () => {
+  it('a long-press on a target reveals a "Tap to move" peek without applying the move', async () => {
+    installMatchMedia(false); // phone: no hover
+    const store = makeTargetStore();
+    const { container } = renderPath(store, 'rhs');
+    const target = nodeAt(container, 'rhs');
+
+    pointer(target, 'pointerdown', 100, 100);
+
+    // The move preview appears; on touch it coaches the follow-up tap.
+    expect(await screen.findByText('Tap to move', undefined, { timeout: 2000 })).toBeInTheDocument();
+    expect(screen.queryByText('Preview Move')).not.toBeInTheDocument();
+
+    // The release commonly emits a trailing click; a peek is "show me," never
+    // "do it" — the move must not apply, so the source stays selected.
+    pointer(target, 'pointerup', 100, 100);
+    fireEvent.click(target);
+    expect(store.get(sourcePathAtom)).toBe('lhs/1');
+  });
+
+  it('lifting the finger dismisses the target peek', async () => {
+    installMatchMedia(false);
+    const store = makeTargetStore();
+    const { container } = renderPath(store, 'rhs');
+    const target = nodeAt(container, 'rhs');
+
+    pointer(target, 'pointerdown', 100, 100);
+    await screen.findByText('Tap to move', undefined, { timeout: 2000 });
+
+    pointer(target, 'pointerup', 100, 100);
+    await waitFor(() => expect(screen.queryByText('Tap to move')).not.toBeInTheDocument());
+  });
+
+  it('desktop hover on a target still reveals "Preview Move"', async () => {
+    installMatchMedia(true); // hover-capable
+    const store = makeTargetStore();
+    const { container } = renderPath(store, 'rhs');
+    const target = nodeAt(container, 'rhs');
+
+    fireEvent.mouseEnter(target);
+
+    expect(await screen.findByText('Preview Move', undefined, { timeout: 2000 })).toBeInTheDocument();
+    expect(screen.queryByText('Tap to move')).not.toBeInTheDocument();
   });
 });
 

@@ -1,6 +1,6 @@
 import * as math from 'mathjs';
 import { parseEquation } from '../src/index';
-import { canonicalizeAssociativeChains, ensureNodeIds, Equation } from '../src/tree';
+import { canonicalizeAssociativeChains, ensureNodeIds, removeNodeAtPath, Equation } from '../src/tree';
 
 // Structural skeleton ignoring ids — captures the *nesting* of a tree.
 const skeleton = (n: any): string => {
@@ -13,6 +13,32 @@ const skeleton = (n: any): string => {
 const sym = (name: string): math.MathNode => new (math as any).SymbolNode(name);
 const mul = (a: math.MathNode, b: math.MathNode): math.MathNode =>
   new (math as any).OperatorNode('*', 'multiply', [a, b]);
+
+describe('removeNodeAtPath — head-of-subtraction sign (#354)', () => {
+  test('removing the head of a subtraction leaves the negated remainder', () => {
+    // `a - b` with `a` removed is `-b`, not `b` — the leading minus that binds the
+    // remaining term to its side must survive, or no operator on the other side
+    // can reconstruct an equivalent equation (so the head drops out of the
+    // movable set). See #354.
+    const eq = parseEquation('a - b = 0');
+    const { newEquation, removedNode } = removeNodeAtPath(eq, 'lhs/0');
+    expect(skeleton(removedNode)).toBe('a');
+    expect(skeleton(newEquation.lhs)).toBe('-(b)');
+  });
+
+  test('removing a non-head subtrahend is unchanged (a - b, remove b -> a)', () => {
+    const eq = parseEquation('a - b = 0');
+    const { newEquation, removedNode } = removeNodeAtPath(eq, 'lhs/1');
+    expect(skeleton(removedNode)).toBe('b');
+    expect(skeleton(newEquation.lhs)).toBe('a');
+  });
+
+  test('removing the head of an addition is unchanged (a + b, remove a -> b)', () => {
+    const eq = parseEquation('a + b = 0');
+    const { newEquation } = removeNodeAtPath(eq, 'lhs/0');
+    expect(skeleton(newEquation.lhs)).toBe('b');
+  });
+});
 
 describe('canonicalizeAssociativeChains (#378)', () => {
   test('rewrites a right-nested product into the parser-canonical left-nested shape', () => {

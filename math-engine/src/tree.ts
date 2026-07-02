@@ -154,7 +154,22 @@ export const removeNodeAtPath = (
 
       if (children.length === binaryCount) {
         const remainingIdx = idxToRemove === 0 ? 1 : 0;
-        return children[remainingIdx];
+        const remaining = children[remainingIdx];
+        // Removing the head (left operand) of a subtraction leaves the *negated*
+        // remainder: `a - b` with `a` gone is `-b`, not `b`. The leading minus
+        // binds the surviving term to its side; dropping it silently changes the
+        // value, so no operator on the other side can reconstruct an equivalent
+        // equation and the head term drops out of the movable set (#354). Every
+        // other binary collapse keeps the sibling verbatim — `+`/`*` heads (whose
+        // implicit `+` is a no-op) and any right operand.
+        if (
+          idxToRemove === 0 &&
+          node.type === 'OperatorNode' &&
+          (node as math.OperatorNode).op === '-'
+        ) {
+          return new mjs.OperatorNode('-', 'unaryMinus', [remaining]);
+        }
+        return remaining;
       } else if (children.length === unaryCount) {
         const defaultZero = 0;
         return new mjs.ConstantNode(defaultZero);

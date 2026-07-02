@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import type * as math from 'mathjs';
+import { isReservedConstantName } from './mathjs';
 import { Equation, getChildren } from './tree';
 import { evaluatePoint, solveForVariable } from './validator';
 
@@ -52,7 +53,7 @@ export const getGraphVariables = (eq: Equation): string[] => {
     if (!node) return;
     if (node.type === 'SymbolNode') {
       const name = (node as math.SymbolNode).name;
-      if (name !== 'pi' && name !== 'e') seen.add(name);
+      if (!isReservedConstantName(name)) seen.add(name);
       return;
     }
     if (node.type === 'FunctionNode') {

@@ -1,8 +1,12 @@
 import { GREEK_UNICODE } from '../src/serialize';
+import { IMAGINARY_UNIT } from '../src/mathjs';
 // Cross-workspace import of the UI's display map (a pure, import-free constants
 // module) to guard the two Greek glyph tables against silent drift (#46): the
 // Unicode export must match what the renderer shows on screen.
-import { SYMBOL_DISPLAY } from '../../ui/src/constants/mathSymbols';
+import {
+  SYMBOL_DISPLAY,
+  IMAGINARY_UNIT as UI_IMAGINARY_UNIT,
+} from '../../ui/src/constants/mathSymbols';
 
 describe('engine Unicode Greek glyphs stay in lockstep with the UI display map (#46)', () => {
   it('covers exactly the same Greek names the UI renders', () => {
@@ -13,5 +17,14 @@ describe('engine Unicode Greek glyphs stay in lockstep with the UI display map (
     for (const [name, glyph] of Object.entries(GREEK_UNICODE)) {
       expect(SYMBOL_DISPLAY[name]).toBe(glyph);
     }
+  });
+});
+
+describe('imaginary-unit token stays in lockstep across engine and UI (#105)', () => {
+  it('uses the same U+2148 codepoint on both sides', () => {
+    // The UI keeps its own copy (that module stays import-free), so guard the two
+    // against drift the same way the Greek tables are guarded.
+    expect(UI_IMAGINARY_UNIT).toBe(IMAGINARY_UNIT);
+    expect(IMAGINARY_UNIT).toBe('ⅈ');
   });
 });

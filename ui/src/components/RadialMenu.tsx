@@ -20,6 +20,7 @@ import { trackEvent } from '../utils/analytics';
 import { ArrowLeftRight, Plus, Minus, Divide } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { HotkeyHint } from './HotkeyHint';
+import { ImaginaryUnitButton } from './ImaginaryUnitButton';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { THEME_GLASS } from '../constants/theme';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
@@ -89,7 +90,8 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
   // `--chrome-scale`. Scale the px ring radius and lucide glyphs by the same
   // factor so the menu enlarges as one piece instead of overlapping into a
   // "flower" with tiny icons (#278).
-  const chromeScale = clampChromeScale(useAtomValue(settingsAtom).chromeScale);
+  const settings = useAtomValue(settingsAtom);
+  const chromeScale = clampChromeScale(settings.chromeScale);
   const radius = radialRadiusPx(chromeScale);
   const iconPx = radialIconPx(chromeScale);
   const spinnerIconPx = radialSpinnerIconPx(chromeScale);
@@ -412,7 +414,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                         </button>
                       </div>
                     ) : (
-                      <span className="relative">
+                      <span className="relative flex items-center gap-1.5">
                         <input
                           ref={termInputRef}
                           type="text"
@@ -424,6 +426,9 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                             isTourActive ? 'cursor-default text-white/80' : 'focus:border-indigo-500/80'
                           }`}
                         />
+                        {settings.allowComplex && !isTourActive && (
+                          <ImaginaryUnitButton inputRef={termInputRef} onInsert={setTermValue} />
+                        )}
                         {isTourActive && tourGlobalOp && !tourInputSatisfied && (
                           <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
                         )}

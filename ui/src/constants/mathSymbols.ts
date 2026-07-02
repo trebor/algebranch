@@ -13,8 +13,25 @@
 // swap to "·" (U+00B7 MIDDLE DOT) here if a smaller mid-dot is preferred.
 export const MULTIPLY_SYMBOL = '⋅';
 
+// The imaginary-unit token (#105): the distinct Unicode codepoint U+2148 'ⅈ'
+// ("DOUBLE-STRUCK ITALIC SMALL I"), NOT the ASCII letter `i` (which stays a
+// free variable). Kept in lockstep with the engine's `IMAGINARY_UNIT`; this
+// module stays import-free (see the drift guard in the glyph-parity test), so
+// the shared value is asserted equal there rather than imported here.
+export const IMAGINARY_UNIT = 'ⅈ';
+
+// Whether a SymbolNode name is the imaginary unit. It renders via its own
+// upright-roman-i path (ISO-80000-2) rather than through the Greek/subscript
+// maps, so callers gate that special-casing on this predicate.
+export const isImaginaryUnit = (name: string): boolean => name === IMAGINARY_UNIT;
+
 // True minus sign (U+2212) rather than the hyphen-minus.
 export const MINUS_SYMBOL = '−';
+
+// Identification shown for the imaginary unit on hover — names the glyph and its
+// meaning in one breath (#105). Shared by the ⅈ hover hint (on the glyph in an
+// equation) and the insert-button tooltip so the two always read the same.
+export const IMAGINARY_UNIT_HINT = `i = √${MINUS_SYMBOL}1`;
 
 // Display map for the binary operators the equation renderers emit.
 export const OPERATOR_DISPLAY: Record<string, string> = {
@@ -70,6 +87,13 @@ export const symbolToGlyph = (name: string): string => SYMBOL_DISPLAY[name] ?? n
 // symbolToGlyph maps only exact whole-name matches.
 export const greekNameFor = (name: string): string | null =>
   name in SYMBOL_DISPLAY ? name : null;
+
+// Hover-hint text identifying a symbol: a Greek letter's spelled name (`theta`)
+// or the imaginary unit's `i = √−1` identification (#105). Null for a plain
+// variable, which needs no hint. The single lookup the equation renderer uses to
+// decide what osmotic-learning hint, if any, to surface for a SymbolNode.
+export const symbolHintFor = (name: string): string | null =>
+  isImaginaryUnit(name) ? IMAGINARY_UNIT_HINT : greekNameFor(name);
 
 // Display-time subscript split (#113): an underscore-bearing symbol name like
 // `v_0`, `F_net`, or `omega_0` renders as a head glyph plus a lowered subscript

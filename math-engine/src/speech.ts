@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import type * as math from 'mathjs';
+import { IMAGINARY_UNIT } from './mathjs';
 import { Equation, RelationOperator } from './tree';
 import { formatNumber } from './index';
 import { PREC, precedenceOf, isUnaryMinus, isAtomic, fnName } from './serialize';
@@ -69,9 +70,13 @@ const group = (inner: string): string => `the quantity ${inner},`;
 
 // Spoken form of a symbol: head name plus any subscripts. The AST keeps ASCII
 // names (`v_0`, `omega_0`), and Greek heads are already spelled out (`theta`),
-// so the head speaks verbatim and each `_` segment becomes " sub …".
+// so the head speaks verbatim and each `_` segment becomes " sub …". The
+// imaginary unit ⅈ (U+2148) is spoken as its conventional "i" rather than the
+// raw glyph, which TTS has no voice for (#105).
 const speakSymbol = (name: string): string =>
-  name.split('_').filter(Boolean).join(' sub ');
+  name === IMAGINARY_UNIT
+    ? 'i'
+    : name.split('_').filter(Boolean).join(' sub ');
 
 // Renders a child under a binary parent, adding "the quantity …" grouping only
 // where the parenthesised printed form would (mirrors serialize.renderChild).

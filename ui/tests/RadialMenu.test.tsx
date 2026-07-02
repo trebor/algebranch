@@ -100,11 +100,16 @@ describe('RadialMenu Focus Trap', () => {
     const input = screen.getByPlaceholderText('e.g. 5x');
     expect(input).toHaveFocus();
 
-    // Check the other focusable controls inside the form: the Apply button and Back to menu button
+    // Check the other focusable controls inside the form: the imaginary-unit
+    // insert button (#105), the Apply button, and the Back to menu button.
+    const insertImaginaryBtn = screen.getByRole('button', { name: /insert imaginary unit/i });
     const applyBtn = screen.getByRole('button', { name: /Apply/i });
     const backBtn = screen.getByRole('button', { name: /Back to menu/i });
 
-    // Focus transitions: Input -> Apply -> Back to menu -> Input
+    // Focus transitions: Input -> ⅈ -> Apply -> Back to menu -> Input
+    await user.tab();
+    expect(insertImaginaryBtn).toHaveFocus();
+
     await user.tab();
     expect(applyBtn).toHaveFocus();
 
@@ -114,7 +119,7 @@ describe('RadialMenu Focus Trap', () => {
     await user.tab();
     expect(input).toHaveFocus();
 
-    // Shift+Tab wrap-around: Input -> Back to menu -> Apply -> Input
+    // Shift+Tab wrap-around: Input -> Back to menu -> Apply -> ⅈ -> Input
     await user.tab({ shift: true });
     expect(backBtn).toHaveFocus();
   });

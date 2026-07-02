@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Robert Harris
 
 import type * as math from 'mathjs';
-import { mjs, fractionMath } from './mathjs';
+import { mjs, fractionMath, isReservedConstantName, IMAGINARY_UNIT } from './mathjs';
 import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, ensureNodeIds } from './tree';
-import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions, getQuadraticStandardForm, getVariables, tryExtractQuadraticExpr } from './validator';
+import { areEquationsEquivalent, areExpressionsValueEqual, evaluatePoint, getFunctionName, getQuadraticFormulaSolutions, getQuadraticStandardForm, getVariables, tryExtractQuadraticExpr } from './validator';
 import { HIGH_SCHOOL_IDENTITIES } from './rules';
 import { matchPattern, instantiatePattern, tryExpressAsPower, tryExpressAsPowerOptions } from './matcher';
 import { tryFactor } from './factor';
@@ -67,7 +67,7 @@ export const isConstantSubtree = (node: math.MathNode): boolean => {
   if (node.type === 'ConstantNode') return true;
   if (node.type === 'SymbolNode') {
     const name = (node as math.SymbolNode).name;
-    return name === 'pi' || name === 'e';
+    return isReservedConstantName(name);
   }
   if (node.type === 'ParenthesisNode') {
     return isConstantSubtree((node as math.ParenthesisNode).content);
@@ -344,6 +344,206 @@ export const trySimplifyRadical = (node: math.MathNode): math.MathNode | null =>
         : new mjs.FunctionNode('nthRoot', [new mjs.ConstantNode(remaining)]);
 
   return new mjs.OperatorNode('*', 'multiply', [new mjs.ConstantNode(coeff), rootNode]);
+};
+
+/**
+ * The "extend to ℂ" rewrite (#105): a square root of a negative constant has no
+ * real value, so resolve it to imaginary form on the principal branch,
+ * `√−A → √A · ⅈ` (for A > 0). The residual real radical `√A` is left intact so
+ * the existing "Simplify Radical" / "Simplify" steps can reduce it in a
+ * following, separately-inspectable move (`√−4 → √4·ⅈ → 2·ⅈ`).
+ *
+ * Returns null unless the node is `sqrt(<negative constant>)` — a bare negative
+ * ConstantNode or a unary-minus of a positive constant subtree. A symbolic
+ * radicand (`√−x`) is deliberately excluded: its sign isn't known, so there is
+ * no unconditional imaginary form to offer.
+ */
+export const tryExtendToComplex = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'FunctionNode') return null;
+  const fn = node as math.FunctionNode;
+  if (getFunctionName(fn) !== 'sqrt' || fn.args.length !== 1) return null;
+
+  const radicand = unwrapParens(fn.args[0]);
+
+  let posRadicand: math.MathNode | null = null;
+  if (radicand.type === 'ConstantNode') {
+    const v = Number((radicand as math.ConstantNode).value);
+    if (v < 0) posRadicand = new mjs.ConstantNode(-v);
+  } else if (radicand.type === 'OperatorNode') {
+    const op = radicand as math.OperatorNode;
+    if (op.isUnary() && op.op === '-' && isConstantSubtree(op.args[0])) {
+      const innerVal = Number(op.args[0].compile().evaluate());
+      if (Number.isFinite(innerVal) && innerVal > 0) posRadicand = op.args[0];
+    }
+  }
+  if (!posRadicand) return null;
+
+  // √−1 collapses straight to ⅈ — the √1 factor would be a pure-noise
+  // intermediate. Any other radicand keeps its residual real √A for a
+  // following Simplify step (√−4 → √4·ⅈ → 2·ⅈ).
+  const posVal = Number(posRadicand.compile().evaluate());
+  if (posVal === 1) return new mjs.SymbolNode(IMAGINARY_UNIT);
+
+  return new mjs.OperatorNode('*', 'multiply', [
+    new mjs.FunctionNode('sqrt', [posRadicand]),
+    new mjs.SymbolNode(IMAGINARY_UNIT),
+  ]);
+};
+
+/** Count occurrences of the imaginary-unit symbol in a subtree. */
+const countImaginaryUnits = (node: math.MathNode): number => {
+  let n = 0;
+  node.traverse((child) => {
+    if (child.type === 'SymbolNode' && (child as math.SymbolNode).name === IMAGINARY_UNIT) n++;
+  });
+  return n;
+};
+
+
+// Snap a float to the nearest integer when it is within tolerance — folded
+// complex arithmetic on exact inputs lands on integers up to float noise.
+const snapReal = (x: number): number => {
+  const r = Math.round(x);
+  return Math.abs(x - r) < 1e-9 ? r : x;
+};
+
+// Build the `b · ⅈ` factor for a positive coefficient, eliding the unit
+// coefficient (b === 1 → bare ⅈ).
+const imaginaryTerm = (b: number): math.MathNode =>
+  b === 1
+    ? new mjs.SymbolNode(IMAGINARY_UNIT)
+    : new mjs.OperatorNode('*', 'multiply', [new mjs.ConstantNode(b), new mjs.SymbolNode(IMAGINARY_UNIT)]);
+
+/**
+ * Render a computed complex (or real) value as an AST node in `a + b·ⅈ` standard
+ * form (#105): a pure real is a bare constant; a pure imaginary is `b·ⅈ` (or ⅈ /
+ * −ⅈ); a mixed value reads `a + b·ⅈ` or `a − b·ⅈ` with the sign folded into a
+ * subtraction so it prints conventionally.
+ */
+export const complexToNode = (value: number | { re: number; im: number; isComplex?: boolean }): math.MathNode => {
+  const re = snapReal(typeof value === 'number' ? value : value.re);
+  const im = snapReal(typeof value === 'number' ? 0 : value.im);
+
+  if (im === 0) return new mjs.ConstantNode(re);
+
+  const imagWithSign = (b: number): math.MathNode =>
+    b < 0
+      ? new mjs.OperatorNode('-', 'unaryMinus', [imaginaryTerm(-b)])
+      : imaginaryTerm(b);
+
+  if (re === 0) return imagWithSign(im);
+
+  const reNode = new mjs.ConstantNode(re);
+  return im < 0
+    ? new mjs.OperatorNode('-', 'subtract', [reNode, imaginaryTerm(-im)])
+    : new mjs.OperatorNode('+', 'add', [reNode, imaginaryTerm(im)]);
+};
+
+const cleanNodeStr = (node: math.MathNode): string => node.toString().replace(/[\s()]/g, '');
+
+/**
+ * Fold a constant subtree that contains ⅈ into `a + b·ⅈ` standard form — the
+ * minimal complex-arithmetic simplification (ⅈ² → −1, power cycling, combining
+ * like imaginary terms). Returns the folded node plus the label the move should
+ * carry, or null when nothing changes.
+ *
+ * The label tracks the exact/decimal split so the folded move honors the same
+ * gates a real simplification would (#105):
+ *  - Integer result (ⅈ·3·ⅈ → −3, 2ⅈ + 3ⅈ → 5ⅈ) → an exact `Simplify`. Fires only
+ *    on a genuine collapse (fewer ⅈ, or a structurally smaller tree for power
+ *    cycling like ⅈ³ → −ⅈ), so it never fires as a bare commutative reorder
+ *    (ⅈ·3 → 3·ⅈ) or on an already-standard term.
+ *  - Non-integer result (5·ⅈ/3 → 1.666…·ⅈ) → `Evaluate to Decimal`, so it is
+ *    gated exactly like the real decimal evaluation and never rides in under
+ *    `Simplify`. Fires whenever the decimal form differs from the input.
+ *
+ * Returns null for a variable-bearing or ⅈ-free node (the latter is left to the
+ * ordinary real simplifier).
+ */
+export const trySimplifyComplexConstant = (
+  node: math.MathNode,
+): { node: math.MathNode; label: 'Simplify' | 'Evaluate to Decimal' } | null => {
+  if (countImaginaryUnits(node) === 0) return null;
+  if (!isConstantSubtree(node)) return null;
+
+  let value: number | { re: number; im: number; isComplex?: boolean };
+  try {
+    value = evaluatePoint(node, {});
+  } catch {
+    return null;
+  }
+  const re = snapReal(typeof value === 'number' ? value : value.re);
+  const im = snapReal(typeof value === 'number' ? 0 : value.im);
+  if (!Number.isFinite(re) || !Number.isFinite(im) || Number.isNaN(re) || Number.isNaN(im)) return null;
+
+  const out = complexToNode(value);
+  const isExact = Number.isInteger(re) && Number.isInteger(im);
+
+  if (isExact) {
+    const collapsesUnits = countImaginaryUnits(out) < countImaginaryUnits(node);
+    const shrinks = countNodes(out) < countNodes(node);
+    if (!collapsesUnits && !shrinks) return null;
+    return { node: out, label: 'Simplify' };
+  }
+
+  // Decimal result: offer it as a gated "Evaluate to Decimal" whenever it
+  // actually changes the expression.
+  if (cleanNodeStr(out) === cleanNodeStr(node)) return null;
+  return { node: out, label: 'Evaluate to Decimal' };
+};
+
+/**
+ * Rationalize a complex denominator by multiplying through by its conjugate:
+ *   1 / (2 + ⅈ)     -> (2 − ⅈ) / 5
+ *   5 / (2 + ⅈ)     -> 2 − ⅈ           (numeric fraction reduces)
+ *   1 / (2·ⅈ)       -> −ⅈ / 2
+ * The denominator must be a constant subtree evaluating to a complex number
+ * a + b·ⅈ with integer a, b and b ≠ 0 (a real denominator is the province of the
+ * real radical rationalizer). Multiplying top and bottom by the conjugate
+ * a − b·ⅈ makes the denominator the real a² + b²; the result is reduced to lowest
+ * terms. Parallels tryRationalizeDenominator over ℂ (#105, #66).
+ */
+export const tryRationalizeComplexDenominator = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'OperatorNode') return null;
+  const opNode = node as math.OperatorNode;
+  if (opNode.op !== '/' || opNode.args.length !== 2) return null;
+
+  const numerator = opNode.args[0];
+  const denominator = unwrapParens(opNode.args[1]);
+
+  if (countImaginaryUnits(denominator) === 0 || !isConstantSubtree(denominator)) return null;
+
+  let dval: number | { re: number; im: number; isComplex?: boolean };
+  try {
+    dval = evaluatePoint(denominator, {});
+  } catch {
+    return null;
+  }
+  if (typeof dval === 'number' || !dval.isComplex) return null;
+  const a = snapReal(dval.re);
+  const b = snapReal(dval.im);
+  if (!Number.isInteger(a) || !Number.isInteger(b) || b === 0) return null;
+
+  const denomInt = a * a + b * b; // (a + b·ⅈ)(a − b·ⅈ)
+
+  const numInner = unwrapParens(numerator);
+  if (numInner.type === 'ConstantNode' && Number.isInteger((numInner as math.ConstantNode).value)) {
+    // c·(a − b·ⅈ) / (a² + b²), reduced to lowest terms.
+    const c = (numInner as math.ConstantNode).value as number;
+    let reNum = c * a;
+    let imNum = -c * b;
+    const g = gcdInt(gcdInt(reNum, imNum), denomInt) || 1;
+    reNum /= g;
+    imNum /= g;
+    const d = denomInt / g;
+    const numNode = complexToNode({ re: reNum, im: imNum });
+    return d === 1 ? numNode : new mjs.OperatorNode('/', 'divide', [numNode, new mjs.ConstantNode(d)]);
+  }
+
+  // General numerator: num · (a − b·ⅈ) / (a² + b²), left unreduced.
+  const conjugate = complexToNode({ re: a, im: -b });
+  const numNode = new mjs.OperatorNode('*', 'multiply', [numerator, conjugate]);
+  return new mjs.OperatorNode('/', 'divide', [numNode, new mjs.ConstantNode(denomInt)]);
 };
 
 /**
@@ -1514,6 +1714,65 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
               }
             }
           }
+        }
+      }
+    } catch {}
+
+    // Simplify a constant ℂ-subtree to a + b·ⅈ standard form (ⅈ² → −1, power
+    // cycling, combining like imaginary terms). Arithmetic on ⅈ already present
+    // in the equation, so — unlike the extend-to-ℂ doorway below — it is NOT
+    // gated on allowComplex. (#105)
+    try {
+      const node = getNodeByPath(eq, path);
+      const folded = trySimplifyComplexConstant(node);
+      if (folded) {
+        const newEq = replaceNodeAtPath(eq, path, folded.node);
+        if (areEquationsEquivalent(eq, newEq)) {
+          rawReductions.push({
+            path,
+            simplified: newEq,
+            type: 'reduce',
+            label: folded.label,
+          });
+        }
+      }
+    } catch {}
+
+    // Rationalize a complex denominator by multiplying through by the conjugate
+    // (1/(2+ⅈ) → (2−ⅈ)/5). Exact form, so — like the real rationalizer — it is
+    // ungated. (#105)
+    try {
+      const node = getNodeByPath(eq, path);
+      const rationalized = tryRationalizeComplexDenominator(node);
+      if (rationalized) {
+        const newEq = replaceNodeAtPath(eq, path, rationalized);
+        if (areEquationsEquivalent(eq, newEq)) {
+          rawReductions.push({
+            path,
+            simplified: newEq,
+            type: 'reduce',
+            label: 'Rationalize Denominator',
+          });
+        }
+      }
+    } catch {}
+
+    // Extend to ℂ: a square root of a negative has no real value; offer
+    // resolving it to imaginary form √−A → √A·ⅈ. Emitted unconditionally here;
+    // the UI gates it on the `allowComplex` setting, exactly as it gates
+    // "Evaluate to Decimal" (#105).
+    try {
+      const node = getNodeByPath(eq, path);
+      const complexNode = tryExtendToComplex(node);
+      if (complexNode) {
+        const newEq = replaceNodeAtPath(eq, path, complexNode);
+        if (areEquationsEquivalent(eq, newEq)) {
+          rawReductions.push({
+            path,
+            simplified: newEq,
+            type: 'reduce',
+            label: 'Extend to ℂ',
+          });
         }
       }
     } catch {}

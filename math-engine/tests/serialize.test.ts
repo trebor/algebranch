@@ -1,4 +1,4 @@
-import { parseEquation } from '../src';
+import { parseEquation, equationToString } from '../src';
 import {
   equationToLatex,
   equationToLatexAligned,
@@ -52,6 +52,13 @@ describe('equationToLatex (bare, no $ delimiters)', () => {
   it('rounds long irrational constants via formatNumber', () => {
     // 1.4142135623730951 has > 12 fractional digits -> rounded to 1.41
     expect(latex('x = 1.4142135623730951')).toBe('x = 1.41');
+  });
+
+  // The imaginary unit renders as an upright roman i (ISO-80000-2), never the
+  // raw U+2148 glyph which plain LaTeX cannot typeset. (#105)
+  it('maps the imaginary unit to an upright \\mathrm{i}', () => {
+    expect(latex('x = ⅈ')).toBe('x = \\mathrm{i}');
+    expect(latex('x = 2*ⅈ')).toBe('x = 2 \\cdot \\mathrm{i}');
   });
 });
 
@@ -121,6 +128,21 @@ describe('equationToUnicode', () => {
 
   it('maps Greek symbol names to glyphs', () => {
     expect(unicode('theta - alpha = 0')).toBe('θ − α = 0');
+  });
+
+  // Unicode copy keeps the semantically-correct U+2148 codepoint, which
+  // re-parses to the same imaginary-unit token. (#105)
+  it('keeps the imaginary-unit glyph in Unicode output', () => {
+    expect(unicode('x = 3 + 2*ⅈ')).toBe('x = 3 + 2 ⋅ ⅈ');
+  });
+
+  it('round-trips the imaginary unit through equationToString → parseEquation', () => {
+    const s = equationToString(parseEquation('x = 3 + 2*ⅈ'));
+    expect(s).toContain('ⅈ');
+    // encodeURIComponent (the share-link transform) preserves the codepoint.
+    expect(decodeURIComponent(encodeURIComponent(s))).toBe(s);
+    // and it re-parses to the same string, so the token survives the round-trip.
+    expect(equationToString(parseEquation(s))).toBe(s);
   });
 
   it('maps inequality relations', () => {

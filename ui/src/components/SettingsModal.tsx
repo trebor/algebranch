@@ -89,6 +89,19 @@ export const SettingsModal: React.FC = () => {
     });
   };
 
+  const handleToggleAllowComplex = () => {
+    const newVal = !settings.allowComplex;
+    setSettings((prev) => ({
+      ...prev,
+      allowComplex: newVal,
+    }));
+    trackEvent({
+      action: 'toggle_allow_complex',
+      category: 'settings',
+      label: newVal ? 'on' : 'off',
+    });
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -195,6 +208,35 @@ export const SettingsModal: React.FC = () => {
                   <span
                     className={`${THEME_GLASS.TOGGLE_KNOB} ${
                       settings.allowEvaluateToDecimal ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className={THEME_GLASS.SETTING_ROW}>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold text-white">
+                    Allow Complex Numbers
+                  </span>
+                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                    Offer an “extend to ℂ” step when a square root of a negative appears (e.g. √−4 → 2ⅈ). Turn off to keep the complex door closed for a real-numbers-only class.
+                  </span>
+                </div>
+
+                <button
+                  onClick={handleToggleAllowComplex}
+                  className={`${THEME_GLASS.TOGGLE_TRACK} ${
+                    settings.allowComplex
+                      ? THEME_GLASS.TOGGLE_TRACK_ON
+                      : THEME_GLASS.TOGGLE_TRACK_OFF
+                  }`}
+                  role="switch"
+                  aria-checked={settings.allowComplex}
+                  aria-label="Toggle allow complex numbers option"
+                >
+                  <span
+                    className={`${THEME_GLASS.TOGGLE_KNOB} ${
+                      settings.allowComplex ? 'translate-x-5' : 'translate-x-0'
                     }`}
                   />
                 </button>

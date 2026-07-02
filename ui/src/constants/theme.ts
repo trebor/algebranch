@@ -374,6 +374,9 @@ export const THEME_GLASS = {
   SPINNER_BOX: 'relative flex items-center gap-3 bg-neutral-900 border border-white/10 rounded-lg px-2 py-1',
   SPINNER_BTN: 'w-6 h-6 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all cursor-pointer',
   FIELD_INPUT: 'bg-neutral-900 border border-white/10 text-white placeholder-white/30 focus:outline-none transition-all font-mono rounded-lg',
+  // Symbol-palette insert button (e.g. the imaginary unit ⅈ, #105): a small
+  // keycap-style button that splices a glyph into the focused expression field.
+  SYMBOL_INSERT_BTN: 'inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/25 text-white/90 shadow-sm select-none active:scale-95 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed',
   BUTTON_PRIMARY_SM: 'relative px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md cursor-pointer active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none',
   ALERT_DANGER_SM: 'text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-2 py-1 max-w-xs text-center',
   TEXT_BUTTON_MUTED: 'text-xs text-white/55 hover:text-white/70 transition-colors cursor-pointer',

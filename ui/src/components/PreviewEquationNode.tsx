@@ -8,7 +8,7 @@ import { useAtomValue } from 'jotai';
 import type * as math from 'mathjs';
 import { currentEquationAtom } from '../store/equation';
 import { Equation, getNodeByPath, getFunctionName, formatNumber, isCommutativeChainLink } from 'math-engine-client';
-import { OPERATOR_DISPLAY, splitSubscript } from '../constants/mathSymbols';
+import { OPERATOR_DISPLAY, splitSubscript, isImaginaryUnit } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
 import { useEquationPreviewPalette } from './EquationPreviewPaletteContext';
 import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
@@ -187,6 +187,12 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
 
     if (node.type === 'SymbolNode') {
       const symbolNode = node as math.SymbolNode;
+      // Upright roman i for the imaginary unit (ISO-80000-2), matching the live
+      // renderer in EquationNode — the constant ⅈ reads distinct from italic
+      // variable i, and we draw our own `i` rather than the U+2148 glyph. (#105)
+      if (isImaginaryUnit(symbolNode.name)) {
+        return <span className={`not-italic font-serif font-medium ${palette.variable}`}>i</span>;
+      }
       const { head, sub } = splitSubscript(symbolNode.name);
       return (
         <span className={`italic font-serif font-medium ${palette.variable}`}>

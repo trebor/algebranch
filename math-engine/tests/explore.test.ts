@@ -1,5 +1,5 @@
 import { parseEquation, getNodeByPath } from '../src';
-import { isCommutativeChainLink } from '../src/explore';
+import { isCommutativeChainLink, flattenAssociativeChain } from '../src/explore';
 
 // Resolve a node and its immediate parent from a path, then apply the predicate.
 // The parent is the node one path segment up (null for a side root).
@@ -70,5 +70,62 @@ describe('isCommutativeChainLink — flatten associative same-operator chains (#
   it('returns false when the parent is null', () => {
     const eq = parseEquation('a + b = 0');
     expect(isCommutativeChainLink(getNodeByPath(eq, 'lhs'), null)).toBe(false);
+  });
+});
+
+describe('flattenAssociativeChain — flat operands of a same-op chain (#353 WB)', () => {
+  const flat = (eqStr: string) =>
+    flattenAssociativeChain(parseEquation(eqStr).lhs, 'lhs');
+
+  it('flattens a sum chain to its ordered operand paths (uneven depths)', () => {
+    // `a+b+c` = `+[+[a,b],c]` → operands a,b,c; the inner `+` (lhs/0) is a link.
+    expect(flat('a + b + c = 0')).toEqual({
+      operandPaths: ['lhs/0/0', 'lhs/0/1', 'lhs/1'],
+      linkPaths: ['lhs/0'],
+    });
+  });
+
+  it('flattens a longer chain, collecting every collapsed link', () => {
+    expect(flat('a + b + c + d = 0')).toEqual({
+      operandPaths: ['lhs/0/0/0', 'lhs/0/0/1', 'lhs/0/1', 'lhs/1'],
+      linkPaths: ['lhs/0', 'lhs/0/0'],
+    });
+  });
+
+  it('flattens a product chain', () => {
+    expect(flat('x * y * z = 0')).toEqual({
+      operandPaths: ['lhs/0/0', 'lhs/0/1', 'lhs/1'],
+      linkPaths: ['lhs/0'],
+    });
+  });
+
+  it('keeps a nested product whole (precedence boundary stops the walk)', () => {
+    // `a + b*c + d` = `+[+[a,*[b,c]],d]` — the product at lhs/0/1 is one operand.
+    expect(flat('a + b * c + d = 0')).toEqual({
+      operandPaths: ['lhs/0/0', 'lhs/0/1', 'lhs/1'],
+      linkPaths: ['lhs/0'],
+    });
+  });
+
+  it('flattens a redundant same-op paren but not across it', () => {
+    // `a + (b + c)` strips the redundant paren to `+[a,+[b,c]]`, so it flattens
+    // to a,b,c (three operands) — mathematically `a+b+c`.
+    expect(flat('a + (b + c) = 0')).toEqual({
+      operandPaths: ['lhs/0', 'lhs/1/0', 'lhs/1/1'],
+      linkPaths: ['lhs/1'],
+    });
+  });
+
+  it('degenerates to a single operand when the root is not an operator', () => {
+    // A bare symbol root has nothing to flatten.
+    expect(flat('a = 0')).toEqual({ operandPaths: ['lhs'], linkPaths: [] });
+  });
+
+  it('leaves a meaningful paren as a single operand (no flatten across it)', () => {
+    // `a*(b+c)` root `*` — the parenthesised sum is one operand, not descended into.
+    expect(flat('a * (b + c) = 0')).toEqual({
+      operandPaths: ['lhs/0', 'lhs/1'],
+      linkPaths: [],
+    });
   });
 });

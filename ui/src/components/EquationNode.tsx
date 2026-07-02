@@ -26,6 +26,7 @@ import {
   onboardingReduceHandleAtom,
   onboardingSubstitutionAtom,
   isTreeAnimatingAtom,
+  triggerDragNudgeAtom,
   ReducibleActionInfo,
 } from '../store/equation';
 import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, symbolHintFor, isImaginaryUnit } from '../constants/mathSymbols';
@@ -69,6 +70,12 @@ interface UnifiedStackOption {
 // substitution — scales down to fit the popup rather than clamping early and
 // spilling off the right edge.
 const PREVIEW_MIN_SCALE = 0.4;
+
+// Movement (px) past which an in-progress press-and-move on a candidate term is
+// classified as a drag attempt and fires the nudge mid-gesture (#386). A medium
+// threshold: comfortably past tap jitter (so a tap never trips it), yet small
+// enough that the dialogue feels like a direct response to starting the drag.
+const DRAG_NUDGE_THRESHOLD_PX = 24;
 
 const renderEquationPreviewRow = (eq: Equation, muted: boolean) => (
   <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
@@ -326,6 +333,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const currentEq = useAtomValue(currentEquationAtom);
   const candidatePaths = useAtomValue(candidatePathsAtom);
   const toggleRootSign = useSetAtom(toggleRootSignAtom);
+  const triggerDragNudge = useSetAtom(triggerDragNudgeAtom);
   // Roving-tabindex controller for the expression composite widget (#257). Null
   // when rendered outside a provider (isolated tests / previews), in which case
   // the node falls back to the legacy single-Tab-stop-per-candidate behavior.
@@ -763,7 +771,77 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     }
   };
 
+  // Drag-nudge detection (#386): a new user's first instinct is to *drag* a
+  // movable term to a target, but the move is two taps. We watch for a
+  // press-and-move that starts on a fresh candidate term and fire the (internally
+  // gated) nudge *mid-drag* — the instant the movement crosses the threshold,
+  // while the button is still down — so the dialogue is a direct, immediate
+  // consequence of dragging rather than a mystery that appears after release. The
+  // nudge selects the source so targets light up and coaches the second tap. We
+  // never preventDefault, so scrolling still works.
+  const dragStartRef = React.useRef<{ x: number; y: number; id: number } | null>(null);
+  // Set when a drag was classified, so the trailing click (if the browser fires
+  // one) is swallowed rather than toggling the selection back off.
+  const dragDetectedRef = React.useRef(false);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    dragDetectedRef.current = false;
+    // Only a fresh pick-up qualifies: a movable term, nothing selected yet, and
+    // not a static/locked node. Panning that starts off a candidate never arms.
+    if (isStatic || sourcePath || !isCandidate) {
+      dragStartRef.current = null;
+      return;
+    }
+    dragStartRef.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    // Attribute the gesture to the term actually pressed: pointerdown bubbles up
+    // through this node's ancestors, and every candidate ancestor would otherwise
+    // arm and capture too — with the *last* setPointerCapture in the chain winning,
+    // so an ancestor would steal the selection. Events bubble target-first, so the
+    // deepest candidate runs first; stop here and the ancestors never arm (#386).
+    e.stopPropagation();
+    // Capture the pointer so the moves keep firing on THIS node as the finger
+    // drags away from it — without capture, pointermove stops reaching the origin
+    // node once the pointer leaves its box and the gesture is missed. Guarded:
+    // jsdom / a released pointer can throw.
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* setPointerCapture unavailable (tests) or pointer already gone — fine. */
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const start = dragStartRef.current;
+    if (!start || start.id !== e.pointerId) return;
+    const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+    if (moved < DRAG_NUDGE_THRESHOLD_PX) return; // not yet a meaningful drag
+    // Fire once, mid-gesture: null the start so further moves don't re-trigger,
+    // and mark the drag so the release's click is swallowed (not a tap-select).
+    dragStartRef.current = null;
+    dragDetectedRef.current = true;
+    triggerDragNudge(path);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    // Detection already happened on move; this is pure cleanup.
+    dragStartRef.current = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* nothing captured — fine. */
+    }
+  };
+
   const handleNodeClick = (e: React.MouseEvent) => {
+    // A classified drag already handed off to the nudge; swallow the trailing
+    // click so activateNode doesn't immediately toggle the just-made selection
+    // back off (a drag is never also a tap-to-select).
+    if (dragDetectedRef.current) {
+      dragDetectedRef.current = false;
+      e.stopPropagation();
+      return;
+    }
+
     // During the tour no node click may bubble to the workspace canvas, whose
     // onClick deselects the source (page.tsx). Otherwise a blocked/static click
     // would clear the selection and desync step order. activateNode still decides
@@ -1611,6 +1689,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     <div
       data-flip-id={nodeId}
       data-eq-node=""
+      data-node-path={path}
       style={customStyle}
       className={`relative inline-flex items-center justify-center border rounded-[0.4em] select-none ${THEME_GLASS.NODE_FOCUS_RING} ${semanticStyle}`}
       {...interactiveProps}
@@ -1622,6 +1701,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         const parentPath = lastSlash !== -1 ? path.substring(0, lastSlash) : null;
         setHoverPath(parentPath);
       }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
       onClick={handleNodeClick}
     >
       {renderedContent}
@@ -2031,7 +2113,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   );
 
   return fillRowHit ? (
-    <div className="w-full flex justify-center" onClick={handleNodeClick} data-fill-row-hit>
+    <div className="w-full flex justify-center" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onClick={handleNodeClick} data-fill-row-hit>
       {anchored}
     </div>
   ) : (

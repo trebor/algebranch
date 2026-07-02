@@ -2040,7 +2040,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                     tabIndex={i === menuActiveIndex ? 0 : -1}
                     onKeyDown={handleMenuKeyDown}
                     // `group` drives the trailing arrow's hover/focus brightening.
-                    className={`group w-full min-w-0 text-left px-2 py-1.5 flex items-center gap-2 cursor-pointer ${THEME_GLASS.CHOOSER_OPTION_ROW}`}
+                    className={`group w-full min-w-0 text-left px-2 py-1.5 flex items-center gap-2 cursor-pointer select-none ${THEME_GLASS.CHOOSER_OPTION_ROW}`}
                     onMouseEnter={() => {
                       setHoveredOption({ type: stack.type, index: i });
                       if (stack.type !== 'substitute') {
@@ -2123,7 +2123,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                   transform: placeAbove ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
                   zIndex: 9999,
                 }}
-                className="relative flex flex-col items-stretch gap-1 py-1.5 px-1 min-w-[210px] max-w-[300px] sm:max-w-[360px] text-left rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md shadow-2xl shadow-[0_0_30px_rgba(129,140,248,0.45)] pointer-events-auto font-sans normal-case"
+                className="relative flex flex-col items-stretch gap-1 py-1.5 px-1 min-w-[210px] max-w-[300px] sm:max-w-[360px] text-left rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md shadow-2xl shadow-[0_0_30px_rgba(129,140,248,0.45)] pointer-events-auto font-sans normal-case select-none"
                 onMouseEnter={cancelMenuClose}
                 onMouseLeave={scheduleMenuClose}
               >

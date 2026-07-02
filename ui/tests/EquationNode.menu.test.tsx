@@ -203,6 +203,33 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
     expect(screen.getByText(/simplifications available/i)).toBeInTheDocument();
   });
 
+  it('marks option rows non-selectable so a touch tap never starts text selection', () => {
+    const store = makeMultiOptionStore();
+    renderTree(store);
+    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    mouseClick(handle);
+
+    // On touch, pressing a label can begin native text selection instead of
+    // registering the tap, leaving a stray highlight and a swallowed apply.
+    // Every option row opts out of selection so the press is unambiguously a tap.
+    for (const opt of screen.getAllByRole('menuitem')) {
+      expect(opt.className).toContain('select-none');
+    }
+  });
+
+  it('locks the entire popover against selection — preview and header, not just rows', () => {
+    const store = makeMultiOptionStore();
+    renderTree(store);
+    mouseClick(screen.getByRole('button', { name: /show simplifications/i }));
+
+    // The whole popover opts out of text selection, so a stray press-drag on the
+    // preview or count header never highlights anything either. Term selection,
+    // if we ever want it, lives elsewhere — never inside this menu.
+    const container = screen.getByRole('menu').closest('.select-none');
+    expect(container).not.toBeNull();
+    expect(container).toContainElement(screen.getByText(/hover an option to preview/i));
+  });
+
   it('gives every option row an apply cue so it reads as a button (#369)', () => {
     const store = makeMultiOptionStore();
     renderTree(store);

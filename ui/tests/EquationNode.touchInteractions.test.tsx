@@ -300,6 +300,45 @@ describe('EquationNode touch handle chooser (#388)', () => {
     expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
   });
 
+  it('closing the menu with a second tap returns the node to the neutral state (#388)', () => {
+    installMatchMedia(false);
+    const store = makeHandleStore();
+    renderLhs(store);
+    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+
+    // A tap opens the menu; on touch the synthesized mouseenter also highlights
+    // the node (hoverPath = its path). jsdom doesn't synthesize that enter, so
+    // model the highlight the tap leaves behind directly.
+    fireEvent.click(handle, { detail: 1 });
+    act(() => store.set(hoverPathAtom, 'lhs/1'));
+    expect(screen.getAllByRole('menuitem')).toHaveLength(1);
+
+    // A second tap on the same handle dismisses the menu. Touch has no
+    // hover-leave, so without an explicit reset the node stays stranded in the
+    // semi-selected highlight — closing must return to nothing-highlighted.
+    fireEvent.click(handle, { detail: 1 });
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
+    expect(store.get(hoverPathAtom)).toBeNull();
+  });
+
+  it('dismissing the menu by tapping outside also clears the touch highlight (#388)', () => {
+    installMatchMedia(false);
+    const store = makeHandleStore();
+    renderLhs(store);
+    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+
+    // Open the menu; model the highlight the tap's synthesized mouseenter leaves.
+    fireEvent.click(handle, { detail: 1 });
+    act(() => store.set(hoverPathAtom, 'lhs/1'));
+    expect(screen.getAllByRole('menuitem')).toHaveLength(1);
+
+    // Tapping anywhere outside the menu and its handle dismisses it — and must
+    // likewise return the node to neutral, not just the handle re-tap path.
+    act(() => pointer(document.body, 'pointerdown', 5, 5));
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
+    expect(store.get(hoverPathAtom)).toBeNull();
+  });
+
   it('a handle press that drifts past the drag threshold does NOT select the node', () => {
     installMatchMedia(false);
     const store = makeHandleStore();

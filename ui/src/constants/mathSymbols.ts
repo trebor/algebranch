@@ -28,6 +28,11 @@ export const isImaginaryUnit = (name: string): boolean => name === IMAGINARY_UNI
 // True minus sign (U+2212) rather than the hyphen-minus.
 export const MINUS_SYMBOL = '−';
 
+// Identification shown for the imaginary unit on hover — names the glyph and its
+// meaning in one breath (#105). Shared by the ⅈ hover hint (on the glyph in an
+// equation) and the insert-button tooltip so the two always read the same.
+export const IMAGINARY_UNIT_HINT = `i = √${MINUS_SYMBOL}1`;
+
 // Display map for the binary operators the equation renderers emit.
 export const OPERATOR_DISPLAY: Record<string, string> = {
   '+': '+',
@@ -82,6 +87,13 @@ export const symbolToGlyph = (name: string): string => SYMBOL_DISPLAY[name] ?? n
 // symbolToGlyph maps only exact whole-name matches.
 export const greekNameFor = (name: string): string | null =>
   name in SYMBOL_DISPLAY ? name : null;
+
+// Hover-hint text identifying a symbol: a Greek letter's spelled name (`theta`)
+// or the imaginary unit's `i = √−1` identification (#105). Null for a plain
+// variable, which needs no hint. The single lookup the equation renderer uses to
+// decide what osmotic-learning hint, if any, to surface for a SymbolNode.
+export const symbolHintFor = (name: string): string | null =>
+  isImaginaryUnit(name) ? IMAGINARY_UNIT_HINT : greekNameFor(name);
 
 // Display-time subscript split (#113): an underscore-bearing symbol name like
 // `v_0`, `F_net`, or `omega_0` renders as a head glyph plus a lowered subscript

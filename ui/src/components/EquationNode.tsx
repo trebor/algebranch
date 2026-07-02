@@ -28,7 +28,7 @@ import {
   isTreeAnimatingAtom,
   ReducibleActionInfo,
 } from '../store/equation';
-import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, greekNameFor, isImaginaryUnit } from '../constants/mathSymbols';
+import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, symbolHintFor, isImaginaryUnit } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
 import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech } from 'math-engine-client';
@@ -1927,17 +1927,18 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     </div>
   );
 
-  // Greek-name hover hint (#116): a symbol rendered as a Greek glyph (θ) keeps its
-  // ASCII spelling in the AST, so we can surface the name on hover for osmotic
-  // learning. A bare variable is almost always a *candidate* (it has move handles),
-  // so gating on "static" would hide this on nearly every symbol — instead fold the
-  // name into the Select-Term tooltip the node already shows, and fall back to a
-  // standalone tip on the rare truly-static symbol.
-  const greekName =
-    node.type === 'SymbolNode' ? greekNameFor((node as math.SymbolNode).name) : null;
-  const greekNameLabel = greekName ? (
+  // Symbol-identification hover hint (#116, #105): a symbol rendered as a Greek
+  // glyph (θ) keeps its ASCII spelling in the AST, so we surface its name on hover
+  // for osmotic learning; the imaginary unit surfaces its `i = √−1` identification
+  // the same way. A bare variable is almost always a *candidate* (it has move
+  // handles), so gating on "static" would hide this on nearly every symbol —
+  // instead fold the hint into the Select-Term tooltip the node already shows, and
+  // fall back to a standalone tip on the rare truly-static symbol.
+  const symbolHint =
+    node.type === 'SymbolNode' ? symbolHintFor((node as math.SymbolNode).name) : null;
+  const symbolHintLabel = symbolHint ? (
     <span className={`text-xs italic select-none ${THEME_GLASS.TEXT_MUTED_BRIGHT}`}>
-      {greekName}
+      {symbolHint}
     </span>
   ) : null;
 
@@ -1989,14 +1990,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         <ScaledEquationFit className="max-w-[280px] sm:max-w-[340px]">
           <div className="text-[1.3em]"><PreviewEquationNode path={path} /></div>
         </ScaledEquationFit>
-        {greekNameLabel}
+        {symbolHintLabel}
       </div>
     );
     tooltipVisible = isHovered && hoverReducePath === null && openMenuType === null;
     tooltipClassName = 'max-w-[300px] sm:max-w-[360px]';
-  } else if (greekName) {
-    // Truly-static Greek symbol (no move handles): give the name its own hover tip.
-    tooltipContent = greekName;
+  } else if (symbolHint) {
+    // Truly-static identified symbol (no move handles): give the hint its own tip.
+    tooltipContent = symbolHint;
     tooltipVisible = undefined;
   }
 

@@ -12,9 +12,11 @@ import {
   resetToEquationStringAtom,
   equationEditSeedAtom,
   submitEquationEditAtom,
-  activeWorkspacePristineAtom
+  activeWorkspacePristineAtom,
+  settingsAtom
 } from '../store/equation';
 import { PreviewEquationNode } from './PreviewEquationNode';
+import { ImaginaryUnitButton } from './ImaginaryUnitButton';
 import { parseEquation, Equation, RelationOperator } from 'math-engine-client';
 import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
@@ -50,6 +52,11 @@ export const EquationInputModal: React.FC = () => {
 
   const lhsRef = React.useRef<HTMLInputElement>(null);
   const rhsRef = React.useRef<HTMLInputElement>(null);
+
+  // Which side an inserted symbol (e.g. the imaginary unit) lands in — the side
+  // last focused, defaulting to the right where a complex term usually goes.
+  const [activeSide, setActiveSide] = React.useState<'lhs' | 'rhs'>('rhs');
+  const allowComplex = useAtomValue(settingsAtom).allowComplex;
 
   // Reset inputs when the modal opens — render-phase previous-prop pattern
   // (not an effect) so the cleared state is in place before paint.
@@ -315,6 +322,7 @@ export const EquationInputModal: React.FC = () => {
                     value={lhsStr}
                     onChange={(e) => handleLhsChange(e.target.value)}
                     onKeyDown={handleLhsKeyDown}
+                    onFocus={() => setActiveSide('lhs')}
                     onPaste={handlePaste}
                     placeholder="Left side (e.g. 3*x)"
                     className="flex-1 min-w-0 bg-transparent text-white placeholder-white/20 text-sm focus:outline-none text-right font-mono"
@@ -351,6 +359,7 @@ export const EquationInputModal: React.FC = () => {
                     value={rhsStr}
                     onChange={(e) => handleRhsChange(e.target.value)}
                     onKeyDown={handleRhsKeyDown}
+                    onFocus={() => setActiveSide('rhs')}
                     onPaste={handlePaste}
                     placeholder="Right side (e.g. 12)"
                     className="flex-1 min-w-0 bg-transparent text-white placeholder-white/20 text-sm focus:outline-none text-left font-mono"
@@ -365,6 +374,18 @@ export const EquationInputModal: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Symbol palette: insert glyphs that can't be typed from a bare
+                    keyboard. The imaginary unit ⅈ lands in the last-focused side
+                    and is gated on the allowComplex setting (#105). */}
+                {allowComplex && (
+                  <div className="flex items-center gap-1.5">
+                    <ImaginaryUnitButton
+                      inputRef={activeSide === 'lhs' ? lhsRef : rhsRef}
+                      onInsert={activeSide === 'lhs' ? handleLhsChange : handleRhsChange}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Preview or Error Area (Below Input) */}

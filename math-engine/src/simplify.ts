@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import type * as math from 'mathjs';
-import { mjs, fractionMath, isReservedConstantName } from './mathjs';
+import { mjs, fractionMath, isReservedConstantName, IMAGINARY_UNIT } from './mathjs';
 import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, ensureNodeIds } from './tree';
 import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions, getQuadraticStandardForm, getVariables, tryExtractQuadraticExpr } from './validator';
 import { HIGH_SCHOOL_IDENTITIES } from './rules';
@@ -344,6 +344,44 @@ export const trySimplifyRadical = (node: math.MathNode): math.MathNode | null =>
         : new mjs.FunctionNode('nthRoot', [new mjs.ConstantNode(remaining)]);
 
   return new mjs.OperatorNode('*', 'multiply', [new mjs.ConstantNode(coeff), rootNode]);
+};
+
+/**
+ * The "extend to ℂ" rewrite (#105): a square root of a negative constant has no
+ * real value, so resolve it to imaginary form on the principal branch,
+ * `√−A → √A · ⅈ` (for A > 0). The residual real radical `√A` is left intact so
+ * the existing "Simplify Radical" / "Simplify" steps can reduce it in a
+ * following, separately-inspectable move (`√−4 → √4·ⅈ → 2·ⅈ`).
+ *
+ * Returns null unless the node is `sqrt(<negative constant>)` — a bare negative
+ * ConstantNode or a unary-minus of a positive constant subtree. A symbolic
+ * radicand (`√−x`) is deliberately excluded: its sign isn't known, so there is
+ * no unconditional imaginary form to offer.
+ */
+export const tryExtendToComplex = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'FunctionNode') return null;
+  const fn = node as math.FunctionNode;
+  if (getFunctionName(fn) !== 'sqrt' || fn.args.length !== 1) return null;
+
+  const radicand = unwrapParens(fn.args[0]);
+
+  let posRadicand: math.MathNode | null = null;
+  if (radicand.type === 'ConstantNode') {
+    const v = Number((radicand as math.ConstantNode).value);
+    if (v < 0) posRadicand = new mjs.ConstantNode(-v);
+  } else if (radicand.type === 'OperatorNode') {
+    const op = radicand as math.OperatorNode;
+    if (op.isUnary() && op.op === '-' && isConstantSubtree(op.args[0])) {
+      const innerVal = Number(op.args[0].compile().evaluate());
+      if (Number.isFinite(innerVal) && innerVal > 0) posRadicand = op.args[0];
+    }
+  }
+  if (!posRadicand) return null;
+
+  return new mjs.OperatorNode('*', 'multiply', [
+    new mjs.FunctionNode('sqrt', [posRadicand]),
+    new mjs.SymbolNode(IMAGINARY_UNIT),
+  ]);
 };
 
 /**
@@ -1514,6 +1552,26 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
               }
             }
           }
+        }
+      }
+    } catch {}
+
+    // Extend to ℂ: a square root of a negative has no real value; offer
+    // resolving it to imaginary form √−A → √A·ⅈ. Emitted unconditionally here;
+    // the UI gates it on the `allowComplex` setting, exactly as it gates
+    // "Evaluate to Decimal" (#105).
+    try {
+      const node = getNodeByPath(eq, path);
+      const complexNode = tryExtendToComplex(node);
+      if (complexNode) {
+        const newEq = replaceNodeAtPath(eq, path, complexNode);
+        if (areEquationsEquivalent(eq, newEq)) {
+          rawReductions.push({
+            path,
+            simplified: newEq,
+            type: 'reduce',
+            label: 'Extend to ℂ',
+          });
         }
       }
     } catch {}

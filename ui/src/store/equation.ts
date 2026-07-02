@@ -826,6 +826,16 @@ export const reduciblePathsAtom = atom<Record<string, ReducibleActionInfo[]>>({}
 
 export interface UserSettings {
   allowEvaluateToDecimal: boolean;
+  /**
+   * Whether the "extend to ℂ" doorway is offered (#105). On (default): a
+   * `sqrt` of a negative surfaces an 'extend to ℂ' move that resolves it to
+   * imaginary form. Off: that invitation is never shown — the "keep the complex
+   * door closed" case for a real-numbers-only class. Follows the #67 gate
+   * pattern (mirrors `allowEvaluateToDecimal`); the planning docs call this
+   * `complexAllowed`. It is one member of the broader capability-preset layer
+   * tracked in #362.
+   */
+  allowComplex: boolean;
   seenEqualsHint: boolean;
   /**
    * Accessibility text-size knob (#239). Multiplies the root rem so all
@@ -889,6 +899,7 @@ export function cycleChromeScale(current: number, direction: 1 | -1 = 1): number
 
 export const DEFAULT_SETTINGS: UserSettings = {
   allowEvaluateToDecimal: true,
+  allowComplex: true,
   seenEqualsHint: false,
   chromeScale: CHROME_SCALE_DEFAULT,
 };
@@ -940,16 +951,23 @@ export const settingsAtom = atom(
   }
 );
 
+// Move labels suppressed by a capability gate (#67 pattern). Each entry hides a
+// reducible move when its setting is off; a path left with no moves is dropped
+// entirely. "Evaluate to Decimal" is gated on allowEvaluateToDecimal; the
+// "Extend to ℂ" doorway is gated on allowComplex (#105).
 export const filteredReduciblePathsAtom = atom<Record<string, ReducibleActionInfo[]>>((get) => {
   const settings = get(settingsAtom);
   const reduciblePaths = get(reduciblePathsAtom);
-  if (settings.allowEvaluateToDecimal) {
-    return reduciblePaths;
-  }
+
+  const suppressed = new Set<string>();
+  if (!settings.allowEvaluateToDecimal) suppressed.add('Evaluate to Decimal');
+  if (!settings.allowComplex) suppressed.add('Extend to ℂ');
+  if (suppressed.size === 0) return reduciblePaths;
+
   const filtered: Record<string, ReducibleActionInfo[]> = {};
   Object.keys(reduciblePaths).forEach((path) => {
     const filteredActions = reduciblePaths[path].filter(
-      (action) => action.label !== 'Evaluate to Decimal'
+      (action) => !action.label || !suppressed.has(action.label)
     );
     if (filteredActions.length > 0) {
       filtered[path] = filteredActions;

@@ -659,6 +659,54 @@ describe('generateValidMoves — pole-robust sampling (#347)', () => {
   });
 });
 
+describe('generateValidMoves — normalized result trees (#378)', () => {
+  // A structural skeleton ignoring ids/values-vs-names, so we can assert the
+  // *nesting* of a move result matches what the parser would produce.
+  const skeleton = (n: any): string => {
+    if (n.type === 'OperatorNode') return `${n.op}(${n.args.map(skeleton).join(',')})`;
+    if (n.type === 'FunctionNode') return `${n.fn?.name ?? n.name}(${n.args.map(skeleton).join(',')})`;
+    if (n.type === 'ParenthesisNode') return `(${skeleton(n.content)})`;
+    return n.name ?? String(n.value);
+  };
+
+  const everyNode = (n: any, visit: (node: any) => void): void => {
+    visit(n);
+    (n.args ?? []).forEach((c: any) => everyNode(c, visit));
+    if (n.content) everyNode(n.content, visit);
+  };
+
+  test('every node in every returned equation carries an id', () => {
+    const eq = parseEquation('x = y + a * b * c');
+    // Cover a spread of drags that rebuild associative chains and other subtrees.
+    for (const src of ['rhs/1/0/0', 'rhs/1/0/1', 'rhs/1/1', 'rhs/0', 'lhs']) {
+      const moves = generateValidMoves(eq, src);
+      for (const result of Object.values(moves)) {
+        for (const side of [result.lhs, result.rhs]) {
+          everyNode(side, (node) => {
+            expect(typeof node.id).toBe('string');
+            expect(node.id.length).toBeGreaterThan(0);
+          });
+        }
+      }
+    }
+  });
+
+  test('associative-chain results match canonical (re-parsed) left-nested nesting', () => {
+    // Dragging `a` (rhs/1/0/0) onto `c` (rhs/1/1) of `x = y + a*b*c` reorders the
+    // chain to `b*c*a`. The move builder wraps it right-nested (`b*(c*a)`); the
+    // normalized result must match the parser's left-nested `(b*c)*a`.
+    const eq = parseEquation('x = y + a * b * c');
+    const moves = generateValidMoves(eq, 'rhs/1/0/0');
+    const result = moves['rhs/1/1'];
+    expect(result).toBeDefined();
+
+    const canonical = parseEquation(`${equationToString(result)}`);
+    expect(skeleton(result.rhs)).toBe(skeleton(canonical.rhs));
+    // Concretely: a flat left-nested product, not a right-nested pair.
+    expect(skeleton(result.rhs)).toBe('+(y,*(*(b,c),a))');
+  });
+});
+
 describe('hasValidMove — short-circuit existence check (#188)', () => {
   // hasValidMove must agree exactly with "generateValidMoves produced ≥1 move"
   // for every path, since it only short-circuits the existence query (it must not

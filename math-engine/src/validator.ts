@@ -23,6 +23,7 @@ import {
   removeNodeAtPath,
   getAllPaths,
   ensureNodeIds,
+  canonicalizeAssociativeChains,
   getChildren,
 } from './tree';
 
@@ -1510,8 +1511,19 @@ const collectValidMoves = (
  * Generates all mathematically valid target equations for a selected node.
  * Maps destination path string to the resulting Equation.
  */
-export const generateValidMoves = (originalEq: Equation, sourcePath: string): Record<string, Equation> =>
-  collectValidMoves(originalEq, sourcePath, false);
+export const generateValidMoves = (originalEq: Equation, sourcePath: string): Record<string, Equation> => {
+  const moves = collectValidMoves(originalEq, sourcePath, false);
+  // Defense-in-depth (#378): a move can wrap the dragged term onto a chain
+  // operand and emit a right-nested, id-less associative node — a malformed
+  // tree that strands terms in path/active-set computation. Normalize every
+  // result before it leaves the move layer: canonicalize associative-chain
+  // nesting, then backfill any missing node ids.
+  const normalized: Record<string, Equation> = {};
+  for (const key of Object.keys(moves)) {
+    normalized[key] = ensureNodeIds(canonicalizeAssociativeChains(moves[key]));
+  }
+  return normalized;
+};
 
 /**
  * Existence-only counterpart to {@link generateValidMoves}: returns true as soon

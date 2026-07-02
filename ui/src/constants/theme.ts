@@ -216,6 +216,18 @@ export const THEME_GLASS = {
   EQUALS_POPOVER_TITLE: 'text-[0.5625rem] font-bold text-indigo-400 tracking-wider select-none',
   EQUALS_POPOVER_DESC: 'text-xs leading-snug text-white/70',
   EQUALS_POPOVER_BTN: 'mt-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-[0.5625rem] font-bold rounded-lg self-end transition-all cursor-pointer shadow-md shadow-indigo-600/20 border border-indigo-400/20',
+  // Drag-nudge coach card (#386): small non-modal popover anchored near a term the
+  // user tried to *drag*, steering them into the two-tap move.
+  DRAG_NUDGE_CARD: 'w-60 p-3 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-2 text-left pointer-events-auto',
+  DRAG_NUDGE_TITLE: 'text-[0.5625rem] font-bold text-indigo-400 tracking-wider select-none uppercase',
+  DRAG_NUDGE_DESC: 'text-xs leading-snug text-white/70',
+  DRAG_NUDGE_CHECK_ROW: 'flex items-center gap-2 cursor-pointer select-none text-[0.6875rem] text-white/50 hover:text-white/70 transition-colors',
+  DRAG_NUDGE_CHECKBOX: 'w-3.5 h-3.5 accent-indigo-500 cursor-pointer',
+  DRAG_NUDGE_CLOSE: 'absolute top-1.5 right-1.5 p-0.5 rounded-md text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors cursor-pointer',
+  // Live preview of the picked-up subexpression inside the nudge card.
+  DRAG_NUDGE_PREVIEW_ROW: 'flex items-center gap-2 flex-wrap',
+  DRAG_NUDGE_PREVIEW_LABEL: 'text-[0.625rem] font-medium text-white/40 select-none shrink-0',
+  DRAG_NUDGE_PREVIEW_BOX: 'px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-400/25 text-white/90 text-base leading-none max-w-full overflow-x-auto scrollbar-thin',
   // Copy-as-format menu (#46): popover offering Plain / LaTeX / Unicode export.
   COPY_MENU: 'z-50 w-44 p-1 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-0.5 text-left',
   COPY_MENU_ITEM: 'flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none',

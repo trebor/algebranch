@@ -19,6 +19,7 @@ import { ExportWorkspacesModal } from '../components/ExportWorkspacesModal';
 import { ImportWorkspacesModal } from '../components/ImportWorkspacesModal';
 import { AboutModal } from '../components/AboutModal';
 import { OnboardingTour } from '../components/OnboardingTour';
+import { DragNudgeHint } from '../components/DragNudgeHint';
 import { Tooltip } from '../components/Tooltip';
 import { HotkeyHint } from '../components/HotkeyHint';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
@@ -2167,6 +2168,7 @@ export default function Home() {
             )}
 
             <OnboardingTour />
+            <DragNudgeHint />
             <SharedWorkspaceBanner />
             <StorageDegradedBanner />
           </div>

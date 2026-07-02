@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { atom } from 'jotai';
-import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getChildren, stripRedundantParentheses, getFunctionName, flipRelation, compressString } from 'math-engine-client';
+import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, nodeToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getChildren, stripRedundantParentheses, getFunctionName, flipRelation, compressString } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
 import { applyGlobalOp, GlobalOpParams, GlobalOpType, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
@@ -1213,6 +1213,64 @@ export const getCanonicalKey = (eqVal: Equation): string => {
 // substitution, toggle-root, and the global both-sides operations alike.
 export const liveAnnouncementAtom = atom<string>('');
 
+// ==========================================
+// Drag-nudge state (#386)
+// New users instinctively try to *drag* a term to a target; the app's move is two
+// taps. We detect that drag attempt (EquationNode), treat the press as the pick-up
+// (select the source so targets light up), and coach the second tap. The nudge
+// keeps returning on every drag attempt until the user checks "Don't show this
+// again" — a completed move does NOT silence it, since a user who keeps dragging
+// after a lucky first move still hasn't internalized the two-tap model. The
+// checkbox is the user's own "I've got it" signal.
+// ==========================================
+
+export const DRAG_NUDGE_DISMISSED_KEY = 'algebranch_drag_nudge_dismissed';
+
+// True once the user has checked "Don't show this again". Hydrated on load.
+export const dragNudgeDismissedAtom = atom<boolean>(false);
+
+// The visible nudge, anchored to the picked-up term's path — or null when hidden.
+export const dragNudgeAtom = atom<{ path: string } | null>(null);
+
+// Write-only: a drag attempt on a movable term. Gated on (not onboarding) AND
+// (not dismissed forever) AND (not already visible). When it fires it selects the
+// term as the source — identical to a tap, so the targets glow — and announces the
+// two-tap hint. No re-show cooldown: a dismissed hint returns on the very next
+// drag, which reads more consistently than a timed lockout.
+export const triggerDragNudgeAtom = atom(null, (get, set, path: string) => {
+  if (get(onboardingChapterIdAtom)) return; // tour teaches this explicitly
+  if (get(dragNudgeDismissedAtom)) return;
+  if (get(dragNudgeAtom)) return; // one already on screen
+
+  set(sourcePathAtom, path);
+  set(dragNudgeAtom, { path });
+  // Name the picked-up term so the announcement mirrors the visual preview in the
+  // card (a11y parity), then teach the two-tap move.
+  let spoken = '';
+  try {
+    spoken = nodeToSpeech(getNodeByPath(get(currentEquationAtom), path));
+  } catch {
+    /* path may not resolve mid-transition — fall back to a term-less phrasing. */
+  }
+  set(
+    liveAnnouncementAtom,
+    `Selected ${spoken ? `${spoken}. ` : ''}Moving a term takes two taps, no dragging — now tap a green glowing target to move it there.`,
+  );
+});
+
+// Write-only: hide the hint. When the user ticked "Don't show this again", also
+// persists the permanent dismissal.
+export const dismissDragNudgeAtom = atom(
+  null,
+  (_get, set, opts?: { dontShowAgain?: boolean }) => {
+    set(dragNudgeAtom, null);
+    if (opts?.dontShowAgain) {
+      set(dragNudgeDismissedAtom, true);
+      safeLocalStorage.setItem(DRAG_NUDGE_DISMISSED_KEY, 'true');
+    }
+  },
+);
+
 // Assertive nav read-out for the Interaction-mode tree (#270). VoiceOver won't
 // re-announce a term when keyboard focus moves UP to its ENCLOSING treeitem — the
 // parent contains the child you came from, so VO announces "group" and goes quiet on
@@ -2310,6 +2368,10 @@ export const hydrateWorkspaceTabsAtom = atom(
 
       const onboardingCompleted = safeLocalStorage.getItem('algebranch_onboarding_completed') === 'true';
       set(onboardingCompletedAtom, onboardingCompleted);
+
+      // Drag-nudge persistence (#386): the "Don't show this again" checkbox is the
+      // only permanent silencer.
+      set(dragNudgeDismissedAtom, safeLocalStorage.getItem(DRAG_NUDGE_DISMISSED_KEY) === 'true');
     } catch (err) {
       console.error('Failed to hydrate workspace tabs from localStorage:', err);
     }

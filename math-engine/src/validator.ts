@@ -1343,6 +1343,51 @@ export const mapPathTempToOrig = (
   }
 };
 
+const ASSOCIATIVE_CHAIN_OPS = new Set(['+', '*']);
+
+/** Parent path of a tree path, or null for a side root (`lhs`/`rhs`). */
+const parentOfPath = (path: string): string | null => {
+  const idx = path.lastIndexOf('/');
+  return idx === -1 ? null : path.substring(0, idx);
+};
+
+/**
+ * The root path (and operator) of the maximal same-operator associative chain
+ * that has the node at `operandPath` as one of its flat operands, or null when
+ * that node is not an operand of a `+`/`*` chain. Mirrors the descent in
+ * `flattenAssociativeChain` (#353): climb through same-op binary `OperatorNode`
+ * parents to the topmost link. Two operands share a root iff they belong to the
+ * same commutative chain — the predicate #377 uses to drop no-op reorderings.
+ */
+const associativeChainRootOf = (
+  eq: Equation,
+  operandPath: string,
+): { rootPath: string; op: string } | null => {
+  const parentPath = parentOfPath(operandPath);
+  if (parentPath === null) return null;
+  const parentNode = getNodeByPath(eq, parentPath) as math.OperatorNode;
+  if (
+    parentNode.type !== 'OperatorNode' ||
+    !ASSOCIATIVE_CHAIN_OPS.has(parentNode.op) ||
+    parentNode.args.length !== 2
+  ) {
+    return null;
+  }
+  const op = parentNode.op;
+  let rootPath = parentPath;
+  for (;;) {
+    const grandParentPath = parentOfPath(rootPath);
+    if (grandParentPath === null) break;
+    const gp = getNodeByPath(eq, grandParentPath) as math.OperatorNode;
+    if (gp.type === 'OperatorNode' && gp.op === op && gp.args.length === 2) {
+      rootPath = grandParentPath;
+    } else {
+      break;
+    }
+  }
+  return { rootPath, op };
+};
+
 /**
  * Shared core for {@link generateValidMoves} / {@link hasValidMove}.
  *
@@ -1386,6 +1431,11 @@ const collectValidMoves = (
       ? [originalEq.relation as RelationOperator, flipRelation(originalEq.relation)]
       : ['='];
 
+    // #377: the source's maximal same-operator associative chain (if it sits in
+    // one). Any target that is another operand of this same chain would produce
+    // a pure commutative reorder — dropped below.
+    const sourceChain = associativeChainRootOf(originalEq, sourcePath);
+
     for (const targetPath of targetPaths) {
       if (excludedParents.has(targetPath)) {
         continue;
@@ -1403,6 +1453,23 @@ const collectValidMoves = (
       );
       if (isCrossEquals && targetPath !== 'lhs' && targetPath !== 'rhs') {
         continue;
+      }
+
+      // #377: a drag whose source and target are both operands of the SAME
+      // maximal same-operator associative chain is a pure commutative reorder —
+      // no algebraic content, and (pre-#378) a malformed-tree hazard. Drop the
+      // whole target: the only equivalence it could yield is the reorder itself
+      // (any other operator changes the value), so nothing legitimate is lost.
+      if (sourceChain) {
+        try {
+          const targetPathInOrig = mapPathTempToOrig(originalEq, sourcePath, targetPath);
+          const targetChain = associativeChainRootOf(originalEq, targetPathInOrig);
+          if (targetChain && targetChain.rootPath === sourceChain.rootPath) {
+            continue;
+          }
+        } catch {
+          // Can't classify the target — fall through and treat it normally.
+        }
       }
 
       const targetNode = getNodeByPath(tempEq, targetPath);

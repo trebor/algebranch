@@ -1,7 +1,7 @@
 import * as math from 'mathjs';
 import { parseEquation, equationToString, Equation, tryExpandPowerTerm, tryCombinePowerTerms } from '../src/index';
 import { areEquationsEquivalent, generateValidMoves, hasValidMove } from '../src/validator';
-import { getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath } from '../src/tree';
+import { getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, canonicalizeAssociativeChains, ensureNodeIds } from '../src/tree';
 import { autoSimplify, getSimplificationForPath } from '../src/simplify';
 
 describe('Math Engine Validator & Simplifier', () => {
@@ -691,19 +691,31 @@ describe('generateValidMoves — normalized result trees (#378)', () => {
     }
   });
 
-  test('associative-chain results match canonical (re-parsed) left-nested nesting', () => {
-    // Dragging `a` (rhs/1/0/0) onto `c` (rhs/1/1) of `x = y + a*b*c` reorders the
-    // chain to `b*c*a`. The move builder wraps it right-nested (`b*(c*a)`); the
-    // normalized result must match the parser's left-nested `(b*c)*a`.
-    const eq = parseEquation('x = y + a * b * c');
-    const moves = generateValidMoves(eq, 'rhs/1/0/0');
-    const result = moves['rhs/1/1'];
-    expect(result).toBeDefined();
+  test('canonicalizes a right-nested, id-less associative chain (defense-in-depth)', () => {
+    // #377 now suppresses the specific in-app reorder that used to surface this
+    // shape (dragging `a` onto `c` in `x = y + a*b*c`). But the move layer must
+    // still normalize any right-nested / id-less chain a future move could build.
+    // Hand-build the malformed shape `y + b*(c*a)` — `*[c,a]` right-nested and
+    // id-less — and assert it normalizes to the parser's left-nested `(b*c)*a`
+    // with every node carrying an id.
+    const sym = (name: string) => new math.SymbolNode(name);
+    const mul = (l: math.MathNode, r: math.MathNode) =>
+      new math.OperatorNode('*', 'multiply', [l, r]);
+    const rightNested = new math.OperatorNode('+', 'add', [
+      sym('y'),
+      mul(sym('b'), mul(sym('c'), sym('a'))), // *[b, *[c,a]] — right-nested, inner id-less
+    ]);
+    const malformed: Equation = { lhs: sym('x'), rhs: rightNested, relation: '=' };
 
-    const canonical = parseEquation(`${equationToString(result)}`);
-    expect(skeleton(result.rhs)).toBe(skeleton(canonical.rhs));
-    // Concretely: a flat left-nested product, not a right-nested pair.
+    const result = ensureNodeIds(canonicalizeAssociativeChains(malformed));
+
+    // Flat left-nested product, matching what the parser produces for `b*c*a`.
     expect(skeleton(result.rhs)).toBe('+(y,*(*(b,c),a))');
+    expect(skeleton(result.rhs)).toBe(skeleton(parseEquation('x = y + b*c*a').rhs));
+    everyNode(result.rhs, (node) => {
+      expect(typeof node.id).toBe('string');
+      expect(node.id.length).toBeGreaterThan(0);
+    });
   });
 });
 
@@ -776,3 +788,37 @@ describe('areEquationsEquivalent — reject pre-filter soundness (#188)', () => 
 });
 
 
+
+describe('generateValidMoves — no-op commutative reordering within an associative chain (#377)', () => {
+  test('suppresses reordering two operands of the same * chain, cross-equals factor move preserved', () => {
+    // p = a*b*c ; rhs is *[*[a,b],c] so a=rhs/0/0, b=rhs/0/1, c=rhs/1.
+    const eq = parseEquation('p = a*b*c');
+    const moves = generateValidMoves(eq, 'rhs/0/0'); // drag 'a'
+
+    // Dragging 'a' onto sibling factors 'b'/'c' is a pure commutative reorder —
+    // in tempEq (a removed) b lives at rhs/0 and c at rhs/1. Neither is offered.
+    expect(moves['rhs/0']).toBeUndefined();
+    expect(moves['rhs/1']).toBeUndefined();
+
+    // The genuine cross-equals move (dividing the factor across '=') survives.
+    expect(moves['lhs']).toBeDefined();
+    expect(equationToString(moves['lhs'])).toBe('p / a = b * c');
+  });
+
+  test('suppresses reordering two operands of the same + chain (parenthesised sum)', () => {
+    // x * (a + b + c) = 64 ; content is +[+[a,b],c] under the paren.
+    const eq = parseEquation('x * (a + b + c) = 64');
+    const moves = generateValidMoves(eq, 'lhs/1/0/0/0'); // drag 'a'
+
+    // Dragging 'a' onto 'c' (temp path lhs/1/0/1) is a commutative reorder — dropped.
+    expect(moves['lhs/1/0/1']).toBeUndefined();
+  });
+
+  test('leaves genuine cross-chain transpositions untouched', () => {
+    // a*b = c*d ; dragging factor 'a' across '=' is real algebra, not a reorder.
+    const eq = parseEquation('a*b = c*d');
+    const moves = generateValidMoves(eq, 'lhs/0'); // drag 'a'
+    expect(moves['rhs']).toBeDefined();
+    expect(equationToString(moves['rhs'])).toBe('b = c * d / a');
+  });
+});

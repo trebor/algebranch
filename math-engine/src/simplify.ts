@@ -4,7 +4,7 @@
 import type * as math from 'mathjs';
 import { mjs, fractionMath, isReservedConstantName, IMAGINARY_UNIT } from './mathjs';
 import { Equation, getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, ensureNodeIds } from './tree';
-import { areEquationsEquivalent, areExpressionsValueEqual, getFunctionName, getQuadraticFormulaSolutions, getQuadraticStandardForm, getVariables, tryExtractQuadraticExpr } from './validator';
+import { areEquationsEquivalent, areExpressionsValueEqual, evaluatePoint, getFunctionName, getQuadraticFormulaSolutions, getQuadraticStandardForm, getVariables, tryExtractQuadraticExpr } from './validator';
 import { HIGH_SCHOOL_IDENTITIES } from './rules';
 import { matchPattern, instantiatePattern, tryExpressAsPower, tryExpressAsPowerOptions } from './matcher';
 import { tryFactor } from './factor';
@@ -388,6 +388,89 @@ export const tryExtendToComplex = (node: math.MathNode): math.MathNode | null =>
     new mjs.FunctionNode('sqrt', [posRadicand]),
     new mjs.SymbolNode(IMAGINARY_UNIT),
   ]);
+};
+
+/** Count occurrences of the imaginary-unit symbol in a subtree. */
+const countImaginaryUnits = (node: math.MathNode): number => {
+  let n = 0;
+  node.traverse((child) => {
+    if (child.type === 'SymbolNode' && (child as math.SymbolNode).name === IMAGINARY_UNIT) n++;
+  });
+  return n;
+};
+
+
+// Snap a float to the nearest integer when it is within tolerance — folded
+// complex arithmetic on exact inputs lands on integers up to float noise.
+const snapReal = (x: number): number => {
+  const r = Math.round(x);
+  return Math.abs(x - r) < 1e-9 ? r : x;
+};
+
+// Build the `b · ⅈ` factor for a positive coefficient, eliding the unit
+// coefficient (b === 1 → bare ⅈ).
+const imaginaryTerm = (b: number): math.MathNode =>
+  b === 1
+    ? new mjs.SymbolNode(IMAGINARY_UNIT)
+    : new mjs.OperatorNode('*', 'multiply', [new mjs.ConstantNode(b), new mjs.SymbolNode(IMAGINARY_UNIT)]);
+
+/**
+ * Render a computed complex (or real) value as an AST node in `a + b·ⅈ` standard
+ * form (#105): a pure real is a bare constant; a pure imaginary is `b·ⅈ` (or ⅈ /
+ * −ⅈ); a mixed value reads `a + b·ⅈ` or `a − b·ⅈ` with the sign folded into a
+ * subtraction so it prints conventionally.
+ */
+export const complexToNode = (value: number | { re: number; im: number; isComplex?: boolean }): math.MathNode => {
+  const re = snapReal(typeof value === 'number' ? value : value.re);
+  const im = snapReal(typeof value === 'number' ? 0 : value.im);
+
+  if (im === 0) return new mjs.ConstantNode(re);
+
+  const imagWithSign = (b: number): math.MathNode =>
+    b < 0
+      ? new mjs.OperatorNode('-', 'unaryMinus', [imaginaryTerm(-b)])
+      : imaginaryTerm(b);
+
+  if (re === 0) return imagWithSign(im);
+
+  const reNode = new mjs.ConstantNode(re);
+  return im < 0
+    ? new mjs.OperatorNode('-', 'subtract', [reNode, imaginaryTerm(-im)])
+    : new mjs.OperatorNode('+', 'add', [reNode, imaginaryTerm(im)]);
+};
+
+/**
+ * Fold a constant subtree that contains ⅈ into `a + b·ⅈ` standard form — the
+ * minimal complex-arithmetic simplification (ⅈ² → −1, power cycling, combining
+ * like imaginary terms). Fires only when the number of ⅈ occurrences strictly
+ * drops, so it collapses genuine arithmetic (ⅈ·3·ⅈ → −3, 2ⅈ + 3ⅈ → 5ⅈ) without
+ * ever firing as a pure commutative reorder (ⅈ·3 → 3·ⅈ) or on an already-standard
+ * term. Returns null for a variable-bearing or ⅈ-free node (the latter is left
+ * to the ordinary real simplifier). (#105)
+ */
+export const trySimplifyComplexConstant = (node: math.MathNode): math.MathNode | null => {
+  if (countImaginaryUnits(node) === 0) return null;
+  if (!isConstantSubtree(node)) return null;
+
+  let value: number | { re: number; im: number; isComplex?: boolean };
+  try {
+    value = evaluatePoint(node, {});
+  } catch {
+    return null;
+  }
+  const re = typeof value === 'number' ? value : value.re;
+  const im = typeof value === 'number' ? 0 : value.im;
+  if (!Number.isFinite(re) || !Number.isFinite(im) || Number.isNaN(re) || Number.isNaN(im)) return null;
+
+  const out = complexToNode(value);
+  // Fire only on a genuine simplification: fewer ⅈ occurrences (ⅈ² → −1,
+  // combining like terms) OR a structurally smaller result (power cycling like
+  // ⅈ³ → −ⅈ keeps one ⅈ but drops the exponent). This rejects a bare
+  // commutative reorder (ⅈ·3 → 3·ⅈ) and an already-standard term.
+  const collapsesUnits = countImaginaryUnits(out) < countImaginaryUnits(node);
+  const shrinks = countNodes(out) < countNodes(node);
+  if (!collapsesUnits && !shrinks) return null;
+  return out;
 };
 
 /**
@@ -1558,6 +1641,26 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
               }
             }
           }
+        }
+      }
+    } catch {}
+
+    // Simplify a constant ℂ-subtree to a + b·ⅈ standard form (ⅈ² → −1, power
+    // cycling, combining like imaginary terms). Arithmetic on ⅈ already present
+    // in the equation, so — unlike the extend-to-ℂ doorway below — it is NOT
+    // gated on allowComplex. (#105)
+    try {
+      const node = getNodeByPath(eq, path);
+      const folded = trySimplifyComplexConstant(node);
+      if (folded) {
+        const newEq = replaceNodeAtPath(eq, path, folded);
+        if (areEquationsEquivalent(eq, newEq)) {
+          rawReductions.push({
+            path,
+            simplified: newEq,
+            type: 'reduce',
+            label: 'Simplify',
+          });
         }
       }
     } catch {}

@@ -231,6 +231,21 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
     expect(container).toContainElement(screen.getByText(/hover an option to preview/i));
   });
 
+  it('leaves the empty stack preview inert — a tap neither applies nor leaks (#390)', () => {
+    const store = makeMultiOptionStore();
+    renderTree(store);
+    mouseClick(screen.getByRole('button', { name: /show simplifications/i }));
+
+    // No row is chosen yet, so the multi-option preview shows nothing definite —
+    // there is nothing to apply. Tapping it must stay inert: the menu stays open
+    // and no selection leaks to the node behind. (Tap-to-apply is single-option
+    // only; a stack needs a row chosen first, which touch can't do today.)
+    expect(store.get(sourcePathAtom)).toBeNull();
+    fireEvent.click(screen.getByTestId('menu-preview'));
+    expect(screen.getAllByRole('menuitem')).toHaveLength(2);
+    expect(store.get(sourcePathAtom)).toBeNull();
+  });
+
   it('gives every option row an apply cue so it reads as a button (#369)', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
@@ -284,7 +299,7 @@ describe('single-option handle opens the menu too (#369)', () => {
     expect(options).toHaveLength(1);
   });
 
-  it('absorbs a tap on the preview instead of leaking it to the node behind (#388)', () => {
+  it('applies the sole option when the preview is tapped, never leaking to the node behind (#390)', () => {
     const store = makeSingleOptionStore();
     renderTree(store);
     const handle = screen.getByRole('button', { name: /simplify alpha/i });
@@ -293,14 +308,16 @@ describe('single-option handle opens the menu too (#369)', () => {
     // Opening the menu selects nothing.
     expect(store.get(sourcePathAtom)).toBeNull();
 
-    // The menu is portaled to document.body, but React events still bubble
-    // through the *component* tree — so a tap on the read-only preview would
-    // otherwise reach the node's own onClick and select the term behind the
-    // menu. The preview must swallow the tap.
+    // The sole option always shows a definite result, so the preview doubles as
+    // a large tap target for that one action (#390): tapping it applies and
+    // closes the menu, same as the labeled row.
     fireEvent.click(screen.getByTestId('menu-preview'));
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
 
+    // The menu is portaled to document.body, but React events still bubble
+    // through the *component* tree — so the preview tap must still stopPropagation
+    // and never leak a selection to the term behind the (now-closed) menu (#388).
     expect(store.get(sourcePathAtom)).toBeNull();
-    expect(screen.getByRole('menu')).toBeInTheDocument();
   });
 
   it('auto-previews the sole option (no "hover to preview" placeholder)', () => {

@@ -40,6 +40,7 @@ import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
 import { useMathScale } from '../hooks/useMathScale';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import { useCanHover } from '../hooks/useCanHover';
 import { shouldPulseHandle } from './handlePulse';
 import {
   hasTallRootIndex,
@@ -76,6 +77,13 @@ const PREVIEW_MIN_SCALE = 0.4;
 // threshold: comfortably past tap jitter (so a tap never trips it), yet small
 // enough that the dialogue feels like a direct response to starting the drag.
 const DRAG_NUDGE_THRESHOLD_PX = 24;
+
+// Hold (ms) after a touch press-down, with the finger held still, before a
+// candidate term "peeks" its Select-Term preview (#388). A touch has no hover,
+// so long-press stands in for it: hold to reveal, lift to dismiss. Kept in step
+// with the platform long-press convention (~0.5s) so it doesn't fight muscle
+// memory, and long enough that it never fires on a quick tap-to-select.
+const LONG_PRESS_PEEK_MS = 500;
 
 const renderEquationPreviewRow = (eq: Equation, muted: boolean) => (
   <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
@@ -340,6 +348,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const roving = useOptionalRovingTabindex();
   // Honor prefers-reduced-motion (#145): suppress the decorative handle pulse.
   const reducedMotion = useReducedMotion();
+  // Touch-vs-hover fork (#388): on a hover-capable pointer the Select-Term
+  // tooltip follows the cursor and handle choosers open on hover; on a touch
+  // device (no hover) those reveals move to long-press (peek) and tap.
+  const canHover = useCanHover();
   // Suppress this node's hover tooltip while the tree is mid-slide (#234), so a
   // popover doesn't appear under the cursor while the term is still moving.
   const isTreeAnimating = useAtomValue(isTreeAnimatingAtom);
@@ -381,7 +393,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     setHoveredOption(null);
     setHoverReducePath(null);
     setHoverReduceIndex(null);
-  }, [cancelMenuClose, setHoverReducePath, setHoverReduceIndex]);
+    // Touch has no hover-leave: opening the menu (via a tap on the handle)
+    // synthesizes a mouseenter that pins hoverPath to this node, highlighting it,
+    // and no leave ever fires. Every dismiss path routes through closeMenu — the
+    // handle re-tap, an outside tap, Escape, applying an option — so clearing
+    // hoverPath here returns the node to neutral however the menu is dismissed,
+    // not just on a second handle tap (#388). Hover devices keep their real
+    // enter/leave, so this is touch-only.
+    if (!canHover) setHoverPath(null);
+  }, [cancelMenuClose, canHover, setHoverPath, setHoverReducePath, setHoverReduceIndex]);
   // Leaving the handle or the menu schedules a close after a grace period; moving
   // onto the other one cancels it. This is the entire open/close model — no global
   // tooltip state involved, so nothing external can dismiss the menu mid-traversal.
@@ -784,15 +804,68 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // one) is swallowed rather than toggling the selection back off.
   const dragDetectedRef = React.useRef(false);
 
+  // Touch long-press "peek" (#388): a tap has no hover, so on touch a held press
+  // reveals this candidate's Select-Term preview and lifting dismisses it. The
+  // timer arms alongside the drag-nudge on the same pointerdown; the two are
+  // mutually exclusive — moving past the threshold cancels the peek and hands off
+  // to the nudge, holding still fires the peek and disarms the nudge.
+  const [isPeeking, setIsPeeking] = React.useState(false);
+  const peekTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set when a peek fired, so the trailing click (long-press often still emits
+  // one on release) is swallowed and never doubles as a tap-to-select.
+  const peekedRef = React.useRef(false);
+  // Pointer type of the most recent press, so the native long-press callout is
+  // suppressed only for touch (never disabling desktop right-click).
+  const lastPointerTypeRef = React.useRef<string>('mouse');
+  const clearPeekTimer = React.useCallback(() => {
+    if (peekTimerRef.current) {
+      clearTimeout(peekTimerRef.current);
+      peekTimerRef.current = null;
+    }
+  }, []);
+  // Drop the pending peek timer if the node unmounts mid-hold.
+  React.useEffect(() => clearPeekTimer, [clearPeekTimer]);
+
   const handlePointerDown = (e: React.PointerEvent) => {
+    // A press that starts on a handle (or any button) inside this node is that
+    // control's own gesture, not a node drag. Without this bail-out the press
+    // bubbles into the node's drag-nudge/peek arming, and a finger drifting on a
+    // small handle crosses the drag threshold and selects the node underneath —
+    // leaving it stuck-selected after the menu closes (#388).
+    if ((e.target as HTMLElement).closest?.('button')) {
+      dragStartRef.current = null;
+      clearPeekTimer();
+      return;
+    }
     dragDetectedRef.current = false;
-    // Only a fresh pick-up qualifies: a movable term, nothing selected yet, and
-    // not a static/locked node. Panning that starts off a candidate never arms.
-    if (isStatic || sourcePath || !isCandidate) {
+    peekedRef.current = false;
+    lastPointerTypeRef.current = e.pointerType;
+    clearPeekTimer();
+    // Two long-press peeks share this press, both touch-only:
+    //  • a fresh pick-up — a movable term with nothing selected yet — previews its
+    //    Select, and the same press can drag-nudge if it moves (#386).
+    //  • a target (a source IS selected) previews the Move it would apply — peek
+    //    only, never a drag.
+    // Anything else (static/locked, or a non-target while a source is held) arms
+    // neither; a pan that starts off such a node stays inert.
+    const canDrag = !isStatic && !sourcePath && isCandidate;
+    const canPeek = e.pointerType === 'touch' && (canDrag || isTarget);
+    if (!canDrag && !canPeek) {
       dragStartRef.current = null;
       return;
     }
-    dragStartRef.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    dragStartRef.current = canDrag ? { x: e.clientX, y: e.clientY, id: e.pointerId } : null;
+    // If the finger stays put until the timer fires we reveal the preview, disarm
+    // the nudge (null dragStartRef), and flag the release's click for swallowing so
+    // the peek never doubles as a select/apply.
+    if (canPeek) {
+      peekTimerRef.current = setTimeout(() => {
+        peekTimerRef.current = null;
+        dragStartRef.current = null;
+        peekedRef.current = true;
+        setIsPeeking(true);
+      }, LONG_PRESS_PEEK_MS);
+    }
     // Attribute the gesture to the term actually pressed: pointerdown bubbles up
     // through this node's ancestors, and every candidate ancestor would otherwise
     // arm and capture too — with the *last* setPointerCapture in the chain winning,
@@ -815,6 +888,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     if (!start || start.id !== e.pointerId) return;
     const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y);
     if (moved < DRAG_NUDGE_THRESHOLD_PX) return; // not yet a meaningful drag
+    // Moved far enough to be a drag, not a hold — cancel the pending peek so a
+    // drag never also flashes the preview.
+    clearPeekTimer();
     // Fire once, mid-gesture: null the start so further moves don't re-trigger,
     // and mark the drag so the release's click is swallowed (not a tap-select).
     dragStartRef.current = null;
@@ -822,13 +898,40 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     triggerDragNudge(path);
   };
 
-  const handlePointerUp = (e: React.PointerEvent) => {
-    // Detection already happened on move; this is pure cleanup.
+  const endPeek = () => {
+    clearPeekTimer();
     dragStartRef.current = null;
+    // Lifting the finger ends the peek: the preview shows only while held.
+    setIsPeeking((was) => (was ? false : was));
+    // Touch has no mouseleave to pair with the mouseenter a tap synthesized, so
+    // hoverPath would stay pinned to this node and leave it the lone highlighted
+    // term — a "semi-selected" limbo after release. Reset to neutral on lift so
+    // every candidate is offered again (#388). Hover devices keep their real
+    // enter/leave, so this is touch-only.
+    if (lastPointerTypeRef.current === 'touch') {
+      setHoverPath(null);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    endPeek();
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
       /* nothing captured — fine. */
+    }
+  };
+
+  const handlePointerCancel = () => {
+    endPeek();
+  };
+
+  // Touch long-press fires the OS callout (iOS text-callout / context menu) on
+  // the held element; suppress it so our own peek preview is what appears. Gated
+  // on the last press being touch, so a desktop right-click is untouched.
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (lastPointerTypeRef.current === 'touch') {
+      e.preventDefault();
     }
   };
 
@@ -838,6 +941,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     // back off (a drag is never also a tap-to-select).
     if (dragDetectedRef.current) {
       dragDetectedRef.current = false;
+      e.stopPropagation();
+      return;
+    }
+
+    // A long-press peek is a "show me," never a selection — swallow the trailing
+    // click the release may emit so it doesn't toggle a selection on (#388).
+    if (peekedRef.current) {
+      peekedRef.current = false;
       e.stopPropagation();
       return;
     }
@@ -1605,6 +1716,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
 
   const customStyle: React.CSSProperties = {
     transition: 'border-color 150ms, background-color 150ms, box-shadow 150ms, opacity 150ms',
+    // Suppress iOS's long-press text-callout on the node so a peek long-press
+    // reveals our preview instead of the OS selection bubble (#388).
+    WebkitTouchCallout: 'none',
     minWidth: minWidth,
     paddingLeft: `${layout.nodePx}em`,
     paddingRight: `${layout.nodePx}em`,
@@ -1704,6 +1818,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      onContextMenu={handleContextMenu}
       onClick={handleNodeClick}
     >
       {renderedContent}
@@ -1850,6 +1966,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                 aria-expanded={openMenuType === stack.type}
                 onMouseEnter={(e) => {
                   e.stopPropagation();
+                  // Hover-open is for hover-capable pointers only (#388). On touch
+                  // the tap synthesizes a mouseenter that would open the menu and
+                  // then be toggled shut by the trailing click — so the chooser
+                  // never stayed up. Ignoring hover here lets the tap (onClick)
+                  // own opening it, and it stays until an outside tap dismisses.
+                  if (!canHover) return;
                   // Don't auto-open the option menu on hover while the tree is
                   // mid-slide (#234) — same rationale as the handle tooltips.
                   if (isTreeAnimating) return;
@@ -1857,6 +1979,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                 }}
                 onMouseLeave={(e) => {
                   e.stopPropagation();
+                  // Touch has no hover-leave; the outside-tap dismiss (and the
+                  // tap-again toggle) handle closing there instead.
+                  if (!canHover) return;
                   scheduleMenuClose();
                 }}
                 onClick={(e) => {
@@ -1923,7 +2048,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                     tabIndex={i === menuActiveIndex ? 0 : -1}
                     onKeyDown={handleMenuKeyDown}
                     // `group` drives the trailing arrow's hover/focus brightening.
-                    className={`group w-full min-w-0 text-left px-2 py-1.5 flex items-center gap-2 cursor-pointer ${THEME_GLASS.CHOOSER_OPTION_ROW}`}
+                    className={`group w-full min-w-0 text-left px-2 py-1.5 flex items-center gap-2 cursor-pointer select-none ${THEME_GLASS.CHOOSER_OPTION_ROW}`}
                     onMouseEnter={() => {
                       setHoveredOption({ type: stack.type, index: i });
                       if (stack.type !== 'substitute') {
@@ -1963,7 +2088,18 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
               </div>
             );
             const previewEl = (
-              <div className="relative w-full">
+              <div
+                className="relative w-full"
+                data-testid="menu-preview"
+                // The preview is read-only, but the menu is portaled to
+                // document.body while React events still bubble through the
+                // component tree — so an unguarded tap here reaches the node's
+                // own onClick and selects the term behind the menu (the option
+                // rows already stopPropagation for the same reason). Swallow the
+                // press so tapping the preview does nothing (#388).
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className={previewOption ? '' : 'invisible'}>
                   <ScaledEquationFit
                     key={`${path}:${openMenuType}`}
@@ -2006,7 +2142,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                   transform: placeAbove ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
                   zIndex: 9999,
                 }}
-                className="relative flex flex-col items-stretch gap-1 py-1.5 px-1 min-w-[210px] max-w-[300px] sm:max-w-[360px] text-left rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md shadow-2xl shadow-[0_0_30px_rgba(129,140,248,0.45)] pointer-events-auto font-sans normal-case"
+                className="relative flex flex-col items-stretch gap-1 py-1.5 px-1 min-w-[210px] max-w-[300px] sm:max-w-[360px] text-left rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md shadow-2xl shadow-[0_0_30px_rgba(129,140,248,0.45)] pointer-events-auto font-sans normal-case select-none"
                 onMouseEnter={cancelMenuClose}
                 onMouseLeave={scheduleMenuClose}
               >
@@ -2065,7 +2201,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       : undefined;
     tooltipContent = (
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
-        <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">Preview Move</span>
+        <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">
+          {/* Same touch/hover split as the Select peek: on touch the preview is a
+              peek and the tap that follows applies, so name that gesture ("Tap to
+              move"); on hover the pointer is live, so "Preview Move" (#388). */}
+          {canHover ? 'Preview Move' : 'Tap to move'}
+        </span>
         {transpositionAssumptions && transpositionAssumptions.length > 0 && (
           <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} select-none`}>
             <TriangleAlert size={11} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
@@ -2078,12 +2219,21 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         </ScaledEquationFit>
       </div>
     );
-    tooltipVisible = undefined;
+    // Hover devices keep the uncontrolled hover-driven reveal. On touch a tap
+    // synthesizes a mouseenter but never a leave, so an uncontrolled tip would
+    // flash on tap and stick — drive it from the explicit long-press peek instead.
+    tooltipVisible = canHover ? undefined : isPeeking;
     tooltipClassName = 'max-w-[300px] sm:max-w-[360px]';
   } else if (!sourcePath && isCandidate) {
     tooltipContent = (
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">
-        <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">Select Term</span>
+        <span className="font-semibold text-zinc-100 text-xs tracking-wider select-none opacity-80">
+          {/* On touch the peek is a preview, not the action — the tap that follows
+              is. Name that next gesture so a user who peeks then lifts knows to tap
+              to commit; on hover the pointer is already there, so "Select Term"
+              reads as the live affordance (#388). */}
+          {canHover ? 'Select Term' : 'Tap to select'}
+        </span>
         <div className="w-full border-t border-white/10 my-1" />
         <ScaledEquationFit className="max-w-[280px] sm:max-w-[340px]">
           <div className="text-[1.3em]"><PreviewEquationNode path={path} /></div>
@@ -2091,7 +2241,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         {symbolHintLabel}
       </div>
     );
-    tooltipVisible = isHovered && hoverReducePath === null && openMenuType === null;
+    // Reveal source depends on the pointer (#388): hover on a hover-capable
+    // device, an explicit long-press peek on touch. A touch tap synthesizes a
+    // hover (`isHovered`) but never the matching leave, so keying the tooltip off
+    // hover there would flash it on tap and leave it stuck — hence peek-only.
+    const revealed = canHover ? isHovered : isPeeking;
+    tooltipVisible = revealed && hoverReducePath === null && openMenuType === null;
     tooltipClassName = 'max-w-[300px] sm:max-w-[360px]';
   } else if (symbolHint) {
     // Truly-static identified symbol (no move handles): give the hint its own tip.

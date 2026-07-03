@@ -238,6 +238,15 @@ export const Tooltip: React.FC<TooltipProps> = ({
       clearTimeout(hideTimeoutId);
       setHideTimeoutId(null);
     }
+    // A controlled-OFF tooltip (owner passed visible={false}) still positions
+    // itself above, but must NOT run the hover-driven show: it can never appear,
+    // and claiming the global single-active slot would dismiss whatever IS shown.
+    // This matters on touch, where a tap synthesizes mouseenters across the
+    // pressed node's neighbours — each wrapped in a visible={false} <Tooltip> —
+    // whose stray shows would otherwise tear down the long-press peek a beat
+    // after it appears (#388). Controlled-ON tooltips drive visibility from the
+    // prop + its effect, so they don't need this timer either.
+    if (visible !== undefined) return;
     if (showTimeoutId) return;
     const id = setTimeout(() => {
       pendingTooltipShows.delete(cancelPending);

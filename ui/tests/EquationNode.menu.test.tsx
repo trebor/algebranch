@@ -11,6 +11,7 @@ import {
   rawActiveTabIdAtom,
   candidatePathsAtom,
   reduciblePathsAtom,
+  sourcePathAtom,
   type WorkspaceTab,
 } from '@/store/equation';
 import { parseEquation } from 'math-engine-client';
@@ -203,6 +204,33 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
     expect(screen.getByText(/simplifications available/i)).toBeInTheDocument();
   });
 
+  it('marks option rows non-selectable so a touch tap never starts text selection', () => {
+    const store = makeMultiOptionStore();
+    renderTree(store);
+    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    mouseClick(handle);
+
+    // On touch, pressing a label can begin native text selection instead of
+    // registering the tap, leaving a stray highlight and a swallowed apply.
+    // Every option row opts out of selection so the press is unambiguously a tap.
+    for (const opt of screen.getAllByRole('menuitem')) {
+      expect(opt.className).toContain('select-none');
+    }
+  });
+
+  it('locks the entire popover against selection — preview and header, not just rows', () => {
+    const store = makeMultiOptionStore();
+    renderTree(store);
+    mouseClick(screen.getByRole('button', { name: /show simplifications/i }));
+
+    // The whole popover opts out of text selection, so a stray press-drag on the
+    // preview or count header never highlights anything either. Term selection,
+    // if we ever want it, lives elsewhere — never inside this menu.
+    const container = screen.getByRole('menu').closest('.select-none');
+    expect(container).not.toBeNull();
+    expect(container).toContainElement(screen.getByText(/hover an option to preview/i));
+  });
+
   it('gives every option row an apply cue so it reads as a button (#369)', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
@@ -254,6 +282,25 @@ describe('single-option handle opens the menu too (#369)', () => {
 
     const options = screen.getAllByRole('menuitem');
     expect(options).toHaveLength(1);
+  });
+
+  it('absorbs a tap on the preview instead of leaking it to the node behind (#388)', () => {
+    const store = makeSingleOptionStore();
+    renderTree(store);
+    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    mouseClick(handle);
+
+    // Opening the menu selects nothing.
+    expect(store.get(sourcePathAtom)).toBeNull();
+
+    // The menu is portaled to document.body, but React events still bubble
+    // through the *component* tree — so a tap on the read-only preview would
+    // otherwise reach the node's own onClick and select the term behind the
+    // menu. The preview must swallow the tap.
+    fireEvent.click(screen.getByTestId('menu-preview'));
+
+    expect(store.get(sourcePathAtom)).toBeNull();
+    expect(screen.getByRole('menu')).toBeInTheDocument();
   });
 
   it('auto-previews the sole option (no "hover to preview" placeholder)', () => {

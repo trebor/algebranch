@@ -22,6 +22,7 @@ import {
   type HistoryNode,
 } from '@/store/equation';
 import { buildWorkspaceUrl, buildEquationUrl } from '@/utils/feedbackUrl';
+import { decodeEqParam } from '@/utils/eqParam';
 import { safeStorage } from '@/utils/safeStorage';
 
 /**
@@ -106,8 +107,8 @@ describe('core flow with storage blocked', () => {
   it('shares a single equation via a ?eq= URL', () => {
     const url = buildEquationUrl(ORIGIN, '2*(x+3)=10');
     expect(url).toContain('/?eq=');
-    // The encoded equation survives the round-trip back to the original string.
-    const decoded = decodeURIComponent(url.split('?eq=')[1]);
+    // The Base64URL-encoded equation survives the round-trip back to the original.
+    const decoded = decodeEqParam(url.split('?eq=')[1], () => true);
     expect(decoded).toBe('2*(x+3)=10');
   });
 });

@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ShareMenu, SHARE_HINT_STEP_THRESHOLD, SHARE_HINT_FLAG } from '@/components/ShareMenu';
+import { encodeEqParam } from '@/utils/eqParam';
 
 function mockClipboard() {
   const writeText = vi.fn().mockResolvedValue(undefined);
@@ -86,7 +87,9 @@ describe('ShareMenu', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: /equation/i }));
 
     await waitFor(() =>
-      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?eq=x%3D1')),
+      expect(writeText).toHaveBeenCalledWith(
+        expect.stringContaining(`?eq=${encodeEqParam('x=1')}`),
+      ),
     );
   });
 

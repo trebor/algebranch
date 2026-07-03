@@ -12,6 +12,7 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 import { trackEvent } from '../utils/analytics';
 import { safeCopyText } from '../utils/clipboard';
 import { safeStorage } from '../utils/safeStorage';
+import { encodeEqParam } from '../utils/eqParam';
 
 const COPIED_TIMEOUT = 2000;
 const MENU_CLOSE_GRACE = 500;
@@ -109,8 +110,6 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
 
   const baseUrl = () =>
     `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
-  const encodeSafe = (s: string) =>
-    encodeURIComponent(s).replace(/[()*!']/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 
   const flashCopied = () => {
     setCopied(true);
@@ -122,7 +121,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
     setOpen(false);
     setHintConsumed(true);
     try {
-      const shareUrl = equationString ? `${baseUrl()}?eq=${encodeSafe(equationString)}` : baseUrl();
+      const shareUrl = equationString ? `${baseUrl()}?eq=${encodeEqParam(equationString)}` : baseUrl();
       safeCopyText(shareUrl).then((success) => {
         if (success) {
           flashCopied();

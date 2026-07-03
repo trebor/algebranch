@@ -4,6 +4,8 @@
 // Pure helpers for turning in-app feedback into a pre-populated GitHub issue.
 // Kept free of React/store/engine imports so they can be unit-tested directly.
 
+import { encodeEqParam } from './eqParam';
+
 const ISSUES_NEW_URL = 'https://github.com/trebor/algebranch/issues/new';
 
 export type DeviceType = 'Desktop' | 'Mobile' | 'Tablet';
@@ -44,17 +46,13 @@ export interface ClientEnv {
 export const buildWorkspaceUrl = (origin: string, compressed: string): string =>
   origin && compressed ? `${origin}/?ws=${compressed}` : '';
 
-// Mirror ShareMenu's encoding: encodeURIComponent leaves ()*!' raw, which break
-// the link round-trip / terminal clickability, so percent-encode them too.
-const encodeEqSafe = (s: string): string =>
-  encodeURIComponent(s).replace(/[()*!']/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
-
 /**
  * Build a `?eq=` deep link for the current equation only (the lighter share
- * option). Returns '' when either piece is missing so callers can omit the line.
+ * option). Base64URL-encoded so it survives social linkifiers (see eqParam.ts).
+ * Returns '' when either piece is missing so callers can omit the line.
  */
 export const buildEquationUrl = (origin: string, equationString: string): string =>
-  origin && equationString ? `${origin}/?eq=${encodeEqSafe(equationString)}` : '';
+  origin && equationString ? `${origin}/?eq=${encodeEqParam(equationString)}` : '';
 
 /** Map a viewport width to the device-type field values in bug_report.yml. */
 export const detectDeviceType = (width: number): DeviceType => {

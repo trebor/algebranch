@@ -2091,14 +2091,25 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
               <div
                 className="relative w-full"
                 data-testid="menu-preview"
-                // The preview is read-only, but the menu is portaled to
-                // document.body while React events still bubble through the
-                // component tree — so an unguarded tap here reaches the node's
-                // own onClick and selects the term behind the menu (the option
-                // rows already stopPropagation for the same reason). Swallow the
-                // press so tapping the preview does nothing (#388).
+                // The menu is portaled to document.body while React events still
+                // bubble through the component tree — so an unguarded tap here
+                // reaches the node's own onClick and selects the term behind the
+                // menu (the option rows already stopPropagation for the same
+                // reason). Always swallow the press to stop that leak (#388).
                 onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // A single-option menu auto-previews its sole option, so the
+                  // preview always shows a definite result — it doubles as a
+                  // large tap target for that one action (#390): tapping it
+                  // applies and closes, same as the row. A multi-option preview
+                  // is empty until a row is chosen (transient on hover,
+                  // unreachable on touch), so it has nothing to apply and stays
+                  // inert.
+                  if (!isSingle) return;
+                  stack.options[0].onApply();
+                  closeMenu();
+                }}
               >
                 <div className={previewOption ? '' : 'invisible'}>
                   <ScaledEquationFit

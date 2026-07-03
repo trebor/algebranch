@@ -9,6 +9,7 @@ import {
   parseUserAgent,
   FeedbackPayload,
 } from '../../ui/src/utils/feedbackUrl';
+import { decodeEqParam } from '../../ui/src/utils/eqParam';
 
 const basePayload: FeedbackPayload = {
   type: 'bug',
@@ -47,10 +48,12 @@ describe('buildWorkspaceUrl', () => {
 });
 
 describe('buildEquationUrl', () => {
-  test('builds a ?eq= URL, percent-encoding ()*!\' for round-trip safety', () => {
-    expect(buildEquationUrl('https://algebranch.org', 'sqrt(4*9)+x=12')).toBe(
-      'https://algebranch.org/?eq=sqrt%284%2A9%29%2Bx%3D12'
-    );
+  test('builds a Base64URL ?eq= link that survives social linkifiers', () => {
+    const url = buildEquationUrl('https://algebranch.org', 'sqrt(4*9)+x=12');
+    const token = url.replace('https://algebranch.org/?eq=', '');
+    // Opaque token — no percent-escapes, parens, stars, plusses, or equals.
+    expect(token).toMatch(/^[A-Za-z0-9\-_]+$/);
+    expect(decodeEqParam(token, () => true)).toBe('sqrt(4*9)+x=12');
   });
 
   test('returns empty string when there is no equation', () => {

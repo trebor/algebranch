@@ -49,6 +49,7 @@ import { useKeyboardShortcuts, ShortcutConfig } from '../hooks/useKeyboardShortc
 import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
 import { HelpModal } from '../components/HelpModal';
 import { buildEquationUrl, buildWorkspaceUrl } from '../utils/feedbackUrl';
+import { decodeEqParam } from '../utils/eqParam';
 import { safeCopyText } from '../utils/clipboard';
 import {
   currentEquationAtom,
@@ -175,23 +176,29 @@ const MINI_PETALS: readonly MiniPetalInfo[] = [
   { char: 'ⁿ√', x: -17, y: -14, tokenKey: 'EQUALS_MINI_PETAL_ROOT' },
 ];
 
+/** True when `parseEquation` accepts the string — the arbiter for `decodeEqParam`. */
+const isParseableEquation = (s: string): boolean => {
+  try {
+    parseEquation(s);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 /**
- * Read the raw `eq` query parameter and percent-decode it ONCE. We pull it
+ * Read the raw `eq` query parameter and resolve it via `decodeEqParam` (see
+ * eqParam.ts): Base64URL share tokens decode to the equation, while
+ * hand-authored raw or percent-encoded links still resolve. We pull the value
  * straight from the query string rather than via `URLSearchParams.get`, which
  * applies form semantics and turns a literal `+` into a space — silently
- * corrupting any equation with a sum (e.g. `sqrt(2)+sqrt(2)` → `sqrt(2) sqrt(2)`,
- * which then fails to parse). `decodeURIComponent` leaves `+` untouched, so both
- * the fully-encoded share links (`%2B`) and hand-written test URLs with a literal
- * `+` resolve correctly. Returns null when absent or undecodable.
+ * corrupting a hand-written sum (e.g. `sqrt(2)+sqrt(2)` → `sqrt(2) sqrt(2)`).
+ * Returns null when absent.
  */
 const readEqParam = (search: string): string | null => {
   const match = search.match(/[?&]eq=([^&#]*)/);
   if (!match) return null;
-  try {
-    return decodeURIComponent(match[1]);
-  } catch {
-    return match[1];
-  }
+  return decodeEqParam(match[1], isParseableEquation);
 };
 
 /**

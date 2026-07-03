@@ -8,6 +8,13 @@ and the monorepo uses a single unified version across all workspaces; the root
 v1.0.0 onward, entries are generated automatically from conventional commits by
 [release-please](https://github.com/googleapis/release-please) (#337).
 
+## [1.3.1](https://github.com/trebor/algebranch/compare/v1.3.0...v1.3.1) (2026-07-03)
+
+
+### Bug Fixes
+
+* **ui:** base64url the ?eq= share link so it survives social linkifiers ([#396](https://github.com/trebor/algebranch/issues/396)) ([167da20](https://github.com/trebor/algebranch/commit/167da2067a908122641ef4ee5d719f3126b03796)), closes [#395](https://github.com/trebor/algebranch/issues/395)
+
 ## [1.3.0](https://github.com/trebor/algebranch/compare/v1.2.0...v1.3.0) (2026-07-03)
 
 

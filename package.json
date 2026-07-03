@@ -1,6 +1,6 @@
 {
   "name": "algebranch-monorepo",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "private": true,
   "description": "Interactive Algebraic Derivation Monorepo",
   "license": "GPL-3.0-or-later",

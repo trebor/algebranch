@@ -9,7 +9,7 @@ import { Tooltip } from './Tooltip';
 import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
 import { CopyFormatMenu } from './CopyFormatMenu';
-import { equationToString, equationToSpeech, getEquationStatus } from 'math-engine-client';
+import { equationToSpeech, getEquationStatus } from 'math-engine-client';
 import { trackEvent } from '../utils/analytics';
 import { sentenceCase } from '../utils/text';
 import { safeCopyText } from '../utils/clipboard';
@@ -446,8 +446,8 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
             contradiction/identity badges sit at negative offsets *outside* the
             card, so they buy no internal clearance. Slimming the left reclaims
             width so the equation truncates less on narrow cards. */}
-        <span className={`text-xs font-mono truncate max-w-full text-indigo-50 font-semibold text-center ${interactive ? 'pl-3 pr-10' : 'px-2'}`}>
-          {equationToString(node.equation)}
+        <span className={`text-xs truncate max-w-full text-indigo-50 font-semibold text-center ${interactive ? 'pl-3 pr-10' : 'px-2'}`}>
+          {equationToFormat(node.equation, 'unicode')}
         </span>
 
         {/* Hover Actions Toolbar — omitted in read-only preview mode

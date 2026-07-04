@@ -165,6 +165,13 @@ const renderFunction = (node: math.FunctionNode, format: Format): string => {
     return isAtomic(args[0]) ? `√${arg}` : `√${wrap(arg, format)}`;
   }
 
+  if (name === 'abs') {
+    const arg = render(args[0], format);
+    // Bars delimit the operand, so no precedence parens are needed inside.
+    if (format === 'latex') return `\\left|${arg}\\right|`;
+    return `|${arg}|`;
+  }
+
   if (name === 'nthRoot') {
     const radicand = render(args[0], format);
     const index = args[1];

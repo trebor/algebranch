@@ -70,6 +70,16 @@ const ALL_RULE_TEST_CASES: RuleTestCase[] = [
   { ruleId: 'exponent_sqrt_reverse', input: 'x^(1/2)', expected: 'sqrt(x)' },
   { ruleId: 'exponent_nthRoot', input: 'nthRoot(x, n)', expected: 'x^(1/n)' },
   { ruleId: 'exponent_nthRoot_reverse', input: 'x^(1/n)', expected: 'nthRoot(x,n)' },
+
+  // 2.5 Absolute Value
+  { ruleId: 'abs_product', input: 'abs(x * y)', expected: 'abs(x)*abs(y)' },
+  { ruleId: 'abs_product_reverse', input: 'abs(x) * abs(y)', expected: 'abs(x*y)' },
+  { ruleId: 'abs_quotient', input: 'abs(x / y)', expected: 'abs(x)/abs(y)' },
+  { ruleId: 'abs_quotient_reverse', input: 'abs(x) / abs(y)', expected: 'abs(x/y)' },
+  { ruleId: 'abs_square', input: 'abs(x)^2', expected: 'x^2' },
+  { ruleId: 'abs_of_sqrt_square', input: 'sqrt(x^2)', expected: 'abs(x)' },
+  { ruleId: 'abs_as_sqrt_square', input: 'abs(x)', expected: 'sqrt(x^2)' },
+
   { ruleId: 'log_change_base', input: 'log(x, y)', expected: 'log(x)/log(y)' },
   { ruleId: 'log_change_base_reverse', input: 'log(x) / log(y)', expected: 'log(x,y)' },
   { ruleId: 'trig_cot_def', input: 'cot(x)', expected: 'cos(x)/sin(x)' },

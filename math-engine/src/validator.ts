@@ -185,6 +185,15 @@ export const evaluateInterval = (node: math.MathNode, scope: Record<string, Inte
       const arg = evaluateInterval(funcNode.args[0], scope);
       return sqrtInterval(arg);
     }
+    if (nameStr === 'abs') {
+      const arg = evaluateInterval(funcNode.args[0], scope);
+      // |·| straddling zero bottoms out at 0; otherwise the endpoints just
+      // swap sign-magnitude, so the bounds are the sorted absolute endpoints.
+      const straddlesZero = arg.min <= 0 && arg.max >= 0;
+      const lo = straddlesZero ? 0 : Math.min(Math.abs(arg.min), Math.abs(arg.max));
+      const hi = Math.max(Math.abs(arg.min), Math.abs(arg.max));
+      return createInterval(lo, hi);
+    }
     if (nameStr === 'nthRoot') {
       const base = evaluateInterval(funcNode.args[0], scope);
       let degree = 2;
@@ -283,6 +292,11 @@ export const evaluatePoint = (node: math.MathNode, scope: Record<string, number>
       return typeof args[0] === 'number' && args[0] >= 0
         ? Math.sqrt(args[0])
         : (mjs.sqrt(args[0]) as any);
+    }
+    if (nameStr === 'abs') {
+      // Native fast path for reals; mjs.abs yields the (real) magnitude of a
+      // Complex argument, matching |z| = √(re²+im²).
+      return typeof args[0] === 'number' ? Math.abs(args[0]) : (Number(mjs.abs(args[0])) as any);
     }
     if (nameStr === 'nthRoot') {
       const base = args[0];

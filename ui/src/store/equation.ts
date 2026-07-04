@@ -5,7 +5,7 @@ import { atom } from 'jotai';
 import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, nodeToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getChildren, stripRedundantParentheses, getFunctionName, flipRelation, compressString } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
-import { applyGlobalOp, GlobalOpParams, GlobalOpType, StepChange, describeGlobalOp, describeSubstitution, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
+import { applyGlobalOp, GlobalOpParams, GlobalOpType, StepChange, describeGlobalOp, describeSubstitution, describeCollapse, describeReduction, getReducibleOptions, ReductionOption, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
 import type * as math from 'mathjs';
 import { mjs } from 'math-engine';
 import { Preset, PRESET_LIST } from '../constants/presets';
@@ -281,10 +281,319 @@ export const deminifyWorkspace = (minified: MinifiedWorkspace): {
   };
 };
 
+// ============================================================================
+// Replay encoding for `?ws=` share links (#403, Track 1)
+//
+// Every non-root node is its parent plus exactly one user move. Instead of
+// storing each node's full equation (`{s,k}`, ~equation length + id log), store
+// the *operation* — a few bytes — and re-run the real engine on load to replay
+// the tree ("chess notation, not board positions"). Node ids come for free:
+// replaying real transforms on the parent's live AST re-derives term continuity
+// (FLIP #234/#344) naturally, so no `k` array is stored.
+//
+// Durability policy is Aggressive (#403): the encoder replays every move it can
+// *verify reproduces the exact child now*, and embeds a tiny per-node checksum.
+// On load, if a future engine version drifts a transform's output, the checksum
+// mismatch is detected and the workspace still loads (graceful degradation) with
+// a `drift` flag the UI can surface. Anything the encoder can't reproduce (legacy
+// string nodes, unclassifiable moves) falls back to the exact embedded state, so
+// correctness is guaranteed by construction regardless of the op coverage.
+// ============================================================================
+
+/** `?ws=` replay-format marker. Independent of STORAGE_SCHEMA_VERSION (localStorage). */
+export const WS_REPLAY_VERSION = 3;
+
+/** One packed replay record; positional by op tag (element[1]). */
+type ReplayRecord = unknown[];
+
+export interface MinifiedReplayWorkspace {
+  v: number; // WS_REPLAY_VERSION
+  r: ReplayRecord[]; // records in topological order (parent index < child index)
+  n: number; // currentNode index
+  a: string; // name
+}
+
+export interface DeminifiedReplayWorkspace {
+  tree: Record<string, SerializedHistoryNode>;
+  currentNodeId: string;
+  name: string;
+  /** A replayed node's checksum mismatched (engine drift) — loaded best-effort. */
+  drift: boolean;
+}
+
+/** 2-char base64url checksum of an equation's canonical string (drift detection). */
+const REPLAY_CHK_ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+const eqChecksum = (s: string): string => {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(h, 33) + s.charCodeAt(i)) | 0;
+  const u = h >>> 0;
+  return REPLAY_CHK_ALPHA[(u >>> 6) & 63] + REPLAY_CHK_ALPHA[u & 63];
+};
+
+/** Map a `bothSides` StepChange op to a compact char and back to GlobalOpParams. */
+const BOTHSIDES_OP_CHAR: Record<string, string> = {
+  add: '+', subtract: '-', multiply: '*', divide: '/', power: '^', root: 'v',
+};
+const charToGlobalOpParams = (opChar: string, operand: string): GlobalOpParams | null => {
+  switch (opChar) {
+    case '+': return { type: 'add', term: operand };
+    case '-': return { type: 'sub', term: operand };
+    case '*': return { type: 'mul', term: operand };
+    case '/': return { type: 'div', term: operand };
+    case '^': return { type: 'power', power: Number(operand) };
+    case 'v': return { type: 'root', power: Number(operand) };
+    default: return null;
+  }
+};
+const bothSidesToGlobalOpParams = (op: string, operand: string): GlobalOpParams | null =>
+  charToGlobalOpParams(BOTHSIDES_OP_CHAR[op], operand);
+
+/** Forward substitution result (replace every `variable` with `replacement`), or null. */
+const replaySubstitute = (parent: Equation, variable: string, replacement: string): Equation | null => {
+  try {
+    const fact: SubstitutionFact = { variable, expression: mjs.parse(replacement) };
+    const opts = getSubstitutionOptions(parent, [fact]);
+    const firstPath = Object.keys(opts)[0];
+    return firstPath ? opts[firstPath][0].substituted : null;
+  } catch { return null; }
+};
+
+/** Reverse substitution / collapse result (collapse `expr` subtree to `variable`), or null. */
+const replayCollapse = (parent: Equation, exprStr: string, variable: string): Equation | null => {
+  try {
+    const fact: SubstitutionFact = { variable, expression: mjs.parse(exprStr) };
+    const opts = getCombineOptions(parent, [fact]);
+    const firstPath = Object.keys(opts)[0];
+    return firstPath ? opts[firstPath][0].substituted : null;
+  } catch { return null; }
+};
+
+/** The (path, index) of the reduction option that reproduces `childStr`, or null. */
+const findReduction = (parent: Equation, childStr: string): { path: string; idx: number } | null => {
+  let opts: Record<string, ReductionOption[]>;
+  try { opts = getReducibleOptions(parent); } catch { return null; }
+  for (const path of Object.keys(opts)) {
+    const arr = opts[path];
+    for (let idx = 0; idx < arr.length; idx++) {
+      try { if (equationToString(arr[idx].simplified) === childStr) return { path, idx }; } catch { /* skip */ }
+    }
+  }
+  return null;
+};
+
+/** Swap-sides result for a parent equation (lhs↔rhs, relation flipped). */
+const swapSides = (eq: Equation): Equation => ({ lhs: eq.rhs, rhs: eq.lhs, relation: flipRelation(eq.relation) });
+
+/**
+ * Derive the smallest replay record reproducing `child` from `parent`, verified
+ * against the current engine. Hinted by the node's `change`; verified before use;
+ * falls back to the exact embedded state when nothing reproduces `child`.
+ */
+const deriveReplayRecord = (
+  pIdx: number,
+  parent: Equation,
+  child: Equation,
+  node: SerializedHistoryNode,
+): ReplayRecord => {
+  const childStr = equationToString(child);
+  const chk = eqChecksum(childStr);
+  const { change, label } = node;
+  const reproduces = (e: Equation | null | undefined): boolean => {
+    try { return !!e && equationToString(e) === childStr; } catch { return false; }
+  };
+
+  // 1. Both-sides / global op (also covers transpositions described as bothSides).
+  if (change?.kind === 'bothSides') {
+    const params = bothSidesToGlobalOpParams(change.op, change.operand);
+    if (params) {
+      try { if (reproduces(applyGlobalOp(parent, params))) return [pIdx, 'b', BOTHSIDES_OP_CHAR[change.op], change.operand, label, chk]; } catch { /* fall through */ }
+    }
+  }
+  // 2. Reduce / distribute / identity (search for the option that matches).
+  if (change?.kind === 'rewrite' && change.op !== 'substitute') {
+    const found = findReduction(parent, childStr);
+    if (found) return [pIdx, 'r', found.path, found.idx, label, chk];
+  }
+  // 3. Substitution (forward) / collapse (reverse). `detail` carries `a → b`.
+  if (change?.kind === 'rewrite' && change.op === 'substitute' && change.detail) {
+    const parts = change.detail.split('→').map(s => s.trim());
+    if (parts.length === 2) {
+      if (change.text?.startsWith('collapse')) {
+        const [exprStr, variable] = parts;
+        if (reproduces(replayCollapse(parent, exprStr, variable))) return [pIdx, 'c', exprStr, variable, label, chk];
+      } else {
+        const [variable, replacement] = parts;
+        if (reproduces(replaySubstitute(parent, variable, replacement))) return [pIdx, 's', variable, replacement, label, chk];
+      }
+    }
+  }
+  // 4. Swap sides (no change recorded by swapSidesAtom).
+  if (!change && reproduces(swapSides(parent))) return [pIdx, 'w', label, chk];
+
+  // 5. Fallback: embed the exact state (SerializedEquation | legacy string) + change.
+  return [pIdx, 'e', node.equation, label, change ?? null];
+};
+
+/** Deserialize a stored node equation into a live, id-bearing AST. */
+const liveNodeEquation = (eq: SerializedEquation | string): Equation =>
+  typeof eq === 'string' ? ensureNodeIds(parseEquation(eq)) : deserializeEquation(eq);
+
+/**
+ * Encode a workspace as a replay payload (#403). Orders nodes so every parent
+ * precedes its children (childrenIds reconstruct for free from parent pointers),
+ * then emits one verified operation record per node.
+ */
+export const minifyReplayWorkspace = (ws: {
+  tree: Record<string, SerializedHistoryNode>;
+  currentNodeId: string;
+  name: string;
+}): MinifiedReplayWorkspace => {
+  const { tree, currentNodeId, name } = ws;
+
+  // BFS from the root along stored childrenIds: parents first, sibling order kept.
+  const rootId = '0' in tree
+    ? '0'
+    : (Object.keys(tree).find(id => tree[id].parentId === null) ?? Object.keys(tree)[0]);
+  const order: string[] = [];
+  const seen = new Set<string>();
+  const queue: string[] = rootId ? [rootId] : [];
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (!id || seen.has(id) || !tree[id]) continue;
+    seen.add(id);
+    order.push(id);
+    for (const cid of tree[id].childrenIds) if (tree[cid] && !seen.has(cid)) queue.push(cid);
+  }
+  // Defensive: append any nodes not reachable from the root (shouldn't happen).
+  for (const id of Object.keys(tree)) if (!seen.has(id)) { order.push(id); seen.add(id); }
+
+  const idToIndex = new Map<string, number>();
+  order.forEach((id, i) => idToIndex.set(id, i));
+
+  const liveEq = new Map<string, Equation>();
+  const records: ReplayRecord[] = order.map((id, i) => {
+    const node = tree[id];
+    const live = liveNodeEquation(node.equation);
+    liveEq.set(id, live);
+
+    const parentId = node.parentId;
+    if (i === 0 || parentId === null || !idToIndex.has(parentId)) {
+      // Root: store the equation string verbatim + its label.
+      const s = typeof node.equation === 'string' ? node.equation : equationToString(live);
+      return [-1, 'q', s, node.label];
+    }
+    return deriveReplayRecord(idToIndex.get(parentId)!, liveEq.get(parentId)!, live, node);
+  });
+
+  return { v: WS_REPLAY_VERSION, r: records, n: idToIndex.get(currentNodeId) ?? 0, a: name };
+};
+
+/**
+ * Rebuild a workspace from a replay payload (#403): replay each record's operation
+ * on its parent's live equation, re-deriving equations, ids, labels and change.
+ * A per-node checksum mismatch (future engine drift) sets `drift` and the node is
+ * loaded best-effort rather than failing the whole link.
+ */
+export const deminifyReplayWorkspace = (payload: MinifiedReplayWorkspace): DeminifiedReplayWorkspace => {
+  const records = payload.r || [];
+  const ids = records.map((_, i) =>
+    i === 0 ? '0' : `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${i}`);
+  const liveEq: Equation[] = [];
+  const tree: Record<string, SerializedHistoryNode> = {};
+  let drift = false;
+  let baseTime = Date.now() - records.length * 1000;
+
+  records.forEach((rec, i) => {
+    const id = ids[i];
+    const pIdx = rec[0] as number;
+    const tag = rec[1] as string;
+    let live: Equation;
+    let label = '';
+    let change: StepChange | undefined;
+
+    if (tag === 'q') {
+      live = ensureNodeIds(parseEquation(rec[2] as string));
+      label = rec[3] as string;
+    } else if (tag === 'e') {
+      const eqPayload = rec[2] as SerializedEquation | string;
+      live = liveNodeEquation(eqPayload);
+      label = rec[3] as string;
+      change = (rec[4] as StepChange | null) ?? undefined;
+    } else {
+      const parent = liveEq[pIdx];
+      let replayed: Equation | null = null;
+      let chk: string | null = null;
+      switch (tag) {
+        case 'b': {
+          const params = charToGlobalOpParams(rec[2] as string, rec[3] as string);
+          label = rec[4] as string; chk = rec[5] as string;
+          if (params) { try { replayed = applyGlobalOp(parent, params); change = describeGlobalOp(params); } catch { /* drift */ } }
+          break;
+        }
+        case 'r': {
+          const path = rec[2] as string; const idx = rec[3] as number;
+          label = rec[4] as string; chk = rec[5] as string;
+          const opt = (() => { try { return getReducibleOptions(parent)[path]?.[idx]; } catch { return undefined; } })();
+          if (opt) { replayed = opt.simplified; change = describeReduction(parent, opt); }
+          break;
+        }
+        case 's': {
+          const variable = rec[2] as string; const replacement = rec[3] as string;
+          label = rec[4] as string; chk = rec[5] as string;
+          replayed = replaySubstitute(parent, variable, replacement);
+          change = describeSubstitution(variable, replacement);
+          break;
+        }
+        case 'c': {
+          const exprStr = rec[2] as string; const variable = rec[3] as string;
+          label = rec[4] as string; chk = rec[5] as string;
+          replayed = replayCollapse(parent, exprStr, variable);
+          change = describeCollapse(exprStr, variable);
+          break;
+        }
+        case 'w': {
+          label = rec[2] as string; chk = rec[3] as string;
+          replayed = swapSides(parent);
+          break;
+        }
+      }
+      if (!replayed) {
+        // The engine could not reproduce this move (a removed/renamed transform).
+        // Degrade gracefully: keep the parent equation so the link still loads.
+        drift = true;
+        replayed = parent;
+      }
+      live = ensureNodeIds(replayed);
+      if (chk && eqChecksum(equationToString(live)) !== chk) drift = true;
+    }
+
+    liveEq[i] = live;
+    tree[id] = {
+      id,
+      equation: serializeEquation(live),
+      parentId: pIdx < 0 ? null : ids[pIdx],
+      childrenIds: [],
+      label,
+      timestamp: (baseTime += 1000),
+      ...(change ? { change } : {}),
+    };
+    if (pIdx >= 0 && tree[ids[pIdx]]) tree[ids[pIdx]].childrenIds.push(id);
+  });
+
+  return {
+    tree,
+    currentNodeId: ids[payload.n] ?? '0',
+    name: payload.a,
+    drift,
+  };
+};
+
 /**
  * Serialize + compress the current workspace into the `?ws=` payload shared by
- * the Share menu and the Feedback flow. Returns '' when there is nothing to
- * share (no tree or no selected node), so callers can omit the link.
+ * the Share menu and the Feedback flow. Emits the compact replay format (#403);
+ * older state-based links (`v:1`/`v:2`) keep loading via `deminifyWorkspace`.
+ * Returns '' when there is nothing to share (no tree or no selected node), so
+ * callers can omit the link.
  */
 export const serializeWorkspaceState = async (
   tree: Record<string, HistoryNode> | null,
@@ -293,7 +602,7 @@ export const serializeWorkspaceState = async (
 ): Promise<string> => {
   if (!tree || !currentNodeId) return '';
   const serialized = serializeTree(tree);
-  const minified = minifyWorkspace({ tree: serialized, currentNodeId, name });
+  const minified = minifyReplayWorkspace({ tree: serialized, currentNodeId, name });
   const stateStr = JSON.stringify(minified);
   return await compressString(stateStr);
 };

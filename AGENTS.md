@@ -108,3 +108,10 @@ PNGs land in `screenshots/` (gitignored) by default; never commit them. Caveats 
 
 - **Strictly human-triggered**: Handoff and pickup operations are human-triggered. Never perform or automate a handoff or pickup unless the user explicitly instructs you to do so. Do not auto-execute these processes on your own.
 - **Worktree Isolation**: We run in separate git worktrees of the same repository. Claude operates in `/Users/trebor/src/algebranch`, and Gemini operates in `/Users/trebor/src/gemini/algebranch`. The `agent-relay` inbox files (`~/.local/state/agent-relay/algebranch/`) coordinate work transitions between our worktrees.
+
+## Antigravity CLI Sandbox & Permission Constraints
+
+- **Never Poll or Loop on Custom Commands**: Do not write scripts, timers, or loops that repeatedly run command-line tools requiring custom approval gates (e.g. `gh pr checks` or status polling). Because the sandbox requires manual developer approval on every turn, polling will repeatedly prompt the developer and disrupt their workflow.
+- **Do Not Recommend settings.json Wildcards for custom Actions**: Agents have a tendency to repeatedly recommend adding wildcard rules like `"custom(gh.read({\"org\":\"\",\"repo\":\"\",\"pr\":\"*\"}))"` to `settings.json` to "solve" the prompt issue. **This does not work.** In the Antigravity permission engine, `Action: "custom"` uses strict literal string matching on the target payload and does not support wildcards or asterisks. Recommending this is a known failure mode and is extremely frustrating. Do not suggest it.
+- **Merge Directly**: Instead of checking check status first, attempt the merge directly (e.g. `gh pr merge --squash`). The command will either succeed or fail with the blockers immediately, serving as a single-action status check.
+

@@ -494,6 +494,24 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
         );
       }
 
+      if (nameStr === 'abs') {
+        // Vertical bars stretched to the operand height, matching EquationNode.
+        return (
+          <div className="flex items-stretch gap-[0.15em]">
+            <span className={`self-stretch border-l-[1.5px] ${palette.radicalBar}`} />
+            <div className="flex items-center">
+              <PreviewEquationNode
+                path={customNode ? undefined : `${path}/0`}
+                customNode={customNode ? (node as math.FunctionNode).args[0] : undefined}
+                inExponent={inExponent}
+                customEquation={customEquation}
+              />
+            </div>
+            <span className={`self-stretch border-l-[1.5px] ${palette.radicalBar}`} />
+          </div>
+        );
+      }
+
       // Default fallback function renderer
       return (
         <div className="flex items-center gap-[0.05em]">

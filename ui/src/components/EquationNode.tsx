@@ -1539,6 +1539,22 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         );
       }
 
+      if (nameStr === 'abs') {
+        // Absolute value renders as vertical bars that stretch to the operand's
+        // height (like the radical vinculum tracks its radicand). The bars are
+        // border-left edges on zero-width stretched spans.
+        const barClass = isStatic ? THEME_GLASS.MATH_BORDER_FN_STATIC : THEME_GLASS.MATH_BORDER_FN_ACTIVE;
+        return (
+          <div className="flex items-stretch gap-[0.15em]">
+            <span className={`self-stretch border-l-[1.5px] ${barClass}`} style={getOpStyle()} />
+            <div className="flex items-center">
+              <EquationNode path={`${path}/0`} key={getChildId(0)} inExponent={inExponent} />
+            </div>
+            <span className={`self-stretch border-l-[1.5px] ${barClass}`} style={getOpStyle()} />
+          </div>
+        );
+      }
+
       // Default fallback function renderer
       return (
         <div className="flex items-center gap-[0.05em]">

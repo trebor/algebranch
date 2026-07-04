@@ -316,6 +316,64 @@ const RAW_RULES: RawRule[] = [
     description: 'Converts a fractional exponent 1/n to an nth root.',
   },
 
+  // 2.5 Absolute Value Rules
+  {
+    id: 'abs_product',
+    name: 'Absolute Value of a Product',
+    category: 'Absolute Value',
+    sourcePatternStr: 'abs(_A * _B)',
+    targetPatternStr: 'abs(_A) * abs(_B)',
+    description: 'Splits the absolute value of a product into a product of absolute values.',
+  },
+  {
+    id: 'abs_product_reverse',
+    name: 'Combine Absolute Values',
+    category: 'Absolute Value',
+    sourcePatternStr: 'abs(_A) * abs(_B)',
+    targetPatternStr: 'abs(_A * _B)',
+    description: 'Combines a product of absolute values into the absolute value of the product.',
+  },
+  {
+    id: 'abs_quotient',
+    name: 'Absolute Value of a Quotient',
+    category: 'Absolute Value',
+    sourcePatternStr: 'abs(_A / _B)',
+    targetPatternStr: 'abs(_A) / abs(_B)',
+    description: 'Splits the absolute value of a quotient into a quotient of absolute values.',
+  },
+  {
+    id: 'abs_quotient_reverse',
+    name: 'Combine Absolute Value Quotient',
+    category: 'Absolute Value',
+    sourcePatternStr: 'abs(_A) / abs(_B)',
+    targetPatternStr: 'abs(_A / _B)',
+    description: 'Combines a quotient of absolute values into the absolute value of the quotient.',
+  },
+  {
+    id: 'abs_square',
+    name: 'Square of an Absolute Value',
+    category: 'Absolute Value',
+    sourcePatternStr: 'abs(_A)^2',
+    targetPatternStr: '_A^2',
+    description: 'The square of an absolute value equals the square of its argument.',
+  },
+  {
+    id: 'abs_of_sqrt_square',
+    name: 'Simplify Root of a Square',
+    category: 'Absolute Value',
+    sourcePatternStr: 'sqrt(_A^2)',
+    targetPatternStr: 'abs(_A)',
+    description: 'The principal square root of a square is the absolute value of the base.',
+  },
+  {
+    id: 'abs_as_sqrt_square',
+    name: 'Absolute Value as a Root',
+    category: 'Absolute Value',
+    sourcePatternStr: 'abs(_A)',
+    targetPatternStr: 'sqrt(_A^2)',
+    description: 'Rewrites an absolute value as the principal square root of the squared argument.',
+  },
+
   // 3. Logarithm Rules
   {
     id: 'log_product',

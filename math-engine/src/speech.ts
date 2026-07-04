@@ -100,6 +100,8 @@ const speakFunction = (node: math.FunctionNode): string => {
 
   if (name === 'sqrt') return `the square root of ${speak(node.args[0])}`;
 
+  if (name === 'abs') return `the absolute value of ${speak(node.args[0])}`;
+
   if (name === 'nthRoot') {
     const radicand = speak(node.args[0]);
     const index = node.args[1];

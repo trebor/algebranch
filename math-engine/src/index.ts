@@ -64,7 +64,7 @@ export const parseEquation = (rawStr: string): Equation => {
 
   const allowedNodeTypes = new Set(['ConstantNode', 'SymbolNode', 'ParenthesisNode', 'OperatorNode', 'FunctionNode']);
   const allowedOperators = new Set(['+', '-', '*', '/', '^']);
-  const allowedFunctions = new Set(['sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'log', 'ln', 'sqrt', 'nthRoot']);
+  const allowedFunctions = new Set(['sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'log', 'ln', 'sqrt', 'nthRoot', 'abs']);
   const forbiddenSymbolNames = new Set(['undefined', 'null', 'nan', 'infinity', 'true', 'false']);
 
   const getFnName = (n: math.FunctionNode): string => {

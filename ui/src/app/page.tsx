@@ -75,6 +75,8 @@ import {
   deserializeTree,
   serializeWorkspaceState,
   deminifyWorkspace,
+  deminifyReplayWorkspace,
+  WS_REPLAY_VERSION,
   SUPPORTED_SCHEMA_VERSIONS,
   wrapVersioned,
   unwrapVersioned,
@@ -593,7 +595,23 @@ export default function Home() {
             let tree, currentNodeId, name;
             let isValid = false;
 
-            if (envelope && SUPPORTED_SCHEMA_VERSIONS.has(envelope.v) && envelope.t) {
+            if (envelope && envelope.v === WS_REPLAY_VERSION && Array.isArray(envelope.r)) {
+              // Replay format (#403): re-run the engine to reconstruct the tree.
+              try {
+                const deminified = deminifyReplayWorkspace(envelope);
+                tree = deminified.tree;
+                currentNodeId = deminified.currentNodeId;
+                name = deminified.name;
+                isValid = true;
+                // A transform's output drifted since this link was made — it still
+                // loaded, but a node may render slightly differently (#403).
+                if (deminified.drift) {
+                  setToast({ message: 'This shared link may render slightly differently on the current version.', key: Date.now() });
+                }
+              } catch (e) {
+                console.error('Failed to replay workspace payload:', e);
+              }
+            } else if (envelope && SUPPORTED_SCHEMA_VERSIONS.has(envelope.v) && envelope.t) {
               try {
                 const deminified = deminifyWorkspace(envelope);
                 tree = deminified.tree;

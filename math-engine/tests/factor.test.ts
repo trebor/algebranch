@@ -110,6 +110,11 @@ describe('tryFactor — guards', () => {
     expect(tryFactor(math.parse('7'))).toHaveLength(0);
     expect(tryFactor(math.parse('sin(x)'))).toHaveLength(0);
   });
+
+  it('safely returns nothing and does not hang for complex products', () => {
+    const complexProduct = math.parse('((2 * x + 3) + (x - 1)) * ((2 * x + 3) ^ 2 - (2 * x + 3) * (x - 1) + (x - 1) ^ 2)');
+    expect(tryFactor(complexProduct)).toHaveLength(0);
+  });
 });
 
 describe('partial-GCF suppression inside a larger sum', () => {

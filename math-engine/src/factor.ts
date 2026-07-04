@@ -149,9 +149,17 @@ const generalQuadratic = (coeffs: number[], v: string): FactorOption | null => {
  * equivalence-checked — callers must validate before offering them.
  */
 export const tryFactor = (node: math.MathNode): FactorOption[] => {
+  let unwrapped = node;
+  while (unwrapped.type === 'ParenthesisNode') {
+    unwrapped = (unwrapped as math.ParenthesisNode).content;
+  }
+  if (unwrapped.type !== 'OperatorNode' || !['+', '-'].includes((unwrapped as math.OperatorNode).op)) {
+    return [];
+  }
+
   let coeffs: number[];
   try {
-    const detailed = mjs.rationalize(node, {}, true) as unknown as { coefficients: number[] };
+    const detailed = mjs.rationalize(unwrapped, {}, true) as unknown as { coefficients: number[] };
     coeffs = detailed.coefficients;
   } catch {
     return [];

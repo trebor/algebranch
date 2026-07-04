@@ -48,6 +48,24 @@ const matchBrace = (str: string): { inner: string; end: number } => {
 };
 
 /**
+ * Match a balanced `(...)` group at the start of `str`. Returns the inner
+ * content and the index just past the closing paren, or a no-op when `str`
+ * doesn't open with `(`.
+ */
+const matchParen = (str: string): { inner: string; end: number } => {
+  if (str[0] !== '(') return { inner: '', end: 0 };
+  let depth = 0;
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === '(') depth++;
+    else if (str[i] === ')') {
+      depth--;
+      if (depth === 0) return { inner: str.slice(1, i), end: i + 1 };
+    }
+  }
+  return { inner: '', end: 0 };
+};
+
+/**
  * Resolve `\frac{A}{B}` → `((A)/(B))` and `\sqrt{A}`/`\sqrt[n]{A}` →
  * `sqrt(A)`/`nthRoot(A,n)`, recursing into the arguments so nested fractions and
  * roots survive. Left-to-right, one command at a time.
@@ -155,15 +173,69 @@ const getGreekGlyphToName = (): Record<string, string> => {
   return greekGlyphToName;
 };
 
+const SUPERSCRIPT_RUN = /[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]/;
+
+/**
+ * Extract the operand immediately after a `√`: a balanced `(…)` group or a bare
+ * atom token. Returns the inner content (parens stripped) and how many chars of
+ * `after` it spans. Mirrors the serializer, which only ever emits `√<atom>` or
+ * `√(…)` (see serialize.ts `renderFunction`).
+ */
+const extractRadicand = (after: string): { inner: string; consumed: number } => {
+  let i = 0;
+  while (i < after.length && /\s/.test(after[i])) i++;
+  if (after[i] === '(') {
+    const { inner, end } = matchParen(after.slice(i));
+    if (end > 0) return { inner, consumed: i + end };
+  }
+  const atom = after.slice(i).match(/^[A-Za-z0-9._]+/);
+  if (atom) return { inner: atom[0], consumed: i + atom[0].length };
+  return { inner: '', consumed: 0 };
+};
+
+/**
+ * Rewrite Unicode radicals to function calls, honoring a leading superscript
+ * *index* as an nth-root: `³√(x)` → `nthRoot(x, 3)`, `√x` → `sqrt(x)`. Must run
+ * before superscripts are turned into exponents, or the index `³` is misread as
+ * a power and produces the invalid `^3√(x)` (#398 regression).
+ */
+const convertRadicals = (s: string): string => {
+  let out = '';
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] === '√') {
+      // A superscript run already emitted to `out` is this root's index.
+      let k = out.length;
+      let index = '';
+      while (k > 0 && SUPERSCRIPT_RUN.test(out[k - 1])) {
+        index = out[k - 1] + index;
+        k--;
+      }
+      const { inner, consumed } = extractRadicand(s.slice(i + 1));
+      out = out.slice(0, k);
+      if (index) {
+        const n = [...index].map((c) => SUPERSCRIPT_TO_NORMAL[c]).join('');
+        out += `nthRoot(${inner}, ${n})`;
+      } else {
+        out += `sqrt(${inner})`;
+      }
+      i += 1 + consumed;
+    } else {
+      out += s[i];
+      i++;
+    }
+  }
+  return out;
+};
+
 const unicodePass = (s: string): string => {
-  let out = s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]+/g, (run) => {
+  // Radicals first: a superscript before `√` is a root index, not an exponent.
+  let out = convertRadicals(s);
+  out = out.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]+/g, (run) => {
     const digits = [...run].map((c) => SUPERSCRIPT_TO_NORMAL[c]).join('');
     // Single non-negative digit → bare `^2`; multi-digit or signed → `^(…)`.
     return digits.length === 1 && digits !== '-' ? '^' + digits : '^(' + digits + ')';
   });
-  // √( … ) keeps its parens; √<token> gets wrapped.
-  out = out.replace(/√\s*\(/g, 'sqrt(');
-  out = out.replace(/√\s*([A-Za-z0-9.]+)/g, 'sqrt($1)');
   out = out
     .replace(/÷/g, '/')
     .replace(/×/g, '*')

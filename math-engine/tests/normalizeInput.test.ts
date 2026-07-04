@@ -1,4 +1,10 @@
-import { normalizeMathInput, parseEquation, equationToString } from '../src/index';
+import {
+  normalizeMathInput,
+  parseEquation,
+  equationToString,
+  equationToLatex,
+  equationToUnicode,
+} from '../src/index';
 
 /**
  * Smart-input normalization (#398): LaTeX / Unicode-math / SymPy dialects should
@@ -62,6 +68,34 @@ describe('normalizeMathInput — Python / SymPy', () => {
   test('mixed pythonic expression', () => {
     expectEquivalent('x**2 - 4 == 0', 'x^2 - 4 = 0');
   });
+});
+
+describe('copy/export forms round-trip back through the parser', () => {
+  // The invariant: anything the tree lets you *copy out* (plain, LaTeX, or
+  // Unicode — see equationToFormat / #46) must paste back into the equation
+  // input and parse to the same equation. Guards the "copy → paste → same math"
+  // goal across every export format.
+  const equations = [
+    'x^2 - 4 * x = 0',
+    'nthRoot(x, 3) = 2', // ³√(x) in Unicode — the reported regression
+    'sqrt(x + 1) = 2',
+    '(a + b) / 2 = c',
+    'x^2 / 4 = 1',
+    'sin(theta) = 1 / 2', // greek symbol + function
+    '2 * (x + 3) = 10',
+    'x^(1 / 2) = y', // non-integer exponent → `^(…)` in Unicode
+  ];
+
+  for (const src of equations) {
+    test(src, () => {
+      const eq = parseEquation(src);
+      const canonical = equationToString(eq);
+      for (const render of [equationToString, equationToLatex, equationToUnicode]) {
+        const copied = render(eq);
+        expect(equationToString(parseEquation(copied))).toBe(canonical);
+      }
+    });
+  }
 });
 
 describe('normalizeMathInput — no-op & guardrails', () => {

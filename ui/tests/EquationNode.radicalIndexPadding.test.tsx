@@ -52,17 +52,24 @@ describe('EquationNode radical index handle padding (#393)', () => {
       </Provider>
     );
 
-    // The root function node is 'lhs' (nthRoot(x, 64)).
-    // Find the DOM element for path 'lhs' and verify it has paddingTop style containing handleReserve.
-    const lhsNode = container.querySelector('[data-node-path="lhs"]');
-    expect(lhsNode).toBeInTheDocument();
+    // In the unified design, the index node itself ('lhs/1') retains its normal handle padding
+    // to separate handles from the text.
+    const indexNode = container.querySelector('[data-node-path="lhs/1"]');
+    expect(indexNode).toBeInTheDocument();
 
-    const style = window.getComputedStyle(lhsNode!);
+    const indexStyle = window.getComputedStyle(indexNode!);
     // Since handleReserve calculates:
     // ((layout.btnTop + layout.btnSize + layout.textGap) * HANDLE_REM) rem
     // = (0.22 + 0.8 + 0.07) * 1.2 = 1.09 * 1.2 = 1.308rem.
-    // Let's check if the paddingTop style contains '1.3080rem' or is exactly '1.3080rem'.
-    expect(style.paddingTop).toContain('1.3080rem');
+    expect(indexStyle.paddingTop).toContain('1.3080rem');
+
+    // The parent 'nthRoot' node ('lhs') does not need handle padding reserved at its level,
+    // since the index's handles are inside the index node's padding, and the bare text is
+    // seated in the crook.
+    const lhsNode = container.querySelector('[data-node-path="lhs"]');
+    expect(lhsNode).toBeInTheDocument();
+    const parentStyle = window.getComputedStyle(lhsNode!);
+    expect(parentStyle.paddingTop).not.toContain('1.3080rem');
   });
 
   it('does NOT reserve top space on the parent nthRoot node when the short-digit index does NOT carry a handle', () => {

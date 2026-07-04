@@ -49,8 +49,6 @@ import {
   RADICAL_CROOK_FRACTION,
   INDEX_INSET_EM,
   RADICAL_SVG_WIDTH_EM,
-  RADICAL_ARM_X_AT_CROOK,
-  INDEX_ARM_RIGHT_MARGIN_EM,
 } from './radicalGeometry';
 
 interface UnifiedStackOption {
@@ -214,15 +212,7 @@ interface EquationNodeProps {
    * max() rather than numeric Math.max (#121).
    */
   readonly minPaddingTop?: string;
-  /**
-   * Suppress the fixed-rem top reserve a handle-bearing node normally adds. Used
-   * when the node is rendered as a radical index (#198): the index is a tiny
-   * 0.55em annotation in the crook, and the fixed-rem reserve would dwarf it and
-   * shove it onto the radical arm. With the reserve off, the index sits at its
-   * natural content height (so a tall fraction/radical index isn't forced into a
-   * fixed slot either) and any handle badge floats over the top instead.
-   */
-  readonly suppressHandleReserve?: boolean;
+
   /**
    * Wrap the node in a full-width, horizontally centered click target to intercept
    * gutter clicks under a fraction bar (#313).
@@ -327,7 +317,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   path,
   inExponent = false,
   minPaddingTop = '0px',
-  suppressHandleReserve = false,
   fillRowHit = false,
 }) => {
   const [sourcePath, setSourcePath] = useAtom(sourcePathAtom);
@@ -551,35 +540,19 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // varies (a fraction vs a nested radical), so we measure the rendered index and express
   // the gap in em — scale-invariant, so the nestle holds at every auto-scale.
   const rootIndexIsTall = hasTallRootIndex(node);
+  const crookFraction = rootIndexIsTall ? RADICAL_CROOK_FRACTION : RADICAL_DEFAULT_CROOK_Y / 100;
+  const armXAtCrook = 7.5 + (12 - 7.5) * (1 - crookFraction);
+  const indexArmGapBaseEm = RADICAL_SVG_WIDTH_EM * (armXAtCrook / 12);
+  const indexArmRightMarginEm = INDEX_INSET_EM - indexArmGapBaseEm;
+
   const indexSlotRef = React.useRef<HTMLDivElement>(null);
   const [indexBox, setIndexBox] = React.useState({ minW: 0, minH: 0, seatBottomEm: INDEX_INSET_EM });
   React.useLayoutEffect(() => {
     const col = indexSlotRef.current;
-    if (!rootIndexIsTall || !col) {
+    if (!col) {
       setIndexBox({ minW: 0, minH: 0, seatBottomEm: INDEX_INSET_EM });
       return;
     }
-    // Crook-relative seating (#201). The index is absolutely positioned so its bottom
-    // rides the crook line (`bottom: (1−crookFraction) of the row height`), which tracks
-    // the crook no matter what drives the row height — the index itself OR a taller
-    // radicand. Absolute content contributes no size to its column, so we measure the
-    // rendered index and reserve that footprint back.
-    //
-    // The index keeps its normal handle band (a FIXED-rem top reserve, like every other
-    // node), so we must split the two unit systems: the em EXPRESSION seats in the pocket
-    // and stays scale-invariant, while the fixed-rem handle reserve pokes ABOVE the
-    // radical top into the root's handle band. We read the child node's real top/bottom
-    // padding off the DOM (whatever it is — full handle reserve, or just nodePy when the
-    // index has no handles) and subtract it, so the pocket is sized to the bare
-    // expression, not the padded box.
-    //   • minWidth keeps the node box wrapped around the index — including its handle band
-    //     (#198), which also grows the box leftward for wide indices.
-    //   • minHeight sizes the pocket to the bare expression + one bottom inset, so the
-    //     expression's TOP sits flush with the radical top and its BOTTOM an inset off the
-    //     crook. This reserved height also makes the row height "definite" so the % seat
-    //     resolves.
-    //   • seatBottomEm offsets the box bottom by the child's bottom padding so the
-    //     EXPRESSION (not the padded box edge) lands an inset above the crook.
     const measure = () => {
       const wrapper = col.firstElementChild as HTMLElement | null;
       const childEl = wrapper?.querySelector('[data-eq-node]') as HTMLElement | null;
@@ -590,8 +563,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       const padBottom = parseFloat(cs.paddingBottom) || 0;
       const exprEm = (childEl.offsetHeight - padTop - padBottom) / fontSize;
       const padBottomEm = padBottom / fontSize;
-      const minW = Math.max(0, wrapper.offsetWidth / fontSize + INDEX_ARM_RIGHT_MARGIN_EM);
-      const minH = (exprEm + INDEX_INSET_EM) / RADICAL_CROOK_FRACTION;
+      const minW = Math.max(0, wrapper.offsetWidth / fontSize + indexArmRightMarginEm);
+      const minH = (exprEm + INDEX_INSET_EM) / crookFraction;
       const seatBottomEm = INDEX_INSET_EM - padBottomEm;
       setIndexBox((prev) =>
         Math.abs(prev.minW - minW) > 0.001 ||
@@ -602,10 +575,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       );
     };
     measure();
+    if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(measure);
     observer.observe(col.firstElementChild ?? col);
     return () => observer.disconnect();
-  }, [rootIndexIsTall, node]);
+  }, [crookFraction, indexArmRightMarginEm, node]);
 
   const getChildId = (index: number): string => {
     if (!node) return `${path}/${index}`;
@@ -653,54 +627,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     if (hasIdentity) handleCount++;
     if (hasSubstitute) handleCount++;
 
-    // Check if this node is an nthRoot with a short-digit index carrying handles.
-    // In that case, the short-digit index passes suppressHandleReserve (so its glyph
-    // sits cleanly in the crook) and its handle badge floats over the top. We must
-    // reserve the handle band at the parent level so the floating badge has room.
-    let hasShortDigitIndexWithHandles = false;
-    try {
-      const pNode = getNodeByPath(currentEq, p);
-      if (pNode && pNode.type === 'FunctionNode' && getFunctionName(pNode as math.FunctionNode) === 'nthRoot') {
-        const fnNode = pNode as math.FunctionNode;
-        let showIndex = fnNode.args.length > 1;
-        if (showIndex) {
-          let unwrapped = fnNode.args[1];
-          while (unwrapped && unwrapped.type === 'ParenthesisNode') {
-            unwrapped = (unwrapped as math.ParenthesisNode).content;
-          }
-          if (unwrapped && unwrapped.type === 'ConstantNode' && (((unwrapped as math.ConstantNode).value as unknown) === 2 || ((unwrapped as math.ConstantNode).value as unknown) === '2')) {
-            showIndex = false;
-          }
-        }
-        const pIndexIsTall = hasTallRootIndex(pNode);
-        if (showIndex && !pIndexIsTall) {
-          const indexPath = `${p}/1`;
-          const indexIsHandleMarked = isOnboardingActive && onboardingReduceHandle?.path === indexPath;
-          const indexIsSubHandleMarked = isOnboardingActive && onboardingSubstitution?.path === indexPath;
-
-          const indexActions = !isOnboardingActive
-            ? (reduciblePaths[indexPath] || [])
-            : (indexIsHandleMarked && onboardingReduceHandle && (reduciblePaths[indexPath] || [])[onboardingReduceHandle.index])
-              ? [(reduciblePaths[indexPath] || [])[onboardingReduceHandle.index]]
-              : [];
-
-          const indexSubstitutions = !isOnboardingActive
-            ? (substitutionPaths[indexPath] || [])
-            : (indexIsSubHandleMarked && onboardingSubstitution && (substitutionPaths[indexPath] || [])[onboardingSubstitution.index])
-              ? [(substitutionPaths[indexPath] || [])[onboardingSubstitution.index]]
-              : [];
-
-          if (indexActions.length > 0 || indexSubstitutions.length > 0) {
-            hasShortDigitIndexWithHandles = true;
-          }
-        }
-      }
-    } catch { /* path invalid or node doesn't exist */ }
-
     // Handle nodes reserve a fixed (rem) band; bare nodes reserve em padding that
     // scales with their text. Returned as CSS length strings so callers can mix
     // the two units via CSS max() (#121).
-    const pPaddingTop = handleCount > 0 || hasShortDigitIndexWithHandles
+    const pPaddingTop = handleCount > 0
       ? handleReserve(pLayout)
       : `${pLayout.nodePy}em`;
 
@@ -1492,17 +1422,17 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         }
         return (
           <div className="flex items-stretch -ml-[0.1em] -mr-[0.2em] relative">
-            {DEBUG_CROOK && rootIndexIsTall && (
+            {DEBUG_CROOK && (
               // Crook line: where the index's bottom should seat. The index slot itself
               // is ring-outlined below, so its lower-right corner should land on this
               // line, nestled against the rising arm.
               <div
                 className="pointer-events-none absolute left-0 right-0 z-50 border-t-2 border-emerald-400/90"
-                style={{ top: `${RADICAL_CROOK_FRACTION * 100}%` }}
+                style={{ top: `${crookFraction * 100}%` }}
               />
             )}
-            {showIndex && (rootIndexIsTall ? (
-              // Tall index (fraction/nested radical), crook-relative seating (#201).
+            {showIndex && (
+              // Crook-relative seating for both tall and short indices (#201).
               // The column is a full-height flex item (stretches to the row); the index
               // content inside is absolutely positioned with its expression bottom an inset
               // above the crook line (`bottom: (1−crookFraction) of the height`), so it
@@ -1511,8 +1441,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
               // from the effect above) so the node box still wraps it (#198) and the row
               // grows tall enough to hold it. The index keeps its normal handle band —
               // that fixed-rem top reserve pokes ABOVE the radical top into the root's
-              // handle band, while the em expression stays seated in the pocket (the
-              // effect splits the two so scale-invariance survives).
+              // handle band, while the em expression stays seated in the pocket.
               <div
                 ref={indexSlotRef}
                 className="relative shrink-0 z-10"
@@ -1525,8 +1454,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                     // right/bottom are in the COLUMN's em (this wrapper's font-size), so
                     // the inset math lands at the intended scale. The 0.5em shrink lives
                     // on the inner element only.
-                    right: `${INDEX_ARM_RIGHT_MARGIN_EM}em`,
-                    bottom: `calc(${((1 - RADICAL_CROOK_FRACTION) * 100).toFixed(4)}% + ${indexBox.seatBottomEm.toFixed(4)}em)`,
+                    right: `${indexArmRightMarginEm}em`,
+                    bottom: `calc(${((1 - crookFraction) * 100).toFixed(4)}% + ${indexBox.seatBottomEm.toFixed(4)}em)`,
                   }}
                 >
                   <div className="text-[0.5em]" style={getOpStyle()}>
@@ -1534,21 +1463,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                   </div>
                 </div>
               </div>
-            ) : (
-              // Short digit index: a normal flow item (not absolutely positioned) so the
-              // node box grows to contain it instead of spilling past the left edge
-              // (#198). Bottom-anchored (items-end) so its glyph sits at a stable height;
-              // the negative right margin nestles it against the rising stroke.
-              <div className="relative self-start shrink-0 flex items-end min-h-[0.96em] -mr-[0.35em] z-10 translate-y-[0.05em]">
-                <div className="text-[0.5em]" style={getOpStyle()}>
-                  <EquationNode path={`${path}/1`} key={getChildId(1)} inExponent={inExponent} suppressHandleReserve />
-                </div>
-              </div>
-            ))}
+            )}
             <div
               className="relative select-none shrink-0 mr-[-1px]"
               style={{ width: `${RADICAL_SVG_WIDTH_EM}em` }}
-              data-crookdebug={DEBUG_CROOK && rootIndexIsTall ? 'svg' : undefined}
+              data-crookdebug={DEBUG_CROOK ? 'svg' : undefined}
             >
               <svg
                 viewBox="0 0 12 100"
@@ -1560,20 +1479,20 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                 style={getOpStyle()}
               >
                 <path
-                  d={radicalPath(rootIndexIsTall ? Math.round(RADICAL_CROOK_FRACTION * 100) : RADICAL_DEFAULT_CROOK_Y)}
+                  d={radicalPath(Math.round(crookFraction * 100))}
                   vectorEffect="non-scaling-stroke"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                {DEBUG_CROOK && rootIndexIsTall && (
+                {DEBUG_CROOK && (
                   // Vertical reference in the SAME coord space as the arm, so it is
                   // guaranteed to sit on the arm at the crook (they cross at y = crook).
                   // This is the target the index's right edge is inset from — its right gap
                   // to this line should match its bottom gap to the green crook line.
                   <line
-                    x1={RADICAL_ARM_X_AT_CROOK}
+                    x1={armXAtCrook}
                     y1={0}
-                    x2={RADICAL_ARM_X_AT_CROOK}
+                    x2={armXAtCrook}
                     y2={100}
                     stroke="#38bdf8"
                     strokeWidth={2}
@@ -1755,7 +1674,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // text shares the same top-boundary offset as its handle-bearing siblings (#30).
   // Handle nodes reserve the fixed rem band; combine with the (possibly em) parent
   // floor via CSS max() since the units may differ.
-  const ownPaddingTop = suppressHandleReserve ? `${layout.nodePy}em` : getNodePadding(path).paddingTop;
+  const ownPaddingTop = handleCount > 0 ? handleReserve(layout) : `${layout.nodePy}em`;
   const paddingTop = cssMax(ownPaddingTop, minPaddingTop);
 
   const customStyle: React.CSSProperties = {

@@ -1308,10 +1308,70 @@ const subtreeHasFinerSimplification = (eq: Equation, p: string): boolean => {
  * Checks if a given path has a simplification opportunity.
  * Returns the simplified Equation if found, otherwise null.
  */
+/**
+ * True when `node` is a division whose denominator is — or folds to — the
+ * constant zero (a literal `/ 0`, or `/ (2 - 2)` etc.). Such an expression is
+ * undefined.
+ */
+const isZeroDenominatorDivision = (node: math.MathNode): boolean => {
+  if (node.type !== 'OperatorNode') return false;
+  const op = node as math.OperatorNode;
+  if (op.op !== '/' || op.args.length !== 2) return false;
+  const den = unwrapParens(op.args[1]);
+  if (!isConstantSubtree(den)) return false;
+  try {
+    return Number(den.compile().evaluate()) === 0;
+  } catch {
+    // A denominator we can't evaluate isn't a provable zero — leave it be.
+    return false;
+  }
+};
+
+/**
+ * True when the path `p` is entangled with a division by zero — either the
+ * subtree at `p` contains a `/ 0` (so folding it would fabricate a value), or `p`
+ * sits at or inside a `/ 0` (so a removal could collapse the division onto its
+ * zero denominator, e.g. dropping the `x` in `x / 0 -> 0`). Both cases are
+ * mathematically undefined, so no simplification may be offered. mathjs's
+ * `simplify` and the numeric equivalence sampler otherwise let the bad rewrite
+ * slip through every guard and reach the learner (#333).
+ */
+const pathTouchesZeroDenominator = (eq: Equation, p: string): boolean => {
+  // Self or descendant divides by zero.
+  let found = false;
+  try {
+    getNodeByPath(eq, p).traverse((n) => {
+      if (!found && isZeroDenominatorDivision(n)) found = true;
+    });
+  } catch {
+    // ignore
+  }
+  if (found) return true;
+
+  // An ancestor divides by zero (p is a numerator/denominator inside a `/ 0`).
+  const parts = p.split('/');
+  let prefix = '';
+  for (let i = 0; i < parts.length - 1; i++) {
+    prefix = i === 0 ? parts[0] : `${prefix}/${parts[i]}`;
+    try {
+      if (isZeroDenominatorDivision(getNodeByPath(eq, prefix))) return true;
+    } catch {
+      // ignore
+    }
+  }
+  return false;
+};
+
 const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null => {
   try {
     const node = getNodeByPath(eq, p);
     if (!node) return null;
+
+    // #333: never offer a simplification entangled with a division by zero — it
+    // is undefined, and the reduce paths (the mathjs fallback in step 5, or a
+    // numerator removal that collapses `x / 0` onto its `0`) would otherwise
+    // fabricate a mathematically wrong value.
+    if (pathTouchesZeroDenominator(eq, p)) return null;
 
     const isDiff = (candidate: Equation): boolean => {
       const clean = (s: string) => s.replace(/[\s()]/g, '');
@@ -1620,6 +1680,12 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
   const rawReductions: ReductionOption[] = [];
 
   allNodePaths.forEach((path) => {
+    // #333: a path entangled with a division by zero is undefined — skip it so no
+    // reduce/factor/identity path can fold `x / 0` into a spurious value. Mirrors
+    // the guard in getSimplificationForPathRaw; a valid move on a sibling subtree
+    // (without a zero denominator) is still discovered at its own path.
+    if (pathTouchesZeroDenominator(eq, path)) return;
+
     // Try standard simplification/distribution
     try {
       const simplified = getSimplificationForPath(eq, path);

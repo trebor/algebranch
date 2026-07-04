@@ -653,10 +653,54 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     if (hasIdentity) handleCount++;
     if (hasSubstitute) handleCount++;
 
+    // Check if this node is an nthRoot with a short-digit index carrying handles.
+    // In that case, the short-digit index passes suppressHandleReserve (so its glyph
+    // sits cleanly in the crook) and its handle badge floats over the top. We must
+    // reserve the handle band at the parent level so the floating badge has room.
+    let hasShortDigitIndexWithHandles = false;
+    try {
+      const pNode = getNodeByPath(currentEq, p);
+      if (pNode && pNode.type === 'FunctionNode' && getFunctionName(pNode as math.FunctionNode) === 'nthRoot') {
+        const fnNode = pNode as math.FunctionNode;
+        let showIndex = fnNode.args.length > 1;
+        if (showIndex) {
+          let unwrapped = fnNode.args[1];
+          while (unwrapped && unwrapped.type === 'ParenthesisNode') {
+            unwrapped = (unwrapped as math.ParenthesisNode).content;
+          }
+          if (unwrapped && unwrapped.type === 'ConstantNode' && (((unwrapped as math.ConstantNode).value as unknown) === 2 || ((unwrapped as math.ConstantNode).value as unknown) === '2')) {
+            showIndex = false;
+          }
+        }
+        const pIndexIsTall = hasTallRootIndex(pNode);
+        if (showIndex && !pIndexIsTall) {
+          const indexPath = `${p}/1`;
+          const indexIsHandleMarked = isOnboardingActive && onboardingReduceHandle?.path === indexPath;
+          const indexIsSubHandleMarked = isOnboardingActive && onboardingSubstitution?.path === indexPath;
+
+          const indexActions = !isOnboardingActive
+            ? (reduciblePaths[indexPath] || [])
+            : (indexIsHandleMarked && onboardingReduceHandle && (reduciblePaths[indexPath] || [])[onboardingReduceHandle.index])
+              ? [(reduciblePaths[indexPath] || [])[onboardingReduceHandle.index]]
+              : [];
+
+          const indexSubstitutions = !isOnboardingActive
+            ? (substitutionPaths[indexPath] || [])
+            : (indexIsSubHandleMarked && onboardingSubstitution && (substitutionPaths[indexPath] || [])[onboardingSubstitution.index])
+              ? [(substitutionPaths[indexPath] || [])[onboardingSubstitution.index]]
+              : [];
+
+          if (indexActions.length > 0 || indexSubstitutions.length > 0) {
+            hasShortDigitIndexWithHandles = true;
+          }
+        }
+      }
+    } catch { /* path invalid or node doesn't exist */ }
+
     // Handle nodes reserve a fixed (rem) band; bare nodes reserve em padding that
     // scales with their text. Returned as CSS length strings so callers can mix
     // the two units via CSS max() (#121).
-    const pPaddingTop = handleCount > 0
+    const pPaddingTop = handleCount > 0 || hasShortDigitIndexWithHandles
       ? handleReserve(pLayout)
       : `${pLayout.nodePy}em`;
 
@@ -1711,7 +1755,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // text shares the same top-boundary offset as its handle-bearing siblings (#30).
   // Handle nodes reserve the fixed rem band; combine with the (possibly em) parent
   // floor via CSS max() since the units may differ.
-  const ownPaddingTop = handleCount > 0 && !suppressHandleReserve ? handleReserve(layout) : `${layout.nodePy}em`;
+  const ownPaddingTop = suppressHandleReserve ? `${layout.nodePy}em` : getNodePadding(path).paddingTop;
   const paddingTop = cssMax(ownPaddingTop, minPaddingTop);
 
   const customStyle: React.CSSProperties = {

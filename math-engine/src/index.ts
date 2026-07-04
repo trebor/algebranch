@@ -4,6 +4,7 @@
 import type * as math from 'mathjs';
 import { mjs } from './mathjs';
 import { Equation, RelationOperator, ensureNodeIds } from './tree';
+import { normalizeMathInput } from './normalizeInput';
 
 // Matches a single relational operator. Two-character operators are listed first
 // so `<=`/`>=` win over a bare `<`/`>`/`=` at the same position.
@@ -26,11 +27,18 @@ export * from './speech';
 export * from './explore';
 export * from './compress';
 export * from './sync';
+export * from './normalizeInput';
 
 /**
  * Parses an equation string of the form "LHS = RHS" into an Equation tree.
+ *
+ * The raw string is first run through `normalizeMathInput` (#398), so LaTeX,
+ * Unicode-math, and SymPy/Python dialects are translated to canonical infix
+ * before the relation split — e.g. Python `==` becomes a single `=` here, ahead
+ * of the `RELATION_REGEX` count check below.
  */
-export const parseEquation = (eqStr: string): Equation => {
+export const parseEquation = (rawStr: string): Equation => {
+  const eqStr = normalizeMathInput(rawStr);
   const relationMatches = [...eqStr.matchAll(RELATION_REGEX)];
   const expectedRelationCount = 1;
 

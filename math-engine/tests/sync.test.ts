@@ -248,3 +248,51 @@ describe('activePaths — commutative chain-link suppression (#353)', () => {
     }
   });
 });
+
+describe('computeMathSync — undefined (÷0) equations are a true dead end (#419)', () => {
+  // Once any subtree is undefined, the whole equation is undefined: no algebraic
+  // manipulation yields a defined equivalent, so NO move is offered anywhere. The
+  // freeze is equation-global (a property of the whole state), not per-subtree —
+  // even a term that doesn't itself touch the /0 cannot be legally moved. The
+  // undefinedPaths diagnostic still points at the offending subtree.
+
+  test('x/0 = 5 offers no active paths, no reductions, but still flags the /0 subtree', () => {
+    const eq = parseEquation('x/0 = 5');
+    const result = computeMathSync(eq, null);
+    expect(result.activePaths).toEqual([]);
+    expect(result.reduciblePaths).toEqual({});
+    expect(result.undefinedPaths).toEqual([{ path: 'lhs', reason: 'division-by-zero' }]);
+  });
+
+  test('x/0 = 5 offers no drop targets for any source (incl. the numerator that would drop the /0)', () => {
+    const eq = parseEquation('x/0 = 5');
+    // Selecting the numerator `x` previously fabricated `0 = x/5`, silently
+    // dropping the /0 and inventing a defined result — the regression this guards.
+    for (const source of getAllPaths(eq)) {
+      const result = computeMathSync(eq, source);
+      expect(result.targetPaths).toEqual({});
+    }
+  });
+
+  test('x/0 + x/5 = 0 freezes every term, still flags only the x/0 subtree', () => {
+    const eq = parseEquation('x/0 + x/5 = 0');
+    for (const source of [null, ...getAllPaths(eq)]) {
+      const result = computeMathSync(eq, source);
+      expect(result.activePaths).toEqual([]);
+      expect(result.reduciblePaths).toEqual({});
+      expect(result.targetPaths).toEqual({});
+    }
+    const flagged = computeMathSync(eq, null).undefinedPaths;
+    expect(flagged).toHaveLength(1);
+    expect(flagged[0].reason).toBe('division-by-zero');
+  });
+
+  test('a defined equation is unaffected — moves still offered (null/no-op case)', () => {
+    for (const s of ['x + 3 = 7', 'x/5 = 2']) {
+      const eq = parseEquation(s);
+      const result = computeMathSync(eq, null);
+      expect(result.undefinedPaths).toEqual([]);
+      expect(result.activePaths.length).toBeGreaterThan(0);
+    }
+  });
+});

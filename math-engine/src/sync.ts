@@ -64,6 +64,22 @@ const isChainLinkPath = (eq: Equation, path: string): boolean => {
 };
 
 export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSyncResult => {
+  // 0. Undefined check first: once any subtree is undefined (today: a division by
+  //    zero, #413), the WHOLE equation is undefined. "Undefined" is not a value you
+  //    can transpose across or cancel, so no algebraic manipulation yields a defined
+  //    equivalent — the equation is a true dead end whose only sound action is undo
+  //    (#419). The freeze is equation-global: even a term that doesn't itself touch
+  //    the /0 offers no move. We still report the offending subtree(s) so the UI can
+  //    badge exactly where the /0 is. (Reductions are already suppressed on
+  //    /0-touching paths per #333; this makes the guarantee explicit and total.)
+  const undefinedPaths = getUndefinedDivisionPaths(eq).map((path) => ({
+    path,
+    reason: 'division-by-zero' as const,
+  }));
+  if (undefinedPaths.length > 0) {
+    return { activePaths: [], reduciblePaths: {}, targetPaths: {}, undefinedPaths };
+  }
+
   // 1. Active paths: nodes that can be moved/transformed.
   const activePaths: string[] = [];
   for (const path of getAllPaths(eq)) {
@@ -125,13 +141,6 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
       // No targets for a source that can't move.
     }
   }
-
-  // 4. Undefined paths: division-by-zero subtrees are a dead end (#413). The
-  //    engine reports the diagnostic; the UI decides how to render it.
-  const undefinedPaths = getUndefinedDivisionPaths(eq).map((path) => ({
-    path,
-    reason: 'division-by-zero' as const,
-  }));
 
   return { activePaths, reduciblePaths, targetPaths, undefinedPaths };
 };

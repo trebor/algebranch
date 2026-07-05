@@ -3,7 +3,7 @@
 
 import { Equation, SerializedEquation, getAllPaths, getNodeByPath, serializeEquation, ensureNodeIds } from './tree';
 import { generateValidMoves, hasValidMove } from './validator';
-import { getReducibleOptions } from './simplify';
+import { getReducibleOptions, getUndefinedDivisionPaths } from './simplify';
 import { isCommutativeChainLink } from './explore';
 
 /**
@@ -22,6 +22,13 @@ export interface MathSyncResult {
   >;
   /** Valid drop targets for the currently selected source term (keyed by target path). */
   readonly targetPaths: Record<string, SerializedEquation>;
+  /**
+   * Subtrees that are mathematically undefined and thus a dead end — no move can
+   * be offered on them. Today the only reason is a division whose denominator is
+   * (or folds to) zero (#413); `path` addresses the offending `/ 0` node so the
+   * UI can badge exactly that subtree.
+   */
+  readonly undefinedPaths: { path: string; reason: 'division-by-zero' }[];
 }
 
 /**
@@ -119,5 +126,12 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
     }
   }
 
-  return { activePaths, reduciblePaths, targetPaths };
+  // 4. Undefined paths: division-by-zero subtrees are a dead end (#413). The
+  //    engine reports the diagnostic; the UI decides how to render it.
+  const undefinedPaths = getUndefinedDivisionPaths(eq).map((path) => ({
+    path,
+    reason: 'division-by-zero' as const,
+  }));
+
+  return { activePaths, reduciblePaths, targetPaths, undefinedPaths };
 };

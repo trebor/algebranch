@@ -1144,6 +1144,7 @@ export interface ReducibleActionInfo {
 export const candidatePathsAtom = atom<Set<string>>(new Set<string>());
 export const targetPathsAtom = atom<Record<string, Equation>>({});
 export const reduciblePathsAtom = atom<Record<string, ReducibleActionInfo[]>>({});
+export const undefinedPathsAtom = atom<{ path: string; reason: 'division-by-zero' }[]>([]);
 
 export interface UserSettings {
   allowEvaluateToDecimal: boolean;
@@ -2379,10 +2380,11 @@ export const swapSidesAtom = atom(
  */
 export const syncMathStateAtom = atom(
   null,
-  (_get, set, { activePaths, reduciblePaths, targetPaths }: { 
-    activePaths: string[]; 
-    reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' | 'identity'; label?: string }[]>; 
-    targetPaths: Record<string, SerializedEquation> 
+  (_get, set, { activePaths, reduciblePaths, targetPaths, undefinedPaths }: {
+    activePaths: string[];
+    reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' | 'identity'; label?: string }[]>;
+    targetPaths: Record<string, SerializedEquation>;
+    undefinedPaths: { path: string; reason: 'division-by-zero' }[];
   }) => {
     set(candidatePathsAtom, new Set<string>(activePaths));
 
@@ -2401,6 +2403,8 @@ export const syncMathStateAtom = atom(
       parsedTargets[k] = deserializeEquation(targetPaths[k]);
     });
     set(targetPathsAtom, parsedTargets);
+
+    set(undefinedPathsAtom, undefinedPaths);
   }
 );
 
@@ -2413,6 +2417,7 @@ export const clearMathStateAtom = atom(
     set(candidatePathsAtom, new Set<string>());
     set(reduciblePathsAtom, {});
     set(targetPathsAtom, {});
+    set(undefinedPathsAtom, []);
   }
 );
 

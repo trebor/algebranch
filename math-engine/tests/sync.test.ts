@@ -12,9 +12,24 @@ import {
   deserializeEquation,
   equationToString,
   areEquationsEquivalent,
+  getChildren,
 } from '../src';
 import { isCommutativeChainLink } from '../src/explore';
 import type { Equation } from '../src';
+import type * as math from 'mathjs';
+
+/** All node ids of an equation in preorder (lhs then rhs). */
+const collectIds = (eq: Equation): string[] => {
+  const ids: string[] = [];
+  const walk = (n: math.MathNode) => {
+    if (!n) return;
+    ids.push((n as unknown as { id: string }).id);
+    getChildren(n).forEach(walk);
+  };
+  walk(eq.lhs);
+  walk(eq.rhs);
+  return ids;
+};
 
 // Resolve a path's node and its immediate parent (the node one segment up, null
 // for a side root) so a test can ask whether a path is an arbitrary chain link.
@@ -198,5 +213,38 @@ describe('activePaths — commutative chain-link suppression (#353)', () => {
     expect(chainLinkAt(eq, 'lhs/0')).toBe(true); // (a+b) is the arbitrary link
     expect(Object.keys(targets)).not.toContain('lhs/0');
     expect(Object.keys(targets)).toContain('rhs'); // moving c across still offered
+  });
+
+  // #400: a reduction transform can leave two tree slots holding the same node id
+  // (or a null id). computeMathSync serializes these option trees straight into the
+  // UI's reducible-preview stack, which renders each as an EquationNode. React then
+  // sees two children with the same key (`getChildId` returns the node id) and warns
+  // — the "Encountered two children with the same key" console error on, e.g., the
+  // quadratic result below. Every option preview must therefore carry unique,
+  // non-null node ids before it crosses to the UI.
+  describe('reducible option previews have unique node ids (#400)', () => {
+    const eqStrings = [
+      'x = (-(-4) - sqrt((-4)^2 - 4*1*0))/(2*1)', // quadratic-formula result (the repro)
+      'x^2 - 4*x = 0',
+      '2*(x + 3) = 10', // Distribute — aliases nodes in the original repro
+    ];
+
+    for (const s of eqStrings) {
+      test(`no duplicate/null ids across any option of ${s}`, () => {
+        const result = computeMathSync(parseEquation(s), null);
+        for (const [path, arr] of Object.entries(result.reduciblePaths)) {
+          arr.forEach((opt, idx) => {
+            const eq = deserializeEquation(opt.equation);
+            const ids = collectIds(eq);
+            // Surface which option failed via the asserted value itself.
+            const where = `path=${path} idx=${idx} label=${opt.label ?? opt.type}`;
+            const nullIds = ids.filter((id) => id == null);
+            expect([where, nullIds]).toEqual([where, []]);
+            const dupIds = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+            expect([where, dupIds]).toEqual([where, []]);
+          });
+        }
+      });
+    }
   });
 });

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import { Equation, SerializedEquation, getAllPaths, getNodeByPath, serializeEquation } from './tree';
+import { Equation, SerializedEquation, getAllPaths, getNodeByPath, serializeEquation, ensureNodeIds } from './tree';
 import { generateValidMoves, hasValidMove } from './validator';
 import { getReducibleOptions } from './simplify';
 import { isCommutativeChainLink } from './explore';
@@ -83,7 +83,15 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
   const reduciblePaths: MathSyncResult['reduciblePaths'] = {};
   for (const path of Object.keys(reductions)) {
     reduciblePaths[path] = reductions[path].map((red) => ({
-      equation: serializeEquation(red.simplified),
+      // A reduction transform can leave two tree slots aliasing one node, or holding
+      // the same (or a null) id (#400). This payload is rendered directly as an
+      // EquationNode preview, where the node id is the React child key — so a
+      // duplicate id becomes a duplicate key ("Encountered two children with the
+      // same key"). ensureNodeIds de-aliases and makes every id unique here, while
+      // preserving the ids inherited from `eq` (so surviving terms still FLIP when
+      // the option is applied). String-matching consumers call getReducibleOptions
+      // directly and are unaffected.
+      equation: serializeEquation(ensureNodeIds(red.simplified)),
       type: red.type,
       label: red.label,
     }));

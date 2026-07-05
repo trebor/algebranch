@@ -144,7 +144,23 @@ export const describeTransposition = (
   if (srcSide === tgtSide) return null;
 
   const parts = sourcePath.split('/');
-  if (parts.length < 2) return null; // moving an entire side — no single operand
+  if (parts.length < 2) {
+    let moved: math.MathNode;
+    try {
+      moved = getNodeByPath(eq, sourcePath);
+    } catch {
+      return null;
+    }
+    const operand = nodeToString(moved);
+    const op = 'subtract';
+    const baseText = `subtract ${operand} from both sides`;
+    return {
+      kind: 'bothSides',
+      op,
+      operand,
+      text: baseText,
+    };
+  }
 
   const childIndex = parseInt(parts[parts.length - 1], 10);
   const parentPath = parts.slice(0, -1).join('/');

@@ -1706,7 +1706,7 @@ export const pushEquationAtom = atom(
           label = action.label || (actionType === 'distribute' ? 'Distribute' : 'Simplify');
         }
       } else if (get(sourcePathAtom)) {
-        label = "Transpose";
+        label = change?.kind === 'bothSides' ? "Transpose" : "Move";
       }
     }
 

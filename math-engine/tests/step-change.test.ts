@@ -79,6 +79,18 @@ describe('describeTransposition — both-sides operations', () => {
     const change = describeTransposition(e, 'lhs/1', 'rhs');
     expect(change!.op).toBe('subtract');
   });
+
+  it('entire side across = becomes "subtract [expression] from both sides"', () => {
+    // -(x + 5) = x : transposing the entire RHS `x` (rhs) to the LHS
+    const changeRhs = describeTransposition(eq('-(x + 5) = x'), 'rhs', 'lhs');
+    expect(changeRhs).toMatchObject({ kind: 'bothSides', op: 'subtract', operand: 'x' });
+    expect(changeRhs!.text).toBe('subtract x from both sides');
+
+    // -(x + 5) = x : transposing the entire LHS `-(x + 5)` (lhs) to the RHS
+    const changeLhs = describeTransposition(eq('-(x + 5) = x'), 'lhs', 'rhs');
+    expect(changeLhs).toMatchObject({ kind: 'bothSides', op: 'subtract', operand: '-(x + 5)' });
+    expect(changeLhs!.text).toBe('subtract -(x + 5) from both sides');
+  });
 });
 
 describe('describeGlobalOp — both-sides radial-menu ops', () => {

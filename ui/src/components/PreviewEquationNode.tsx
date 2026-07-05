@@ -10,6 +10,7 @@ import { currentEquationAtom } from '../store/equation';
 import { Equation, getNodeByPath, getFunctionName, formatNumber, isCommutativeChainLink } from 'math-engine-client';
 import { OPERATOR_DISPLAY, splitSubscript, isImaginaryUnit } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
+import { precedenceOf, PREC } from 'math-engine';
 import { useEquationPreviewPalette } from './EquationPreviewPaletteContext';
 import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
 import {
@@ -531,6 +532,80 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
     return <span>{node.toString()}</span>;
   };
 
+  // Precedence parenthesization check (#410)
+  let needsPrecedenceParens = false;
+  if (node.type !== 'ParenthesisNode' && path) {
+    const parentSlash = path.lastIndexOf('/');
+    if (parentSlash >= 0) {
+      try {
+        const parentPath = path.slice(0, parentSlash);
+        const parent = getNodeByPath(eq, parentPath);
+        if (parent && parent.type === 'OperatorNode') {
+          const parentOp = parent as math.OperatorNode;
+          const cp = precedenceOf(node);
+          const isRight = parentOp.args.length > 1 && parentOp.args[1] === node;
+          const side = isRight ? 'right' : 'left';
+
+          if (parentOp.op === '^') {
+            if (side === 'left') {
+              needsPrecedenceParens = cp <= PREC.pow;
+            }
+          } else if (parentOp.isUnary()) {
+            if (parentOp.op === '-') {
+              needsPrecedenceParens = cp < PREC.unary;
+            }
+          } else {
+            const parentPrec = parentOp.op === '+' || parentOp.op === '-' ? PREC.add : PREC.mul;
+            needsPrecedenceParens = cp < parentPrec;
+            if (!needsPrecedenceParens && cp === parentPrec && side === 'right') {
+              const childIsDivision = node.type === 'OperatorNode' && (node as math.OperatorNode).op === '/';
+              if (parentOp.op === '-' || parentOp.op === '/') {
+                needsPrecedenceParens = true;
+              } else if (parentOp.op === '*' && childIsDivision) {
+                needsPrecedenceParens = true;
+              }
+            }
+          }
+        }
+      } catch {
+        // Ignore if no parent resolvable
+      }
+    }
+  }
+
+  let rendered = renderContent();
+  if (needsPrecedenceParens) {
+    rendered = (
+      <div className="flex items-stretch px-[0.05em] relative">
+        <div className="relative w-[0.32em] select-none shrink-0">
+          <div
+            className="absolute inset-x-0"
+            style={{
+              top: '0.2em',
+              bottom: '0.2em',
+            }}
+          >
+            <LeftParenSVG className={`w-full h-full ${palette.paren}`} />
+          </div>
+        </div>
+        <div className="px-[0.05em] inline-flex items-center justify-center">
+          {rendered}
+        </div>
+        <div className="relative w-[0.32em] select-none shrink-0">
+          <div
+            className="absolute inset-x-0"
+            style={{
+              top: '0.2em',
+              bottom: '0.2em',
+            }}
+          >
+            <RightParenSVG className={`w-full h-full ${palette.paren}`} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // In read view a stop is a VISUAL cursor target only (#270): it registers (for
   // depth-first ordering) and shows a ring when active, but carries NO ARIA role or
   // name. The whole render is aria-hidden and a live region narrates the active stop
@@ -545,7 +620,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
       className={`relative inline-flex items-center justify-center ${isActiveStop ? THEME_GLASS.EXPLORE_CURSOR : ''}`}
       {...exploreProps}
     >
-      {renderContent()}
+      {rendered}
     </div>
   );
 };

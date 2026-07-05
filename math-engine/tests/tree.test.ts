@@ -1,6 +1,6 @@
 import * as math from 'mathjs';
-import { parseEquation } from '../src/index';
-import { canonicalizeAssociativeChains, ensureNodeIds, removeNodeAtPath, Equation } from '../src/tree';
+import { parseEquation, getReducibleOptions } from '../src/index';
+import { canonicalizeAssociativeChains, ensureNodeIds, getChildren, removeNodeAtPath, Equation } from '../src/tree';
 
 // Structural skeleton ignoring ids — captures the *nesting* of a tree.
 const skeleton = (n: any): string => {
@@ -98,5 +98,56 @@ describe('canonicalizeAssociativeChains (#378)', () => {
     walk(out.lhs);
     walk(out.rhs);
     expect(ids.every((id) => typeof id === 'string' && id.length > 0)).toBe(true);
+  });
+});
+
+describe('ensureNodeIds — de-aliases shared node objects (#400)', () => {
+  // Collects every node object across both sides of an equation.
+  const collectNodes = (eq: Equation): math.MathNode[] => {
+    const nodes: math.MathNode[] = [];
+    const walk = (n: math.MathNode) => {
+      if (!n) return;
+      nodes.push(n);
+      getChildren(n).forEach(walk);
+    };
+    walk(eq.lhs);
+    walk(eq.rhs);
+    return nodes;
+  };
+
+  // Every tree position must be a distinct object with a distinct id.
+  const expectNoAliasing = (eq: Equation) => {
+    const nodes = collectNodes(eq);
+    const ids = nodes.map((n) => (n as unknown as { id?: string }).id);
+    expect(new Set(nodes).size).toBe(nodes.length); // no shared object references
+    expect(new Set(ids).size).toBe(ids.length); // no duplicate ids
+  };
+
+  const findOption = (input: string, label: string): Equation => {
+    const option = Object.values(getReducibleOptions(parseEquation(input)))
+      .flat()
+      .find((o) => o.label === label);
+    if (!option) throw new Error(`No reduction "${label}" found for ${input}`);
+    return option.simplified;
+  };
+
+  test('Quadratic Formula (−) output has no aliased nodes', () => {
+    const simplified = findOption('x^2-4x=0', 'Apply Quadratic Formula (-)');
+    expectNoAliasing(ensureNodeIds(simplified));
+  });
+
+  test('Distribute output has no aliased nodes', () => {
+    const simplified = findOption('2*(x+3)=10', 'Distribute');
+    expectNoAliasing(ensureNodeIds(simplified));
+  });
+
+  test('an already alias-free tree round-trips structurally unchanged', () => {
+    const eq = ensureNodeIds(parseEquation('a + b * c = d'));
+    const before = { lhs: eq.lhs.toString(), rhs: eq.rhs.toString() };
+    const out = ensureNodeIds(eq);
+    expectNoAliasing(out);
+    expect({ lhs: out.lhs.toString(), rhs: out.rhs.toString() }).toEqual(before);
+    // Stable ids survive an id-clean pass unchanged.
+    expect((out.lhs as unknown as { id: string }).id).toBe((eq.lhs as unknown as { id: string }).id);
   });
 });

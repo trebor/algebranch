@@ -149,8 +149,20 @@ export const toCompactEquation = (eq: Equation): CompactEquation => ({
  */
 export const fromCompactEquation = (c: CompactEquation): Equation => {
   const cleaned = cleanSides(parseEquation(c.s));
+  // Re-attach stored ids, but never let a duplicate through: a workspace saved
+  // before the #400 alias fix baked a repeated `node_<hash>_<n>` into `k`, and
+  // attaching it verbatim would hand two nodes the same React key (see
+  // `getChildId`). Keep the first occurrence of an id (preserves FLIP continuity)
+  // and mint a fresh unique id for any collision (or gap) in the stored array.
+  const seen = new Set<string>();
+  let dedupeCounter = 0;
   preorderNodes(cleaned).forEach((node, i) => {
-    (node as unknown as { id: string }).id = c.k[i];
+    let id = c.k[i];
+    while (id === undefined || seen.has(id)) {
+      id = `node_reload_${i}_${dedupeCounter++}`;
+    }
+    seen.add(id);
+    (node as unknown as { id: string }).id = id;
   });
   return cleaned;
 };

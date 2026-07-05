@@ -417,24 +417,61 @@ export const ensureNodeIds = (eq: Equation): Equation => {
 
   // Track all assigned unique IDs in this tree pass to prevent sibling duplicates
   const seenIds = new Set<string>();
+  // Track object identities so an aliased node (the *same* object occupying two
+  // tree slots, #400) can be detected and de-aliased. Re-assigning a fresh id to
+  // a shared object can't fix aliasing — both slots still read the one object —
+  // so the second occurrence must be replaced by an independent structural clone.
+  const seenObjects = new Set<math.MathNode>();
 
-  const traverseAndAssign = (node: math.MathNode) => {
-    if (!node) return;
-    const nodeObj = node as unknown as Record<string, string>;
-    
+  // Deep-clones a subtree into fresh objects. cloneWithChildren returns the node
+  // untouched for leaves, so leaves are cloned via node.clone() directly to
+  // guarantee a distinct object at every position.
+  const deepCloneNode = (node: math.MathNode): math.MathNode => {
+    const children = getChildren(node);
+    if (children.length === 0) return node.clone();
+    return cloneWithChildren(node, children.map(deepCloneNode));
+  };
+
+  const setChildren = (node: math.MathNode, newChildren: math.MathNode[]) => {
+    const asArgs = node as unknown as NodeWithArgs;
+    if ('args' in node && Array.isArray(asArgs.args)) {
+      asArgs.args = newChildren;
+    } else if ('content' in node && (node as unknown as NodeWithContent).content) {
+      (node as unknown as NodeWithContent).content = newChildren[0];
+    }
+  };
+
+  const traverseAndAssign = (node: math.MathNode): math.MathNode => {
+    if (!node) return node;
+
+    // A repeat object reference is an alias: clone it so this slot is independent.
+    // The clone carries the original's (now duplicate) ids, which the id check
+    // below regenerates as it descends, yielding a fully distinct subtree.
+    let current = node;
+    if (seenObjects.has(current)) {
+      current = deepCloneNode(current);
+    }
+    seenObjects.add(current);
+
+    const nodeObj = current as unknown as Record<string, string>;
     // Generate new unique ID if missing or if already assigned elsewhere in this tree
     if (!nodeObj.id || seenIds.has(nodeObj.id)) {
       nodeObj.id = generateId();
     }
     seenIds.add(nodeObj.id);
 
-    const children = getChildren(node);
-    children.forEach(traverseAndAssign);
+    const children = getChildren(current);
+    if (children.length > 0) {
+      setChildren(current, children.map(traverseAndAssign));
+    }
+    return current;
   };
 
-  traverseAndAssign(cleanedEq.lhs);
-  traverseAndAssign(cleanedEq.rhs);
-  return cleanedEq;
+  return {
+    lhs: traverseAndAssign(cleanedEq.lhs),
+    rhs: traverseAndAssign(cleanedEq.rhs),
+    relation: cleanedEq.relation,
+  };
 };
 
 export interface SerializedNode {

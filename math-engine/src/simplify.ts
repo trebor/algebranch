@@ -2133,6 +2133,29 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
     reduciblePaths[bestRed.path].push(bestRed);
   });
 
+  // Suppress generic "Simplify" / "Simplify Fraction" options when a more
+  // specific/precise reduction/transposition is available on the same path.
+  const GENERIC_LABELS = new Set(['Simplify', 'Simplify Fraction']);
+  Object.keys(reduciblePaths).forEach((path) => {
+    const list = reduciblePaths[path];
+    const hasSpecific = list.some((r) => {
+      if (!r.label) return false;
+      const l = r.label;
+      return (
+        l.startsWith('Factor') ||
+        l.startsWith('Take Root') ||
+        l === 'Complete the Square' ||
+        l === 'Simplify Radical' ||
+        l === 'Combine Like Radicals' ||
+        l === 'Rationalize Denominator' ||
+        l === 'Combine Fractions'
+      );
+    });
+    if (hasSpecific) {
+      reduciblePaths[path] = list.filter((r) => !r.label || !GENERIC_LABELS.has(r.label));
+    }
+  });
+
   // De-emphasize "Evaluate to Decimal" so an exact-form move is always the
   // headline (#66): decimal is a separate, opt-in step, never the primary one.
   // Stable partition — sink it to the bottom of each node's list while keeping

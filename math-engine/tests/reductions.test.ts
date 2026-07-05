@@ -1,4 +1,5 @@
 import { parseEquation, getReducibleOptions, equationToString } from '../src';
+import * as factorModule from '../src/factor';
 
 describe('Algebraic Reducible Options & Labeling Tests', () => {
   test('should correctly label decimal evaluations as "Evaluate to Decimal"', () => {
@@ -206,6 +207,44 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
     const simplifyOption = options.find((o) => o.label === 'Simplify');
     expect(simplifyOption).toBeDefined();
     expect(simplifyOption?.simplified.lhs.toString()).toBe('2');
+  });
+
+  test('should suppress generic "Simplify" when a specific reduction is available', () => {
+    const spy = jest.spyOn(factorModule, 'tryFactor').mockImplementation((node) => {
+      if (node.toString() === 'a * c - b * c') {
+        return [{
+          node: parseEquation('c * (a - b) = d').lhs,
+          label: 'Factor out c'
+        }];
+      }
+      return [];
+    });
+
+    try {
+      const eq = parseEquation('a * c - b * c = d');
+      const reductions = getReducibleOptions(eq);
+      const options = reductions['lhs'] || [];
+
+      const factorOption = options.find((o) => o.label === 'Factor out c');
+      expect(factorOption).toBeDefined();
+
+      const simplifyOption = options.find((o) => o.label === 'Simplify');
+      expect(simplifyOption).toBeUndefined();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test('should NOT suppress generic "Simplify" when the specific option is Distribute', () => {
+    const eq = parseEquation('2 * (3 + 4) = x');
+    const reductions = getReducibleOptions(eq);
+    const options = reductions['lhs'] || [];
+
+    const simplifyOption = options.find((o) => o.label === 'Simplify');
+    const distributeOption = options.find((o) => o.label === 'Distribute');
+
+    expect(simplifyOption).toBeDefined();
+    expect(distributeOption).toBeDefined();
   });
 });
 

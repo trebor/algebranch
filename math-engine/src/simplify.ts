@@ -1362,6 +1362,30 @@ const pathTouchesZeroDenominator = (eq: Equation, p: string): boolean => {
   return false;
 };
 
+/**
+ * Collects the path of every division subtree in `eq` whose denominator is — or
+ * folds to — the constant zero. Such a subtree is undefined (division by zero),
+ * so the UI can annotate it as a dead end rather than a place to make a move
+ * (#413). Complements the #333 guards (`pathTouchesZeroDenominator`), which
+ * *suppress* reductions on these paths so no invalid `x / 0 -> 0` fold slips
+ * through; this surfaces the honest diagnostic the learner sees in that silence.
+ *
+ * Only the division node itself is flagged — the smallest offending subtree — so
+ * the UI can badge exactly the `/ 0` and not its ancestors. A valid sibling term
+ * (`x / 5` in `x / 0 + x / 5`) is never flagged.
+ */
+export const getUndefinedDivisionPaths = (eq: Equation): string[] => {
+  const paths: string[] = [];
+  for (const path of getAllPaths(eq)) {
+    try {
+      if (isZeroDenominatorDivision(getNodeByPath(eq, path))) paths.push(path);
+    } catch {
+      // An unresolvable path can't be an undefined division — skip it.
+    }
+  }
+  return paths;
+};
+
 const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null => {
   try {
     const node = getNodeByPath(eq, p);

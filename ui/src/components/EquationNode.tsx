@@ -35,7 +35,7 @@ import { THEME_GLASS } from '../constants/theme';
 import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech, flattenAssociativeChain } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
-import { describeTransposition, describeReduction, describeSubstitution, describeCollapse } from 'math-engine';
+import { describeTransposition, describeReduction, describeSubstitution, describeCollapse, precedenceOf, PREC } from 'math-engine';
 import { ArrowLeftRight, Zap, Split, RefreshCw, Replace, TriangleAlert, ArrowRight } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
@@ -1780,13 +1780,93 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // roleless div is transparent to the a11y tree, so toggling only the attribute
   // keeps both the semantics and the DOM structure stable.
   const isLeafNode = node.type === 'ConstantNode' || node.type === 'SymbolNode';
-  const renderedContent = isLeafNode ? (
+  let renderedContent = isLeafNode ? (
     renderContent()
   ) : (
     <div role={isTreeitem ? 'group' : undefined} className="inline-flex items-center justify-center">
       {renderContent()}
     </div>
   );
+
+  // Precedence parenthesization check (#410)
+  let needsPrecedenceParens = false;
+  if (node.type !== 'ParenthesisNode') {
+    const parentSlash = path.lastIndexOf('/');
+    if (parentSlash >= 0) {
+      try {
+        const parentPath = path.slice(0, parentSlash);
+        const parent = getNodeByPath(currentEq, parentPath);
+        if (parent && parent.type === 'OperatorNode') {
+          const parentOp = parent as math.OperatorNode;
+          const cp = precedenceOf(node);
+          const isRight = parentOp.args.length > 1 && parentOp.args[1] === node;
+          const side = isRight ? 'right' : 'left';
+
+          if (parentOp.op === '^') {
+            if (side === 'left') {
+              needsPrecedenceParens = cp <= PREC.pow;
+            }
+          } else if (parentOp.isUnary()) {
+            if (parentOp.op === '-') {
+              needsPrecedenceParens = cp < PREC.unary;
+            }
+          } else {
+            const parentPrec = parentOp.op === '+' || parentOp.op === '-' ? PREC.add : PREC.mul;
+            needsPrecedenceParens = cp < parentPrec;
+            if (!needsPrecedenceParens && cp === parentPrec && side === 'right') {
+              const childIsDivision = node.type === 'OperatorNode' && (node as math.OperatorNode).op === '/';
+              if (parentOp.op === '-' || parentOp.op === '/') {
+                needsPrecedenceParens = true;
+              } else if (parentOp.op === '*' && childIsDivision) {
+                needsPrecedenceParens = true;
+              }
+            }
+          }
+        }
+      } catch {
+        // Ignore if no parent resolvable
+      }
+    }
+  }
+
+  if (needsPrecedenceParens) {
+    const padding = getNodePadding(path);
+    renderedContent = (
+      <div className="flex items-stretch px-[0.05em] relative">
+        <div className="relative w-[0.32em] select-none shrink-0">
+          <div
+            className="absolute inset-x-0"
+            style={{
+              top: padding.paddingTop,
+              bottom: padding.paddingBottom,
+            }}
+          >
+            <LeftParenSVG
+              className={`w-full h-full ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`}
+              style={getOpStyle()}
+            />
+          </div>
+        </div>
+        <div className="px-[0.05em] inline-flex items-center justify-center">
+          {renderedContent}
+        </div>
+        <div className="relative w-[0.32em] select-none shrink-0">
+          <div
+            className="absolute inset-x-0"
+            style={{
+              top: padding.paddingTop,
+              bottom: padding.paddingBottom,
+            }}
+          >
+            <RightParenSVG
+              className={`w-full h-full ${isStatic ? THEME_GLASS.MATH_OP_MUTED_STATIC : THEME_GLASS.MATH_OP_MUTED_ACTIVE}`}
+              style={getOpStyle()}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const element = (
     <div

@@ -31,6 +31,8 @@ describe('custom mathjs instance', () => {
     expect(mjs.add(2, 3)).toBe(5);
     expect(mjs.pow(2, 3)).toBe(8);
     expect(typeof mjs.sqrt).toBe('function');
+    expect(typeof mjs.nthRoot).toBe('function');
+    expect(mjs.nthRoot(8, 3)).toBe(2);
     expect(typeof mjs.sin).toBe('function');
     expect(typeof mjs.fraction).toBe('function');
   });

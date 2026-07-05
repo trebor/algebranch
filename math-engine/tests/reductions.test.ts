@@ -198,5 +198,14 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
     expect(reductions['rhs'].find(r => r.label === 'Evaluate to Decimal')).toBeDefined();
     expect(filtered['rhs']?.find(r => r.label === 'Evaluate to Decimal')).toBeUndefined();
   });
+
+  test('should offer simplification of perfect nthRoot to constant', () => {
+    const eq = parseEquation('nthRoot(8, 3) = x');
+    const reductions = getReducibleOptions(eq);
+    const options = reductions['lhs'] || [];
+    const simplifyOption = options.find((o) => o.label === 'Simplify');
+    expect(simplifyOption).toBeDefined();
+    expect(simplifyOption?.simplified.lhs.toString()).toBe('2');
+  });
 });
 

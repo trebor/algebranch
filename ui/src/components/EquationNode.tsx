@@ -27,6 +27,7 @@ import {
   onboardingSubstitutionAtom,
   isTreeAnimatingAtom,
   triggerDragNudgeAtom,
+  undefinedPathsAtom,
   ReducibleActionInfo,
 } from '../store/equation';
 import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, symbolHintFor, isImaginaryUnit } from '../constants/mathSymbols';
@@ -38,6 +39,7 @@ import { describeTransposition, describeReduction, describeSubstitution, describ
 import { ArrowLeftRight, Zap, Split, RefreshCw, Replace, TriangleAlert, ArrowRight } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
+import { UndefinedInlineTooltipContent, UNDEFINED_INLINE_LABEL } from './UndefinedWarning';
 import { useMathScale } from '../hooks/useMathScale';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useCanHover } from '../hooks/useCanHover';
@@ -329,6 +331,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const pushEquation = useSetAtom(pushEquationAtom);
   const currentEq = useAtomValue(currentEquationAtom);
   const candidatePaths = useAtomValue(candidatePathsAtom);
+  const undefinedPaths = useAtomValue(undefinedPathsAtom);
   const toggleRootSign = useSetAtom(toggleRootSignAtom);
   const triggerDragNudge = useSetAtom(triggerDragNudgeAtom);
   // Roving-tabindex controller for the expression composite widget (#257). Null
@@ -647,6 +650,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const isStatic = sourcePath
     ? (!isSelected && !isTarget)
     : !isCandidate;
+  const isUndefinedNode = undefinedPaths.some((u) => u.path === path);
 
   // Determine if the user is hovering over any candidate node (or inside one)
   const isHoveringAnyCandidate = React.useMemo(() => {
@@ -1681,8 +1685,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // and minWidth so the row never overhangs. The handle band is a fixed rem size
   // (#121) while the node's own side padding stays em, so minWidth combines both.
   const handleCount = interactionStacks.length;
-  const handleBandWidth = (handleCount * layout.btnSize + (handleCount - 1) * layout.btnGap) * HANDLE_REM;
-  const minWidth = handleCount > 0
+  // The undefined (÷0) warning handle occupies the same top-right band as action
+  // handles (#416), so it must reserve the same layout space even though it isn't
+  // an interactive stack. A ÷0 node is static (its reductions are suppressed by
+  // #333), so this is normally the sole band item — but summing keeps the
+  // reservation correct if that ever changes.
+  const bandCount = handleCount + (isUndefinedNode ? 1 : 0);
+  const handleBandWidth = (bandCount * layout.btnSize + (bandCount - 1) * layout.btnGap) * HANDLE_REM;
+  const minWidth = bandCount > 0
     ? `calc(${handleBandWidth.toFixed(4)}rem + ${layout.nodePx * 2}em)`
     : undefined;
 
@@ -1690,7 +1700,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // text shares the same top-boundary offset as its handle-bearing siblings (#30).
   // Handle nodes reserve the fixed rem band; combine with the (possibly em) parent
   // floor via CSS max() since the units may differ.
-  const ownPaddingTop = handleCount > 0 ? handleReserve(layout) : `${layout.nodePy}em`;
+  const ownPaddingTop = bandCount > 0 ? handleReserve(layout) : `${layout.nodePy}em`;
   const paddingTop = cssMax(ownPaddingTop, minPaddingTop);
 
   const customStyle: React.CSSProperties = {
@@ -1828,6 +1838,34 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       {/* Receptive target backing card transition layer */}
       {isTarget && (
         <div className={THEME_GLASS.TARGET_GLOW} />
+      )}
+
+      {/* Undefined (÷0) warning handle — a dead-end marker for a division-by-zero
+          subtree (#416). It sits in the same top-right band where action handles
+          live: a ÷0 node is static (its reductions are suppressed, #333), so that
+          slot is guaranteed free — exactly where a learner looks to act, they meet
+          the warning instead of silence. Not an action, so it opens no chooser; a
+          hover/focus tooltip carries the same explanation as the history badge. */}
+      {isUndefinedNode && (
+        <div
+          className="absolute flex items-center z-25"
+          style={{
+            fontSize: `${HANDLE_REM}rem`,
+            top: `${layout.btnTop}em`,
+            right: `${layout.btnRight}em`,
+          }}
+        >
+          <Tooltip content={<UndefinedInlineTooltipContent path={path} />} position="top">
+            <span
+              role="img"
+              aria-label={UNDEFINED_INLINE_LABEL}
+              className={THEME_GLASS.UNDEFINED_HANDLE}
+              style={{ width: `${layout.btnSize}em`, height: `${layout.btnSize}em` }}
+            >
+              <TriangleAlert className="h-full w-full" strokeWidth={2.5} />
+            </span>
+          </Tooltip>
+        </div>
       )}
 
       {/* Compact Inline Operations Toolbar - sits inside the top-padding area to prevent layout overlap */}

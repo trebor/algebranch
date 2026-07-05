@@ -44,6 +44,7 @@ export {
   deserializeEquation,
   deserializeNode,
   getEquationStatus,
+  getUndefinedDivisionPaths,
   compressString,
   decompressString,
 } from 'math-engine';

@@ -9,7 +9,8 @@ import { Tooltip } from './Tooltip';
 import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
 import { CopyFormatMenu } from './CopyFormatMenu';
-import { equationToSpeech, getEquationStatus } from 'math-engine-client';
+import { equationToSpeech, getEquationStatus, getUndefinedDivisionPaths } from 'math-engine-client';
+import { UndefinedHistoryTooltipContent, UNDEFINED_HISTORY_LABEL } from './UndefinedWarning';
 import { trackEvent } from '../utils/analytics';
 import { sentenceCase } from '../utils/text';
 import { safeCopyText } from '../utils/clipboard';
@@ -30,7 +31,7 @@ import {
   type ZoomMode,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
-import { Check, CircleSlash, Infinity, ZoomIn, Search, ZoomOut } from 'lucide-react';
+import { Check, CircleSlash, Infinity, ZoomIn, Search, ZoomOut, TriangleAlert } from 'lucide-react';
 import {
   RovingTabindexProvider,
   useOptionalRovingTabindex,
@@ -378,8 +379,13 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
   // top-right corner. Transition badges (substitute #3, restriction #63) moved
   // onto the incoming connector — they describe the step, not the state.
   const eqStatus = getEquationStatus(node.equation);
-  const isContradiction = eqStatus === 'contradiction';
-  const isIdentity = eqStatus === 'identity';
+  // A ÷0 subtree makes the whole state a dead end (#416) — a terminal status that
+  // sits alongside contradiction/identity. It's orthogonal (a ÷0 equation is
+  // `conditional`, not a constant relation), but gate the others on it so the
+  // single corner slot never double-stacks.
+  const isUndefined = getUndefinedDivisionPaths(node.equation).length > 0;
+  const isContradiction = !isUndefined && eqStatus === 'contradiction';
+  const isIdentity = !isUndefined && eqStatus === 'identity';
 
   return (
     <Tooltip
@@ -436,6 +442,27 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
           >
             <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${isContradiction ? THEME_GLASS.TREE_NODE_BADGE_CONTRADICTION : THEME_GLASS.TREE_NODE_BADGE_IDENTITY}`}>
               {isContradiction ? <CircleSlash size={9} /> : <Check size={9} />}
+            </span>
+          </Tooltip>
+        )}
+
+        {/* Undefined (÷0) state badge (#416): the whole state contains a
+            division-by-zero dead end. Shares the terminal-status corner slot with
+            contradiction/identity and reveals the same warning tooltip as the
+            inline handle in the canvas, so the message reads consistently. */}
+        {isUndefined && (
+          <Tooltip
+            content={<UndefinedHistoryTooltipContent />}
+            position="top"
+            className="w-max max-w-[240px] text-sm"
+            wrapperClassName="z-20 absolute -top-1.5 -right-1.5"
+          >
+            <span
+              role="img"
+              aria-label={UNDEFINED_HISTORY_LABEL}
+              className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.UNDEFINED_TREE_BADGE}`}
+            >
+              <TriangleAlert size={9} />
             </span>
           </Tooltip>
         )}

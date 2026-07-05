@@ -366,6 +366,27 @@ export const THEME_GLASS = {
   TREE_NODE_BADGE_CONTRADICTION: 'bg-red-600 border-red-400 text-red-50',
   TREE_NODE_BADGE_IDENTITY: 'bg-emerald-600 border-emerald-400 text-emerald-50',
 
+  // --- Undefined (÷0) warning (#416): dead-end marker on division-by-zero subtrees ---
+  // Two surfaces share one warning: an inline warning-triangle handle on the
+  // offending subtree, and a state badge on the history-tree node. Red, warning-
+  // shaped: a dead end, not a caution or an offered move.
+  // Inline handle: fills the (guaranteed-free) action-handle slot; a bare glowing
+  // triangle so the warning shape reads, not a colored action-handle disk.
+  UNDEFINED_HANDLE: 'flex items-center justify-center text-red-400 cursor-help drop-shadow-[0_0_6px_rgba(248,113,113,0.6)]',
+  // History-tree corner badge — mirrors the contradiction badge so the terminal-
+  // status cluster stays visually consistent.
+  UNDEFINED_TREE_BADGE: 'bg-red-600 border-red-400 text-red-50',
+  // Shared tooltip chrome. No max-width on the shell: the title stays on one line
+  // (whitespace-nowrap) and defines the tooltip's natural width, so "zero" never
+  // wraps; the body clamps its own width so longer prose still wraps under it.
+  UNDEFINED_TOOLTIP: 'flex items-start gap-2 text-left',
+  UNDEFINED_TOOLTIP_ICON: 'shrink-0 text-red-400 mt-0.5',
+  UNDEFINED_TOOLTIP_TITLE: 'font-semibold text-red-300 whitespace-nowrap',
+  UNDEFINED_TOOLTIP_BODY: 'text-white/70 max-w-[15rem]',
+  // Inline-tooltip preview chrome: the offending `/0` sub-expression, boxed so it
+  // reads as a rendered term rather than as part of the prose.
+  UNDEFINED_TOOLTIP_PREVIEW: 'self-start rounded-md bg-white/5 px-2 py-1 text-white text-[1.15em] leading-none',
+
   // --- Unified Stacks & Chooser Design Tokens ---
   STACK_BADGE_SIMPLIFY: 'bg-neutral-950 border-white text-white',
   STACK_BADGE_DISTRIBUTE: 'bg-neutral-950 border-white text-white',

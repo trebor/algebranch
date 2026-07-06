@@ -30,7 +30,10 @@ export type StepChange =
     }
   | {
       readonly kind: 'rewrite';
-      readonly op: 'evaluate' | 'simplify' | 'distribute' | 'identity' | 'quadratic' | 'quadratic_standard_form' | 'substitute';
+      // #427: the product↔sum inverse pair splits out of the old buckets —
+      // 'expand' (distribute + expand-power) and 'factor'. 'distribute' is kept
+      // only so history nodes serialized before #427 still resolve a tree badge.
+      readonly op: 'evaluate' | 'simplify' | 'expand' | 'factor' | 'distribute' | 'identity' | 'quadratic' | 'quadratic_standard_form' | 'substitute';
       readonly detail?: string;
       readonly text: string;
       // Domain restrictions the step relies on, e.g. ['x ≠ 0'] when a variable
@@ -237,8 +240,11 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
   if (option.label && option.label.includes('Quadratic Formula')) {
     return { kind: 'rewrite', op: 'quadratic', detail: option.label, text: 'apply the quadratic formula' };
   }
-  if (option.type === 'distribute') {
-    return { kind: 'rewrite', op: 'distribute', text: 'distribute' };
+  // Distribution rides the Expand handle (#427), so its StepChange op is
+  // 'expand' while the prose stays "distribute". Expand Power also has type
+  // 'expand' but keeps its own phrasing, so key this off the label, not the type.
+  if (option.type === 'expand' && option.label === 'Distribute') {
+    return { kind: 'rewrite', op: 'expand', text: 'distribute' };
   }
   // Combining fractions over a common denominator (#61) is a 'reduce' option, but
   // gets its own phrasing and carries the b·d ≠ 0 domain assumption (#63).
@@ -314,8 +320,14 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
       text: before && after ? `complete the square ${before} → ${after}` : 'complete the square',
     };
   }
-  if (option.type === 'identity') {
+  // The Rewrite (identity) family plus the two structural moves split out of it
+  // in #427 — Factor and Expand Power — all describe from their label here.
+  if (option.type === 'identity' || option.type === 'factor' || option.type === 'expand') {
     const label = option.label ?? 'apply identity';
+    // The history-tree edge badge (#103) mirrors the handle the student clicked,
+    // so carry the split-out handle family through as the StepChange op (#427):
+    // Factor / Expand get their own, everything else stays the Rewrite identity.
+    const familyOp = option.type === 'factor' ? 'factor' : option.type === 'expand' ? 'expand' : 'identity';
     let before = '';
     let afterNode: math.MathNode | null = null;
     try {
@@ -332,7 +344,7 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
         const term = label.slice(11);
         return {
           kind: 'rewrite',
-          op: 'identity',
+          op: familyOp,
           detail: label,
           text: `factor out ${term} from ${before} → ${after}`,
         };
@@ -340,7 +352,7 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
       if (lowerLabel === 'factor') {
         return {
           kind: 'rewrite',
-          op: 'identity',
+          op: familyOp,
           detail: label,
           text: `factor ${before} → ${after}`,
         };
@@ -349,7 +361,7 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
         const factorType = label.slice(7).toLowerCase();
         return {
           kind: 'rewrite',
-          op: 'identity',
+          op: familyOp,
           detail: label,
           text: `factor ${factorType}: ${before} → ${after}`,
         };
@@ -358,7 +370,7 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
         const powerType = label.slice(11).toLowerCase();
         return {
           kind: 'rewrite',
-          op: 'identity',
+          op: familyOp,
           detail: label,
           text: `express ${before} as ${powerType}: ${after}`,
         };
@@ -366,20 +378,20 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
       if (lowerLabel === 'expand power') {
         return {
           kind: 'rewrite',
-          op: 'identity',
+          op: familyOp,
           detail: label,
           text: `expand power ${before} → ${after}`,
         };
       }
       return {
         kind: 'rewrite',
-        op: 'identity',
+        op: familyOp,
         detail: label,
         text: `apply ${lowerLabel}: ${before} → ${after}`,
       };
     }
 
-    return { kind: 'rewrite', op: 'identity', detail: option.label, text: label.toLowerCase() };
+    return { kind: 'rewrite', op: familyOp, detail: option.label, text: label.toLowerCase() };
   }
 
   // type === 'reduce'

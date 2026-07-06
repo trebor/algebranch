@@ -149,7 +149,7 @@ describe('describeReduction — in-place rewrites', () => {
     const change = describeReduction(e, factorOption!);
     expect(change).toMatchObject({
       kind: 'rewrite',
-      op: 'identity',
+      op: 'factor',
       text: 'factor x ^ 2 + 5 * x + 6 → (x + 2) * (x + 3)'
     });
   });
@@ -162,9 +162,25 @@ describe('describeReduction — in-place rewrites', () => {
     const change = describeReduction(e, gcfOption!);
     expect(change).toMatchObject({
       kind: 'rewrite',
-      op: 'identity',
+      op: 'factor',
       text: 'factor out 3x from 6 * x ^ 2 + 9 * x → 3 * x * (2 * x + 3)'
     });
+  });
+
+  it('tags distribution with the Expand op so its tree badge matches the handle (#427)', () => {
+    const e = eq('2 * (3 + x) = y');
+    const option = findOption('2 * (3 + x) = y', 'Distribute');
+    expect(option).toBeDefined();
+    const change = describeReduction(e, option!);
+    expect(change).toMatchObject({ kind: 'rewrite', op: 'expand', text: 'distribute' });
+  });
+
+  it('tags expand-power with the Expand op (#427)', () => {
+    const e = eq('y = x ^ 2');
+    const option = findOption('y = x ^ 2', 'Expand Power');
+    expect(option).toBeDefined();
+    const change = describeReduction(e, option!);
+    expect(change).toMatchObject({ kind: 'rewrite', op: 'expand' });
   });
 
   it('describes rationalizing a radical denominator with its own verb (#66)', () => {

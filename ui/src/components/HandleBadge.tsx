@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import React from 'react';
-import { Zap, Split, ArrowLeftRight, Replace, TriangleAlert, Plus, Minus, Divide } from 'lucide-react';
+import { Zap, UnfoldHorizontal, FoldHorizontal, ArrowLeftRight, Replace, TriangleAlert, Plus, Minus, Divide } from 'lucide-react';
 import { THEME_GLASS } from '../constants/theme';
 
 // Fixed size to match: 0.8em * 1.2rem = 0.96rem (15.36px)
@@ -15,8 +15,22 @@ export const HANDLE_THEMES = {
     pingClass: THEME_GLASS.PING_SIMPLIFY,
     iconClass: 'text-neutral-950 fill-neutral-950 stroke-[2.5]',
   },
+  expand: {
+    icon: UnfoldHorizontal,
+    handleClass: THEME_GLASS.HANDLE_EXPAND,
+    pingClass: THEME_GLASS.PING_EXPAND,
+    iconClass: 'text-white stroke-[2.5]',
+  },
+  factor: {
+    icon: FoldHorizontal,
+    handleClass: THEME_GLASS.HANDLE_FACTOR,
+    pingClass: THEME_GLASS.PING_FACTOR,
+    iconClass: 'text-white stroke-[2.5]',
+  },
+  // Legacy edge badge (#427): history nodes serialized before the taxonomy split
+  // carry op 'distribute'; render them as Expand so old trees stay coherent.
   distribute: {
-    icon: Split,
+    icon: UnfoldHorizontal,
     handleClass: THEME_GLASS.HANDLE_DISTRIBUTE,
     pingClass: THEME_GLASS.PING_DISTRIBUTE,
     iconClass: 'text-white stroke-[2.5]',
@@ -45,8 +59,8 @@ const NORMAL_BORDER_RADIUS = '9999px';
 const OPTICAL_CENTER_NUDGE = '0.1em';
 
 export interface HandleBadgeProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  /** The operation type, e.g. 'simplify', 'distribute', 'identity', 'substitute', or 'neutral' */
-  opType: 'simplify' | 'distribute' | 'identity' | 'substitute' | 'neutral';
+  /** The operation type, e.g. 'simplify', 'expand', 'factor', 'identity', 'substitute', or 'neutral' */
+  opType: 'simplify' | 'expand' | 'factor' | 'distribute' | 'identity' | 'substitute' | 'neutral';
   /** If the step has restriction warning badges */
   hasRestrictionBadge?: boolean;
   /** Stacking count for multi-option stacks */

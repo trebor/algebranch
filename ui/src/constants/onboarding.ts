@@ -253,7 +253,7 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       },
       {
         title: 'Substitute the Known Value',
-        description: 'The y carries a teal substitution handle: it can be replaced by what it equals. Click the teal handle on y to swap it for 2 * x.',
+        description: 'The y carries a violet substitution handle: it can be replaced by what it equals. Click the violet handle on y to swap it for 2 * x.',
         highlightPath: 'lhs/0', // the y
         nextEquation: '2 * x + 4 = 10',
         stepLabel: 'Substitute'

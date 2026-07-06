@@ -50,7 +50,7 @@ export const FactsStrip: React.FC = () => {
                 eyebrow="Available substitution"
                 meta={sourceLabel ? `from “${sourceLabel}”` : undefined}
                 equation={factEq}
-                footer={<span>Tap a teal handle on “{fact.variable}” in the equation to substitute</span>}
+                footer={<span>Tap a violet handle on “{fact.variable}” in the equation to substitute</span>}
               />
             }
             position="top"

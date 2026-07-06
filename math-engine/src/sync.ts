@@ -5,6 +5,7 @@ import { Equation, SerializedEquation, getAllPaths, getNodeByPath, serializeEqua
 import { generateValidMoves, hasValidMove } from './validator';
 import { getReducibleOptions, getUndefinedDivisionPaths } from './simplify';
 import { isCommutativeChainLink } from './explore';
+import { equationToString } from './index';
 
 /**
  * The sync-state payload the UI store consumes each time the equation (or the
@@ -63,6 +64,16 @@ const isChainLinkPath = (eq: Equation, path: string): boolean => {
   }
 };
 
+/**
+ * Rendered signature of an equation, used to detect no-op offers (#367): a
+ * transform whose result renders identically to the current state changes
+ * nothing, so surfacing it is pure noise. `equationToString` is a purely
+ * structural render (no simplification) that is order- and paren-sensitive, so
+ * this collides ONLY on a true byte-for-byte no-op — a genuine commutative
+ * reorder (`a·b` → `b·a`) renders differently and is correctly kept.
+ */
+const stateSignature = (eq: Equation): string => equationToString(eq);
+
 export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSyncResult => {
   // 0. Undefined check first: once any subtree is undefined (today: a division by
   //    zero, #413), the WHOLE equation is undefined. "Undefined" is not a value you
@@ -79,6 +90,12 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
   if (undefinedPaths.length > 0) {
     return { activePaths: [], reduciblePaths: {}, targetPaths: {}, undefinedPaths };
   }
+
+  // Signature of the current state, computed once. Any offered transform whose
+  // result matches it is a no-op and is suppressed below (#367) — a generic filter
+  // applied across both offer channels (reductions and drop targets), not a
+  // special-case for any one expression.
+  const currentSignature = stateSignature(eq);
 
   // 1. Active paths: nodes that can be moved/transformed.
   const activePaths: string[] = [];
@@ -105,7 +122,16 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
   const reductions = getReducibleOptions(eq);
   const reduciblePaths: MathSyncResult['reduciblePaths'] = {};
   for (const path of Object.keys(reductions)) {
-    reduciblePaths[path] = reductions[path].map((red) => ({
+    // Drop any option whose result renders identically to the current state — a
+    // no-op reduction that just re-derives the current node (#367). If the whole
+    // list is no-ops, the path is omitted entirely rather than left empty.
+    const meaningful = reductions[path].filter(
+      (red) => stateSignature(red.simplified) !== currentSignature,
+    );
+    if (meaningful.length === 0) {
+      continue;
+    }
+    reduciblePaths[path] = meaningful.map((red) => ({
       // A reduction transform can leave two tree slots aliasing one node, or holding
       // the same (or a null) id (#400). This payload is rendered directly as an
       // EquationNode preview, where the node id is the React child key — so a
@@ -133,6 +159,12 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
         // its terms remain valid targets (#353). Target keys are matched against the
         // rendered `eq`, the same tree the UI keys isTarget on.
         if (isChainLinkPath(eq, k)) {
+          continue;
+        }
+        // Suppress a drop target that lands byte-for-byte on the current state — a
+        // no-op move (e.g. dropping `3` onto `(x+2)` in `(x+2)·3` reproduces it). The
+        // same generic signature test as the reduction channel above (#367).
+        if (stateSignature(moves[k]) === currentSignature) {
           continue;
         }
         targetPaths[k] = serializeEquation(moves[k]);

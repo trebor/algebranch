@@ -242,3 +242,32 @@ describe('Self-Quotient Identity (x/x -> 1)', () => {
     expect(selfQuotientOption('y = x / 0')).toBeUndefined();
   });
 });
+
+describe('Split Fraction Suppression', () => {
+  const getSplitOption = (input: string) =>
+    Object.values(getReducibleOptions(parseEquation(input)))
+      .flat()
+      .find((r) => r.label === 'Split Fraction');
+
+  test('offers split fraction on x/5', () => {
+    const option = getSplitOption('y = x / 5');
+    expect(option).toBeDefined();
+    expect(equationToString(option!.simplified)).toBe('y = x * (1 / 5)');
+  });
+
+  test('does NOT offer split fraction on 1/x', () => {
+    const option = getSplitOption('y = 1 / x');
+    expect(option).toBeUndefined();
+  });
+
+  test('does NOT offer split fraction on 1/(x+3)', () => {
+    const option = getSplitOption('y = 1 / (x + 3)');
+    expect(option).toBeUndefined();
+  });
+
+  test('does NOT offer split fraction on (1)/x', () => {
+    const option = getSplitOption('y = (1) / x');
+    expect(option).toBeUndefined();
+  });
+});
+

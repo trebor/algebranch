@@ -787,7 +787,7 @@ const RAW_RULES: RawRule[] = [
   },
   {
     id: 'fraction_decompose',
-    name: 'Decompose Fraction',
+    name: 'Split Fraction',
     category: 'Basic Arithmetic',
     sourcePatternStr: '_A / _B',
     targetPatternStr: '_A * (1 / _B)',
@@ -795,7 +795,7 @@ const RAW_RULES: RawRule[] = [
   },
   {
     id: 'fraction_compose',
-    name: 'Decompose Fraction (Reverse)',
+    name: 'Combine Fraction',
     category: 'Basic Arithmetic',
     sourcePatternStr: '_A * (1 / _B)',
     targetPatternStr: '_A / _B',

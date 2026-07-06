@@ -14,6 +14,62 @@ import { mjs } from './mathjs';
 
 const MAX_CONST = 100000; // guard the divisor search against pathological inputs
 
+// Cap on a product root's multiplied-out term count before we hand it to mathjs
+// `rationalize` (see `expansionTerms`). Rationalize's cost grows explosively with
+// the expanded term count — measured ~36 ms at 8 terms, ~600 ms at 16, and it
+// hangs at 32 (#406). This is *purely* a performance guard; what we choose to
+// offer is governed separately by the `factorCount` de-factoring invariant.
+const MAX_EXPANSION_TERMS = 8;
+
+/**
+ * Upper bound on the number of terms `node` expands to when multiplied out — the
+ * cost metric that keeps product roots away from the mathjs `rationalize` blowup
+ * behind #406. Cost is multiplicative across `*` factors and additive across
+ * `+`/`-` terms; a monomial or atomic-base power (`x`, `x^3`) is one term, while
+ * a power of a *compound* base (`(x-1)^2`) and any non-polynomial shape (division,
+ * functions) expand pathologically and count as unbounded.
+ */
+const expansionTerms = (node: math.MathNode): number => {
+  switch (node.type) {
+    case 'ParenthesisNode':
+      return expansionTerms((node as math.ParenthesisNode).content);
+    case 'ConstantNode':
+    case 'SymbolNode':
+      return 1;
+    case 'OperatorNode': {
+      const on = node as math.OperatorNode;
+      if (on.op === '*') return on.args.reduce((p, a) => p * expansionTerms(a), 1);
+      if (on.op === '+' || on.op === '-') return on.args.reduce((s, a) => s + expansionTerms(a), 0);
+      if (on.op === '^') {
+        let base = on.args[0];
+        while (base.type === 'ParenthesisNode') base = (base as math.ParenthesisNode).content;
+        return base.type === 'SymbolNode' || base.type === 'ConstantNode' ? 1 : Infinity;
+      }
+      return Infinity; // division and other operators are not a polynomial product
+    }
+    default:
+      return Infinity; // FunctionNode, etc.
+  }
+};
+
+/**
+ * Number of top-level multiplicative factors of `node`: parentheses unwrapped,
+ * nested `*` flattened, a non-product counting as 1. `tryFactor` uses this to
+ * enforce the #424 invariant — never surface a candidate that is *less* factored
+ * than its source (e.g. expanding an already-factored product back into a
+ * polynomial, or a lateral re-order). It is deliberately kept separate from the
+ * #406 hang guard above so that a future "safely rationalize products" change
+ * cannot quietly reintroduce the de-factoring offer.
+ */
+export const factorCount = (node: math.MathNode): number => {
+  let n = node;
+  while (n.type === 'ParenthesisNode') n = (n as math.ParenthesisNode).content;
+  if (n.type === 'OperatorNode' && (n as math.OperatorNode).op === '*') {
+    return (n as math.OperatorNode).args.reduce((sum, a) => sum + factorCount(a), 0);
+  }
+  return 1;
+};
+
 export interface FactorOption {
   readonly node: math.MathNode;
   readonly label: string;
@@ -153,9 +209,17 @@ export const tryFactor = (node: math.MathNode): FactorOption[] => {
   while (unwrapped.type === 'ParenthesisNode') {
     unwrapped = (unwrapped as math.ParenthesisNode).content;
   }
-  if (unwrapped.type !== 'OperatorNode' || !['+', '-'].includes((unwrapped as math.OperatorNode).op)) {
-    return [];
-  }
+  if (unwrapped.type !== 'OperatorNode') return [];
+  const { op } = unwrapped as math.OperatorNode;
+  const isSum = op === '+' || op === '-';
+  const isProduct = op === '*';
+  if (!isSum && !isProduct) return [];
+  // #406 hang guard (performance only): a product can drive `rationalize` into an
+  // exponential expansion blowup. Let a product through to candidate generation
+  // only when its multiplied-out term count stays within budget; the pedagogy of
+  // *whether* a product's candidates are worth offering is the factorCount
+  // invariant below, not this guard.
+  if (isProduct && expansionTerms(unwrapped) > MAX_EXPANSION_TERMS) return [];
 
   let coeffs: number[];
   try {
@@ -178,5 +242,12 @@ export const tryFactor = (node: math.MathNode): FactorOption[] => {
   if (monic) options.push(monic);
   const general = generalQuadratic(coeffs, v);
   if (general) options.push(general);
-  return options;
+
+  // #424 de-factoring invariant: only surface a candidate that is *more* factored
+  // than its source. A sum is a single factor, so real sum factorings always
+  // increase the count and pass; but expanding an already-factored product (e.g.
+  // x*(x-1)*(x+1)*(x+2) -> x*(x^3+2x^2-x-2)) drops from 4 factors to 2 — that, and
+  // no-op lateral re-orders, are rejected here rather than shown as "factoring".
+  const srcFactors = factorCount(unwrapped);
+  return options.filter((o) => factorCount(o.node) > srcFactors);
 };

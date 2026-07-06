@@ -155,9 +155,72 @@ describe('tryFactor — no de-factoring invariant (#424)', () => {
   });
 });
 
+describe('tryFactor — multivariate GCF extraction (#428)', () => {
+  const gcfOf = (expr: string): { form?: string; label?: string } => {
+    const opt = tryFactor(mjs.parse(expr)).find((o) => o.label.startsWith('Factor out'));
+    return { form: opt && norm(opt.node.toString()), label: opt?.label };
+  };
+
+  it('factors a*c - b*c into c(a - b) and labels it "Factor out c"', () => {
+    const { form, label } = gcfOf('a*c - b*c');
+    expect(form).toBe('c*a-b');
+    expect(label).toBe('Factor out c');
+  });
+
+  it('factors x*y + x*z into x(y + z)', () => {
+    expect(gcfOf('x*y + x*z').form).toBe('x*y+z');
+  });
+
+  it('factors 6x^2*y + 9x*y into 3xy(2x + 3)', () => {
+    expect(gcfOf('6*x^2*y + 9*x*y').form).toBe('3*x*y*2*x+3');
+  });
+
+  it('factors x*y + x into x(y + 1)', () => {
+    expect(gcfOf('x*y + x').form).toBe('x*y+1');
+  });
+
+  it('offers no candidate when there is no common factor (a*c + b*d)', () => {
+    expect(tryFactor(mjs.parse('a*c + b*d'))).toHaveLength(0);
+  });
+
+  it('offers no candidate for a multivariate product (a*b*c)', () => {
+    expect(tryFactor(mjs.parse('a*b*c'))).toHaveLength(0);
+  });
+
+  it('offers no candidate for non-monomial terms (a/c + b, sin(a) + b)', () => {
+    expect(tryFactor(mjs.parse('a/c + b'))).toHaveLength(0);
+    expect(tryFactor(mjs.parse('sin(a) + b'))).toHaveLength(0);
+  });
+
+  it('emits at most one "Factor out" candidate for a many-variable sum', () => {
+    const opts = tryFactor(mjs.parse('a*b*d + a*c*d - a*d'));
+    expect(opts.filter((o) => o.label.startsWith('Factor out')).length).toBeLessThanOrEqual(1);
+  });
+
+  it('suppresses the generic "Simplify" once a precise GCF factoring exists (#421)', () => {
+    const labels = Object.values(getReducibleOptions(parseEquation('a*c - b*c = d')))
+      .flat()
+      .map((o) => o.label ?? '');
+    expect(labels).toContain('Factor out c');
+    expect(labels).not.toContain('Simplify');
+  });
+
+  it('offers a validated multivariate factoring via getReducibleOptions', () => {
+    const eq = parseEquation('a*c - b*c = d');
+    const opts = getReducibleOptions(eq);
+    const factorings = Object.values(opts)
+      .flat()
+      .filter((o) => typeof o.label === 'string' && o.label === 'Factor out c');
+    expect(factorings.length).toBeGreaterThan(0);
+    for (const f of factorings) {
+      expect(areEquationsEquivalent(eq, f.simplified)).toBe(true);
+    }
+  });
+});
+
 describe('tryFactor — guards', () => {
-  it('returns nothing for multivariate expressions', () => {
-    expect(tryFactor(math.parse('x*y + x'))).toHaveLength(0);
+  it('returns nothing for a genuinely common-factorless multivariate sum', () => {
+    expect(tryFactor(math.parse('a*c + b*d'))).toHaveLength(0);
   });
 
   it('returns nothing for a bare constant or non-polynomial', () => {

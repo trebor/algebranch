@@ -136,6 +136,153 @@ const gcfFactor = (coeffs: number[], v: string): FactorOption | null => {
   return { node, label: `Factor out ${prefix.replace('*', '')}` };
 };
 
+/** An integer-coefficient monomial: `coeff * ∏ sym^exp`. */
+interface Monomial {
+  coeff: number;
+  powers: Map<string, number>;
+}
+
+/**
+ * Flatten an additive tree into signed leaf terms. `+` preserves the incoming
+ * sign; binary `-` negates the right operand; unary `-` negates its operand.
+ */
+const flattenSum = (node: math.MathNode, sign: number, out: { node: math.MathNode; sign: number }[]): void => {
+  let n = node;
+  while (n.type === 'ParenthesisNode') n = (n as math.ParenthesisNode).content;
+  if (n.type === 'OperatorNode') {
+    const on = n as math.OperatorNode;
+    if (on.op === '+') {
+      flattenSum(on.args[0], sign, out);
+      flattenSum(on.args[1], sign, out);
+      return;
+    }
+    if (on.op === '-') {
+      if (on.args.length === 2) {
+        flattenSum(on.args[0], sign, out);
+        flattenSum(on.args[1], -sign, out);
+        return;
+      }
+      if (on.args.length === 1) {
+        flattenSum(on.args[0], -sign, out);
+        return;
+      }
+    }
+  }
+  out.push({ node: n, sign });
+};
+
+/**
+ * Decompose a term into a clean integer-coefficient monomial, or `null` if it is
+ * anything else (a division, a function call, a non-integer constant, a
+ * compound-base power). Conservative on purpose — anything non-monomial bails the
+ * whole multivariate GCF path.
+ */
+const monomialOf = (node: math.MathNode): Monomial | null => {
+  let n = node;
+  while (n.type === 'ParenthesisNode') n = (n as math.ParenthesisNode).content;
+
+  if (n.type === 'ConstantNode') {
+    const value = Number((n as math.ConstantNode).value);
+    if (!Number.isInteger(value)) return null;
+    return { coeff: value, powers: new Map() };
+  }
+  if (n.type === 'SymbolNode') {
+    return { coeff: 1, powers: new Map([[(n as math.SymbolNode).name, 1]]) };
+  }
+  if (n.type === 'OperatorNode') {
+    const on = n as math.OperatorNode;
+    if (on.op === '*') {
+      const acc: Monomial = { coeff: 1, powers: new Map() };
+      for (const arg of on.args) {
+        const m = monomialOf(arg);
+        if (!m) return null;
+        acc.coeff *= m.coeff;
+        for (const [sym, exp] of m.powers) acc.powers.set(sym, (acc.powers.get(sym) ?? 0) + exp);
+      }
+      return acc;
+    }
+    if (on.op === '^') {
+      let base = on.args[0];
+      while (base.type === 'ParenthesisNode') base = (base as math.ParenthesisNode).content;
+      const expNode = on.args[1];
+      if (base.type !== 'SymbolNode' || expNode.type !== 'ConstantNode') return null;
+      const exp = Number((expNode as math.ConstantNode).value);
+      if (!Number.isInteger(exp) || exp < 1) return null;
+      return { coeff: 1, powers: new Map([[(base as math.SymbolNode).name, exp]]) };
+    }
+    if (on.op === '-' && on.args.length === 1) {
+      const m = monomialOf(on.args[0]);
+      if (!m) return null;
+      return { coeff: -m.coeff, powers: m.powers };
+    }
+  }
+  return null;
+};
+
+/** Render an unsigned monomial as `mag*∏ sym^exp`, symbols sorted for determinism. */
+const monomialToString = (mag: number, powers: Map<string, number>): string => {
+  const factors = [...powers.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([sym, exp]) => (exp === 1 ? sym : `${sym}^${exp}`));
+  if (factors.length === 0) return `${mag}`;
+  return mag === 1 ? factors.join('*') : `${mag}*${factors.join('*')}`;
+};
+
+/**
+ * Multivariate GCF extraction: pull the single full greatest common factor out of
+ * a sum of integer-coefficient monomials, e.g. `a*c - b*c -> c*(a - b)` or
+ * `6*x^2*y + 9*x*y -> 3*x*y*(2*x + 3)`. Returns at most one candidate — no
+ * factor-subset enumeration, no partial per-variable pulls, no recursion — which
+ * bounds the load and keeps async/worker evaluation (#437) optional. Bails on any
+ * non-monomial term, and never touches mathjs `rationalize` (sidestepping the #406
+ * expansion blowup entirely).
+ */
+const multivariateGcf = (sum: math.MathNode): FactorOption | null => {
+  const rawTerms: { node: math.MathNode; sign: number }[] = [];
+  flattenSum(sum, 1, rawTerms);
+
+  const terms: Monomial[] = [];
+  for (const { node, sign } of rawTerms) {
+    const m = monomialOf(node);
+    if (!m) return null; // a non-monomial term bails the whole path
+    terms.push({ coeff: sign * m.coeff, powers: m.powers });
+  }
+  if (terms.length < 2) return null;
+
+  const g = arrayGcd(terms.map((t) => t.coeff)); // positive integer content
+  const gcfPowers = new Map<string, number>();
+  for (const [sym, exp] of terms[0].powers) {
+    let min = exp;
+    for (const t of terms) {
+      const e = t.powers.get(sym);
+      if (e === undefined) {
+        min = 0;
+        break;
+      }
+      min = Math.min(min, e);
+    }
+    if (min > 0) gcfPowers.set(sym, min);
+  }
+  if (g <= 1 && gcfPowers.size === 0) return null; // nothing meaningful to extract
+
+  let reduced = '';
+  for (const t of terms) {
+    const coeff = t.coeff / g;
+    const powers = new Map<string, number>();
+    for (const [sym, exp] of t.powers) {
+      const rem = exp - (gcfPowers.get(sym) ?? 0);
+      if (rem > 0) powers.set(sym, rem);
+    }
+    const termStr = monomialToString(Math.abs(coeff), powers);
+    if (reduced === '') reduced = coeff < 0 ? `-${termStr}` : termStr;
+    else reduced += coeff < 0 ? ` - ${termStr}` : ` + ${termStr}`;
+  }
+
+  const prefix = monomialToString(g, gcfPowers);
+  const node = mjs.parse(`${prefix} * (${reduced})`);
+  return { node, label: `Factor out ${prefix.replace(/\*/g, '')}` };
+};
+
 /**
  * Monic quadratic factoring: `v^2 + b*v + c -> (v + p)(v + q)` with integer
  * p + q = b, p * q = c. Also covers `v^2 - c` (difference of squares) directly.
@@ -214,6 +361,19 @@ export const tryFactor = (node: math.MathNode): FactorOption[] => {
   const isSum = op === '+' || op === '-';
   const isProduct = op === '*';
   if (!isSum && !isProduct) return [];
+
+  const vars = variablesIn(node);
+
+  // Multivariate GCF path (sums only): a distinct term-based algorithm that never
+  // touches `rationalize` (so it sidesteps the #406 blowup) and emits at most one
+  // full-GCF candidate. A multivariate *product* is already a single term, so it
+  // falls through to the univariate path below and is rejected there.
+  if (isSum && vars.length > 1) {
+    const gcf = multivariateGcf(unwrapped);
+    if (!gcf) return [];
+    return factorCount(gcf.node) > factorCount(unwrapped) ? [gcf] : [];
+  }
+
   // #406 hang guard (performance only): a product can drive `rationalize` into an
   // exponential expansion blowup. Let a product through to candidate generation
   // only when its multiplied-out term count stays within budget; the pedagogy of
@@ -231,8 +391,7 @@ export const tryFactor = (node: math.MathNode): FactorOption[] => {
   if (!Array.isArray(coeffs) || coeffs.length < 2) return [];
   if (!coeffs.every((c) => typeof c === 'number' && Number.isInteger(c))) return [];
 
-  const vars = variablesIn(node);
-  if (vars.length !== 1) return []; // Phase 1: univariate only
+  if (vars.length !== 1) return []; // univariate rationalize path only
   const v = vars[0];
 
   const options: FactorOption[] = [];

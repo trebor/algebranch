@@ -9,6 +9,9 @@ import { HIGH_SCHOOL_IDENTITIES } from './rules';
 import { matchPattern, instantiatePattern, tryExpressAsPower, tryExpressAsPowerOptions } from './matcher';
 import { tryFactor } from './factor';
 
+const SPLIT_NUMERATOR_SUPPRESS_VALUE = 1;
+
+
 /**
  * Counts the total number of nodes in a mathematical syntax tree.
  */
@@ -1873,6 +1876,20 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
       for (const rule of HIGH_SCHOOL_IDENTITIES) {
         const bindings = matchPattern(rule.sourcePattern, node);
         if (bindings) {
+          // Exclude Split Fraction if the numerator is 1
+          if (rule.id === 'fraction_decompose') {
+            const aNode = bindings['_A'];
+            if (aNode) {
+              let unwrapped = aNode;
+              while (unwrapped.type === 'ParenthesisNode') {
+                unwrapped = (unwrapped as math.ParenthesisNode).content;
+              }
+              if (unwrapped.type === 'ConstantNode' && Number((unwrapped as math.ConstantNode).value) === SPLIT_NUMERATOR_SUPPRESS_VALUE) {
+                continue;
+              }
+            }
+          }
+
           // Exclude n = 2 for nthRoot exponent rules to prevent duplicate square root rules
           if (rule.id === 'exponent_nthRoot_reverse' || rule.id === 'exponent_nthRoot') {
             const nNode = bindings['_n'];

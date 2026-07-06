@@ -249,6 +249,76 @@ describe('activePaths — commutative chain-link suppression (#353)', () => {
   });
 });
 
+describe('computeMathSync — no-op offer suppression (#367)', () => {
+  // A transform that lands the equation in a state that renders identically to the
+  // current one is a no-op: it looks like a real move but changes nothing. Detect it
+  // generically by comparing the rendered result against the current render, and
+  // suppress the offer across BOTH channels — reductions and drop targets. The render
+  // (equationToString) is order- and paren-sensitive, so a genuine commutative reorder
+  // (a·b → b·a, a different string) is NOT collapsed; only a true byte-for-byte no-op is.
+
+  const sig = (eqStr: string): string => equationToString(parseEquation(eqStr));
+
+  // No offered result — reduction option or drop target — may render identically to
+  // the current equation, for any source selection. This is the generic invariant.
+  const noOfferedNoOp = (eqStr: string): void => {
+    const eq = parseEquation(eqStr);
+    const current = equationToString(eq);
+    for (const source of [null, ...getAllPaths(eq)]) {
+      const result = computeMathSync(eq, source);
+      for (const [path, arr] of Object.entries(result.reduciblePaths)) {
+        arr.forEach((opt, i) => {
+          const rendered = equationToString(deserializeEquation(opt.equation));
+          expect(`${eqStr} reduce@${path}[${i}] -> ${rendered}`).not.toBe(
+            `${eqStr} reduce@${path}[${i}] -> ${current}`,
+          );
+        });
+      }
+      for (const [path, se] of Object.entries(result.targetPaths)) {
+        const rendered = equationToString(deserializeEquation(se));
+        expect(`${eqStr} ${source} target@${path} -> ${rendered}`).not.toBe(
+          `${eqStr} ${source} target@${path} -> ${current}`,
+        );
+      }
+    }
+  };
+
+  test('the (x+2)·3=0 drop-onto-sibling no-op target is suppressed; the real cross-equals move survives', () => {
+    // Selecting `3` (lhs/1) and dropping it onto `(x+2)` (lhs/0) reproduces
+    // `(x + 2) * 3 = 0` byte-for-byte — a no-op move (the repro from #367).
+    const eq = parseEquation('(x + 2) * 3 = 0');
+    const targets = computeMathSync(eq, 'lhs/1').targetPaths; // source = the 3
+    // Guard: the move engine DOES still generate the no-op as a candidate target, so a
+    // missing key means suppression removed it, not that no move existed.
+    const rawMoves = generateValidMoves(eq, 'lhs/1');
+    expect(sig('(x + 2) * 3 = 0')).toBe(equationToString(rawMoves['lhs/0']));
+    expect(Object.keys(targets)).not.toContain('lhs/0'); // no-op target suppressed
+    expect(Object.keys(targets)).toContain('rhs'); // moving 3 across the equals survives
+  });
+
+  test('no offered transform is a byte-for-byte no-op, across a battery (generic filter)', () => {
+    for (const s of [
+      '(x + 2) * 3 = 0',
+      'x*(x-1)*(x+1)*(x+2) = 3',
+      'x + 3 = 7',
+      '2*x + 3 = 7',
+      'x = 2 + 3',
+      'a + b + c = d',
+    ]) {
+      noOfferedNoOp(s);
+    }
+  });
+
+  test('genuine offers are untouched — a real move and a real reduction still surface (null case)', () => {
+    // The filter must remove ONLY no-ops. `x + 3 = 7` transposes 3 across the equals
+    // (a real, distinct state), and `x = 2 + 3` still folds 2+3 -> 5.
+    const move = computeMathSync(parseEquation('x + 3 = 7'), 'lhs/1');
+    expect(Object.keys(move.targetPaths)).toContain('rhs');
+    const reduce = computeMathSync(parseEquation('x = 2 + 3'), null);
+    expect(Object.keys(reduce.reduciblePaths).length).toBeGreaterThan(0);
+  });
+});
+
 describe('computeMathSync — undefined (÷0) equations are a true dead end (#419)', () => {
   // Once any subtree is undefined, the whole equation is undefined: no algebraic
   // manipulation yields a defined equivalent, so NO move is offered anywhere. The

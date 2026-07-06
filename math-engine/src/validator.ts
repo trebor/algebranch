@@ -1450,6 +1450,44 @@ const collectValidMoves = (
     // a pure commutative reorder — dropped below.
     const sourceChain = associativeChainRootOf(originalEq, sourcePath);
 
+    // The operator that a cross-equals move SHOULD use, derived from how the
+    // source is bound to its side — the same inverse describeTransposition uses to
+    // label the step. When the far side is degenerate (e.g. 0), several operators
+    // keep the equation equivalent, so the brute-force op search below finds more
+    // than one match. Without a tie-break it recorded the LAST accepted op, which
+    // could contradict the label — a "multiply both sides by 3" step that actually
+    // divides (the `(x+2)*3=0` family). We prefer this operator (in its standard
+    // `target ∘ moved` orientation) so the move always agrees with its label.
+    let preferredOp: '+' | '-' | '*' | '/' | null = null;
+    {
+      const parts = sourcePath.split('/');
+      if (parts.length >= 2) {
+        const childIndex = parseInt(parts[parts.length - 1], 10);
+        const parentPath = parts.slice(0, -1).join('/');
+        try {
+          const parent = getNodeByPath(originalEq, parentPath);
+          if (parent && parent.type === 'OperatorNode') {
+            switch ((parent as math.OperatorNode).op) {
+              case '+':
+                preferredOp = '-';
+                break;
+              case '-':
+                preferredOp = childIndex === 1 ? '+' : '-';
+                break;
+              case '*':
+                preferredOp = '/';
+                break;
+              case '/':
+                preferredOp = childIndex === 1 ? '*' : '/';
+                break;
+            }
+          }
+        } catch {
+          preferredOp = null;
+        }
+      }
+    }
+
     for (const targetPath of targetPaths) {
       if (excludedParents.has(targetPath)) {
         continue;
@@ -1500,10 +1538,23 @@ const collectValidMoves = (
         originalEqParam = null;
       }
 
+      // Once the semantically-preferred operator has recorded a move for this
+      // target (a cross-equals step matching the describe label), a later
+      // coincidentally-equivalent operator must NOT overwrite it — that's what
+      // produced the wrong-direction move on a degenerate (0) far side.
+      let preferredLocked = false;
+
       // Records the candidate under the first relation variant the validator
       // accepts. `candidateParamEq` (the parametrized form) is preferred; when it
       // can't be built we fall back to validating the concrete candidate.
-      const tryAddMove = (candidateEq: Equation, candidateParamEq: Equation | null): void => {
+      // `isPreferred` marks the semantic inverse operator so it both wins the
+      // tie-break and blocks later ops from clobbering it.
+      const tryAddMove = (
+        candidateEq: Equation,
+        candidateParamEq: Equation | null,
+        isPreferred = false,
+      ): void => {
+        if (preferredLocked && !isPreferred) return;
         for (const rel of relationVariants) {
           const candRel: Equation = isInequality ? { ...candidateEq, relation: rel } : candidateEq;
           const isNoOp = (
@@ -1527,6 +1578,7 @@ const collectValidMoves = (
 
           if (isEquivalent) {
             moves[targetPath] = candRel;
+            if (isPreferred) preferredLocked = true;
             return;
           }
         }
@@ -1549,7 +1601,9 @@ const collectValidMoves = (
             eqStandardParam = null;
           }
         }
-        tryAddMove(eqStandard, eqStandardParam);
+        // The standard `target ∘ moved` orientation is the semantic inverse; on a
+        // cross-equals move, matching preferredOp makes it win any equivalence tie.
+        tryAddMove(eqStandard, eqStandardParam, isCrossEquals && op === preferredOp);
         if (stopAtFirst && moves[targetPath] !== undefined) break;
 
         if (op === '-' || op === '/') {
@@ -1572,9 +1626,14 @@ const collectValidMoves = (
 
       // Direct replacement is only valid if we are overwriting a neutral constant (0 or 1).
       // In the existence query, skip it once this target already has a move.
+      // Marked preferred so it keeps its historical precedence: on a neutral (0/1)
+      // far side it is the fully-simplified endpoint of the same semantic step
+      // (e.g. `x^2 - 9 = 0` → `x^2 = 9`, not `x^2 = 0 + 9`), so it must be allowed
+      // to win even after the preferred arithmetic op has locked the target. It
+      // carries no operator, so it can never contradict a step's ×/÷/±label.
       if ((!stopAtFirst || moves[targetPath] === undefined) && isNeutralNode(targetNode)) {
         const eqDirect = replaceNodeAtPath(tempEq, targetPath, removedNode);
-        tryAddMove(eqDirect, null);
+        tryAddMove(eqDirect, null, true);
       }
 
       if (stopAtFirst && Object.keys(moves).length > 0) {

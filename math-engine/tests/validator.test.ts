@@ -3,6 +3,7 @@ import { parseEquation, equationToString, Equation, tryExpandPowerTerm, tryCombi
 import { areEquationsEquivalent, generateValidMoves, hasValidMove } from '../src/validator';
 import { getAllPaths, removeNodeAtPath, getNodeByPath, replaceNodeAtPath, canonicalizeAssociativeChains, ensureNodeIds } from '../src/tree';
 import { autoSimplify, getSimplificationForPath } from '../src/simplify';
+import { describeTransposition } from '../src/describe';
 
 describe('Math Engine Validator & Simplifier', () => {
   test('parseEquation and equationToString work correctly', () => {
@@ -820,5 +821,48 @@ describe('generateValidMoves — no-op commutative reordering within an associat
     const moves = generateValidMoves(eq, 'lhs/0'); // drag 'a'
     expect(moves['rhs']).toBeDefined();
     expect(equationToString(moves['rhs'])).toBe('b = c * d / a');
+  });
+});
+
+describe('cross-equals move uses the semantically-correct operator (move/label agreement)', () => {
+  // When the far side is 0, several operators keep the equation equivalent
+  // (e.g. `(x+2)*3=0 ⟺ (x+2)/3=0`), so the historical "last accepted op wins"
+  // tie-break could pick the WRONG direction — producing a move labeled
+  // "multiply both sides by 3" that actually divides. The move must match the
+  // inverse operator that describeTransposition derives from the source's binding.
+
+  test('dragging a denominator across MULTIPLIES even when the numerator is 0', () => {
+    // `x + 2 = 0 / 3`, drag the denominator 3 (rhs/1) to the left. The inverse of a
+    // denominator is multiply, so the result must be (x+2)*3 = 0, not (x+2)/3 = 0.
+    const eq = parseEquation('x + 2 = 0 / 3');
+    const label = describeTransposition(eq, 'rhs/1', 'lhs');
+    expect(label?.op).toBe('multiply');
+    const moves = generateValidMoves(eq, 'rhs/1');
+    expect(equationToString(moves['lhs'])).toBe('(x + 2) * 3 = 0');
+  });
+
+  test('dragging a multiplier across still DIVIDES when the far side is 0 (unchanged)', () => {
+    // The mirror case: `(x+2)*3 = 0`, drag the multiplier 3 (lhs/1). Inverse of a
+    // multiplier is divide → x + 2 = 0 / 3, matching its label.
+    const eq = parseEquation('(x + 2) * 3 = 0');
+    const label = describeTransposition(eq, 'lhs/1', 'rhs');
+    expect(label?.op).toBe('divide');
+    const moves = generateValidMoves(eq, 'lhs/1');
+    expect(equationToString(moves['rhs'])).toBe('x + 2 = 0 / 3');
+  });
+
+  test('the round trip is a true inverse: multiplier-drag then denominator-drag returns the start', () => {
+    const start = parseEquation('(x + 2) * 3 = 0');
+    const forward = generateValidMoves(start, 'lhs/1')['rhs']; // -> x + 2 = 0 / 3
+    expect(equationToString(forward)).toBe('x + 2 = 0 / 3');
+    const back = generateValidMoves(forward, 'rhs/1')['lhs']; // -> (x + 2) * 3 = 0
+    expect(equationToString(back)).toBe('(x + 2) * 3 = 0');
+  });
+
+  test('non-degenerate far side is unaffected (nonzero numerator)', () => {
+    // Only one operator is equivalence-valid here, so behavior is unchanged.
+    const eq = parseEquation('x + 2 = 5 / 3');
+    const moves = generateValidMoves(eq, 'rhs/1'); // denominator 3
+    expect(equationToString(moves['lhs'])).toBe('(x + 2) * 3 = 5');
   });
 });

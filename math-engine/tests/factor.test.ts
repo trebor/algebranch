@@ -1,5 +1,6 @@
 import * as math from 'mathjs';
-import { tryFactor } from '../src/factor';
+import { tryFactor, factorCount } from '../src/factor';
+import { mjs } from '../src/mathjs';
 import { getReducibleOptions } from '../src/simplify';
 import { parseEquation } from '../src/index';
 import { areEquationsEquivalent } from '../src/validator';
@@ -98,6 +99,59 @@ describe('tryFactor — GCF extraction', () => {
 
   it('does not offer a GCF for a single monomial 5x', () => {
     expect(tryFactor(math.parse('5*x')).filter((o) => o.label.startsWith('Factor out'))).toHaveLength(0);
+  });
+});
+
+describe('factorCount — multiplicative factor count (#424)', () => {
+  it('counts top-level factors of a product, flattening nesting', () => {
+    expect(factorCount(mjs.parse('x*(x-1)*(x+1)*(x+2)'))).toBe(4);
+    expect(factorCount(mjs.parse('3*x*(2*x+3)'))).toBe(3);
+  });
+
+  it('treats a sum or bare term as a single factor', () => {
+    expect(factorCount(mjs.parse('x^2 + 5*x + 6'))).toBe(1);
+    expect(factorCount(mjs.parse('x^4 + 2*x^3 - x^2 - 2*x'))).toBe(1);
+    expect(factorCount(mjs.parse('x'))).toBe(1);
+  });
+
+  it('scores the de-factored form as fewer factors than the source product', () => {
+    // the offer #424 must suppress: 4 factors collapsed to 2
+    expect(factorCount(mjs.parse('x*(x^3 + 2*x^2 - x - 2)'))).toBe(2);
+  });
+});
+
+describe('tryFactor — no de-factoring invariant (#424)', () => {
+  // Parsed with `mjs` (the engine's own instance) so `rationalize` accepts these
+  // product nodes and actually reaches candidate generation — vanilla math.parse
+  // builds nodes it rejects, which would mask the invariant behind an early throw.
+  it('does not offer to expand an already-factored product back to x*(cubic)', () => {
+    const opts = tryFactor(mjs.parse('x*(x-1)*(x+1)*(x+2)'));
+    expect(opts.filter((o) => o.label.startsWith('Factor out'))).toHaveLength(0);
+    const forms = opts.map((o) => norm(o.node.toString()));
+    expect(forms).not.toContain(norm('x*(x^3 + 2*x^2 - x - 2)'));
+  });
+
+  it('does not offer a partial de-factoring of the x*(x-1)*(x+1) subtree', () => {
+    expect(
+      tryFactor(mjs.parse('x*(x-1)*(x+1)')).filter((o) => o.label.startsWith('Factor out')),
+    ).toHaveLength(0);
+  });
+
+  it('does not offer a lateral re-order of an already-factored (x-1)(x+1)', () => {
+    expect(tryFactor(mjs.parse('(x-1)*(x+1)'))).toHaveLength(0);
+  });
+
+  it('does not over-suppress: legitimate sum factorings are still offered', () => {
+    expect(tryFactor(mjs.parse('x^2 + 5*x + 6')).some((o) => o.label === 'Factor')).toBe(true);
+    expect(tryFactor(mjs.parse('6*x^2 + 9*x')).some((o) => o.label.startsWith('Factor out'))).toBe(true);
+  });
+
+  it('offers no Factor option for the product via getReducibleOptions, but keeps Distribute', () => {
+    const labels = Object.values(getReducibleOptions(parseEquation('x*(x-1)*(x+1)*(x+2) = 3')))
+      .flat()
+      .map((o) => o.label ?? '');
+    expect(labels.some((l) => l.startsWith('Factor'))).toBe(false);
+    expect(labels).toContain('Distribute'); // the honest expand path stays available
   });
 });
 

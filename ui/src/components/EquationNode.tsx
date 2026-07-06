@@ -36,7 +36,8 @@ import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech, flattenAssociativeChain } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
 import { describeTransposition, describeReduction, describeSubstitution, describeCollapse, precedenceOf, PREC } from 'math-engine';
-import { ArrowLeftRight, Zap, Split, RefreshCw, Replace, TriangleAlert, ArrowRight } from 'lucide-react';
+import type { ReductionOption } from 'math-engine';
+import { ArrowLeftRight, Zap, UnfoldHorizontal, FoldHorizontal, RefreshCw, Replace, TriangleAlert, ArrowRight } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
 import { UndefinedInlineTooltipContent, UNDEFINED_INLINE_LABEL } from './UndefinedWarning';
@@ -129,18 +130,27 @@ const STACK_CONFIG = {
     badgeClass: THEME_GLASS.STACK_BADGE_SIMPLIFY,
     iconClass: 'text-neutral-950 fill-neutral-950 stroke-[2.5]',
   },
-  distribute: {
-    singularLabel: 'Distribute',
-    pluralLabel: 'distributions',
-    icon: Split,
-    handleClass: THEME_GLASS.HANDLE_DISTRIBUTE,
-    pingClass: THEME_GLASS.PING_DISTRIBUTE,
-    badgeClass: THEME_GLASS.STACK_BADGE_DISTRIBUTE,
+  expand: {
+    singularLabel: 'Expand',
+    pluralLabel: 'expansions',
+    icon: UnfoldHorizontal,
+    handleClass: THEME_GLASS.HANDLE_EXPAND,
+    pingClass: THEME_GLASS.PING_EXPAND,
+    badgeClass: THEME_GLASS.STACK_BADGE_EXPAND,
+    iconClass: 'text-white stroke-[2.5]',
+  },
+  factor: {
+    singularLabel: 'Factor',
+    pluralLabel: 'factorings',
+    icon: FoldHorizontal,
+    handleClass: THEME_GLASS.HANDLE_FACTOR,
+    pingClass: THEME_GLASS.PING_FACTOR,
+    badgeClass: THEME_GLASS.STACK_BADGE_FACTOR,
     iconClass: 'text-white stroke-[2.5]',
   },
   identity: {
-    singularLabel: 'Apply Identity',
-    pluralLabel: 'identities',
+    singularLabel: 'Rewrite',
+    pluralLabel: 'rewrites',
     icon: ArrowLeftRight,
     handleClass: THEME_GLASS.HANDLE_IDENTITY,
     pingClass: THEME_GLASS.PING_IDENTITY,
@@ -354,11 +364,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const onboardingSubstitution = useAtomValue(onboardingSubstitutionAtom);
   // Which option's equation preview the open menu is showing, keyed by stack type
   // so a stale hover from one stack never leaks into another.
-  const [hoveredOption, setHoveredOption] = React.useState<{ type: 'reduce' | 'distribute' | 'identity' | 'substitute'; index: number } | null>(null);
+  const [hoveredOption, setHoveredOption] = React.useState<{ type: 'reduce' | 'expand' | 'factor' | 'identity' | 'substitute'; index: number } | null>(null);
   // The multi-option menu is a hover popover, not a Tooltip: openMenuType is the
   // stack whose menu is open, menuAnchor is its on-screen anchor, and a grace timer
   // bridges the hover gap between the handle and the menu.
-  const [openMenuType, setOpenMenuType] = React.useState<'reduce' | 'distribute' | 'identity' | 'substitute' | null>(null);
+  const [openMenuType, setOpenMenuType] = React.useState<'reduce' | 'expand' | 'factor' | 'identity' | 'substitute' | null>(null);
   const [menuAnchor, setMenuAnchor] = React.useState<{ top: number; left: number; placement: 'above' | 'below' } | null>(null);
   const menuCloseTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keyboard focus model for the multi-option menu (#257, PR D). A keyboard-opened
@@ -486,7 +496,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // (onMouseEnter) and keyboard/click (Enter/Space) so the menu is reachable
   // without a pointer (#231).
   const openStackMenu = React.useCallback(
-    (el: HTMLElement, type: 'reduce' | 'distribute' | 'identity' | 'substitute', viaKeyboard = false) => {
+    (el: HTMLElement, type: 'reduce' | 'expand' | 'factor' | 'identity' | 'substitute', viaKeyboard = false) => {
       cancelMenuClose();
       menuTriggerElRef.current = el;
       menuOpenedViaKeyboardRef.current = viaKeyboard;
@@ -620,13 +630,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         : [];
 
     const hasReduce = pActions.some(a => a.type === 'reduce');
-    const hasDistribute = pActions.some(a => a.type === 'distribute');
+    const hasExpand = pActions.some(a => a.type === 'expand');
+    const hasFactor = pActions.some(a => a.type === 'factor');
     const hasIdentity = pActions.some(a => a.type === 'identity');
     const hasSubstitute = pSubstitutions.length > 0;
 
     let handleCount = 0;
     if (hasReduce) handleCount++;
-    if (hasDistribute) handleCount++;
+    if (hasExpand) handleCount++;
+    if (hasFactor) handleCount++;
     if (hasIdentity) handleCount++;
     if (hasSubstitute) handleCount++;
 
@@ -1097,14 +1109,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     };
     return {
       reduce: make(`${path}#reduce`),
-      distribute: make(`${path}#distribute`),
+      expand: make(`${path}#expand`),
+      factor: make(`${path}#factor`),
       identity: make(`${path}#identity`),
       substitute: make(`${path}#substitute`),
-    } as Record<'reduce' | 'distribute' | 'identity' | 'substitute', (el: HTMLElement | null) => void>;
+    } as Record<'reduce' | 'expand' | 'factor' | 'identity' | 'substitute', (el: HTMLElement | null) => void>;
   }, [roving, path]);
 
   const handleRovingKeyDown = React.useCallback(
-    (e: React.KeyboardEvent, stackType: 'reduce' | 'distribute' | 'identity' | 'substitute') => {
+    (e: React.KeyboardEvent, stackType: 'reduce' | 'expand' | 'factor' | 'identity' | 'substitute') => {
       switch (e.key) {
         case 'ArrowRight':
           if (roving) { e.preventDefault(); e.stopPropagation(); roving.moveFocus('next'); }
@@ -1577,13 +1590,22 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
 
   const interactionStacks = React.useMemo(() => {
     const stacks: {
-      type: 'reduce' | 'distribute' | 'identity' | 'substitute';
+      type: 'reduce' | 'expand' | 'factor' | 'identity' | 'substitute';
       options: UnifiedStackOption[];
     }[] = [];
 
     const reduceOptions: UnifiedStackOption[] = [];
-    const distributeOptions: UnifiedStackOption[] = [];
+    const expandOptions: UnifiedStackOption[] = [];
+    const factorOptions: UnifiedStackOption[] = [];
     const identityOptions: UnifiedStackOption[] = [];
+
+    // Fallback name for an action with no explicit label — keyed on its handle
+    // type (#427). Real options almost always carry a label; this only guards.
+    const defaultLabelFor = (type: ReductionOption['type']): string =>
+      type === 'expand' ? 'Expand'
+      : type === 'factor' ? 'Factor'
+      : type === 'identity' ? 'Apply Identity'
+      : 'Simplify';
 
     actions.forEach((action, idx) => {
       // Describe the move up front so its domain restrictions (#63) can be shown
@@ -1592,30 +1614,32 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       const change = describeReduction(currentEq, {
         path,
         simplified: action.equation,
-        type: action.type as 'reduce' | 'distribute' | 'identity',
+        type: action.type as ReductionOption['type'],
         label: action.label,
       });
       const opt: UnifiedStackOption = {
         id: `action-${action.type}-${idx}`,
-        label: action.label || (action.type === 'distribute' ? "Distribute" : action.type === 'identity' ? "Apply Identity" : "Simplify"),
+        label: action.label || defaultLabelFor(action.type),
         equation: action.equation,
         originalOption: action,
         assumptions: change.assumptions,
         onApply: () => {
-          const reductionLabel = action.label || (action.type === 'distribute' ? 'Distribute' : action.type === 'identity' ? 'Apply Identity' : 'Simplify');
+          const reductionLabel = action.label || defaultLabelFor(action.type);
           pushEquation(action.equation, reductionLabel, change);
           trackEvent({
             action: 'apply_reduction',
             category: 'math_interaction',
-            label: `${action.type}: ${action.label || (action.type === 'distribute' ? 'Distribute' : 'Simplify')}`,
+            label: `${action.type}: ${action.label || defaultLabelFor(action.type)}`,
           });
         }
       };
 
       if (action.type === 'reduce') {
         reduceOptions.push(opt);
-      } else if (action.type === 'distribute') {
-        distributeOptions.push(opt);
+      } else if (action.type === 'expand') {
+        expandOptions.push(opt);
+      } else if (action.type === 'factor') {
+        factorOptions.push(opt);
       } else if (action.type === 'identity') {
         identityOptions.push(opt);
       }
@@ -1658,11 +1682,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       reduceOptions.length > 0 &&
       reduceOptions.every((o) => o.label === 'Evaluate to Decimal');
 
+    // Canonical stacking order (#427): Simplify · Expand · Factor · Rewrite ·
+    // Substitute, so the Expand/Factor inverse pair always reads adjacently.
     if (reduceOptions.length > 0 && !reduceIsDecimalOnly) {
       stacks.push({ type: 'reduce', options: reduceOptions });
     }
-    if (distributeOptions.length > 0) {
-      stacks.push({ type: 'distribute', options: distributeOptions });
+    if (expandOptions.length > 0) {
+      stacks.push({ type: 'expand', options: expandOptions });
+    }
+    if (factorOptions.length > 0) {
+      stacks.push({ type: 'factor', options: factorOptions });
     }
     if (identityOptions.length > 0) {
       stacks.push({ type: 'identity', options: identityOptions });
@@ -1722,7 +1751,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // action it offers in the current selection state. Speak the term as readable
   // math (#256) — "x squared", not the raw "x ^ 2" the AST string would give.
   const termText = nodeToSpeech(node);
-  // A node hosts handles (Simplify/Distribute/…) only when its toolbar is live —
+  // A node hosts handles (Simplify/Expand/Factor/…) only when its toolbar is live —
   // i.e. not while a transposition source is selected (the toolbar is inert then).
   const handlesNavigable = handleCount > 0 && !sourcePath;
   // A node is a treeitem if it is transposition-actionable (canClick) OR it hosts
@@ -2108,7 +2137,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
             const isSingle = stack.options.length === 1;
             const optionLabelClass = stack.type === 'substitute' ? THEME_GLASS.CHOOSER_OPTION_SUBSTITUTE :
               stack.type === 'reduce' ? THEME_GLASS.CHOOSER_OPTION_SIMPLIFY :
-              stack.type === 'distribute' ? THEME_GLASS.CHOOSER_OPTION_DISTRIBUTE :
+              stack.type === 'expand' ? THEME_GLASS.CHOOSER_OPTION_EXPAND :
+              stack.type === 'factor' ? THEME_GLASS.CHOOSER_OPTION_FACTOR :
               THEME_GLASS.CHOOSER_OPTION_IDENTITY;
             // Multi-option: the preview tracks the hovered row and stays empty
             // (with a hint) before any hover, so it never implies a one-click

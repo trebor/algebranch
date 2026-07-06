@@ -1136,7 +1136,7 @@ export const radialInitialActionAtom = atom<RadialInitialAction | null>(null);
 
 export interface ReducibleActionInfo {
   equation: Equation;
-  type: 'reduce' | 'distribute' | 'identity';
+  type: 'reduce' | 'expand' | 'factor' | 'identity';
   label?: string;
 }
 
@@ -1703,7 +1703,7 @@ export const pushEquationAtom = atom(
         const action = actions?.[index];
         if (action) {
           const actionType = action.type;
-          label = action.label || (actionType === 'distribute' ? 'Distribute' : 'Simplify');
+          label = action.label || (actionType === 'expand' ? 'Expand' : actionType === 'factor' ? 'Factor' : actionType === 'identity' ? 'Apply Identity' : 'Simplify');
         }
       } else if (get(sourcePathAtom)) {
         label = change?.kind === 'bothSides' ? "Transpose" : "Move";
@@ -2382,7 +2382,7 @@ export const syncMathStateAtom = atom(
   null,
   (_get, set, { activePaths, reduciblePaths, targetPaths, undefinedPaths }: {
     activePaths: string[];
-    reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'distribute' | 'identity'; label?: string }[]>;
+    reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'expand' | 'factor' | 'identity'; label?: string }[]>;
     targetPaths: Record<string, SerializedEquation>;
     undefinedPaths: { path: string; reason: 'division-by-zero' }[];
   }) => {
@@ -3108,7 +3108,7 @@ export const onboardingReduceHandleAtom = atom<{ path: string; index: number } |
  * The substitution handle the tutorial wants clicked next (#3): the fact-based
  * option whose resulting equation matches the active step's expected
  * nextEquation. Mirrors onboardingReduceHandleAtom; when set, the annotation
- * circle marks the teal handle and all other interactions stay locked.
+ * circle marks the violet handle and all other interactions stay locked.
  */
 export const onboardingSubstitutionAtom = atom<{ path: string; index: number } | null>((get) => {
   const chapterId = get(onboardingChapterIdAtom);

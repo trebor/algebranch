@@ -15,10 +15,10 @@ import { isCommutativeChainLink } from './explore';
 export interface MathSyncResult {
   /** Paths whose node has at least one valid move/transposition available. */
   readonly activePaths: string[];
-  /** Per-path simplify/distribute/identity rewrites available in place. */
+  /** Per-path simplify/expand/factor/identity rewrites available in place. */
   readonly reduciblePaths: Record<
     string,
-    { equation: SerializedEquation; type: 'reduce' | 'distribute' | 'identity'; label?: string }[]
+    { equation: SerializedEquation; type: 'reduce' | 'expand' | 'factor' | 'identity'; label?: string }[]
   >;
   /** Valid drop targets for the currently selected source term (keyed by target path). */
   readonly targetPaths: Record<string, SerializedEquation>;

@@ -37,8 +37,8 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
     expect(reduceOption).toBeDefined();
     expect(equationToString(reduceOption!.simplified)).toBe('x = 2');
 
-    // Distribution (distribute division)
-    const distributeOption = reductions['rhs'].find(r => r.label === 'Distribute' && r.type === 'distribute');
+    // Distribution (distribute division) — now typed as the Expand handle (#427)
+    const distributeOption = reductions['rhs'].find(r => r.label === 'Distribute' && r.type === 'expand');
     expect(distributeOption).toBeDefined();
     expect(equationToString(distributeOption!.simplified)).toBe('x = (10 / 2) - (6 / 2)');
   });
@@ -245,6 +245,56 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
 
     expect(simplifyOption).toBeDefined();
     expect(distributeOption).toBeDefined();
+  });
+
+  // #427: the five-handle taxonomy — the product↔sum inverse pair (Expand /
+  // Factor) is split out of the old `identity`/`distribute` buckets, so each
+  // structural move carries the handle type the UI groups it under.
+  describe('five-handle taxonomy typing (#427)', () => {
+    test('distribution carries the Expand handle type', () => {
+      const eq = parseEquation('2 * (3 + 4) = x');
+      const distribute = (getReducibleOptions(eq)['lhs'] || []).find(o => o.label === 'Distribute');
+      expect(distribute).toBeDefined();
+      expect(distribute!.type).toBe('expand');
+    });
+
+    test('expand-power carries the Expand handle type', () => {
+      const eq = parseEquation('x = y ^ 2');
+      const expandPower = (getReducibleOptions(eq)['rhs'] || []).find(o => o.label === 'Expand Power');
+      expect(expandPower).toBeDefined();
+      expect(expandPower!.type).toBe('expand');
+    });
+
+    test('factoring carries the Factor handle type', () => {
+      const spy = jest.spyOn(factorModule, 'tryFactor').mockImplementation((node) => {
+        if (node.toString() === 'a * c - b * c') {
+          return [{ node: parseEquation('c * (a - b) = d').lhs, label: 'Factor out c' }];
+        }
+        return [];
+      });
+      try {
+        const eq = parseEquation('a * c - b * c = d');
+        const factor = (getReducibleOptions(eq)['lhs'] || []).find(o => o.label === 'Factor out c');
+        expect(factor).toBeDefined();
+        expect(factor!.type).toBe('factor');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    test('a named identity still carries the identity (Rewrite) handle type', () => {
+      const eq = parseEquation('x = sin(theta) ^ 2 + cos(theta) ^ 2');
+      const identity = (getReducibleOptions(eq)['rhs'] || []).find(o => o.label === 'Pythagorean Identity');
+      expect(identity).toBeDefined();
+      expect(identity!.type).toBe('identity');
+    });
+
+    test('rationalizing a denominator stays on the Simplify (reduce) handle', () => {
+      const eq = parseEquation('x = 1 / sqrt(2)');
+      const rationalize = (getReducibleOptions(eq)['rhs'] || []).find(o => o.label === 'Rationalize Denominator');
+      expect(rationalize).toBeDefined();
+      expect(rationalize!.type).toBe('reduce');
+    });
   });
 });
 

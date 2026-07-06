@@ -342,21 +342,36 @@ export const THEME_GLASS = {
   TARGET_GLOW: 'bg-emerald-400/20 blur-md rounded-lg -z-10 animate-pulse',
   MINI_TOOLBAR: 'bg-neutral-900 border border-white/10 rounded-[1em] px-[0.6em] py-[0.2em] shadow-lg text-[0.55em] whitespace-nowrap',
   MINI_TOOLBAR_BUTTON: 'p-[0.1em] hover:bg-white/10 text-indigo-400 hover:text-indigo-300 rounded-[1em] transition-colors flex items-center gap-[0.2em] cursor-pointer',
-  HANDLE_DISTRIBUTE: 'bg-purple-600 hover:bg-purple-500 text-white',
-  HANDLE_IDENTITY: 'bg-indigo-600 hover:bg-indigo-500 text-white',
+  // #427 five-handle taxonomy — Simplify (amber soloist) · Expand + Factor (the
+  // green "structure" family) · Rewrite + Substitute (the blue-violet
+  // "equivalence" family). Expand/Factor are the product↔sum inverse pair:
+  // neighbouring emerald/teal hues say "these belong together", while the
+  // mirrored Unfold/Fold icons carry the direction. Teal moved off Substitute
+  // (now violet) so it can mark Factor as emerald's deeper sibling.
   HANDLE_SIMPLIFY: 'bg-amber-400 hover:bg-amber-300 text-neutral-950 shadow-inner',
-  PING_DISTRIBUTE: 'bg-purple-500/40',
-  PING_IDENTITY: 'bg-indigo-500/40',
+  HANDLE_EXPAND: 'bg-emerald-500 hover:bg-emerald-400 text-white',
+  HANDLE_FACTOR: 'bg-teal-600 hover:bg-teal-500 text-white',
+  HANDLE_IDENTITY: 'bg-indigo-600 hover:bg-indigo-500 text-white',
+  HANDLE_SUBSTITUTE: 'bg-violet-600 hover:bg-violet-500 text-white',
+  // Legacy 'distribute' family, repointed to Expand/emerald so history nodes
+  // serialized before #427 still resolve an Expand-coloured tree badge.
+  HANDLE_DISTRIBUTE: 'bg-emerald-500 hover:bg-emerald-400 text-white',
   PING_SIMPLIFY: 'bg-amber-400/40',
-  HANDLE_SUBSTITUTE: 'bg-teal-500 hover:bg-teal-400 text-white',
-  PING_SUBSTITUTE: 'bg-teal-400/40',
+  PING_EXPAND: 'bg-emerald-500/40',
+  PING_FACTOR: 'bg-teal-500/40',
+  PING_IDENTITY: 'bg-indigo-500/40',
+  PING_SUBSTITUTE: 'bg-violet-400/40',
+  PING_DISTRIBUTE: 'bg-emerald-500/40',
 
   // --- Substitution (#3): facts strip + history-tree badge ---
-  FACT_CHIP: 'flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300/90 text-xs font-semibold select-none shrink-0 whitespace-nowrap',
-  FACT_CHIP_ICON: 'flex items-center justify-center h-4 w-4 rounded-full bg-teal-500/80 text-white shrink-0',
-  FACT_CHIP_SOURCE: 'text-teal-300/50 font-medium',
-  TREE_NODE_BADGE_SUBSTITUTE: 'bg-teal-600 border-teal-400 text-teal-50',
-  SUB_COUNT_BADGE: 'bg-neutral-950 border-teal-400 text-teal-300',
+  // Violet, matching the Substitute handle (#427) so the fact chips, the count
+  // badge, and the tree badge all read as one substitution family — teal now
+  // belongs to Factor.
+  FACT_CHIP: 'flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-300/90 text-xs font-semibold select-none shrink-0 whitespace-nowrap',
+  FACT_CHIP_ICON: 'flex items-center justify-center h-4 w-4 rounded-full bg-violet-500/80 text-white shrink-0',
+  FACT_CHIP_SOURCE: 'text-violet-300/50 font-medium',
+  TREE_NODE_BADGE_SUBSTITUTE: 'bg-violet-600 border-violet-400 text-violet-50',
+  SUB_COUNT_BADGE: 'bg-neutral-950 border-violet-400 text-violet-300',
 
   // --- Domain restrictions (#63): history-tree badge + Step Details row ---
   // Amber "caveat" treatment so an assumed ≠0 restriction can't slip by unseen.
@@ -389,14 +404,18 @@ export const THEME_GLASS = {
 
   // --- Unified Stacks & Chooser Design Tokens ---
   STACK_BADGE_SIMPLIFY: 'bg-neutral-950 border-white text-white',
+  STACK_BADGE_EXPAND: 'bg-neutral-950 border-white text-white',
+  STACK_BADGE_FACTOR: 'bg-neutral-950 border-white text-white',
   STACK_BADGE_DISTRIBUTE: 'bg-neutral-950 border-white text-white',
   STACK_BADGE_IDENTITY: 'bg-neutral-950 border-white text-white',
   STACK_BADGE_SUBSTITUTE: 'bg-neutral-950 border-white text-white',
 
   CHOOSER_OPTION_SIMPLIFY: 'font-mono text-xs text-amber-300',
-  CHOOSER_OPTION_DISTRIBUTE: 'font-mono text-xs text-purple-300',
+  CHOOSER_OPTION_EXPAND: 'font-mono text-xs text-emerald-300',
+  CHOOSER_OPTION_FACTOR: 'font-mono text-xs text-teal-300',
+  CHOOSER_OPTION_DISTRIBUTE: 'font-mono text-xs text-emerald-300',
   CHOOSER_OPTION_IDENTITY: 'font-mono text-xs text-indigo-300',
-  CHOOSER_OPTION_SUBSTITUTE: 'font-mono text-xs text-teal-300',
+  CHOOSER_OPTION_SUBSTITUTE: 'font-mono text-xs text-violet-300',
 
   // Resting button chrome for chooser rows (#369): a subtle filled, bordered,
   // rounded surface so each option reads as a pressable control before any

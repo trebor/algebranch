@@ -78,7 +78,9 @@ const EDGE_OP_SYMBOLS: Record<string, string> = {
 
 const EDGE_REWRITE_LABELS: Record<string, string> = {
   simplify: 'S',
-  distribute: 'D',
+  expand: 'X',
+  factor: 'F',
+  distribute: 'X', // legacy pre-#427 op → Expand
   identity: 'I',
   quadratic: 'Q',
   quadratic_standard_form: 'Q',
@@ -117,7 +119,8 @@ const getEdgeBadgeDetails = (
   if (lowerLabel === 'simplify') return { shortLabel: 'S', isMath: false };
   if (lowerLabel === 'transpose') return { shortLabel: 'T', isMath: false };
   if (lowerLabel === 'substitute') return { shortLabel: 'S', isMath: false };
-  if (lowerLabel === 'distribute') return { shortLabel: 'D', isMath: false };
+  if (lowerLabel === 'distribute' || lowerLabel === 'expand') return { shortLabel: 'X', isMath: false };
+  if (lowerLabel.startsWith('factor')) return { shortLabel: 'F', isMath: false };
   return { shortLabel: label ? label.charAt(0).toUpperCase() : '', isMath: false };
 };
 
@@ -132,12 +135,15 @@ const getEdgeBadgeDetails = (
 const getBadgeOpType = (
   change: StepChange | undefined,
   label: string,
-): 'simplify' | 'distribute' | 'identity' | 'substitute' | 'neutral' => {
+): 'simplify' | 'expand' | 'factor' | 'identity' | 'substitute' | 'neutral' => {
   const op = change?.kind === 'rewrite' ? change.op : label.toLowerCase();
   if (op === 'simplify' || op === 'evaluate' || op === 'quadratic' || op === 'quadratic_standard_form') {
     return 'simplify';
   }
-  if (op === 'distribute') return 'distribute';
+  // #427: the Expand/Factor inverse pair. 'distribute' is the legacy op carried
+  // by nodes serialized before the split — fold it into Expand.
+  if (op === 'expand' || op === 'distribute') return 'expand';
+  if (op === 'factor') return 'factor';
   if (op === 'identity') return 'identity';
   if (op === 'substitute') return 'substitute';
   return 'neutral';

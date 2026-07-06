@@ -1679,7 +1679,7 @@ export const autoSimplify = (eq: Equation): Equation => {
 export interface ReductionOption {
   readonly path: string;
   readonly simplified: Equation;
-  readonly type: 'reduce' | 'distribute' | 'identity';
+  readonly type: 'reduce' | 'expand' | 'factor' | 'identity';
   readonly label?: string;
 }
 
@@ -1749,7 +1749,7 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
         rawReductions.push({
           path,
           simplified,
-          type: isActualDistribution ? 'distribute' : 'reduce',
+          type: isActualDistribution ? 'expand' : 'reduce',
           label
         });
 
@@ -1762,7 +1762,7 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
             rawReductions.push({
               path,
               simplified: eqDist,
-              type: 'distribute',
+              type: 'expand',
               label: 'Distribute'
             });
           }
@@ -1925,7 +1925,7 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
         const newEq = replaceNodeAtPath(eq, path, factored.node);
         if (clean(factored.node.toString()) === clean(node.toString())) continue; // no-op
         if (areEquationsEquivalent(eq, newEq)) {
-          rawReductions.push({ path, simplified: newEq, type: 'identity', label: factored.label });
+          rawReductions.push({ path, simplified: newEq, type: 'factor', label: factored.label });
         }
       }
     } catch {}
@@ -2007,7 +2007,7 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
           rawReductions.push({
             path,
             simplified: newEq,
-            type: 'identity',
+            type: 'expand',
             label: 'Expand Power'
           });
         }

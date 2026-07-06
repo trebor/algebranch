@@ -403,13 +403,6 @@ export const THEME_GLASS = {
   UNDEFINED_TOOLTIP_PREVIEW: 'self-start rounded-md bg-white/5 px-2 py-1 text-white text-[1.15em] leading-none',
 
   // --- Unified Stacks & Chooser Design Tokens ---
-  STACK_BADGE_SIMPLIFY: 'bg-neutral-950 border-white text-white',
-  STACK_BADGE_EXPAND: 'bg-neutral-950 border-white text-white',
-  STACK_BADGE_FACTOR: 'bg-neutral-950 border-white text-white',
-  STACK_BADGE_DISTRIBUTE: 'bg-neutral-950 border-white text-white',
-  STACK_BADGE_IDENTITY: 'bg-neutral-950 border-white text-white',
-  STACK_BADGE_SUBSTITUTE: 'bg-neutral-950 border-white text-white',
-
   CHOOSER_OPTION_SIMPLIFY: 'font-mono text-xs text-amber-300',
   CHOOSER_OPTION_EXPAND: 'font-mono text-xs text-emerald-300',
   CHOOSER_OPTION_FACTOR: 'font-mono text-xs text-teal-300',

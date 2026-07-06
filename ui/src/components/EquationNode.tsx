@@ -127,7 +127,6 @@ const STACK_CONFIG = {
     icon: Zap,
     handleClass: THEME_GLASS.HANDLE_SIMPLIFY,
     pingClass: THEME_GLASS.PING_SIMPLIFY,
-    badgeClass: THEME_GLASS.STACK_BADGE_SIMPLIFY,
     iconClass: 'text-neutral-950 fill-neutral-950 stroke-[2.5]',
   },
   expand: {
@@ -136,7 +135,6 @@ const STACK_CONFIG = {
     icon: UnfoldHorizontal,
     handleClass: THEME_GLASS.HANDLE_EXPAND,
     pingClass: THEME_GLASS.PING_EXPAND,
-    badgeClass: THEME_GLASS.STACK_BADGE_EXPAND,
     iconClass: 'text-white stroke-[2.5]',
   },
   factor: {
@@ -145,7 +143,6 @@ const STACK_CONFIG = {
     icon: FoldHorizontal,
     handleClass: THEME_GLASS.HANDLE_FACTOR,
     pingClass: THEME_GLASS.PING_FACTOR,
-    badgeClass: THEME_GLASS.STACK_BADGE_FACTOR,
     iconClass: 'text-white stroke-[2.5]',
   },
   identity: {
@@ -154,7 +151,6 @@ const STACK_CONFIG = {
     icon: ArrowLeftRight,
     handleClass: THEME_GLASS.HANDLE_IDENTITY,
     pingClass: THEME_GLASS.PING_IDENTITY,
-    badgeClass: THEME_GLASS.STACK_BADGE_IDENTITY,
     iconClass: 'text-white stroke-[2.5]',
   },
   substitute: {
@@ -163,7 +159,6 @@ const STACK_CONFIG = {
     icon: Replace,
     handleClass: THEME_GLASS.HANDLE_SUBSTITUTE,
     pingClass: THEME_GLASS.PING_SUBSTITUTE,
-    badgeClass: THEME_GLASS.STACK_BADGE_SUBSTITUTE,
     iconClass: 'text-white stroke-[2.5]',
   },
 } as const;
@@ -2048,36 +2043,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
               </>
             );
 
-            // Count badge for multi-option stacks. Rendered as a sibling of the
-            // button (not a child) — a bright accent inviting inspection of the
-            // node's multiple options (#121). pointer-events-none so it never steals
-            // hover from the button it overlaps.
-            const badge = !single ? (
-              <span
-                className={`absolute flex items-center justify-center rounded-full font-bold border leading-none pointer-events-none ${config.badgeClass}`}
-                style={{
-                  fontSize: '0.4em',
-                  height: '1.5em',
-                  minWidth: '1.5em',
-                  padding: '0 0.2em',
-                  top: '-0.8em',
-                  right: '-0.8em',
-                }}
-              >
-                {/* Optical-center nudge: digits have no descender, so flex/line-box
-                    centering leaves them riding high — push down a hair (#121). */}
-                <span style={{ position: 'relative', top: '0.1em' }}>{stack.options.length}</span>
-              </span>
-            ) : null;
-
             // Every handle — single- or multi-option — opens the same
             // self-contained popover (#369). Uniform gesture: hover/click both
             // reveal the chooser, so a click never silently mutates the equation.
             // Deliberately not a Tooltip, so it's immune to the global
             // single-active-tooltip churn that was dismissing it mid-traversal.
             return (
-              <span key={stack.type} className="relative inline-flex">
               <button
+                key={stack.type}
                 className={buttonClass}
                 style={buttonStyle}
                 // Roving item folded into the expression's single Tab stop (#257);
@@ -2126,8 +2099,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
               >
                 {buttonInner}
               </button>
-              {badge}
-              </span>
             );
           })}
           {openMenuType && menuAnchor && typeof document !== 'undefined' && (() => {

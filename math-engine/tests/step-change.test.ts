@@ -7,6 +7,9 @@ import {
   describeTransposition,
   describeReduction,
   describeGlobalOp,
+  describeSubstitution,
+  describeCollapse,
+  handleFamilyForReductionType,
   findMinimalChangedPath,
   StepChange,
 } from '../src';
@@ -308,6 +311,74 @@ describe('decomposed simplify steps read cleanly (#59)', () => {
     // contained in the product lhs/0/0.
     const dropOne = optionByResult('m * x * 1 / x + b / x = 4', 'm * x / x + b / x')!;
     expect(findMinimalChangedPath(e, dropOne.simplified, dropOne.path)).toBe('lhs/0/0');
+  });
+});
+
+describe('StepChange.family — the handle family is the single source of truth', () => {
+  // The history-tree edge badge (#103) must show the *handle the student
+  // clicked*, and the UI buckets a reduction into a handle stack purely by its
+  // `type`. So the family recorded on the change has to be derived from that
+  // same `type` — never re-inferred from the finer prose op — or the connector
+  // badge can drift away from the handle (#433 follow-up: quadratic formula,
+  // typed 'identity'/Rewrite, was mislabelled Simplify because its op is
+  // 'quadratic').
+  const SAMPLES = [
+    'x ^ 2 - 5 * x + 6 = 0',   // quadratic: standard-form + formula (type identity)
+    '2 * (x + 3) = 10',        // distribute (type expand)
+    'x ^ 2 - 9 = 0',           // factor (type factor)
+    '2 + 3 = x',               // evaluate / simplify (type reduce)
+    'x = sin(theta) ^ 2 + cos(theta) ^ 2', // named identity (type identity)
+  ];
+
+  it('every reducible option records the family its own type maps to', () => {
+    for (const s of SAMPLES) {
+      const e = eq(s);
+      for (const opt of Object.values(getReducibleOptions(e)).flat()) {
+        const change = describeReduction(e, opt);
+        expect(change.kind).toBe('rewrite');
+        if (change.kind !== 'rewrite') continue;
+        expect(change.family).toBe(handleFamilyForReductionType(opt.type));
+      }
+    }
+  });
+
+  it('the quadratic formula stays on the Rewrite (identity) handle it is offered under', () => {
+    // Regression for the reported violation: this is typed 'identity' by the
+    // engine and lives under the Rewrite handle, but its prose op is
+    // 'quadratic'. The badge must follow the handle, not the op. (Already in
+    // standard form, so the formula is offered directly.)
+    const e = eq('x ^ 2 - 5 * x + 6 = 0');
+    const formula = Object.values(getReducibleOptions(e)).flat().find((o) => o.label?.includes('Quadratic Formula'));
+    expect(formula).toBeDefined();
+    expect(describeReduction(e, formula!)).toMatchObject({ op: 'quadratic', family: 'identity' });
+  });
+
+  it('the standard-form normalization stays on the Rewrite (identity) handle', () => {
+    // Not yet `= 0`, so the =0 normalization is surfaced first (#90). Its op is
+    // 'quadratic_standard_form' but its handle — and thus its badge — is Rewrite.
+    const e = eq('x ^ 2 + 6 = 5 * x');
+    const standardForm = Object.values(getReducibleOptions(e)).flat().find((o) => o.label === 'Write in Standard Form');
+    expect(standardForm).toBeDefined();
+    expect(describeReduction(e, standardForm!)).toMatchObject({ op: 'quadratic_standard_form', family: 'identity' });
+  });
+
+  it('distribute rides the Expand handle', () => {
+    const e = eq('2 * (x + 3) = 10');
+    const distribute = Object.values(getReducibleOptions(e)).flat().find((o) => o.label === 'Distribute');
+    expect(distribute).toBeDefined();
+    expect(describeReduction(e, distribute!)).toMatchObject({ op: 'expand', family: 'expand' });
+  });
+
+  it('substitution and collapse ride the Substitute handle', () => {
+    expect(describeSubstitution('x', '2 * y')).toMatchObject({ op: 'substitute', family: 'substitute' });
+    expect(describeCollapse('2 * y', 'x')).toMatchObject({ op: 'substitute', family: 'substitute' });
+  });
+
+  it('handleFamilyForReductionType maps every reduction type to its handle', () => {
+    expect(handleFamilyForReductionType('reduce')).toBe('simplify');
+    expect(handleFamilyForReductionType('expand')).toBe('expand');
+    expect(handleFamilyForReductionType('factor')).toBe('factor');
+    expect(handleFamilyForReductionType('identity')).toBe('identity');
   });
 });
 

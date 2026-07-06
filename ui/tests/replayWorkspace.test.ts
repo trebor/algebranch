@@ -74,7 +74,12 @@ const reduceStep = (tree: Record<string, HistoryNode>, fromId: string, label = '
   const firstPath = Object.keys(opts)[0];
   if (!firstPath) return null;
   const opt = opts[firstPath][0];
-  return addChild(tree, fromId, ensureNodeIds(opt.simplified), opt.label || label, { kind: 'rewrite', op: opt.type === 'expand' ? 'expand' : opt.type === 'factor' ? 'factor' : 'simplify', text: 'simplify' });
+  return addChild(tree, fromId, ensureNodeIds(opt.simplified), opt.label || label, {
+    kind: 'rewrite',
+    family: opt.type === 'expand' ? 'expand' : opt.type === 'factor' ? 'factor' : 'simplify',
+    op: opt.type === 'expand' ? 'expand' : opt.type === 'factor' ? 'factor' : 'simplify',
+    text: 'simplify',
+  });
 };
 
 /** Round-trip a live tree through the replay codec and return the rebuilt live tree + drift. */

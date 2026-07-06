@@ -96,7 +96,7 @@ function makeContradictionStore() {
         childrenIds: [],
         label: 'Substitute',
         timestamp: 2,
-        change: { kind: 'rewrite', op: 'substitute', text: 'substitute the known value', assumptions: ['x ≠ 0'] },
+        change: { kind: 'rewrite', family: 'substitute', op: 'substitute', text: 'substitute the known value', assumptions: ['x ≠ 0'] },
       },
     },
     currentNodeId: '1',
@@ -137,18 +137,30 @@ describe('WorkspaceTreeView transition badges on edges (#103)', () => {
     expect(handle!.querySelector('.lucide-replace')).not.toBeNull();
   });
 
-  it('renders every Simplify-handle rewrite with the simplify icon, whatever the engine op (#103)', () => {
-    // The ⚡ Simplify (reduce) handle records its rewrites under finer engine ops
-    // — evaluate / simplify / quadratic — but they came from the *same* handle,
-    // so the edge must always show that handle's icon, never a letter glyph.
-    for (const op of ['evaluate', 'simplify', 'quadratic', 'quadratic_standard_form'] as const) {
+  it('renders the connector badge from the handle family, never re-derived from the engine op (#103)', () => {
+    // The badge must show the handle the student clicked. `family` is the single
+    // source of truth; the finer `op` (evaluate / quadratic / …) only shapes the
+    // prose. The telling case is a quadratic rewrite: its op is 'quadratic' but
+    // it is offered under the Rewrite handle, so it must show the ↔ Rewrite icon,
+    // NOT the ⚡ Simplify icon a naive op→badge mapping would pick.
+    const cases = [
+      { family: 'simplify', op: 'simplify', icon: '.lucide-zap' },
+      { family: 'simplify', op: 'evaluate', icon: '.lucide-zap' },
+      { family: 'expand', op: 'expand', icon: '.lucide-unfold-horizontal' },
+      { family: 'factor', op: 'factor', icon: '.lucide-fold-horizontal' },
+      { family: 'identity', op: 'identity', icon: '.lucide-arrow-left-right' },
+      { family: 'identity', op: 'quadratic', icon: '.lucide-arrow-left-right' },
+      { family: 'identity', op: 'quadratic_standard_form', icon: '.lucide-arrow-left-right' },
+      { family: 'substitute', op: 'substitute', icon: '.lucide-replace' },
+    ] as const;
+    for (const { family, op, icon } of cases) {
       const store = createStore();
       const tab: WorkspaceTab = {
         id: 'a',
         name: 'w',
         historyTree: {
           '0': { id: '0', equation: parseEquation('2+3=x'), parentId: null, childrenIds: ['1'], label: 'Initial', timestamp: 1 },
-          '1': { id: '1', equation: parseEquation('5=x'), parentId: '0', childrenIds: [], label: 'Simplify', timestamp: 2, change: { kind: 'rewrite', op, text: `${op} step` } },
+          '1': { id: '1', equation: parseEquation('5=x'), parentId: '0', childrenIds: [], label: 'Step', timestamp: 2, change: { kind: 'rewrite', family, op, text: `${op} step` } },
         },
         currentNodeId: '1',
         isCustomNamed: true,
@@ -158,9 +170,9 @@ describe('WorkspaceTreeView transition badges on edges (#103)', () => {
       store.set(rawActiveTabIdAtom, 'a');
       const { container } = renderTree(store);
       const handle = container.querySelector('button[aria-hidden="true"]');
-      expect(handle, `op=${op}`).not.toBeNull();
-      // Simplify handle icon is the ⚡ (lucide Zap), not an 'E'/'Q' letter glyph.
-      expect(handle!.querySelector('.lucide-zap'), `op=${op}`).not.toBeNull();
+      expect(handle, `family=${family} op=${op}`).not.toBeNull();
+      // The handle shows its family's icon, never a letter glyph.
+      expect(handle!.querySelector(icon), `family=${family} op=${op}`).not.toBeNull();
       cleanup();
     }
   });

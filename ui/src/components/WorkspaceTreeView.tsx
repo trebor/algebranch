@@ -76,37 +76,19 @@ const EDGE_OP_SYMBOLS: Record<string, string> = {
   root: '√',
 };
 
-const EDGE_REWRITE_LABELS: Record<string, string> = {
-  simplify: 'S',
-  expand: 'X',
-  factor: 'F',
-  distribute: 'X', // legacy pre-#427 op → Expand
-  identity: 'I',
-  quadratic: 'Q',
-  quadratic_standard_form: 'Q',
-  substitute: 'S',
-  evaluate: 'E',
-};
-
 /**
- * The short glyph shown inside a connector's transition handle (#103). Transition
- * badges live on the edge into a node (a property of the *step*), while state
- * badges — contradiction/identity, step index — stay on the node itself. Reads
- * `node.change` when present, falling back to parsing the human label.
+ * The short glyph shown inside a *neutral* connector handle (#103) — the
+ * both-sides ops (+, −, ⋅, /, ^, √) and swap sides (↔). Rewrites don't reach
+ * here for their glyph: they carry a themed handle family, so `HandleBadge`
+ * draws the family icon and ignores this label. Reads `node.change` when
+ * present, falling back to parsing the human label for changeless steps.
  */
 const getEdgeBadgeDetails = (
   change: StepChange | undefined,
   label: string,
 ): { shortLabel: string; isMath: boolean } => {
-  if (change) {
-    if (change.kind === 'bothSides') {
-      return { shortLabel: EDGE_OP_SYMBOLS[change.op] || '', isMath: true };
-    }
-    if (change.kind === 'rewrite') {
-      const shortLabel =
-        EDGE_REWRITE_LABELS[change.op] || (change.op ? change.op.charAt(0).toUpperCase() : '');
-      return { shortLabel, isMath: false };
-    }
+  if (change?.kind === 'bothSides') {
+    return { shortLabel: EDGE_OP_SYMBOLS[change.op] || '', isMath: true };
   }
 
   // Fallback: parse the human-readable label when no structured change exists.
@@ -125,29 +107,18 @@ const getEdgeBadgeDetails = (
 };
 
 /**
- * Maps a transition to a themed handle accent, or 'neutral' for the glyph
- * handles. The edge icon must match the *handle the user clicked* (#103), so
- * this keys off the handle family, not the engine's finer op classification:
- * the ⚡ Simplify (reduce) handle records its rewrites under several ops —
- * evaluate, simplify, and the quadratic-formula variants — that all map back to
- * the one simplify icon. distribute / identity / substitute are already 1:1.
+ * The themed handle accent for a transition, or 'neutral' for the glyph handles
+ * (both-sides ops, swap). The edge icon must match the *handle the student
+ * clicked* (#103), and a rewrite already records that as `change.family` — the
+ * single source of truth the engine derives from the option's handle type. So
+ * this is a direct read, not an op→family re-inference that could drift: a
+ * quadratic rewrite (op 'quadratic', family 'identity') correctly shows the
+ * Rewrite icon because that is the handle it was offered under.
  */
 const getBadgeOpType = (
   change: StepChange | undefined,
-  label: string,
-): 'simplify' | 'expand' | 'factor' | 'identity' | 'substitute' | 'neutral' => {
-  const op = change?.kind === 'rewrite' ? change.op : label.toLowerCase();
-  if (op === 'simplify' || op === 'evaluate' || op === 'quadratic' || op === 'quadratic_standard_form') {
-    return 'simplify';
-  }
-  // #427: the Expand/Factor inverse pair. 'distribute' is the legacy op carried
-  // by nodes serialized before the split — fold it into Expand.
-  if (op === 'expand' || op === 'distribute') return 'expand';
-  if (op === 'factor') return 'factor';
-  if (op === 'identity') return 'identity';
-  if (op === 'substitute') return 'substitute';
-  return 'neutral';
-};
+): 'simplify' | 'expand' | 'factor' | 'identity' | 'substitute' | 'neutral' =>
+  change?.kind === 'rewrite' ? change.family : 'neutral';
 
 interface WorkspaceTreeViewProps {
   /** When false, the tree is a read-only preview: node clicks don't navigate
@@ -971,7 +942,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
           if (!node) return null;
 
           const { shortLabel, isMath } = getEdgeBadgeDetails(node.change, node.label);
-          const opType = getBadgeOpType(node.change, node.label);
+          const opType = getBadgeOpType(node.change);
           const hasRestrictionBadge = !!node.change?.assumptions?.length;
           const isHighlighted = hoveredLoopTargetId === node.id;
           const parentStepNum = stepIndices.get(parent.id) ?? 0;

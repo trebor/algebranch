@@ -15,6 +15,24 @@ import { GlobalOpParams } from './globalOps';
  *  - `rewrite`: an in-place rewrite of a sub-expression (evaluate / simplify /
  *    distribute / identity / quadratic).
  */
+/**
+ * The interaction handle a rewrite is offered under — the five-handle taxonomy
+ * of #427: Simplify · Expand · Factor · Rewrite(identity) · Substitute. This is
+ * the *single source of truth* the history-tree connector badge reads (#103): a
+ * reduction is bucketed into its handle stack by `ReductionOption.type`, so the
+ * family stamped on the change must be derived from that same `type` — never
+ * re-inferred from the finer prose `op` — or the connector badge can drift away
+ * from the handle the student actually clicked.
+ */
+export type HandleFamily = 'simplify' | 'expand' | 'factor' | 'identity' | 'substitute';
+
+/** Map a reduction's engine `type` to the handle family it is offered under. */
+export const handleFamilyForReductionType = (type: ReductionOption['type']): HandleFamily =>
+  type === 'expand' ? 'expand'
+    : type === 'factor' ? 'factor'
+      : type === 'identity' ? 'identity'
+        : 'simplify'; // 'reduce'
+
 export type StepChange =
   | {
       readonly kind: 'bothSides';
@@ -30,9 +48,14 @@ export type StepChange =
     }
   | {
       readonly kind: 'rewrite';
-      // #427: the product↔sum inverse pair splits out of the old buckets —
-      // 'expand' (distribute + expand-power) and 'factor'. 'distribute' is kept
-      // only so history nodes serialized before #427 still resolve a tree badge.
+      // The handle this rewrite was offered under — what the connector badge
+      // renders (#103). Required, so every rewrite must declare its family and
+      // the badge can never diverge from the handle.
+      readonly family: HandleFamily;
+      // The finer prose classification, used for the step's wording (not the
+      // badge). #427 split the product↔sum inverse pair out of the old buckets —
+      // 'expand' (distribute + expand-power) and 'factor'. 'distribute' lingers
+      // only so history nodes serialized before #427 still parse.
       readonly op: 'evaluate' | 'simplify' | 'expand' | 'factor' | 'distribute' | 'identity' | 'quadratic' | 'quadratic_standard_form' | 'substitute';
       readonly detail?: string;
       readonly text: string;
@@ -40,6 +63,9 @@ export type StepChange =
       // factor is cancelled out of a fraction (#63). Omitted when there are none.
       readonly assumptions?: readonly string[];
     };
+
+/** A rewrite `StepChange` before its handle family is stamped on. */
+type RewriteBody = Omit<Extract<StepChange, { kind: 'rewrite' }>, 'family'>;
 
 const nodeToString = (node: math.MathNode | null): string => (node ? node.toString() : '');
 
@@ -232,7 +258,14 @@ export const describeTransposition = (
  * quadratic) as a rewrite. `eq` is the equation the option was derived from, so
  * we can show the before → after of the affected sub-expression.
  */
-export const describeReduction = (eq: Equation, option: ReductionOption): StepChange => {
+export const describeReduction = (eq: Equation, option: ReductionOption): StepChange => ({
+  ...describeReductionBody(eq, option),
+  // The badge follows the handle, always: family comes from the option's type,
+  // the same thing that placed it in a handle stack — never from `op` below.
+  family: handleFamilyForReductionType(option.type),
+});
+
+const describeReductionBody = (eq: Equation, option: ReductionOption): RewriteBody => {
   // #90: the =0 normalization step that precedes the quadratic formula.
   if (option.label === 'Write in Standard Form') {
     return { kind: 'rewrite', op: 'quadratic_standard_form', detail: option.label, text: 'write in standard form (= 0)' };
@@ -441,6 +474,7 @@ export const describeReduction = (eq: Equation, option: ReductionOption): StepCh
  */
 export const describeSubstitution = (variable: string, replacement: string): StepChange => ({
   kind: 'rewrite',
+  family: 'substitute',
   op: 'substitute',
   detail: `${variable} → ${replacement}`,
   text: `substitute ${variable} = ${replacement}`,
@@ -453,6 +487,7 @@ export const describeSubstitution = (variable: string, replacement: string): Ste
  */
 export const describeCollapse = (expression: string, variable: string): StepChange => ({
   kind: 'rewrite',
+  family: 'substitute',
   op: 'substitute',
   detail: `${expression} → ${variable}`,
   text: `collapse ${expression} to ${variable}`,

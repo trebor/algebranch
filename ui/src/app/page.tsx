@@ -1694,7 +1694,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <ShareMenu
             equationString={currentEq ? equationToString(currentEq) : ''}
-            getCompressedWorkspace={() => serializeWorkspaceState(tree, currentNodeId, currentTabName)}
+            getCompressedWorkspace={(scope) => serializeWorkspaceState(tree, currentNodeId, currentTabName, scope)}
             derivationStepCount={
               tree && currentNodeId && tree[currentNodeId]
                 ? getActivePathIds(tree, currentNodeId).size - 1

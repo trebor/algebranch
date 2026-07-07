@@ -601,19 +601,54 @@ export const deminifyReplayWorkspace = (payload: MinifiedReplayWorkspace): Demin
 };
 
 /**
+ * What a `?ws=` share carries (#439): the whole workspace tree ('full', the
+ * default) or just the root → current-node lineage ('path').
+ */
+export type ShareScope = 'full' | 'path';
+
+/**
+ * The root → `currentNodeId` lineage as a standalone tree (#439): off-path nodes
+ * dropped, `childrenIds` pruned to the chain so the result is a plain linear
+ * chain with the current node as its leaf. Pure — the input tree is untouched.
+ */
+export const filterTreeToPath = <N extends { parentId: string | null; childrenIds: string[] }>(
+  tree: Record<string, N>,
+  currentNodeId: string,
+): Record<string, N> => {
+  const keep = new Set<string>();
+  let id: string | null = currentNodeId;
+  while (id && tree[id] && !keep.has(id)) {
+    keep.add(id);
+    id = tree[id].parentId;
+  }
+  const filtered: Record<string, N> = {};
+  for (const nodeId of keep) {
+    filtered[nodeId] = {
+      ...tree[nodeId],
+      childrenIds: tree[nodeId].childrenIds.filter((cid) => keep.has(cid)),
+    };
+  }
+  return filtered;
+};
+
+/**
  * Serialize + compress the current workspace into the `?ws=` payload shared by
  * the Share menu and the Feedback flow. Emits the compact replay format (#403);
  * older state-based links (`v:1`/`v:2`) keep loading via `deminifyWorkspace`.
- * Returns '' when there is nothing to share (no tree or no selected node), so
- * callers can omit the link.
+ * `scope: 'path'` (#439) shares only the active derivation — the lineage filter
+ * runs before minification, so the payload format (and the decode path) is
+ * unchanged, just with fewer nodes. Returns '' when there is nothing to share
+ * (no tree or no selected node), so callers can omit the link.
  */
 export const serializeWorkspaceState = async (
   tree: Record<string, HistoryNode> | null,
   currentNodeId: string | null,
   name: string,
+  scope: ShareScope = 'full',
 ): Promise<string> => {
   if (!tree || !currentNodeId) return '';
-  const serialized = serializeTree(tree);
+  let serialized = serializeTree(tree);
+  if (scope === 'path') serialized = filterTreeToPath(serialized, currentNodeId);
   const minified = minifyReplayWorkspace({ tree: serialized, currentNodeId, name });
   const stateStr = JSON.stringify(minified);
   return await compressString(stateStr);

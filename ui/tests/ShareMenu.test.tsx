@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ShareMenu, SHARE_HINT_STEP_THRESHOLD, SHARE_HINT_FLAG } from '@/components/ShareMenu';
+import { ShareMenu, SHARE_HINT_STEP_THRESHOLD, SHARE_HINT_FLAG, classifyLinkSize } from '@/components/ShareMenu';
 import { encodeEqParam } from '@/utils/eqParam';
 
 function mockClipboard() {
@@ -56,13 +56,15 @@ describe('ShareMenu', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /share workspace/i }));
 
-    expect(getWs).toHaveBeenCalledTimes(1);
+    // Hovering the pill pre-computes the link sizes, so getWs may be called more
+    // than once; the headline behavior is that the click copies the full ?ws= link.
+    expect(getWs).toHaveBeenCalledWith('full');
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?ws=COMPRESSED')),
     );
   });
 
-  it('the caret opens a menu offering both share scopes', async () => {
+  it('the caret opens a menu with workspace, derivation, and equation items', async () => {
     renderMenu();
     expect(screen.queryByRole('menu')).toBeNull();
 
@@ -70,14 +72,15 @@ describe('ShareMenu', () => {
 
     const menu = screen.getByRole('menu');
     expect(within(menu).getByRole('menuitem', { name: /workspace/i })).toBeTruthy();
+    expect(within(menu).getByRole('menuitem', { name: /derivation/i })).toBeTruthy();
     expect(within(menu).getByRole('menuitem', { name: /equation/i })).toBeTruthy();
   });
 
-  it('each menu row sells what the link restores (subtitles)', async () => {
+  it('menu item descriptions name what each link restores', async () => {
     renderMenu();
     await userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
 
-    expect(screen.getByText(/full derivation and history/i)).toBeTruthy();
+    expect(screen.getByText(/all branches and steps/i)).toBeTruthy();
     expect(screen.getByText(/just the starting equation/i)).toBeTruthy();
   });
 
@@ -115,5 +118,89 @@ describe('ShareMenu', () => {
     setReducedMotion(true);
     const { container } = renderMenu({ derivationStepCount: SHARE_HINT_STEP_THRESHOLD + 5 });
     expect(container.querySelector('[data-share-hint]')).toBeNull();
+  });
+
+  // Share scope (#439): three separate menu items — workspace (full tree),
+  // derivation (path only), equation — ordered largest → smallest link.
+  // No segmented control; each item is independently clickable.
+  describe('share scope (#439)', () => {
+    const renderScoped = () => {
+      const getCompressedWorkspace = vi.fn(async (scope: 'full' | 'path') => `payload-${scope}`);
+      renderMenu({
+        getCompressedWorkspace,
+        derivationStepCount: 3,
+      });
+      return getCompressedWorkspace;
+    };
+    const openMenu = () =>
+      userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
+
+    it('the menu lists workspace, derivation, and equation items (largest → smallest)', async () => {
+      renderScoped();
+      await openMenu();
+      const menu = screen.getByRole('menu');
+      const items = within(menu).getAllByRole('menuitem');
+      expect(items.length).toBeGreaterThanOrEqual(3);
+      expect(items[0].textContent).toMatch(/workspace/i);
+      expect(items[1].textContent).toMatch(/derivation/i);
+      expect(items[2].textContent).toMatch(/equation/i);
+    });
+
+    it('the workspace item shares the full tree', async () => {
+      const getCompressedWorkspace = renderScoped();
+      await openMenu();
+      await userEvent.click(screen.getByRole('menuitem', { name: /share workspace/i }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalled());
+      expect(getCompressedWorkspace).toHaveBeenCalledWith('full');
+      expect(writeText.mock.calls[0][0]).toContain('payload-full');
+    });
+
+    it('the derivation item shares the path payload', async () => {
+      const getCompressedWorkspace = renderScoped();
+      await openMenu();
+      await userEvent.click(screen.getByRole('menuitem', { name: /share derivation/i }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalled());
+      expect(getCompressedWorkspace).toHaveBeenCalledWith('path');
+      expect(writeText.mock.calls[0][0]).toContain('payload-path');
+    });
+
+    it('the derivation description shows the step count', async () => {
+      renderScoped(); // derivationStepCount=3
+      await openMenu();
+      const menu = screen.getByRole('menu');
+      expect(menu.textContent).toMatch(/3 step/);
+    });
+
+    it('the primary pill shares the full workspace by default', async () => {
+      const getCompressedWorkspace = renderScoped();
+      await userEvent.click(screen.getByRole('button', { name: /share workspace link/i }));
+      await waitFor(() => expect(writeText).toHaveBeenCalled());
+      expect(getCompressedWorkspace).toHaveBeenCalledWith('full');
+    });
+  });
+
+  // Link-size characterization (#439): the menu advises whether a link pastes
+  // cleanly ("Tiny / Compact / Large"), computed from the real URL length —
+  // a raw char count alone doesn't tell the user the consequence.
+  describe('link-size characterization (#439)', () => {
+    it('bands the length by real-world URL safety', () => {
+      expect(classifyLinkSize(50).label).toBe('Tiny');
+      expect(classifyLinkSize(1000).label).toBe('Compact');
+      expect(classifyLinkSize(5000)).toEqual({ label: 'Large', tone: 'warn' });
+    });
+
+    it('shows a qualitative band on the menu items, not just a number', async () => {
+      renderMenu({ getCompressedWorkspace: () => 'x'.repeat(20) });
+      await userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
+      await waitFor(() => expect(screen.getAllByText(/tiny link/i).length).toBeGreaterThan(0));
+    });
+
+    it('warns when a link is large enough to risk truncation', async () => {
+      renderMenu({ getCompressedWorkspace: () => 'x'.repeat(3000) });
+      await userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
+      await waitFor(() => expect(screen.getAllByText(/large link/i).length).toBeGreaterThan(0));
+    });
   });
 });

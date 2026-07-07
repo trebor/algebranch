@@ -12,7 +12,9 @@ expect.extend(toHaveNoViolations);
 
 // jsdom doesn't implement scrollIntoView; components that scroll the active
 // tab/step into view (WorkspaceTabs, WorkspaceTreeView) would otherwise throw
-// on mount. Stub it as a no-op.
-if (!Element.prototype.scrollIntoView) {
+// on mount. Stub it as a no-op. Guarded so this shared setup also runs cleanly
+// under the `node` test environment (share-link codec tests), where there is
+// no DOM `Element`.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = vi.fn();
 }

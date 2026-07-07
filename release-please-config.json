@@ -6,7 +6,8 @@
     ".": {
       "extra-files": [
         { "type": "json", "path": "ui/package.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "math-engine/package.json", "jsonpath": "$.version" }
+        { "type": "json", "path": "math-engine/package.json", "jsonpath": "$.version" },
+        { "type": "generic", "path": "ui/public/sw.js" }
       ]
     }
   }

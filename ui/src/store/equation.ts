@@ -315,6 +315,17 @@ export const deminifyWorkspace = (minified: MinifiedWorkspace): {
 /** `?ws=` replay-format marker. Independent of STORAGE_SCHEMA_VERSION (localStorage). */
 export const WS_REPLAY_VERSION = 3;
 
+/**
+ * Replay-format versions this client can still decode (#451). Mirrors the
+ * `SUPPORTED_SCHEMA_VERSIONS` localStorage pattern: newest write is
+ * `WS_REPLAY_VERSION`, but a `?ws=` link carrying any version in this set still
+ * loads. The decode path checks membership, not strict equality — so the day we
+ * ship v4, every v3 link already shared post-launch keeps working (add 4 here
+ * and teach `deminifyReplayWorkspace` the new records) instead of being silently
+ * discarded.
+ */
+export const SUPPORTED_WS_REPLAY_VERSIONS = new Set([3]);
+
 /** One packed replay record; positional by op tag (element[1]). */
 type ReplayRecord = unknown[];
 

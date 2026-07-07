@@ -1,9 +1,13 @@
-const PRECACHE_NAME = 'algebranch-precache-v7';
+// SW_VERSION and PRECACHE_NAME are stamped with the release version (#451): the
+// `prebuild` step (scripts/stamp-sw.mjs) rewrites them from root package.json, and
+// release-please keeps the committed values in sync via the x-release-please-version
+// annotations below. Do not hand-edit the versions.
+const PRECACHE_NAME = 'algebranch-precache-v1.3.1'; // x-release-please-version
 const STATIC_CACHE_NAME = 'algebranch-static-v1';
 const RUNTIME_CACHE_NAME = 'algebranch-runtime-v1';
 const CURRENT_CACHES = [PRECACHE_NAME, STATIC_CACHE_NAME, RUNTIME_CACHE_NAME];
 
-const SW_VERSION = '1.0.0';
+const SW_VERSION = '1.3.1'; // x-release-please-version
 
 const MAX_STATIC_ENTRIES = 150;
 const MAX_RUNTIME_ENTRIES = 50;
@@ -67,8 +71,30 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Detect navigation/document requests (HTML pages)
-  const isNavigation = event.request.mode === 'navigate' || 
+  const isNavigation = event.request.mode === 'navigate' ||
                        (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html'));
+
+  // 0. Network-first for the app shell (navigations / `/`). Serving HTML
+  //    cache-first pinned returning visitors to a stale build until sw.js itself
+  //    changed; go to the network first so online users always get the current
+  //    HTML, and fall back to the precached `/` only when offline.
+  if (isNavigation || url.pathname === '/') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(PRECACHE_NAME).then((cache) => cache.put('/', responseToCache));
+          }
+          return response;
+        })
+        .catch(() =>
+          caches.match(event.request, { cacheName: PRECACHE_NAME })
+            .then((cached) => cached || caches.match('/', { cacheName: PRECACHE_NAME }))
+        )
+    );
+    return;
+  }
 
   // 1. Cache-first for precached core assets
   const isPrecached = ASSETS_TO_CACHE.includes(url.pathname);

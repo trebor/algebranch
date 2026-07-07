@@ -78,7 +78,7 @@ import {
   serializeWorkspaceState,
   deminifyWorkspace,
   deminifyReplayWorkspace,
-  WS_REPLAY_VERSION,
+  SUPPORTED_WS_REPLAY_VERSIONS,
   SUPPORTED_SCHEMA_VERSIONS,
   wrapVersioned,
   unwrapVersioned,
@@ -603,7 +603,7 @@ export default function Home() {
             let tree, currentNodeId, name;
             let isValid = false;
 
-            if (envelope && envelope.v === WS_REPLAY_VERSION && Array.isArray(envelope.r)) {
+            if (envelope && SUPPORTED_WS_REPLAY_VERSIONS.has(envelope.v) && Array.isArray(envelope.r)) {
               // Replay format (#403): re-run the engine to reconstruct the tree.
               try {
                 const deminified = deminifyReplayWorkspace(envelope);
@@ -646,11 +646,21 @@ export default function Home() {
               if (!matched && !isSharedWorkspaceBannerDismissed()) setSharedWorkspaceBanner(true);
             } else {
               console.warn('Discarded legacy or invalid shared workspace version:', envelope?.version || envelope?.v);
+              // An unrecognized `?ws=` version (e.g. a link made by a newer build)
+              // used to open a blank app with no explanation (#451). Tell the
+              // recipient why instead of silently discarding it.
+              setToast({ message: 'This link needs a newer version of Algebranch to open.', key: Date.now() });
             }
             // Clear query parameter from the URL to prevent duplicate tabs on page refresh
             window.history.replaceState(null, '', window.location.pathname);
           } catch (err) {
-            console.error('Failed to parse shared state from URL:', err);
+            // A malformed `?ws=` (bad base64, truncated link) is expected user input,
+            // not an app fault: warn (not error, which trips the Next dev overlay and
+            // hides the toast) and surface it to the recipient instead of opening a
+            // blank app with only a console message (#451).
+            console.warn('Failed to parse shared state from URL:', err);
+            setToast({ message: "This shared link couldn't be opened — it may be incomplete or corrupted.", key: Date.now() });
+            window.history.replaceState(null, '', window.location.pathname);
           }
           return;
         }

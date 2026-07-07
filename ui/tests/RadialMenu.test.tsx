@@ -1,13 +1,29 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, createStore } from 'jotai';
 import React, { useRef } from 'react';
 import { RadialMenu } from '@/components/RadialMenu';
 import { radialMenuOpenAtom, radialInitialActionAtom } from '@/store/equation';
+
+// matchMedia stand-in: jsdom ships none. Answer `(hover: hover)` from the
+// `canHover` flag so a test can model a phone (canHover=false) vs a desktop
+// (canHover=true, the no-matchMedia default). Mirrors the touch-interaction suite.
+function installMatchMedia(canHover: boolean) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: query.includes('hover: hover') ? canHover : false,
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => true,
+    onchange: null,
+  })) as unknown as typeof window.matchMedia;
+}
 
 function RadialMenuHarness() {
   const anchor = useRef<HTMLDivElement>(null);
@@ -19,9 +35,71 @@ function RadialMenuHarness() {
   );
 }
 
+const originalMatchMedia = window.matchMedia;
+
+describe('RadialMenu touch tooltip suppression (#388)', () => {
+  afterEach(() => {
+    cleanup();
+    window.matchMedia = originalMatchMedia;
+  });
+
+  // On touch there is no hover, but the focus trap auto-focuses the first petal
+  // (swap) on open, and <Tooltip> shows on `onFocus` as well as hover. That made
+  // the "Swap left and right sides" tip auto-pop from a single tap on the `=`.
+  // Its owner must pass visible={false} on touch so neither focus nor synthesized
+  // hover can reveal it.
+  it('does NOT auto-show the swap petal tooltip on a touch (no-hover) device', async () => {
+    installMatchMedia(false); // phone: no hover
+    const store = createStore();
+    store.set(radialMenuOpenAtom, true);
+    render(
+      <Provider store={store}>
+        <RadialMenuHarness />
+      </Provider>,
+    );
+
+    // The petal button (aria-label) is present, but its tooltip text — rendered
+    // by HotkeyHint inside the <Tooltip> popover — must never appear.
+    expect(screen.getByRole('button', { name: /Swap left and right sides/i })).toBeTruthy();
+    // Past the tooltip show-delay window, the tooltip text is still absent.
+    await new Promise((r) => setTimeout(r, 300));
+    expect(screen.queryByText('Swap left and right sides')).toBeNull();
+  });
+
+  // Desktop keeps the hover/focus-driven tooltip so the guard can't over-suppress.
+  it('still shows the swap petal tooltip on focus on a hover-capable device', async () => {
+    installMatchMedia(true); // desktop: hover-capable
+    const store = createStore();
+    store.set(radialMenuOpenAtom, true);
+    render(
+      <Provider store={store}>
+        <RadialMenuHarness />
+      </Provider>,
+    );
+
+    // The swap petal is auto-focused by the trap; its tooltip appears after the delay.
+    await waitFor(() => expect(screen.getByText('Swap left and right sides')).toBeInTheDocument());
+  });
+
+  // Long-press on a petal must not select the glyph text (÷, +, ×, …).
+  it('marks petals unselectable so a long-press cannot select the glyph', () => {
+    installMatchMedia(false);
+    const store = createStore();
+    store.set(radialMenuOpenAtom, true);
+    render(
+      <Provider store={store}>
+        <RadialMenuHarness />
+      </Provider>,
+    );
+    const petal = screen.getByRole('button', { name: /Swap left and right sides/i });
+    expect(petal.className).toContain('select-none');
+  });
+});
+
 describe('RadialMenu Focus Trap', () => {
   afterEach(() => {
     cleanup();
+    window.matchMedia = originalMatchMedia;
   });
 
   it('renders nothing when closed', () => {

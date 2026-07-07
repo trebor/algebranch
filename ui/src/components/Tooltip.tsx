@@ -5,6 +5,14 @@
 
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useCanHover } from '../hooks/useCanHover';
+
+// Touch long-press "peek" (#388): a tap has no hover, so on a touch-primary device
+// the hover model can't drive the tooltip. Instead a press held this long (with the
+// finger still) reveals the tip until release. Mirrors the node Select-Term peek.
+const TOOLTIP_PEEK_HOLD_MS = 500;
+// Finger drift past this (a scroll, not a hold) cancels the pending peek.
+const TOOLTIP_PEEK_MOVE_CANCEL_PX = 10;
 
 // Module-scope so it's a stable, recognizable hook (not a per-render
 // conditional alias): layout effect on the client, plain effect on the server
@@ -18,6 +26,10 @@ interface TriggerProps {
   onFocus?: (e: React.FocusEvent) => void;
   onBlur?: (e: React.FocusEvent) => void;
   onClick?: (e: React.MouseEvent) => boolean | void;
+  onPointerDown?: (e: React.PointerEvent) => void;
+  onPointerMove?: (e: React.PointerEvent) => void;
+  onPointerUp?: (e: React.PointerEvent) => void;
+  onPointerCancel?: (e: React.PointerEvent) => void;
 }
 
 interface TooltipProps {
@@ -63,6 +75,15 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const isShown = (visible !== undefined ? visible : isVisible) && !isDismissed;
+
+  // Touch-primary device: no hover, so the hover/focus reveal is replaced by the
+  // long-press peek below. Hover-capable pointers keep the desktop model untouched.
+  const canHover = useCanHover();
+  const holdTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressStartRef = React.useRef<{ x: number; y: number } | null>(null);
+  // A peek fired on this press — its trailing click must be swallowed so a
+  // long-press to *read* the tip never triggers the button's action.
+  const didPeekRef = React.useRef(false);
 
   const [calculatedPosition, setCalculatedPosition] = useState<'top' | 'bottom' | 'left' | 'right'>(position);
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
@@ -169,6 +190,14 @@ export const Tooltip: React.FC<TooltipProps> = ({
     };
   }, []);
 
+  // Clear a pending long-press peek timer on unmount so it can't fire into a
+  // torn-down component.
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    };
+  }, []);
+
   // Dismiss tooltip instantly upon scrolling any container in the viewport
   useEffect(() => {
     if (!isVisible) return;
@@ -181,55 +210,63 @@ export const Tooltip: React.FC<TooltipProps> = ({
     };
   }, [isVisible]);
 
+  const positionFromRect = (rect: DOMRect) => {
+    const triggerCenterX = rect.left + rect.width / 2;
+    const triggerCenterY = rect.top + rect.height / 2;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    const isNarrow = viewportWidth < 768;
+    let optimalDir = position;
+
+    if (autoAlign) {
+      if (isNarrow) {
+        // On mobile, prefer top/bottom to prevent horizontal clipping
+        optimalDir = triggerCenterY > viewportHeight / 2 ? 'top' : 'bottom';
+      } else {
+        // On desktop, prefer left/right based on screen half
+        optimalDir = triggerCenterX > viewportWidth / 2 ? 'left' : 'right';
+      }
+    }
+
+    setCalculatedPosition(optimalDir);
+
+    const offset = 12; // Pixels visual offset gap (increased from 8px for better breathing room)
+    let top = 0;
+    let left = 0;
+
+    if (optimalDir === 'left') {
+      top = triggerCenterY;
+      left = rect.left - offset;
+    } else if (optimalDir === 'right') {
+      top = triggerCenterY;
+      left = rect.right + offset;
+    } else if (optimalDir === 'top') {
+      top = rect.top - offset;
+      left = triggerCenterX;
+    } else {
+      top = rect.bottom + offset;
+      left = triggerCenterX;
+    }
+
+    // Clamp horizontal coordinates for top/bottom tooltips to prevent edge clipping
+    if (optimalDir === 'top' || optimalDir === 'bottom') {
+      const halfWidth = 100; // max-w-[200px] / 2
+      left = Math.max(halfWidth + 8, Math.min(left, viewportWidth - halfWidth - 8));
+    }
+
+    setCoords({ top, left });
+  };
+
   const showTooltip = (e: React.MouseEvent<Element> | React.FocusEvent<Element>) => {
+    // Touch has no genuine hover: the browser synthesizes a mouseenter (and focus)
+    // from a tap with no matching mouseleave, so honouring it here would flash the
+    // tip and leave it stuck once the tap's action fires. On touch the reveal is the
+    // long-press peek instead; ignore hover/focus entirely (#388).
+    if (!canHover) return;
     setIsDismissed(false);
     try {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const triggerCenterX = rect.left + rect.width / 2;
-      const triggerCenterY = rect.top + rect.height / 2;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      
-      const isNarrow = viewportWidth < 768;
-      let optimalDir = position;
-
-      if (autoAlign) {
-        if (isNarrow) {
-          // On mobile, prefer top/bottom to prevent horizontal clipping
-          optimalDir = triggerCenterY > viewportHeight / 2 ? 'top' : 'bottom';
-        } else {
-          // On desktop, prefer left/right based on screen half
-          optimalDir = triggerCenterX > viewportWidth / 2 ? 'left' : 'right';
-        }
-      }
-        
-      setCalculatedPosition(optimalDir);
-
-      const offset = 12; // Pixels visual offset gap (increased from 8px for better breathing room)
-      let top = 0;
-      let left = 0;
-
-      if (optimalDir === 'left') {
-        top = triggerCenterY;
-        left = rect.left - offset;
-      } else if (optimalDir === 'right') {
-        top = triggerCenterY;
-        left = rect.right + offset;
-      } else if (optimalDir === 'top') {
-        top = rect.top - offset;
-        left = triggerCenterX;
-      } else {
-        top = rect.bottom + offset;
-        left = triggerCenterX;
-      }
-
-      // Clamp horizontal coordinates for top/bottom tooltips to prevent edge clipping
-      if (optimalDir === 'top' || optimalDir === 'bottom') {
-        const halfWidth = 100; // max-w-[200px] / 2
-        left = Math.max(halfWidth + 8, Math.min(left, viewportWidth - halfWidth - 8));
-      }
-
-      setCoords({ top, left });
+      positionFromRect(e.currentTarget.getBoundingClientRect());
     } catch (err) {
       console.error('Failed to compute dynamic tooltip position:', err);
     }
@@ -297,6 +334,41 @@ export const Tooltip: React.FC<TooltipProps> = ({
     }
   };
 
+  // --- Touch long-press peek (#388) -----------------------------------------
+  const clearHold = () => {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  };
+
+  // Reveal the tip under a held finger. Controlled tooltips (visible !== undefined)
+  // are owner-driven and never peek — their owner decides when they show.
+  const peekTooltip = (el: Element) => {
+    if (visible !== undefined) return;
+    setIsDismissed(false);
+    try {
+      positionFromRect(el.getBoundingClientRect());
+    } catch (err) {
+      console.error('Failed to compute dynamic tooltip position:', err);
+    }
+    // Supersede any pending/open tooltip and show now — no hover-delay on a peek.
+    pendingTooltipShows.forEach((cancel) => cancel());
+    if (activeTooltipClose && activeTooltipClose !== closeSelf) {
+      activeTooltipClose();
+    }
+    didPeekRef.current = true;
+    setIsVisible(true);
+    activeTooltipClose = closeSelf;
+  };
+
+  const hidePeek = () => {
+    setIsVisible(false);
+    if (activeTooltipClose === closeSelf) {
+      activeTooltipClose = null;
+    }
+  };
+
   // Directional arrow classes
   const arrowClasses = {
     top: 'absolute top-full left-1/2 -translate-x-1/2 border-t-neutral-950/95 border-x-transparent border-b-transparent',
@@ -335,6 +407,14 @@ export const Tooltip: React.FC<TooltipProps> = ({
       }
     },
     onClick: (e: React.MouseEvent) => {
+      // A long-press peek just fired: swallow the browser's trailing click so
+      // reading the tip never triggers the button's action (#388).
+      if (didPeekRef.current) {
+        didPeekRef.current = false;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       if (!children.props.onClick || children.props.onClick(e) !== false) {
         setIsVisible(false);
         if (activeTooltipClose === closeSelf) {
@@ -345,6 +425,38 @@ export const Tooltip: React.FC<TooltipProps> = ({
         setShowTimeoutId(null);
         setHideTimeoutId(null);
       }
+    },
+    // Touch long-press peek (#388): arm on a touch press, reveal after the hold,
+    // hide on release. Only for uncontrolled tooltips on touch-primary devices;
+    // hover-capable pointers ignore this and keep the desktop hover model.
+    onPointerDown: (e: React.PointerEvent) => {
+      if (!canHover && e.pointerType === 'touch' && visible === undefined) {
+        didPeekRef.current = false;
+        pressStartRef.current = { x: e.clientX, y: e.clientY };
+        const el = e.currentTarget;
+        clearHold();
+        holdTimerRef.current = setTimeout(() => peekTooltip(el), TOOLTIP_PEEK_HOLD_MS);
+      }
+      children.props.onPointerDown?.(e);
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      // Finger drift past the threshold means a scroll, not a hold — abort the peek.
+      if (holdTimerRef.current && pressStartRef.current) {
+        const dx = e.clientX - pressStartRef.current.x;
+        const dy = e.clientY - pressStartRef.current.y;
+        if (dx * dx + dy * dy > TOOLTIP_PEEK_MOVE_CANCEL_PX ** 2) clearHold();
+      }
+      children.props.onPointerMove?.(e);
+    },
+    onPointerUp: (e: React.PointerEvent) => {
+      clearHold();
+      if (didPeekRef.current) hidePeek();
+      children.props.onPointerUp?.(e);
+    },
+    onPointerCancel: (e: React.PointerEvent) => {
+      clearHold();
+      if (didPeekRef.current) hidePeek();
+      children.props.onPointerCancel?.(e);
     },
   });
 

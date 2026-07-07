@@ -41,6 +41,41 @@ export const classifyLinkSize = (n: number): LinkBand =>
       ? { label: 'Compact', tone: 'ok' }
       : { label: 'Large', tone: 'warn' };
 
+/**
+ * Actionable advice for a link length (#405). Returns an explanation only for the
+ * WARN band — naming *why* a large link is risky — and `null` for the safe bands,
+ * so callers render nothing when the link pastes cleanly everywhere. When a
+ * narrower share scope exists below this one (`hasSmallerScope`), it also nudges
+ * toward it; the smallest scope (equation) omits that clause since nothing below
+ * it would shrink the link.
+ */
+export const bandAdvice = (
+  n: number,
+  { hasSmallerScope = true }: { hasSmallerScope?: boolean } = {},
+): string | null => {
+  if (classifyLinkSize(n).tone !== 'warn') return null;
+  const risk = 'This link may be trimmed by some chat apps and QR encoders.';
+  return hasSmallerScope ? `${risk} Try a narrower scope below.` : risk;
+};
+
+/**
+ * The advice sentence (#405) rendered inside a menu item when *that item's* own
+ * link lands in the warn band — so the explanation sits with the large link and
+ * its containment is unambiguous. `role="note"` so screen readers announce it.
+ */
+const ItemAdvice: React.FC<{ size: number | null; hasSmallerScope: boolean }> = ({
+  size,
+  hasSmallerScope,
+}) => {
+  const advice = size === null ? null : bandAdvice(size, { hasSmallerScope });
+  if (!advice) return null;
+  return (
+    <span role="note" className={THEME_GLASS.SHARE_MENU_ADVICE}>
+      {advice}
+    </span>
+  );
+};
+
 /** The qualitative band + muted exact count shown beside each menu item. */
 const SizeBadge: React.FC<{ size: number | null }> = ({ size }) => {
   if (size === null) return null;
@@ -342,6 +377,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
               </span>
               <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>All branches and steps</span>
               <SizeBadge size={linkSizes.full} />
+              <ItemAdvice size={linkSizes.full} hasSmallerScope />
             </span>
           </button>
           {/* Derivation share — root → current node only, a shorter link. */}
@@ -359,6 +395,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
               </span>
               <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>{derivationDesc}</span>
               <SizeBadge size={linkSizes.path} />
+              <ItemAdvice size={linkSizes.path} hasSmallerScope />
             </span>
           </button>
           {/* Equation share — just the starting equation, the smallest link. */}
@@ -373,6 +410,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
               <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Share equation</span>
               <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>Just the starting equation</span>
               <SizeBadge size={linkSizes.eq} />
+              <ItemAdvice size={linkSizes.eq} hasSmallerScope={false} />
             </span>
           </button>
         </div>

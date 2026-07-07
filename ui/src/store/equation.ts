@@ -2255,6 +2255,18 @@ export const openEquationEditorAtom = atom(null, (get, set) => {
 });
 
 /**
+ * Action: open the input dialog pre-seeded from pasted clipboard text (#440 ⌘V).
+ * Reuses `parseRawStringToEditSeed` so the same relation-splitting that fixes a
+ * broken query-param equation also splits `2x + 1 = 7` into its two sides. A
+ * blank paste is a no-op — we never pop an empty modal.
+ */
+export const openEquationFromPasteAtom = atom(null, (_get, set, text: string) => {
+  if (!text.trim()) return;
+  set(equationEditSeedAtom, parseRawStringToEditSeed(text));
+  set(equationInputModalOpenAtom, true);
+});
+
+/**
  * Read-only: is the active workspace "pristine" — a single root node with no
  * derivation steps taken yet? Drives the adaptive Edit tooltip and the
  * in-place-vs-fork branch in `submitEquationEditAtom` (#261).

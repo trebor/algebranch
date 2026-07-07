@@ -76,6 +76,22 @@ describe('ShareMenu', () => {
     expect(within(menu).getByRole('menuitem', { name: /equation/i })).toBeTruthy();
   });
 
+  it('shows the C-then-P chord on the derivation row and no chord on the equation row (#440)', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
+
+    const derivationItem = screen.getByRole('menuitem', { name: /derivation/i });
+    const derivationCaps = within(derivationItem)
+      .queryAllByText((_, el) => el?.tagName === 'KBD')
+      .map((el) => el.textContent);
+    expect(derivationCaps).toEqual(['C', 'P']);
+
+    // The C L chord is retired to menu-only, so the equation row shows no keycap.
+    const equationItem = screen.getByRole('menuitem', { name: /equation/i });
+    const equationCaps = within(equationItem).queryAllByText((_, el) => el?.tagName === 'KBD');
+    expect(equationCaps).toHaveLength(0);
+  });
+
   it('menu item descriptions name what each link restores', async () => {
     renderMenu();
     await userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));

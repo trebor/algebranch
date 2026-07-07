@@ -3,6 +3,8 @@
 
 import {
   shouldIgnoreShortcut,
+  shouldIdleCopy,
+  shouldPasteOpen,
   formatShortcut,
   ShortcutTarget,
 } from '../../ui/src/utils/keyboardShortcuts';
@@ -37,6 +39,44 @@ describe('shouldIgnoreShortcut', () => {
 
   it('matches tag names case-insensitively (defensive against lowercase input)', () => {
     expect(shouldIgnoreShortcut({ tagName: 'input' }, false)).toBe(true);
+  });
+});
+
+describe('shouldIdleCopy', () => {
+  const div: ShortcutTarget = { tagName: 'DIV', isContentEditable: false };
+
+  it('copies the current equation only when the selection is collapsed on a non-editable target', () => {
+    expect(shouldIdleCopy(div, true)).toBe(true);
+    expect(shouldIdleCopy(null, true)).toBe(true);
+    expect(shouldIdleCopy(undefined, true)).toBe(true);
+  });
+
+  it('yields to the native copy when a real text selection exists', () => {
+    expect(shouldIdleCopy(div, false)).toBe(false);
+    expect(shouldIdleCopy(null, false)).toBe(false);
+  });
+
+  it('never hijacks copy while focus is in an editable field', () => {
+    expect(shouldIdleCopy({ tagName: 'INPUT' }, true)).toBe(false);
+    expect(shouldIdleCopy({ tagName: 'TEXTAREA' }, true)).toBe(false);
+    expect(shouldIdleCopy({ tagName: 'SELECT' }, true)).toBe(false);
+    expect(shouldIdleCopy({ tagName: 'DIV', isContentEditable: true }, true)).toBe(false);
+  });
+});
+
+describe('shouldPasteOpen', () => {
+  it('opens the equation modal on paste over a non-editable target', () => {
+    expect(shouldPasteOpen({ tagName: 'DIV' })).toBe(true);
+    expect(shouldPasteOpen({ tagName: 'BUTTON' })).toBe(true);
+    expect(shouldPasteOpen(null)).toBe(true);
+    expect(shouldPasteOpen(undefined)).toBe(true);
+  });
+
+  it('never hijacks paste while typing in an editable field', () => {
+    expect(shouldPasteOpen({ tagName: 'INPUT' })).toBe(false);
+    expect(shouldPasteOpen({ tagName: 'TEXTAREA' })).toBe(false);
+    expect(shouldPasteOpen({ tagName: 'SELECT' })).toBe(false);
+    expect(shouldPasteOpen({ tagName: 'DIV', isContentEditable: true })).toBe(false);
   });
 });
 

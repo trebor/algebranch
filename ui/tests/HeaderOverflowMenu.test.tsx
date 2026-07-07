@@ -10,11 +10,13 @@ describe('HeaderOverflowMenu', () => {
   let onOpenSettings: () => void;
   let onOpenAbout: () => void;
   let onOpenHelp: () => void;
+  let onOpenShortcuts: () => void;
 
   beforeEach(() => {
     onOpenSettings = vi.fn();
     onOpenAbout = vi.fn();
     onOpenHelp = vi.fn();
+    onOpenShortcuts = vi.fn();
   });
 
   afterEach(cleanup);
@@ -25,6 +27,7 @@ describe('HeaderOverflowMenu', () => {
         onOpenSettings={onOpenSettings}
         onOpenAbout={onOpenAbout}
         onOpenHelp={onOpenHelp}
+        onOpenShortcuts={onOpenShortcuts}
       />
     );
 
@@ -68,6 +71,15 @@ describe('HeaderOverflowMenu', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: /help/i }));
 
     expect(onOpenHelp).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('calls onOpenShortcuts and closes the menu when Keyboard shortcuts is clicked (#440)', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /more options/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /keyboard shortcuts/i }));
+
+    expect(onOpenShortcuts).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menu')).toBeNull();
   });
 

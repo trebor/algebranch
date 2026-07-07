@@ -4,7 +4,7 @@
 'use client';
 
 import React from 'react';
-import { MoreVertical, Settings as SettingsIcon, Info, HelpCircle } from 'lucide-react';
+import { MoreVertical, Settings as SettingsIcon, Info, HelpCircle, Keyboard } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
@@ -13,12 +13,14 @@ interface HeaderOverflowMenuProps {
   onOpenSettings: () => void;
   onOpenAbout: () => void;
   onOpenHelp: () => void;
+  onOpenShortcuts: () => void;
 }
 
 export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
   onOpenSettings,
   onOpenAbout,
   onOpenHelp,
+  onOpenShortcuts,
 }) => {
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
@@ -59,6 +61,12 @@ export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
     trackEvent({ action: 'overflow_open_about', category: 'interaction' });
   };
 
+  const handleShortcutsClick = () => {
+    setOpen(false);
+    onOpenShortcuts();
+    trackEvent({ action: 'overflow_open_shortcuts', category: 'interaction' });
+  };
+
   return (
     <div ref={containerRef} className="relative inline-flex">
       <Tooltip content="More options" position="bottom" autoAlign={false}>
@@ -96,6 +104,15 @@ export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
           >
             <HelpCircle size={14} className="text-indigo-400" />
             <span>Help</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleShortcutsClick}
+            className={`${THEME_GLASS.OVERFLOW_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
+          >
+            <Keyboard size={14} className="text-indigo-400" />
+            <span>Keyboard shortcuts</span>
           </button>
           <button
             type="button"

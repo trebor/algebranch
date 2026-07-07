@@ -284,6 +284,14 @@ export const THEME_GLASS = {
   SHARE_MENU_ITEM_PRIMARY: 'bg-indigo-600/10 hover:bg-indigo-600/25 text-white',
   SHARE_MENU_ITEM_TITLE: 'text-xs font-semibold',
   SHARE_MENU_ITEM_DESC: 'text-[0.625rem] leading-snug text-white/45',
+  // Link-size characterization (#439): a qualitative band ("Tiny/Compact/Large")
+  // advising whether the link pastes everywhere, with the exact char count muted
+  // beside it. OK = safe to share anywhere; WARN = large enough that some chat
+  // apps may trim it.
+  SHARE_SIZE_BADGE: 'inline-flex items-baseline gap-1 text-[0.625rem] leading-snug font-medium',
+  SHARE_SIZE_BADGE_OK: 'text-emerald-300/80',
+  SHARE_SIZE_BADGE_WARN: 'text-amber-300/90',
+  SHARE_SIZE_BADGE_COUNT: 'text-white/35 font-normal tabular-nums',
 
   // Workspace switcher (#247): on short/landscape viewports the horizontal tab
   // strip collapses into this pill + popover anchored top-left of the expression

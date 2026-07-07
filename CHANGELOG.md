@@ -8,6 +8,43 @@ and the monorepo uses a single unified version across all workspaces; the root
 v1.0.0 onward, entries are generated automatically from conventional commits by
 [release-please](https://github.com/googleapis/release-please) (#337).
 
+## [1.4.0](https://github.com/trebor/algebranch/compare/v1.3.1...v1.4.0) (2026-07-07)
+
+
+### Features
+
+* **math-engine:** absolute value |x| operator ([#179](https://github.com/trebor/algebranch/issues/179)) ([#411](https://github.com/trebor/algebranch/issues/411)) ([b616c43](https://github.com/trebor/algebranch/commit/b616c43901fa1ee8f4c9e07372892299ff44bb58))
+* **math-engine:** flag division-by-zero subtrees as undefined ([#413](https://github.com/trebor/algebranch/issues/413)) ([#417](https://github.com/trebor/algebranch/issues/417)) ([0a4de2d](https://github.com/trebor/algebranch/commit/0a4de2d95043df64dbe3fe68ccccc70212b14443))
+* **math-engine:** freeze all moves on a division-by-zero equation ([#419](https://github.com/trebor/algebranch/issues/419)) ([#420](https://github.com/trebor/algebranch/issues/420)) ([0e4f93e](https://github.com/trebor/algebranch/commit/0e4f93ee8c6d1e4b7c2909e3198ecebffee2df27))
+* **math-engine:** support multivariate GCF factoring ([#428](https://github.com/trebor/algebranch/issues/428)) ([#438](https://github.com/trebor/algebranch/issues/438)) ([c352d53](https://github.com/trebor/algebranch/commit/c352d53c64d9bae51fd820f6e2066f1041030fea))
+* **math-engine:** suppress no-op offers and fix cross-equals move/label mismatch ([#367](https://github.com/trebor/algebranch/issues/367)) ([#433](https://github.com/trebor/algebranch/issues/433)) ([398cf66](https://github.com/trebor/algebranch/commit/398cf66500b236895f108e7c95673523f7773a04))
+* smart math input parsing (LaTeX / Unicode / SymPy) ([#401](https://github.com/trebor/algebranch/issues/401)) ([610c7f4](https://github.com/trebor/algebranch/commit/610c7f494d2b588e686cc6d0f86dfd7980fcc1ad))
+* suppress generic simplify when specific reductions are available ([#421](https://github.com/trebor/algebranch/issues/421)) ([#429](https://github.com/trebor/algebranch/issues/429)) ([6050368](https://github.com/trebor/algebranch/commit/605036887e14edf8156f9bbf4de345f2f47e2e23))
+* suppress Split Fraction option for 1/x and rename rules ([#432](https://github.com/trebor/algebranch/issues/432)) ([87579b9](https://github.com/trebor/algebranch/commit/87579b9fa15239966f39a869be6d14b5be69a4c5))
+* **ui:** exact-preferred decimal default; center equals menu on narrow screens ([#454](https://github.com/trebor/algebranch/issues/454)) ([2ee7d30](https://github.com/trebor/algebranch/commit/2ee7d303a91fd6560bb1cd328eadc58b16771971)), closes [#363](https://github.com/trebor/algebranch/issues/363) [#392](https://github.com/trebor/algebranch/issues/392)
+* **ui:** explain and place large-share-link advice in the share menu ([#405](https://github.com/trebor/algebranch/issues/405)) ([#446](https://github.com/trebor/algebranch/issues/446)) ([72c80df](https://github.com/trebor/algebranch/commit/72c80df240520251268d345b3a00eb9039d772ca))
+* **ui:** five-handle taxonomy — Simplify · Expand · Factor · Rewrite · Substitute ([#427](https://github.com/trebor/algebranch/issues/427)) ([#431](https://github.com/trebor/algebranch/issues/431)) ([cd95dc6](https://github.com/trebor/algebranch/commit/cd95dc66e83e4a0c3f41dc5cb483d57f2147f7e0))
+* **ui:** flag division-by-zero subtrees with a dead-end warning ([#416](https://github.com/trebor/algebranch/issues/416)) ([#422](https://github.com/trebor/algebranch/issues/422)) ([a171c5d](https://github.com/trebor/algebranch/commit/a171c5d5c319e5bab9900e417adf6cc8753ecb79))
+* **ui:** path-only share + link-size guidance in the share menu ([#439](https://github.com/trebor/algebranch/issues/439)) ([#443](https://github.com/trebor/algebranch/issues/443)) ([61783fd](https://github.com/trebor/algebranch/commit/61783fd4adf62e62c1add9aa6613344b90116d41))
+* **ui:** pre-publish visual/UX cleanups ([#449](https://github.com/trebor/algebranch/issues/449)) ([#450](https://github.com/trebor/algebranch/issues/450)) ([ff2760b](https://github.com/trebor/algebranch/commit/ff2760beea6e7885cabd955784c22944a54d94f1))
+* **ui:** remove stack counts from handles ([#435](https://github.com/trebor/algebranch/issues/435)) ([cdced4c](https://github.com/trebor/algebranch/commit/cdced4c56fd9e4e292772991529e6192d800269c))
+* **ui:** render history card labels as display-ready Unicode ([#412](https://github.com/trebor/algebranch/issues/412)) ([89a44fd](https://github.com/trebor/algebranch/commit/89a44fde1453feaee53d116044bd337d7dd1eae7)), closes [#408](https://github.com/trebor/algebranch/issues/408)
+* **ui:** replay-encode ?ws= share links to slash length ([#403](https://github.com/trebor/algebranch/issues/403)) ([#404](https://github.com/trebor/algebranch/issues/404)) ([678c659](https://github.com/trebor/algebranch/commit/678c659c3fe4c1e4737492b40eddda7b27edf6ea))
+* **ui:** unified copy / paste / share model ([#440](https://github.com/trebor/algebranch/issues/440)) ([#444](https://github.com/trebor/algebranch/issues/444)) ([646f4fb](https://github.com/trebor/algebranch/commit/646f4fb14a2d4940423eb0f38294d933ae2b5327))
+
+
+### Bug Fixes
+
+* **history-tree:** make the handle family the single source of truth for edge badges ([#436](https://github.com/trebor/algebranch/issues/436)) ([7352136](https://github.com/trebor/algebranch/commit/73521367f265f953825f25eb56cac56b5f6d99f6))
+* **math-engine:** describe entire-side transposition as subtraction ([#426](https://github.com/trebor/algebranch/issues/426)) ([90eb699](https://github.com/trebor/algebranch/commit/90eb699ee8e88b85251c6bd555b8643c2cdca9cf))
+* **math-engine:** guard tryFactor against complex products to prevent mathjs rationalize hang ([#406](https://github.com/trebor/algebranch/issues/406)) ([6d3dcbf](https://github.com/trebor/algebranch/commit/6d3dcbfd9715d227d01fb805303158f79692330e))
+* **math-engine:** stop offering invalid x/0 -&gt; 0 simplification ([#333](https://github.com/trebor/algebranch/issues/333)) ([#414](https://github.com/trebor/algebranch/issues/414)) ([86dafe9](https://github.com/trebor/algebranch/commit/86dafe9b970dd8a435aba4ab21b3a6aae54f7bb2))
+* **math-engine:** support simplifying -y - y to -(2 * y) and 2 * -y ([#441](https://github.com/trebor/algebranch/issues/441)) ([#442](https://github.com/trebor/algebranch/issues/442)) ([0f99324](https://github.com/trebor/algebranch/commit/0f99324c6cf155af14a16cf3568765983dcc2aaa))
+* **math-engine:** suppress de-factoring "Factor out x" on product roots ([#424](https://github.com/trebor/algebranch/issues/424)) ([#430](https://github.com/trebor/algebranch/issues/430)) ([867728a](https://github.com/trebor/algebranch/commit/867728a43533d215d2471dd30a81f8d5ec4bf11f))
+* **math-engine:** uniquify reducible-option preview node ids ([#400](https://github.com/trebor/algebranch/issues/400)) ([#415](https://github.com/trebor/algebranch/issues/415)) ([8fb8922](https://github.com/trebor/algebranch/commit/8fb8922466f0c5e2dfe449e64acedf463531b02b))
+* precedence-paren rendering ([#410](https://github.com/trebor/algebranch/issues/410)) + nthRoot registration ([#425](https://github.com/trebor/algebranch/issues/425)) ([3adf672](https://github.com/trebor/algebranch/commit/3adf67298de8a5dc39a5201e3b36c1c12a8da3ad))
+* **ui:** touch-aware tooltip peek — tap acts, long-press reads ([#388](https://github.com/trebor/algebranch/issues/388)) ([#455](https://github.com/trebor/algebranch/issues/455)) ([974bd7d](https://github.com/trebor/algebranch/commit/974bd7d7f089d8e24d2245030f841fd4bacaab46))
+
 ## [1.3.1](https://github.com/trebor/algebranch/compare/v1.3.0...v1.3.1) (2026-07-03)
 
 

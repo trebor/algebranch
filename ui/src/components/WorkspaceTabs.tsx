@@ -325,7 +325,7 @@ export const WorkspaceTabs: React.FC = () => {
       </RovingTabindexProvider>
 
       {/* Plus Button to add tab - Pinned to the right */}
-      <Tooltip content={<HotkeyHint label="New workspace tab" keys="N" />} position="bottom" autoAlign={false}>
+      <Tooltip content={<HotkeyHint label="New workspace tab" keys="N" />} position="bottom" autoAlign={false} className="max-w-max">
         <button
           onClick={() => setIsInputModalOpen(true)}
           className="flex items-center justify-center p-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white/40 hover:text-white transition-all cursor-pointer shrink-0"

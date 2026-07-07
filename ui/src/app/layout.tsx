@@ -8,6 +8,9 @@ import Script from "next/script";
 
 import { Provider as JotaiProvider } from "jotai";
 import { ReducedMotionProvider } from "../components/ReducedMotionProvider";
+import { APP_NAME, APP_TITLE } from "../constants/brand";
+// Note: the bare brand is the base <title> on purpose — the tagline is kept out
+// of the browser tab (#449); it lives in the on-page subtitle and social cards.
 import { ChromeScaleProvider } from "../components/ChromeScaleProvider";
 import { ConsentManager } from "../components/ConsentManager";
 import { shouldRenderDebugOverlay, buildDebugOverlayScript } from "../utils/debugOverlay";
@@ -36,22 +39,22 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://algebranch.org"),
-  title: "Algebranch - Interactive Algebraic Steps",
+  title: APP_NAME,
   description: "An interactive step-by-step mathematical exploration and algebraic manipulation system.",
   manifest: "/manifest.json",
   keywords: ["algebra", "math editor", "step by step math", "equation solver", "algebraic identity", "interactive math", "visual math", "study tool", "symbolic manipulation"],
   authors: [{ name: "Algebranch Team" }],
   openGraph: {
-    title: "Algebranch - Interactive Algebraic Steps",
+    title: APP_TITLE,
     description: "An interactive step-by-step mathematical exploration and algebraic manipulation system.",
     url: "https://algebranch.org",
-    siteName: "Algebranch",
+    siteName: APP_NAME,
     images: [
       {
         url: "/social-preview.png",
         width: 1280,
         height: 640,
-        alt: "Algebranch - Interactive Algebraic Steps",
+        alt: APP_TITLE,
       },
     ],
     locale: "en_US",
@@ -59,14 +62,14 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Algebranch - Interactive Algebraic Steps",
+    title: APP_TITLE,
     description: "An interactive step-by-step mathematical exploration and algebraic manipulation system.",
     images: ["/social-preview.png"],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Algebranch",
+    title: APP_NAME,
   },
 };
 

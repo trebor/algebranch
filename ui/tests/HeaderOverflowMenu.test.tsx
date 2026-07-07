@@ -74,13 +74,40 @@ describe('HeaderOverflowMenu', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('calls onOpenShortcuts and closes the menu when Keyboard shortcuts is clicked (#440)', async () => {
+  it('calls onOpenShortcuts and closes the menu when Shortcuts is clicked (#440, #449)', async () => {
     renderMenu();
     await userEvent.click(screen.getByRole('button', { name: /more options/i }));
-    await userEvent.click(screen.getByRole('menuitem', { name: /keyboard shortcuts/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /^shortcuts$/i }));
 
     expect(onOpenShortcuts).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('shortens the shortcuts label to just "Shortcuts" (#449)', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /more options/i }));
+
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByRole('menuitem', { name: /^shortcuts$/i })).toBeTruthy();
+    expect(within(menu).queryByRole('menuitem', { name: /keyboard shortcuts/i })).toBeNull();
+  });
+
+  it('offers a GitHub link that opens the repo in a new tab, placed above About (#449)', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /more options/i }));
+
+    const menu = screen.getByRole('menu');
+    const github = within(menu).getByRole('menuitem', { name: /github/i });
+    expect(github).toHaveAttribute('href', 'https://github.com/trebor/algebranch');
+    expect(github).toHaveAttribute('target', '_blank');
+    expect(github.getAttribute('rel') ?? '').toContain('noopener');
+
+    // GitHub sits immediately above About in the menu order.
+    const items = within(menu).getAllByRole('menuitem');
+    const githubIndex = items.indexOf(github);
+    const aboutIndex = items.findIndex((el) => /about/i.test(el.textContent ?? ''));
+    expect(githubIndex).toBeGreaterThanOrEqual(0);
+    expect(aboutIndex).toBe(githubIndex + 1);
   });
 
   it('closes the menu when Escape is pressed', async () => {

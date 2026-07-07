@@ -19,4 +19,10 @@ describe('CATEGORY_EXAMPLES (#245)', () => {
       expect(() => parseEquation(example), `unparseable example for "${category}": ${example}`).not.toThrow();
     }
   });
+
+  it('no category title contains parentheses (#449)', () => {
+    for (const category of categories) {
+      expect(category, `category title should not use parentheses: "${category}"`).not.toMatch(/[()]/);
+    }
+  });
 });

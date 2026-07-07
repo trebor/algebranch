@@ -37,9 +37,9 @@ const getCategoryIcon = (category: string) => {
       return <Zap size={11} className="text-amber-400 shrink-0" />;
     case 'Fractions, Radicals & Rationals':
       return <Percent size={11} className="text-teal-400 shrink-0" />;
-    case 'Transcendental (Logs & Trig)':
+    case 'Transcendental, Logs & Trig':
       return <Activity size={11} className="text-pink-400 shrink-0" />;
-    case 'Formulas (Physics, Geometry & Science)':
+    case 'Physics, Geometry & Science Formulas':
       return <Triangle size={11} className="text-emerald-400 shrink-0" />;
     default:
       return <FolderGit2 size={11} className="text-indigo-400 shrink-0" />;
@@ -154,7 +154,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
             Define Equation
           </span>
           <div className="grid grid-cols-2 gap-2">
-            <Tooltip content={<HotkeyHint label="Enter equation in new workspace" keys="N" />} position="bottom" autoAlign={false} wrapperClassName="w-full">
+            <Tooltip content={<HotkeyHint label="Enter equation in new workspace" keys="N" />} position="bottom" autoAlign={false} wrapperClassName="w-full" className="max-w-max">
               <button
                 type="button"
                 onClick={() => {

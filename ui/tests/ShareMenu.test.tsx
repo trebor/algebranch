@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ShareMenu, SHARE_HINT_STEP_THRESHOLD, SHARE_HINT_FLAG, classifyLinkSize } from '@/components/ShareMenu';
+import { ShareMenu, SHARE_HINT_STEP_THRESHOLD, SHARE_HINT_FLAG, classifyLinkSize, bandAdvice } from '@/components/ShareMenu';
 import { encodeEqParam } from '@/utils/eqParam';
 
 function mockClipboard() {
@@ -217,6 +217,61 @@ describe('ShareMenu', () => {
       renderMenu({ getCompressedWorkspace: () => 'x'.repeat(3000) });
       await userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
       await waitFor(() => expect(screen.getAllByText(/large link/i).length).toBeGreaterThan(0));
+    });
+  });
+
+  // Large-link advice (#405): beyond the amber "Large link" badge, the menu
+  // explains *why* a large link is risky and points at the smaller scopes
+  // already listed below — so the warning is actionable, not just a color.
+  describe('large-link advice (#405)', () => {
+    it('bandAdvice explains the truncation risk only for the warn band', () => {
+      expect(bandAdvice(50)).toBeNull();
+      expect(bandAdvice(1000)).toBeNull();
+      expect(bandAdvice(3000)).toMatch(/trimmed/i);
+    });
+
+    it('nudges to a narrower scope only when one exists below', () => {
+      expect(bandAdvice(3000, { hasSmallerScope: true })).toMatch(/narrower scope/i);
+      // The smallest scope (equation) has nothing below it → risk sentence only.
+      const smallest = bandAdvice(3000, { hasSmallerScope: false });
+      expect(smallest).toMatch(/trimmed/i);
+      expect(smallest).not.toMatch(/narrower scope/i);
+    });
+
+    it('renders the advice inside the specific large item card, not floating above', async () => {
+      // Same payload for full + path → both those links are large.
+      renderMenu({ getCompressedWorkspace: () => 'x'.repeat(3000) });
+      await userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
+
+      const workspaceItem = screen.getByRole('menuitem', { name: /share workspace/i });
+      await waitFor(() => {
+        // The note lives *inside* the workspace card (containment), not as a
+        // menu-level sibling floating above the options.
+        const note = within(workspaceItem).getByRole('note');
+        expect(note.textContent).toMatch(/trimmed/i);
+        expect(note.textContent).toMatch(/narrower scope/i);
+      });
+    });
+
+    it('a large single derivation warns on its own row even when nothing else is', async () => {
+      // Full tiny, path large: emulate a long single derivation path.
+      const getCompressedWorkspace = (scope: 'full' | 'path') =>
+        scope === 'path' ? 'x'.repeat(3000) : 'SMALL';
+      renderMenu({ getCompressedWorkspace });
+      await userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
+
+      const derivationItem = screen.getByRole('menuitem', { name: /share derivation/i });
+      const workspaceItem = screen.getByRole('menuitem', { name: /share workspace/i });
+      await waitFor(() => expect(within(derivationItem).getByRole('note')).toBeTruthy());
+      expect(within(workspaceItem).queryByRole('note')).toBeNull();
+    });
+
+    it('shows no advice note when every link is small', async () => {
+      renderMenu({ getCompressedWorkspace: () => 'COMPRESSED' });
+      await userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
+      // Let the async size computation settle, then assert no note appeared.
+      await waitFor(() => expect(screen.getAllByText(/tiny link/i).length).toBeGreaterThan(0));
+      expect(screen.queryByRole('note')).toBeNull();
     });
   });
 });

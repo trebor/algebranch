@@ -292,6 +292,11 @@ export const THEME_GLASS = {
   SHARE_SIZE_BADGE_OK: 'text-emerald-300/80',
   SHARE_SIZE_BADGE_WARN: 'text-amber-300/90',
   SHARE_SIZE_BADGE_COUNT: 'text-white/35 font-normal tabular-nums',
+  // Large-link advice (#405): a muted explanatory note rendered *inside* a menu
+  // item when that item's own link lands in the WARN band, naming the truncation
+  // risk and (where a narrower scope exists) nudging toward it. The amber tint
+  // echoes the warn badge, but the sentence — not the color — carries the meaning.
+  SHARE_MENU_ADVICE: 'mt-0.5 text-[0.625rem] leading-snug text-amber-200/80',
 
   // Workspace switcher (#247): on short/landscape viewports the horizontal tab
   // strip collapses into this pill + popover anchored top-left of the expression

@@ -30,6 +30,7 @@ import {
   radialRadiusPx,
   radialIconPx,
   radialSpinnerIconPx,
+  radialMenuPosition,
 } from '../utils/radialLayout';
 
 /**
@@ -118,14 +119,21 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
     onClose: handleClose,
   });
 
-  // Calculate position relative to anchor
+  // Calculate position relative to anchor. On a narrow (mobile) viewport the
+  // menu drops into the center of the screen so its petals/input panel can't run
+  // off the edge when the `=` sits near a screen border (#392); wider viewports
+  // keep it anchored to the `=`.
   React.useEffect(() => {
     if (isOpen && anchorRef.current) {
       const rect = anchorRef.current.getBoundingClientRect();
-      setPosition({
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-      });
+      setPosition(
+        radialMenuPosition({
+          anchorX: rect.left + rect.width / 2,
+          anchorY: rect.top + rect.height / 2,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+        }),
+      );
     }
   }, [isOpen, anchorRef]);
 

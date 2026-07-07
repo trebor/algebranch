@@ -5,8 +5,10 @@ import {
   radialIconPx,
   radialPetalDiameterPx,
   radialPetalCenterDistancePx,
+  radialMenuPosition,
   RADIAL_BASE_RADIUS_PX,
   RADIAL_ICON_BASE_PX,
+  RADIAL_NARROW_VIEWPORT_PX,
 } from '@/utils/radialLayout';
 
 describe('radial menu geometry scales with chrome scale', () => {
@@ -37,5 +39,43 @@ describe('radial menu geometry scales with chrome scale', () => {
     for (const { scale } of TEXT_SIZE_OPTIONS) {
       expect(ratioAt(scale)).toBeCloseTo(base);
     }
+  });
+});
+
+// #392: near a screen edge on a narrow (mobile) viewport, anchoring the menu to
+// the `=` sign let the petals/input panel run off-screen. Below the `sm`
+// breakpoint we drop the menu into the dead center of the screen — both axes —
+// so it always lands fully on-screen; wider viewports keep the anchored bloom.
+describe('radialMenuPosition narrow-viewport centering', () => {
+  it('centers on the screen in both axes when the viewport is narrower than sm', () => {
+    // An anchor hugging a corner would overflow; centering rescues it.
+    expect(
+      radialMenuPosition({ anchorX: 380, anchorY: 20, viewportWidth: 400, viewportHeight: 700 }),
+    ).toEqual({ x: 200, y: 350 });
+  });
+
+  it('stays anchored to the = sign when there is room', () => {
+    expect(
+      radialMenuPosition({ anchorX: 300, anchorY: 120, viewportWidth: 1280, viewportHeight: 800 }),
+    ).toEqual({ x: 300, y: 120 });
+  });
+
+  it('treats the threshold as the first anchored width (centers strictly below it)', () => {
+    expect(
+      radialMenuPosition({
+        anchorX: 500,
+        anchorY: 40,
+        viewportWidth: RADIAL_NARROW_VIEWPORT_PX,
+        viewportHeight: 900,
+      }),
+    ).toEqual({ x: 500, y: 40 });
+    expect(
+      radialMenuPosition({
+        anchorX: 500,
+        anchorY: 40,
+        viewportWidth: RADIAL_NARROW_VIEWPORT_PX - 1,
+        viewportHeight: 900,
+      }),
+    ).toEqual({ x: (RADIAL_NARROW_VIEWPORT_PX - 1) / 2, y: 450 });
   });
 });

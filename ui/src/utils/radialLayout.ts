@@ -26,6 +26,38 @@ export const RADIAL_ICON_BASE_PX = 18;
 /** Default lucide glyph size (px) inside the spinner stepper buttons. */
 export const RADIAL_SPINNER_ICON_BASE_PX = 12;
 
+/**
+ * Viewport width (px) below which the equals menu centers horizontally on the
+ * screen instead of anchoring to the `=` sign (#392). At or above it there is
+ * room to keep the anchored placement. Matches Tailwind's `sm` breakpoint.
+ */
+export const RADIAL_NARROW_VIEWPORT_PX = 640;
+
+/** The `=` sign's center and the viewport size, in px — inputs to menu placement. */
+export interface RadialMenuAnchor {
+  anchorX: number;
+  anchorY: number;
+  viewportWidth: number;
+  viewportHeight: number;
+}
+
+/**
+ * Placement (px) for the equals menu's center. On a narrow (mobile) viewport an
+ * anchor near a screen edge let the petals/input panel run off-screen (#392);
+ * below the `sm` threshold we drop the menu into the dead center of the screen —
+ * both axes — so it always lands fully on-screen. Wider viewports keep it
+ * anchored to the `=` sign, where the bloom has room.
+ */
+export function radialMenuPosition(
+  { anchorX, anchorY, viewportWidth, viewportHeight }: RadialMenuAnchor,
+  narrowThresholdPx: number = RADIAL_NARROW_VIEWPORT_PX,
+): { x: number; y: number } {
+  if (viewportWidth < narrowThresholdPx) {
+    return { x: viewportWidth / 2, y: viewportHeight / 2 };
+  }
+  return { x: anchorX, y: anchorY };
+}
+
 /** Ring radius (px) for a given chrome scale, growing with the rem petals. */
 export function radialRadiusPx(chromeScale: number): number {
   return RADIAL_BASE_RADIUS_PX * chromeScale;

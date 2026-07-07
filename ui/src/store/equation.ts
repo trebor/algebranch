@@ -1266,7 +1266,11 @@ export function cycleChromeScale(current: number, direction: 1 | -1 = 1): number
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
-  allowEvaluateToDecimal: true,
+  // Exact-preferred baseline (#363): a fresh session keeps responses in exact
+  // fractional/radical forms and does not offer the "Evaluate to Decimal" move
+  // until a user opts in. Sessions that previously saved settings keep their
+  // explicit value via the `{ ...DEFAULT_SETTINGS, ...parsed }` load merge.
+  allowEvaluateToDecimal: false,
   allowComplex: true,
   seenEqualsHint: false,
   chromeScale: CHROME_SCALE_DEFAULT,

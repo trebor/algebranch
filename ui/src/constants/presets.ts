@@ -342,14 +342,14 @@ export const PRESET_LIST: Preset[] = [
   },
 
   // ─────────────────────────────────────────────────────────────
-  // Transcendental (Logs & Trig)
+  // Transcendental, Logs & Trig
   // ─────────────────────────────────────────────────────────────
   {
     id: 'id_log_product',
     label: 'Logarithm Product Rule',
     equation: 'log(x * y) = 5',
     description: 'Expand logarithm of product into a sum of logarithms.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -357,7 +357,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Logarithm Quotient Rule',
     equation: 'log(a / b) = 3',
     description: 'Expand logarithm of quotient into a difference of logarithms.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -365,7 +365,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Logarithm Power Rule',
     equation: 'log(x^3) = 9',
     description: 'Move log argument power exponent to multiplier coefficient.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -373,7 +373,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Logarithm Change of Base',
     equation: 'log(x, 10) = 2',
     description: 'Expand a base-10 logarithm into a quotient of natural logarithms.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -381,7 +381,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Reverse Log Change of Base',
     equation: 'log(x) / log(3) = 4',
     description: 'Condenses a quotient of natural logarithms into a log with custom base.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -389,7 +389,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Pythagorean Trig Identity',
     equation: 'sin(phi)^2 + cos(phi)^2 = 1',
     description: 'Simplify sin^2 + cos^2 of any angle to 1.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -397,7 +397,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Tangent Quotient Identity',
     equation: 'tan(x) = y',
     description: 'Express tangent function as sine over cosine.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -405,7 +405,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Secant Reciprocal Identity',
     equation: 'sec(t) = 2',
     description: 'Express secant function as reciprocal of cosine.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -413,7 +413,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Cosecant Reciprocal Identity',
     equation: 'csc(u) = v',
     description: 'Express cosecant function as reciprocal of sine.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -421,7 +421,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Double Angle Sine',
     equation: 'sin(2 * theta) = 1',
     description: 'Expand sine of a double angle.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -429,7 +429,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Cotangent Quotient Identity',
     equation: 'cot(x) = 2',
     description: 'Express cotangent as cosine over sine.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -437,7 +437,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Cotangent Reciprocal',
     equation: 'cot(theta) = y',
     description: 'Express cotangent as the reciprocal of tangent.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -445,7 +445,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Tangent Reciprocal',
     equation: 'tan(theta) = 1 / z',
     description: 'Express tangent as the reciprocal of cotangent.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -453,7 +453,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Pythagorean Identity for cos^2',
     equation: '1 - sin(x)^2 = y',
     description: 'Rewrite 1 - sin^2(x) using cosine squared.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -461,7 +461,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Pythagorean Identity for sin^2',
     equation: '1 - cos(x)^2 = z',
     description: 'Rewrite 1 - cos^2(x) using sine squared.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -469,7 +469,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Tangent-Secant Pythagorean Identity',
     equation: 'tan(theta)^2 + 1 = y',
     description: 'Rewrite tan^2(theta) + 1 using secant squared.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -477,7 +477,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Cotangent-Cosecant Pythagorean Identity',
     equation: '1 + cot(theta)^2 = z',
     description: 'Rewrite 1 + cot^2(theta) using cosecant squared.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -485,7 +485,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Cosine Double Angle as cos^2 - sin^2',
     equation: 'cos(2 * x) = y',
     description: 'Expand double angle cosine using difference of squares.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -493,7 +493,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Cosine Double Angle as 2cos^2 - 1',
     equation: 'cos(2 * theta) = z',
     description: 'Expand double angle cosine using cosine only.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -501,7 +501,7 @@ export const PRESET_LIST: Preset[] = [
     label: 'Cosine Double Angle as 1 - 2sin^2',
     equation: 'cos(2 * phi) = w',
     description: 'Expand double angle cosine using sine only.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
   {
@@ -509,152 +509,152 @@ export const PRESET_LIST: Preset[] = [
     label: 'Double Angle Tangent',
     equation: 'tan(2 * x) = y',
     description: 'Expand tangent of a double angle.',
-    category: 'Transcendental (Logs & Trig)',
+    category: 'Transcendental, Logs & Trig',
     tags: ['identity'],
   },
 
   // ─────────────────────────────────────────────────────────────
-  // Formulas (Physics, Geometry & Science)
+  // Physics, Geometry & Science Formulas
   // ─────────────────────────────────────────────────────────────
   {
     id: 'literal_slope_intercept',
     label: 'Slope-Intercept Formula',
     equation: 'y = m * x + b',
     description: 'A straight line giving output y for input x, with slope m and y-intercept b.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'literal_rectangle_area',
     label: 'Rectangle Area',
     equation: 'A = w * h',
     description: 'Area A of a rectangle with width w and height h.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'literal_rectangle_perimeter',
     label: 'Rectangle Perimeter',
     equation: 'P = 2 * l + 2 * w',
     description: 'Perimeter P around a rectangle of length l and width w.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'literal_simple_interest',
     label: 'Simple Interest',
     equation: 'I = P * r * t',
     description: 'Interest I earned on principal P at rate r over time t.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'literal_temp_c_to_f',
     label: 'Celsius to Fahrenheit',
     equation: 'F = (9 / 5) * C + 32',
     description: 'Temperature in Fahrenheit F converted from a Celsius temperature C.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'geom_pythagorean',
     label: 'Pythagorean Theorem',
     equation: 'a^2 + b^2 = c^2',
     description: 'Relation between legs a, b and hypotenuse c in a right-angled triangle.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'geom_circle_area',
     label: 'Area of Circle',
     equation: 'A = pi * r^2',
     description: 'Area A of a circle of radius r, where pi is the ratio of circumference to diameter.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'geom_cylinder_volume',
     label: 'Volume of Cylinder',
     equation: 'V = pi * r^2 * h',
     description: 'Calculates volume V given base radius r and height h.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'geom_sphere_volume',
     label: 'Volume of Sphere',
     equation: 'V = (4 / 3) * pi * r^3',
     description: 'Volume V of a sphere of radius r.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'quadratic_circle',
     label: 'Circle Equation',
     equation: 'x^2 + y^2 = r^2',
     description: 'A circle centered at the origin: every point with coordinates x and y sits at radius r.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'physics_force',
     label: "Newton's Second Law",
     equation: 'F = m * a',
     description: 'Force F equals mass m times acceleration a.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'physics_mass_energy',
     label: 'Mass-Energy Equivalence',
     equation: 'E = m * c^2',
     description: 'Energy E equals mass m times the speed of light c squared.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'physics_kinetic_energy',
     label: 'Kinetic Energy',
     equation: 'K = (1 / 2) * m * v^2',
     description: 'Kinetic energy K of a body of mass m moving at velocity v.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'physics_acceleration',
     label: 'Constant Acceleration',
     equation: 'v = u + a * t',
     description: 'Final velocity v given initial velocity u, acceleration a, and time t.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'physics_ohms_law',
     label: "Ohm's Law",
     equation: 'V = I * R',
     description: 'Voltage V equals current I multiplied by electrical resistance R.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'physics_wave',
     label: 'Wave Speed Equation',
     equation: 'v = f * lambda',
     description: 'Wave velocity v as frequency f multiplied by wavelength λ.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'thermo_gas_law',
     label: 'Ideal Gas Law',
     equation: 'P * V = n * R * T',
     description: 'Pressure P times volume V equals amount n times the gas constant R times temperature T.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'thermo_density',
     label: 'Density Formula',
     equation: 'rho = m / V',
     description: 'Density ρ of a substance equal to its mass m divided by volume V.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'thermo_boyles_law',
     label: "Boyle's Law",
     equation: 'P_1 * V_1 = P_2 * V_2',
     description: 'A gas at constant temperature: initial pressure P_1 and volume V_1 give the same product as final pressure P_2 and volume V_2.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
   {
     id: 'thermo_specific_heat',
     label: 'Specific Heat Energy',
     equation: 'Q = m * c * d',
     description: 'Heat energy absorbed Q given mass m, specific heat c, and temp delta d.',
-    category: 'Formulas (Physics, Geometry & Science)',
+    category: 'Physics, Geometry & Science Formulas',
   },
 ];
 
@@ -669,6 +669,6 @@ export const CATEGORY_EXAMPLES: Record<string, string> = {
   'Linear & Basic Algebra': '2 * x + 4 = 10',
   'Quadratics & Polynomials': 'x^2 - 4 = 0',
   'Fractions, Radicals & Rationals': 'sqrt(x) + 2 = 5',
-  'Transcendental (Logs & Trig)': 'sin(phi)^2 + cos(phi)^2 = 1',
-  'Formulas (Physics, Geometry & Science)': 'E = m * c^2',
+  'Transcendental, Logs & Trig': 'sin(phi)^2 + cos(phi)^2 = 1',
+  'Physics, Geometry & Science Formulas': 'E = m * c^2',
 };

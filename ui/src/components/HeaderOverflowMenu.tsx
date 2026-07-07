@@ -4,7 +4,7 @@
 'use client';
 
 import React from 'react';
-import { MoreVertical, Settings as SettingsIcon, Info, HelpCircle, Keyboard } from 'lucide-react';
+import { MoreVertical, Settings as SettingsIcon, Info, HelpCircle, Keyboard, Github } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
@@ -67,6 +67,12 @@ export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
     trackEvent({ action: 'overflow_open_shortcuts', category: 'interaction' });
   };
 
+  const handleGitHubClick = () => {
+    // The anchor navigates on its own (new tab); just close the menu and log.
+    setOpen(false);
+    trackEvent({ action: 'overflow_open_github', category: 'interaction' });
+  };
+
   return (
     <div ref={containerRef} className="relative inline-flex">
       <Tooltip content="More options" position="bottom" autoAlign={false}>
@@ -112,8 +118,19 @@ export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
             className={`${THEME_GLASS.OVERFLOW_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
           >
             <Keyboard size={14} className="text-indigo-400" />
-            <span>Keyboard shortcuts</span>
+            <span>Shortcuts</span>
           </button>
+          <a
+            role="menuitem"
+            href="https://github.com/trebor/algebranch"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleGitHubClick}
+            className={`${THEME_GLASS.OVERFLOW_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
+          >
+            <Github size={14} className="text-indigo-400" />
+            <span>GitHub</span>
+          </a>
           <button
             type="button"
             role="menuitem"

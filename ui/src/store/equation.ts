@@ -2120,12 +2120,16 @@ export const deleteSessionAtom = atom(
     const tabs = get(tabsAtom);
     const tabToDelete = tabs.find(t => t.sessionId === sessionId);
     if (tabToDelete) {
+      // Read the active id before mutating tabsAtom (see closeTabAtom, #449):
+      // otherwise the getter falls back to tabs[0] and the right-neighbour
+      // selection below never runs.
+      const activeId = get(activeTabIdAtom);
       const filteredTabs = tabs.filter(t => t.id !== tabToDelete.id);
       if (filteredTabs.length > 0) {
         set(tabsAtom, filteredTabs);
-        
-        // If we are deleting the active tab, we need to switch activeTabId
-        const activeId = get(activeTabIdAtom);
+
+        // If we are deleting the active tab, activate its right neighbour
+        // (falling back to the new rightmost).
         if (activeId === tabToDelete.id) {
           const closedIndex = tabs.findIndex(t => t.id === tabToDelete.id);
           const nextActiveIndex = Math.min(closedIndex, filteredTabs.length - 1);
@@ -2623,12 +2627,18 @@ export const closeTabAtom = atom(
       return;
     }
 
+    // Capture the active id BEFORE mutating tabsAtom: once the closed tab is
+    // gone, activeTabIdAtom's getter silently falls back to tabs[0], which would
+    // make the `activeId === tabId` check below never fire and strand you on the
+    // first tab. Reading first lets us honour Chrome-style right-neighbour
+    // selection instead (#449).
+    const activeId = get(activeTabIdAtom);
     const filtered = tabs.filter(t => t.id !== tabId);
     set(tabsAtom, filtered);
 
-    const activeId = get(activeTabIdAtom);
     if (activeId === tabId) {
-      // Switch active tab to the adjacent tab
+      // Activate the right neighbour; if we closed the rightmost tab, fall back
+      // to the new rightmost.
       const closedIndex = tabs.findIndex(t => t.id === tabId);
       const nextActiveIndex = Math.min(closedIndex, filtered.length - 1);
       set(activeTabIdAtom, filtered[nextActiveIndex].id);

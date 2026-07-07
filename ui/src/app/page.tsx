@@ -45,6 +45,7 @@ import { PeekHandle } from '../components/PeekHandle';
 import { useIsMobile } from '../hooks/useBreakpoint';
 import { useIsShortScreen, useIsVeryShortScreen } from '../hooks/useIsShortScreen';
 import { useImmersiveChrome } from '../hooks/useImmersiveChrome';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useKeyboardShortcuts, ShortcutConfig } from '../hooks/useKeyboardShortcuts';
 import { useClipboardBridge } from '../hooks/useClipboardBridge';
 import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
@@ -137,6 +138,7 @@ import {
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
+import { APP_TAGLINE } from '../constants/brand';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil } from 'lucide-react';
@@ -319,6 +321,9 @@ export default function Home() {
   const [shortcutsOverlayOpen, setShortcutsOverlayOpen] = useAtom(shortcutsOverlayOpenAtom);
   const [helpOpen, setHelpOpen] = useAtom(helpModalOpenAtom);
   const anyModalOpen = useAtomValue(anyModalOpenAtom);
+
+  // Keep the browser-tab title in sync with the active workspace name (#449).
+  useDocumentTitle();
 
   const closeAllModals = () => {
     setAboutOpen(false);
@@ -1708,7 +1713,7 @@ export default function Home() {
             <div>
               <h1 className="text-base font-bold text-white tracking-wide">Algebranch</h1>
               <p className="short-screen-hide text-xs text-indigo-300 font-semibold tracking-wider">
-                Interactive Algebra
+                {APP_TAGLINE}
               </p>
             </div>
           </Link>
@@ -2175,7 +2180,7 @@ export default function Home() {
               >
                 {/* Graph resize/close controls sitting in the top-right corner of the header */}
                 <div className="absolute right-4 top-1.5 z-35 select-none flex items-center bg-neutral-900 border border-white/10 rounded-full px-1.5 py-0.5 shadow-md">
-                  <Tooltip content={<HotkeyHint label="Expand graph (2/3)" keys="G" />} position="top" autoAlign={false}>
+                  <Tooltip content={<HotkeyHint label="Expand graph to 2/3" keys="G" />} position="top" autoAlign={false} className="max-w-max">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -2191,7 +2196,7 @@ export default function Home() {
                     </button>
                   </Tooltip>
                   <div className="w-[1px] h-3 bg-white/10 mx-0.5" />
-                  <Tooltip content={<HotkeyHint label={graphSize === 'expand' ? "Shrink graph (1/3)" : "Hide graph"} keys="G" />} position="top" autoAlign={false}>
+                  <Tooltip content={<HotkeyHint label={graphSize === 'expand' ? "Shrink graph to 1/3" : "Hide graph"} keys="G" />} position="top" autoAlign={false} className="max-w-max">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -2224,9 +2229,10 @@ export default function Home() {
 
         {/* Right Sidebar Edge Handle (Desktop Only) */}
         <div className="hidden lg:block">
-          <Tooltip 
-            content={<HotkeyHint label={rightSidebarSize === 'hidden' ? "Show History Sidebar" : rightSidebarSize === 'wider' ? "Shrink History Sidebar (normal)" : "Expand History Sidebar (wider)"} keys="H" />}
+          <Tooltip
+            content={<HotkeyHint label={rightSidebarSize === 'hidden' ? "Show History Sidebar" : rightSidebarSize === 'wider' ? "Narrow History Sidebar" : "Widen History Sidebar"} keys="H" />}
             position="left"
+            className="max-w-max"
             wrapperClassName={`absolute top-1/2 -translate-y-1/2 z-45 w-5 h-20 transition-all duration-300 ease-in-out ${
               rightSidebarLayout.handlePosition
             } translate-x-1/2`}

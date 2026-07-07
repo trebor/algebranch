@@ -432,8 +432,8 @@ export const THEME_GLASS = {
   CHOOSER_OPTION_ARROW: 'text-white/35 group-hover:text-indigo-200 group-focus-visible:text-indigo-200 transition-colors',
 
   // --- RadialMenu specific ---
-  RADIAL_CENTER: 'w-14 h-14 rounded-full bg-indigo-600/30 border-2 border-indigo-400/50 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)] pointer-events-auto cursor-pointer z-10',
-  RADIAL_PETAL: 'w-12 h-12 rounded-full backdrop-blur-xl bg-neutral-900/80 border border-white/15 shadow-lg shadow-black/40 flex items-center justify-center pointer-events-auto transition-colors',
+  RADIAL_CENTER: 'w-14 h-14 rounded-full bg-indigo-600/30 border-2 border-indigo-400/50 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)] pointer-events-auto cursor-pointer select-none z-10',
+  RADIAL_PETAL: 'w-12 h-12 rounded-full backdrop-blur-xl bg-neutral-900/80 border border-white/15 shadow-lg shadow-black/40 flex items-center justify-center pointer-events-auto select-none transition-colors',
   RADIAL_PETAL_HOVER: 'cursor-pointer hover:bg-white/10 hover:border-white/30 hover:scale-110 active:scale-95',
   RADIAL_PETAL_LOCKED: 'cursor-default',
   RADIAL_INPUT_PANEL: 'flex items-center gap-2 bg-neutral-950/95 backdrop-blur-xl border border-white/15 rounded-xl px-3 py-2 shadow-2xl shadow-black/60',

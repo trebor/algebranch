@@ -116,6 +116,10 @@ const ALL_RULE_TEST_CASES: RuleTestCase[] = [
   { ruleId: 'repeated_addition_5', input: '5 * (x + 3)', expected: '(x+3)+(x+3)+(x+3)+(x+3)+(x+3)' },
   { ruleId: 'repeated_addition_5_right', input: '(x + 3) * 5', expected: '(x+3)+(x+3)+(x+3)+(x+3)+(x+3)' },
   { ruleId: 'repeated_addition_5_reverse', input: '(x + 3) + (x + 3) + (x + 3) + (x + 3) + (x + 3)', expected: '5*(x+3)' },
+  { ruleId: 'repeated_subtraction_2_reverse', input: '-x - x', expected: '2*-x' },
+  { ruleId: 'repeated_subtraction_3_reverse', input: '-x - x - x', expected: '3*-x' },
+  { ruleId: 'repeated_subtraction_4_reverse', input: '-x - x - x - x', expected: '4*-x' },
+  { ruleId: 'repeated_subtraction_5_reverse', input: '-x - x - x - x - x', expected: '5*-x' },
   { ruleId: 'fraction_decompose', input: 'x / 5', expected: 'x*(1/5)' },
   { ruleId: 'fraction_compose', input: 'x * (1 / 5)', expected: 'x/5' },
   { ruleId: 'self_quotient', input: 'x / x', expected: '1' }

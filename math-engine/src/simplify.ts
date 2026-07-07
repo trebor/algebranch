@@ -26,6 +26,20 @@ const countNodes = (node: math.MathNode): number => {
 };
 
 /**
+ * Counts the total number of SymbolNode instances in a mathematical syntax tree.
+ */
+const countSymbolNodes = (node: math.MathNode): number => {
+  let count = 0;
+  node.traverse((n) => {
+    if (n.type === 'SymbolNode') {
+      count++;
+    }
+  });
+  return count;
+};
+
+
+/**
  * Tries to remove a single node at path 'p' from the equation.
  * Returns the new equation if successful, otherwise null.
  */
@@ -1527,7 +1541,10 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
         const simplifiedNode = mjs.simplify(node.toString());
         if (simplifiedNode.toString() !== node.toString()) {
           // Enforce complexity reduction to filter out non-simplifying reorderings (e.g. (y - 1) * 2 -> 2 * (y - 1))
-          if (countNodes(simplifiedNode) < countNodes(node)) {
+          if (
+            countNodes(simplifiedNode) < countNodes(node) ||
+            (countNodes(simplifiedNode) === countNodes(node) && countSymbolNodes(simplifiedNode) < countSymbolNodes(node))
+          ) {
             const candidate = replaceNodeAtPath(eq, p, simplifiedNode);
             if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
               return candidate;
@@ -1646,7 +1663,10 @@ export const autoSimplify = (eq: Equation): Equation => {
         const simplifiedNode = mjs.simplify(node.toString());
         if (simplifiedNode.toString() !== node.toString()) {
           // Enforce complexity reduction to filter out non-simplifying reorderings (e.g. (y - 1) * 2 -> 2 * (y - 1))
-          if (countNodes(simplifiedNode) < countNodes(node)) {
+          if (
+            countNodes(simplifiedNode) < countNodes(node) ||
+            (countNodes(simplifiedNode) === countNodes(node) && countSymbolNodes(simplifiedNode) < countSymbolNodes(node))
+          ) {
             const candidate = replaceNodeAtPath(currentEq, paths[i], simplifiedNode);
             if (areEquationsEquivalent(currentEq, candidate)) {
               currentEq = candidate;

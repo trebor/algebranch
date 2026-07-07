@@ -296,5 +296,20 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
       expect(rationalize!.type).toBe('reduce');
     });
   });
+
+  test('should offer simplification and multiplication options for -y - y = -8', () => {
+    const eq = parseEquation('-y - y = -8');
+    const reductions = getReducibleOptions(eq);
+    expect(reductions['lhs']).toBeDefined();
+
+    const simplifyOption = reductions['lhs'].find(r => r.label === 'Simplify');
+    expect(simplifyOption).toBeDefined();
+    expect(equationToString(simplifyOption!.simplified)).toBe('-(2 * y) = -8');
+
+    const multOption = reductions['lhs'].find(r => r.label === 'Express as Multiplication');
+    expect(multOption).toBeDefined();
+    expect(equationToString(multOption!.simplified)).toBe('2 * -y = -8');
+  });
 });
+
 

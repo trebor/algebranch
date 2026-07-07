@@ -353,7 +353,10 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
           >
             <Route size={14} className="mt-0.5 shrink-0 text-indigo-400/70" />
             <span className="flex flex-col gap-0.5 flex-1 min-w-0">
-              <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Share derivation</span>
+              <span className="flex items-center justify-between gap-2">
+                <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Share derivation</span>
+                <SequenceChips keys={['C', 'P']} className="opacity-60" />
+              </span>
               <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>{derivationDesc}</span>
               <SizeBadge size={linkSizes.path} />
             </span>
@@ -367,10 +370,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
           >
             <Variable size={14} className="mt-0.5 shrink-0 text-indigo-400/70" />
             <span className="flex flex-col gap-0.5 flex-1 min-w-0">
-              <span className="flex items-center justify-between gap-2">
-                <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Share equation</span>
-                <SequenceChips keys={['C', 'L']} className="opacity-60" />
-              </span>
+              <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Share equation</span>
               <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>Just the starting equation</span>
               <SizeBadge size={linkSizes.eq} />
             </span>

@@ -21,6 +21,19 @@ export interface ShortcutTarget {
 }
 
 /**
+ * Whether focus sits in an editable field — an input/textarea/select or a
+ * contenteditable element. The shared guard behind every "don't swallow the
+ * user's typing" check, so the keyboard shortcuts and the ⌘C/⌘V clipboard bridge
+ * agree on what "editable" means.
+ */
+export const isEditableTarget = (target: ShortcutTarget | null | undefined): boolean => {
+  if (!target) return false;
+  const tag = target.tagName?.toUpperCase();
+  if (tag && IGNORED_TAGS.has(tag)) return true;
+  return target.isContentEditable === true;
+};
+
+/**
  * Returns `true` when a global keyboard shortcut should NOT fire. A shortcut is
  * ignored when a modal is open (so it can't act on the obscured app behind it),
  * or when focus is inside an editable field (input/textarea/select/
@@ -31,12 +44,31 @@ export const shouldIgnoreShortcut = (
   modalOpen: boolean
 ): boolean => {
   if (modalOpen) return true;
-  if (!target) return false;
-  const tag = target.tagName?.toUpperCase();
-  if (tag && IGNORED_TAGS.has(tag)) return true;
-  if (target.isContentEditable) return true;
-  return false;
+  return isEditableTarget(target);
 };
+
+/**
+ * Whether a bare ⌘C should copy the current equation instead of doing a native
+ * text copy (#440). Fires only when the selection is *collapsed* — a real text
+ * selection always wins so we never hijack an ordinary copy — and focus is not
+ * in an editable field. ⌘C then universally means "the visible thing, as text".
+ */
+export const shouldIdleCopy = (
+  target: ShortcutTarget | null | undefined,
+  selectionCollapsed: boolean
+): boolean => {
+  if (!selectionCollapsed) return false;
+  return !isEditableTarget(target);
+};
+
+/**
+ * Whether a ⌘V should open the New Equation modal seeded from the clipboard
+ * (#440), rather than being left to the browser. Only when focus is not in an
+ * editable field — paste while typing is always the native behavior.
+ */
+export const shouldPasteOpen = (
+  target: ShortcutTarget | null | undefined
+): boolean => !isEditableTarget(target);
 
 /** Modifier symbols on macOS (glued together, no separator). */
 const MAC_MODIFIERS = { meta: '⌘', shift: '⇧', alt: '⌥' } as const;

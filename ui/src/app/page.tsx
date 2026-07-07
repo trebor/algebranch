@@ -46,9 +46,10 @@ import { useIsMobile } from '../hooks/useBreakpoint';
 import { useIsShortScreen, useIsVeryShortScreen } from '../hooks/useIsShortScreen';
 import { useImmersiveChrome } from '../hooks/useImmersiveChrome';
 import { useKeyboardShortcuts, ShortcutConfig } from '../hooks/useKeyboardShortcuts';
+import { useClipboardBridge } from '../hooks/useClipboardBridge';
 import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
 import { HelpModal } from '../components/HelpModal';
-import { buildEquationUrl, buildWorkspaceUrl } from '../utils/feedbackUrl';
+import { buildWorkspaceUrl } from '../utils/feedbackUrl';
 import { decodeEqParam } from '../utils/eqParam';
 import { safeCopyText } from '../utils/clipboard';
 import {
@@ -125,6 +126,7 @@ import {
   equationEditSeedAtom,
   parseRawStringToEditSeed,
   openEquationEditorAtom,
+  openEquationFromPasteAtom,
   activeWorkspacePristineAtom,
   shortcutsOverlayOpenAtom,
   helpModalOpenAtom,
@@ -312,6 +314,7 @@ export default function Home() {
   const setEquationInputModalOpen = useSetAtom(equationInputModalOpenAtom);
   const setEquationEditSeed = useSetAtom(equationEditSeedAtom);
   const openEquationEditor = useSetAtom(openEquationEditorAtom);
+  const openEquationFromPaste = useSetAtom(openEquationFromPasteAtom);
   const isWorkspacePristine = useAtomValue(activeWorkspacePristineAtom);
   const [shortcutsOverlayOpen, setShortcutsOverlayOpen] = useAtom(shortcutsOverlayOpenAtom);
   const [helpOpen, setHelpOpen] = useAtom(helpModalOpenAtom);
@@ -1277,7 +1280,7 @@ export default function Home() {
       leader: 'c',
       key: 'd',
       action: () => {
-        safeCopyText(formatDerivation(tree, currentNodeId, 'plain'))
+        safeCopyText(formatDerivation(tree, currentNodeId, 'unicode'))
           .then((success) => {
             if (success) {
               setToast({ message: 'Derivation copied', key: Date.now() });
@@ -1290,12 +1293,13 @@ export default function Home() {
       category: 'Copy & Share',
     },
     {
-      // `C E` copies just the current equation as plain text.
+      // `C E` copies just the current equation as Unicode text — "copy as text"
+      // means the pretty rendered form everywhere (card default, ⌘C, C E, C D).
       leader: 'c',
       key: 'e',
       action: () => {
         if (!currentEq) return;
-        safeCopyText(equationToFormat(currentEq, 'plain'))
+        safeCopyText(equationToFormat(currentEq, 'unicode'))
           .then((success) => {
             if (success) {
               setToast({ message: 'Equation copied', key: Date.now() });
@@ -1330,24 +1334,26 @@ export default function Home() {
       category: 'Copy & Share',
     },
     {
-      // `C L` copies the lighter `?eq=` link (reopens just the equation, not
-      // the derivation tree).
+      // `C P` copies a `?ws=` deep link scoped to the active derivation *path*
+      // (root → current node) — the shorter "share your worked solution" link
+      // from #439. The equation-only link retires to the Share menu (no chord).
       leader: 'c',
-      key: 'l',
-      action: () => {
-        if (!currentEq) return;
-        const url = buildEquationUrl(window.location.origin, equationToString(currentEq));
-        if (!url) return;
-        safeCopyText(url)
-          .then((success) => {
-            if (success) {
-              setToast({ message: 'Equation link copied', key: Date.now() });
-              trackEvent({ action: 'shortcut_share_equation', category: 'keyboard' });
-            }
-          })
-          .catch((err) => console.error('Failed to copy equation link:', err));
+      key: 'p',
+      action: async () => {
+        try {
+          const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName, 'path');
+          const url = buildWorkspaceUrl(window.location.origin, compressed);
+          if (!url) return;
+          const success = await safeCopyText(url);
+          if (success) {
+            setToast({ message: 'Derivation link copied', key: Date.now() });
+            trackEvent({ action: 'shortcut_share_derivation_link', category: 'keyboard' });
+          }
+        } catch (err) {
+          console.error('Failed to copy derivation link:', err);
+        }
       },
-      description: 'Copy equation share link',
+      description: 'Copy derivation share link',
       category: 'Copy & Share',
     },
     {
@@ -1566,7 +1572,7 @@ export default function Home() {
     onPendingLeader: (leader) => {
       if (leader === 'c') {
         setToast({
-          message: 'Copy / share — D derivation · E equation · L link · W workspace',
+          message: 'Copy / share — E equation · D derivation · W workspace · P path',
           key: Date.now(),
         });
       }
@@ -1575,6 +1581,22 @@ export default function Home() {
 
   useKeyboardShortcuts(modalNavigationBindings, {
     disabled: false,
+  });
+
+  // App-aware ⌘C / ⌘V (#440): idle ⌘C copies the current equation as Unicode
+  // (WYSIWYG with the cards); ⌘V outside an input opens the New Equation modal
+  // seeded from the clipboard. Native selection copy / in-field paste untouched.
+  useClipboardBridge({
+    disabled: anyModalOpen,
+    getEquationUnicode: () => (currentEq ? equationToFormat(currentEq, 'unicode') : null),
+    onIdleCopy: () => {
+      setToast({ message: 'Equation copied', key: Date.now() });
+      trackEvent({ action: 'clipboard_idle_copy', category: 'keyboard' });
+    },
+    onPaste: (text) => {
+      openEquationFromPaste(text);
+      trackEvent({ action: 'clipboard_paste_open', category: 'keyboard' });
+    },
   });
 
   // Mobile swipe gestures logic
@@ -1721,6 +1743,7 @@ export default function Home() {
             onOpenSettings={toggleSettings}
             onOpenAbout={toggleAbout}
             onOpenHelp={toggleHelp}
+            onOpenShortcuts={toggleShortcuts}
           />
         </div>
       </header>

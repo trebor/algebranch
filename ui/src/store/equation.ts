@@ -1109,6 +1109,11 @@ export const sourcePathAtom = atom<string | null>(null);
 export const hoverPathAtom = atom<string | null>(null);
 export const hoverReducePathAtom = atom<string | null>(null);
 export const hoverReduceIndexAtom = atom<number | null>(null);
+// The stack family of the hovered/open reduce handle, so the live equation can
+// light its affected region in that family's accent colour (#423 part 2). Set
+// alongside hoverReducePathAtom; a stale value is inert because the region only
+// renders where hoverReducePathAtom points.
+export const hoverReduceTypeAtom = atom<'reduce' | 'expand' | 'factor' | 'identity' | 'substitute' | null>(null);
 export const hoveredLoopTargetIdAtom = atom<string | null>(null);
 // True while the user hovers a full-derivation copy trigger; the history tree
 // dims off-path nodes so the export scope (root -> selected) is visible (#46).

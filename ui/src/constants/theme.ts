@@ -376,6 +376,19 @@ export const THEME_GLASS = {
   PING_SUBSTITUTE: 'bg-violet-400/40',
   PING_DISTRIBUTE: 'bg-emerald-500/40',
 
+  // --- Live reduce-region highlight (#423 part 2) ---
+  // While a handle/option is hovered or its menu is open, the live equation's
+  // affected subtree lights up in the stack's accent colour, threading the option
+  // row → live region → dimmed preview into one colour story. A ring + soft outer
+  // glow (no layout cost) outlines the region root; the accents match the handle
+  // colours (amber/emerald/teal/indigo/violet) so the hovered handle and the lit
+  // region read as the same family.
+  REDUCE_REGION_SIMPLIFY: 'ring-2 ring-amber-400/70 shadow-[0_0_16px_rgba(251,191,36,0.4)]',
+  REDUCE_REGION_EXPAND: 'ring-2 ring-emerald-400/70 shadow-[0_0_16px_rgba(16,185,129,0.4)]',
+  REDUCE_REGION_FACTOR: 'ring-2 ring-teal-400/70 shadow-[0_0_16px_rgba(20,184,166,0.4)]',
+  REDUCE_REGION_IDENTITY: 'ring-2 ring-indigo-400/70 shadow-[0_0_16px_rgba(99,102,241,0.4)]',
+  REDUCE_REGION_SUBSTITUTE: 'ring-2 ring-violet-400/70 shadow-[0_0_16px_rgba(139,92,246,0.4)]',
+
   // --- Substitution (#3): facts strip + history-tree badge ---
   // Violet, matching the Substitute handle (#427) so the fact chips, the count
   // badge, and the tree badge all read as one substitution family — teal now

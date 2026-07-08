@@ -17,6 +17,7 @@ import {
   candidatePathsAtom,
   hoverReducePathAtom,
   hoverReduceIndexAtom,
+  hoverReduceTypeAtom,
   filteredReduciblePathsAtom,
   substitutionPathsAtom,
   toggleRootSignAtom,
@@ -169,6 +170,17 @@ const STACK_CONFIG = {
     iconClass: 'text-white stroke-[2.5]',
   },
 } as const;
+
+// Accent ring+glow the live equation's affected subtree wears while its handle or
+// option is hovered / its menu is open, keyed by stack family so the lit region
+// matches the hovered handle's colour (#423 part 2).
+const REDUCE_REGION_CLASS: Record<'reduce' | 'expand' | 'factor' | 'identity' | 'substitute', string> = {
+  reduce: THEME_GLASS.REDUCE_REGION_SIMPLIFY,
+  expand: THEME_GLASS.REDUCE_REGION_EXPAND,
+  factor: THEME_GLASS.REDUCE_REGION_FACTOR,
+  identity: THEME_GLASS.REDUCE_REGION_IDENTITY,
+  substitute: THEME_GLASS.REDUCE_REGION_SUBSTITUTE,
+};
 
 // Geometry for the click-opened interaction chooser (a self-contained popover,
 // deliberately NOT a Tooltip, so the global single-active-tooltip mechanism can't
@@ -338,6 +350,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
   const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
   const [, setHoverReduceIndex] = useAtom(hoverReduceIndexAtom);
+  const [hoverReduceType, setHoverReduceType] = useAtom(hoverReduceTypeAtom);
   const reduciblePaths = useAtomValue(filteredReduciblePathsAtom);
   const substitutionPaths = useAtomValue(substitutionPathsAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
@@ -390,6 +403,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     setHoveredOption(null);
     setHoverReducePath(null);
     setHoverReduceIndex(null);
+    setHoverReduceType(null);
     // Touch has no hover-leave: opening the menu (via a tap on the handle)
     // synthesizes a mouseenter that pins hoverPath to this node, highlighting it,
     // and no leave ever fires. Every dismiss path routes through closeMenu — the
@@ -398,7 +412,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     // not just on a second handle tap (#388). Hover devices keep their real
     // enter/leave, so this is touch-only.
     if (!canHover) setHoverPath(null);
-  }, [canHover, setHoverPath, setHoverReducePath, setHoverReduceIndex]);
+  }, [canHover, setHoverPath, setHoverReducePath, setHoverReduceIndex, setHoverReduceType]);
 
   // Close the menu and hand focus back to the handle that opened it. The exit
   // path for Escape / outside-click — never a permanent trap (WCAG 2.1.2).
@@ -505,9 +519,10 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       if (type !== 'substitute') {
         setHoverReducePath(path);
         setHoverReduceIndex(null);
+        setHoverReduceType(type);
       }
     },
-    [path, setHoverReducePath, setHoverReduceIndex],
+    [path, setHoverReducePath, setHoverReduceIndex, setHoverReduceType],
   );
 
   // The circle marks the reduce/substitution handle itself when one produces the
@@ -834,8 +849,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     if (type !== 'substitute') {
       setHoverReducePath(path);
       setHoverReduceIndex(Number(el.dataset.reduceIndex));
+      setHoverReduceType(type);
     }
-  }, [path, setHoverReducePath, setHoverReduceIndex]);
+  }, [path, setHoverReducePath, setHoverReduceIndex, setHoverReduceType]);
   // Hold a row to read it: after LONG_PRESS_PEEK_MS still-held, reveal its preview
   // and arm the trailing-click swallow. Mirrors the node peek (drift cancels, hold
   // fires) but local to the rows — the chooser is deliberately not a Tooltip.
@@ -1211,6 +1227,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     : canClick
     ? THEME_GLASS.CARD_CANDIDATE
     : THEME_GLASS.CARD_CANDIDATE + ' cursor-default';
+
+  // This node roots the region a hovered/open reduce handle acts on: light it in
+  // the stack's accent colour so the option row, the lit live region, and the
+  // dimmed preview read as one change (#423 part 2). Only the region root wears
+  // the ring; it wraps the whole affected subtree, so one outline lights the lot.
+  const reduceRegionClass =
+    hoverReducePath === path && hoverReduceType ? REDUCE_REGION_CLASS[hoverReduceType] : '';
 
   // Recursive Render logic depending on Node type
   const renderContent = () => {
@@ -1950,7 +1973,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       data-eq-node=""
       data-node-path={path}
       style={customStyle}
-      className={`relative inline-flex items-center justify-center border rounded-[0.4em] select-none ${THEME_GLASS.NODE_FOCUS_RING} ${semanticStyle}`}
+      className={`relative inline-flex items-center justify-center border rounded-[0.4em] select-none ${THEME_GLASS.NODE_FOCUS_RING} ${semanticStyle} ${reduceRegionClass}`}
       {...interactiveProps}
       onMouseEnter={() => {
         setHoverPath(path);
@@ -2145,6 +2168,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                     if (!canHover || stack.type === 'substitute') return;
                     setHoverReducePath(path);
                     setHoverReduceIndex(null);
+                    setHoverReduceType(stack.type);
                   }}
                   onMouseLeave={(e) => {
                     e.stopPropagation();
@@ -2155,6 +2179,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                     if (openMenuType === stack.type) return;
                     setHoverReducePath(null);
                     setHoverReduceIndex(null);
+                    setHoverReduceType(null);
                   }}
                   onClick={(e) => {
                     // Click commits (#456): toggle the chooser. Enter/Space also

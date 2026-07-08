@@ -58,7 +58,14 @@ export type StepChange =
       // too but rejoined 'identity' in #466. 'distribute' lingers only so history
       // nodes serialized before #427 still parse.
       readonly op: 'evaluate' | 'simplify' | 'expand' | 'factor' | 'distribute' | 'identity' | 'quadratic' | 'quadratic_standard_form' | 'substitute';
+      // The parseable before → after of the affected sub-expression (`a → b`),
+      // rendered as pretty math by the transition tooltip. Uniform across every
+      // in-place rewrite so the tooltip body never has to special-case a family.
       readonly detail?: string;
+      // The concise operation name for compact UIs — the transition tooltip's
+      // title (e.g. "Factor", "Distribute", "Rationalize Denominator"). The full
+      // accessible sentence, with the before → after spelled out, lives in `text`.
+      readonly label?: string;
       readonly text: string;
       // Domain restrictions the step relies on, e.g. ['x ≠ 0'] when a variable
       // factor is cancelled out of a fraction (#63). Omitted when there are none.
@@ -261,6 +268,10 @@ export const describeTransposition = (
  */
 export const describeReduction = (eq: Equation, option: ReductionOption): StepChange => ({
   ...describeReductionBody(eq, option),
+  // The concise operation name for the tooltip title is the handle label the
+  // student clicked — spread last so it authoritatively wins over any label a
+  // body might carry, mirroring how `family` follows the handle below.
+  ...(option.label ? { label: option.label } : {}),
   // The badge follows the handle, always: family comes from the option's type,
   // the same thing that placed it in a handle stack — never from `op` below.
   family: handleFamilyForReductionType(option.type),
@@ -279,7 +290,23 @@ const describeReductionBody = (eq: Equation, option: ReductionOption): RewriteBo
   // now that unfolding a power moved to Rewrite (#466), so keying off the label
   // is belt-and-suspenders.
   if (option.type === 'expand' && option.label === 'Distribute') {
-    return { kind: 'rewrite', op: 'expand', text: 'distribute' };
+    // Name what is being distributed by showing the affected sub-expression's
+    // before → after, parallel to the other reductions below — a bare
+    // "distribute" leaves the student guessing which product was expanded.
+    let before = '';
+    let after = '';
+    try {
+      before = nodeToString(getNodeByPath(eq, option.path));
+      after = nodeToString(getNodeByPath(option.simplified, option.path));
+    } catch {
+      /* fall back to a bare label */
+    }
+    return {
+      kind: 'rewrite',
+      op: 'expand',
+      detail: before && after ? `${before} → ${after}` : undefined,
+      text: before && after ? `distribute ${before} → ${after}` : 'distribute',
+    };
   }
   // Combining fractions over a common denominator (#61) is a 'reduce' option, but
   // gets its own phrasing and carries the b·d ≠ 0 domain assumption (#63).
@@ -382,7 +409,7 @@ const describeReductionBody = (eq: Equation, option: ReductionOption): RewriteBo
         return {
           kind: 'rewrite',
           op: familyOp,
-          detail: label,
+          detail: `${before} → ${after}`,
           text: `factor out ${term} from ${before} → ${after}`,
         };
       }
@@ -390,7 +417,7 @@ const describeReductionBody = (eq: Equation, option: ReductionOption): RewriteBo
         return {
           kind: 'rewrite',
           op: familyOp,
-          detail: label,
+          detail: `${before} → ${after}`,
           text: `factor ${before} → ${after}`,
         };
       }
@@ -399,7 +426,7 @@ const describeReductionBody = (eq: Equation, option: ReductionOption): RewriteBo
         return {
           kind: 'rewrite',
           op: familyOp,
-          detail: label,
+          detail: `${before} → ${after}`,
           text: `factor ${factorType}: ${before} → ${after}`,
         };
       }
@@ -408,19 +435,21 @@ const describeReductionBody = (eq: Equation, option: ReductionOption): RewriteBo
         return {
           kind: 'rewrite',
           op: familyOp,
-          detail: label,
+          detail: `${before} → ${after}`,
           text: `express ${before} as ${powerType}: ${after}`,
         };
       }
       return {
         kind: 'rewrite',
         op: familyOp,
-        detail: label,
+        detail: `${before} → ${after}`,
         text: `apply ${lowerLabel}: ${before} → ${after}`,
       };
     }
 
-    return { kind: 'rewrite', op: familyOp, detail: option.label, text: label.toLowerCase() };
+    // No before/after resolved — there is no math to typeset, so omit `detail`
+    // (the concise `label` still titles the tooltip via describeReduction).
+    return { kind: 'rewrite', op: familyOp, text: label.toLowerCase() };
   }
 
   // type === 'reduce'
@@ -472,6 +501,7 @@ export const describeSubstitution = (variable: string, replacement: string): Ste
   kind: 'rewrite',
   family: 'substitute',
   op: 'substitute',
+  label: 'Substitute',
   detail: `${variable} → ${replacement}`,
   text: `substitute ${variable} = ${replacement}`,
 });
@@ -485,6 +515,7 @@ export const describeCollapse = (expression: string, variable: string): StepChan
   kind: 'rewrite',
   family: 'substitute',
   op: 'substitute',
+  label: 'Collapse',
   detail: `${expression} → ${variable}`,
   text: `collapse ${expression} to ${variable}`,
 });

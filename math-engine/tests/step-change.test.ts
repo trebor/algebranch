@@ -153,6 +153,11 @@ describe('describeReduction — in-place rewrites', () => {
     expect(change).toMatchObject({
       kind: 'rewrite',
       op: 'factor',
+      // `detail` carries the parseable before → after (so the tooltip renders it
+      // as pretty math), `label` the concise operation name for the tooltip
+      // title, and `text` the full accessible sentence for the derivation list.
+      label: 'Factor',
+      detail: 'x ^ 2 + 5 * x + 6 → (x + 2) * (x + 3)',
       text: 'factor x ^ 2 + 5 * x + 6 → (x + 2) * (x + 3)'
     });
   });
@@ -166,16 +171,24 @@ describe('describeReduction — in-place rewrites', () => {
     expect(change).toMatchObject({
       kind: 'rewrite',
       op: 'factor',
+      label: 'Factor out 3x',
+      detail: '6 * x ^ 2 + 9 * x → 3 * x * (2 * x + 3)',
       text: 'factor out 3x from 6 * x ^ 2 + 9 * x → 3 * x * (2 * x + 3)'
     });
   });
 
-  it('tags distribution with the Expand op so its tree badge matches the handle (#427)', () => {
+  it('tags distribution with the Expand op so its tree badge matches the handle (#427), naming what is distributed', () => {
     const e = eq('2 * (3 + x) = y');
     const option = findOption('2 * (3 + x) = y', 'Distribute');
     expect(option).toBeDefined();
     const change = describeReduction(e, option!);
-    expect(change).toMatchObject({ kind: 'rewrite', op: 'expand', text: 'distribute' });
+    expect(change).toMatchObject({
+      kind: 'rewrite',
+      op: 'expand',
+      label: 'Distribute',
+      detail: '2 * (3 + x) → 2 * 3 + 2 * x',
+      text: 'distribute 2 * (3 + x) → 2 * 3 + 2 * x',
+    });
   });
 
   it('tags unfolding a power with the Rewrite identity op, mirroring repeated addition (#466)', () => {

@@ -26,6 +26,7 @@ import {
   exportPreviewActiveAtom,
   equationToFormat,
   activeZoomModeAtom,
+  appHydratedAtom,
   type VisualTreeNode,
   type HistoryNode,
   type ZoomMode,
@@ -514,6 +515,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
   const exportPreviewActive = useAtomValue(exportPreviewActiveAtom);
   const [activeCopyMenuNodeId, setActiveCopyMenuNodeId] = React.useState<string | null>(null);
+  const appHydrated = useAtomValue(appHydratedAtom);
 
   const activeCardRef = React.useRef<HTMLDivElement | null>(null);
   // The role="tree" container; Escape on a step releases focus back here (#257).
@@ -1040,10 +1042,115 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
     </div>
   );
 
+  const skeletonWrapper = React.useMemo(() => {
+    if (appHydrated) return null;
+    
+    const skeletonWidth = cardWidth + TREE_GUTTER_PX * 2;
+    const skeletonHeight = TREE_TOP_OFFSET_PX * 2 + 2 * TREE_ROW_HEIGHT_PX + cardHeight;
+    const centerX = TREE_GUTTER_PX + cardWidth / 2;
+
+    return (
+      <div
+        style={{
+          width: pxToRem(skeletonWidth),
+          height: pxToRem(skeletonHeight),
+          position: 'relative',
+          overflow: 'hidden',
+          minWidth: '100%',
+        }}
+        className="relative mx-auto animate-pulse"
+      >
+        <div className="absolute inset-0 min-w-full h-full pointer-events-none">
+          {/* SVG Connectors skeleton */}
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none overflow-visible select-none"
+            aria-hidden
+            style={{
+              width: pxToRem(skeletonWidth),
+              height: pxToRem(skeletonHeight),
+            }}
+          >
+            <g stroke="rgba(255, 255, 255, 0.05)" strokeWidth={2}>
+              <line
+                x1={pxToRem(centerX)}
+                y1={pxToRem(TREE_TOP_OFFSET_PX + cardHeight)}
+                x2={pxToRem(centerX)}
+                y2={pxToRem(TREE_TOP_OFFSET_PX + TREE_ROW_HEIGHT_PX)}
+              />
+              <line
+                x1={pxToRem(centerX)}
+                y1={pxToRem(TREE_TOP_OFFSET_PX + TREE_ROW_HEIGHT_PX + cardHeight)}
+                x2={pxToRem(centerX)}
+                y2={pxToRem(TREE_TOP_OFFSET_PX + 2 * TREE_ROW_HEIGHT_PX)}
+              />
+            </g>
+          </svg>
+
+          {/* Skeleton Nodes */}
+          {[0, 1, 2].map((depth) => {
+            const y = TREE_TOP_OFFSET_PX + depth * TREE_ROW_HEIGHT_PX;
+            const x = TREE_GUTTER_PX;
+            return (
+              <div
+                key={depth}
+                className="absolute rounded-xl border border-white/5 flex flex-col items-center justify-center p-3"
+                style={{
+                  left: pxToRem(x),
+                  top: pxToRem(y),
+                  width: pxToRem(cardWidth),
+                  height: pxToRem(cardHeight),
+                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                }}
+              >
+                {/* Shimmering horizontal bar representing math equation */}
+                <div className="h-2 w-20 bg-white/10 rounded-md animate-pulse" />
+                {/* Skeleton index badge */}
+                <div className="absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full border border-white/5 bg-neutral-900/80 flex items-center justify-center">
+                  <div className="h-1.5 w-1.5 rounded-full bg-white/20 animate-pulse" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }, [appHydrated, cardWidth, cardHeight]);
+
+  if (!appHydrated) {
+    if (!interactive) {
+      return (
+        <div ref={scrollContainerRef} className={className ?? `flex-1 overflow-auto pr-1 relative ${THEME_GLASS.TREE_BG}`}>
+          {skeletonWrapper}
+        </div>
+      );
+    }
+
+    return (
+      <div className={`relative flex-1 flex flex-col min-h-0 group ${className ?? THEME_GLASS.TREE_BG}`}>
+        <div className="absolute top-3 right-4 z-30 contextual-actions flex items-center gap-1.5 opacity-30 pointer-events-none">
+          <button disabled className={THEME_GLASS.ICON_BUTTON} aria-label="Zoom: Normal"><ZoomIn size={14} /></button>
+          <button disabled className={THEME_GLASS.ICON_BUTTON} aria-label="Zoom: Overview"><Search size={14} /></button>
+          <button disabled className={THEME_GLASS.ICON_BUTTON} aria-label="Zoom: Full Tree"><ZoomOut size={14} /></button>
+        </div>
+        <div ref={scrollContainerRef} className="flex-1 overflow-auto pr-1 pt-9 relative rounded-2xl">
+          {skeletonWrapper}
+        </div>
+      </div>
+    );
+  }
+
   if (!interactive) {
     return (
       <div ref={scrollContainerRef} className={className ?? `flex-1 overflow-auto pr-1 relative ${THEME_GLASS.TREE_BG}`}>
-        {scaledWrapper}
+        <div style={{ animation: 'treeFadeIn 0.3s ease-out forwards' }}>
+          <style>{`
+            @keyframes treeFadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+          `}</style>
+          {scaledWrapper}
+        </div>
       </div>
     );
   }
@@ -1080,7 +1187,17 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
         </Tooltip>
       </div>
       <div ref={scrollContainerRef} className="flex-1 overflow-auto pr-1 pt-9 relative rounded-2xl">
-        <RovingTabindexProvider containerRef={treeContainerRef}>{scaledWrapper}</RovingTabindexProvider>
+        <RovingTabindexProvider containerRef={treeContainerRef}>
+          <div style={{ animation: 'treeFadeIn 0.3s ease-out forwards' }}>
+            <style>{`
+              @keyframes treeFadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+            `}</style>
+            {scaledWrapper}
+          </div>
+        </RovingTabindexProvider>
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ import {
   sourcePathAtom,
   hoverPathAtom,
   hoverReducePathAtom,
+  hoverReduceIndexAtom,
   isTreeAnimatingAtom,
   dragNudgeAtom,
   type WorkspaceTab,
@@ -496,5 +497,139 @@ describe('EquationNode desktop handle: hover informs, click commits (#456)', () 
 
     // The controlled Select-Term tooltip is a node affordance, untouched by #456.
     expect(await screen.findByText('Select Term', undefined, { timeout: 2000 })).toBeInTheDocument();
+  });
+});
+
+// A tap applies (unchanged); a long-press *reads* a row into the preview pane
+// without applying — completing the read/act symmetry of #455 inside the chooser,
+// so touch users no longer choose blind against a hover-only preview.
+describe('EquationNode chooser option-row long-press preview (#457)', () => {
+  // currentNodeId leaves '0' only when an option's onApply runs (pushEquation
+  // advances the history head) — the definitive "did it apply?" signal, immune to
+  // the menu also closing on plain dismiss.
+  const currentNodeId = (store: ReturnType<typeof createStore>) =>
+    (store.get(rawTabsAtom)[0] as WorkspaceTab).currentNodeId;
+
+  const openMultiMenu = () => {
+    const store = makeMultiHandleStore();
+    renderLhs(store);
+    fireEvent.click(screen.getByRole('button', { name: 'Simplify' }), { detail: 1 });
+    return store;
+  };
+
+  it('a long-press on an option row previews it in the pane without applying', () => {
+    vi.useFakeTimers();
+    installMatchMedia(false); // phone: no hover
+    const store = openMultiMenu();
+
+    // Before any read the pane sits on its placeholder — nothing definite shown.
+    expect(screen.getByText(/hold an option to preview/i)).toBeInTheDocument();
+
+    const beta = screen.getByRole('menuitem', { name: /Simplify Beta/ });
+    pointer(beta, 'pointerdown', 100, 100);
+    act(() => vi.advanceTimersByTime(600)); // past the ~500ms long-press hold
+
+    // Placeholder gone → the pane now shows a definite preview…
+    expect(screen.queryByText(/an option to preview/i)).not.toBeInTheDocument();
+    // …targeting Beta specifically (row index 1 of the reduce stack)…
+    expect(store.get(hoverReducePathAtom)).toBe('lhs/1');
+    expect(store.get(hoverReduceIndexAtom)).toBe(1);
+    // …and it applied nothing: menu still open, history head unmoved.
+    expect(screen.getAllByRole('menuitem')).toHaveLength(2);
+    expect(currentNodeId(store)).toBe('0');
+  });
+
+  it('releasing the finger keeps the preview showing and still applies nothing', () => {
+    vi.useFakeTimers();
+    installMatchMedia(false);
+    const store = openMultiMenu();
+
+    const beta = screen.getByRole('menuitem', { name: /Simplify Beta/ });
+    pointer(beta, 'pointerdown', 100, 100);
+    act(() => vi.advanceTimersByTime(600));
+    pointer(beta, 'pointerup', 100, 100);
+
+    // The preview persists after lift so the user can read it, then decide.
+    expect(screen.queryByText(/an option to preview/i)).not.toBeInTheDocument();
+    expect(currentNodeId(store)).toBe('0');
+  });
+
+  it('swallows the long-press trailing click so a read never applies', () => {
+    vi.useFakeTimers();
+    installMatchMedia(false);
+    const store = openMultiMenu();
+
+    const beta = screen.getByRole('menuitem', { name: /Simplify Beta/ });
+    pointer(beta, 'pointerdown', 100, 100);
+    act(() => vi.advanceTimersByTime(600));
+    pointer(beta, 'pointerup', 100, 100);
+    // A long-press commonly emits a trailing click on release; it must be swallowed
+    // so the read does not double as an apply.
+    fireEvent.click(beta, { detail: 1 });
+
+    expect(screen.getAllByRole('menuitem')).toHaveLength(2);
+    expect(currentNodeId(store)).toBe('0');
+  });
+
+  it('a fresh tap after reading applies the row and closes the menu', () => {
+    vi.useFakeTimers();
+    installMatchMedia(false);
+    const store = openMultiMenu();
+
+    // Read Beta (long-press), lift, and swallow the read's trailing click.
+    const beta = screen.getByRole('menuitem', { name: /Simplify Beta/ });
+    pointer(beta, 'pointerdown', 100, 100);
+    act(() => vi.advanceTimersByTime(600));
+    pointer(beta, 'pointerup', 100, 100);
+    fireEvent.click(beta, { detail: 1 });
+    expect(currentNodeId(store)).toBe('0'); // still just read, not applied
+
+    // Now a fresh, deliberate tap (a quick press/lift, no hold) acts.
+    pointer(beta, 'pointerdown', 100, 100);
+    act(() => vi.advanceTimersByTime(50)); // lifts well before the long-press fires
+    pointer(beta, 'pointerup', 100, 100);
+    fireEvent.click(beta, { detail: 1 });
+
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
+    expect(currentNodeId(store)).not.toBe('0');
+  });
+
+  it('a plain tap with no hold still applies immediately (tap-acts survives)', () => {
+    installMatchMedia(false);
+    const store = openMultiMenu();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: /Simplify Alpha/ }), { detail: 1 });
+
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
+    expect(currentNodeId(store)).not.toBe('0');
+  });
+
+  it('a press that drifts past the threshold cancels — no preview fires', () => {
+    vi.useFakeTimers();
+    installMatchMedia(false);
+    const store = openMultiMenu();
+
+    const beta = screen.getByRole('menuitem', { name: /Simplify Beta/ });
+    pointer(beta, 'pointerdown', 100, 100);
+    pointer(beta, 'pointermove', 140, 100); // ~40px, past the 24px threshold
+    act(() => vi.advanceTimersByTime(600));
+
+    // A drift is a scroll, not a hold: the placeholder stays, nothing applied.
+    expect(screen.getByText(/hold an option to preview/i)).toBeInTheDocument();
+    expect(currentNodeId(store)).toBe('0');
+  });
+
+  it('placeholder copy is device-aware: "Hold…" on touch', () => {
+    installMatchMedia(false);
+    openMultiMenu();
+    expect(screen.getByText(/hold an option to preview/i)).toBeInTheDocument();
+    expect(screen.queryByText(/hover an option to preview/i)).not.toBeInTheDocument();
+  });
+
+  it('placeholder copy is device-aware: "Hover…" on a hover device', () => {
+    installMatchMedia(true);
+    openMultiMenu();
+    expect(screen.getByText(/hover an option to preview/i)).toBeInTheDocument();
+    expect(screen.queryByText(/hold an option to preview/i)).not.toBeInTheDocument();
   });
 });

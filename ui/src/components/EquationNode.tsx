@@ -795,6 +795,67 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // Drop the pending peek timer if the node unmounts mid-hold.
   React.useEffect(() => clearPeekTimer, [clearPeekTimer]);
 
+  // Chooser option-row long-press "read" (#457): inside an open multi-option
+  // menu the preview pane is hover-driven, so on touch it sits blank. A held
+  // press on a row reveals that row's preview (setting hoveredOption, same as a
+  // hover) without applying; the release's trailing click is swallowed. Mirrors
+  // the node peek but stays local to the rows — the chooser is deliberately not a
+  // Tooltip. One timer/press ref suffices: only one row is pressed at a time.
+  const optionHoldTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const optionPressRef = React.useRef<{ x: number; y: number; id: number } | null>(null);
+  const clearOptionHoldTimer = React.useCallback(() => {
+    if (optionHoldTimerRef.current) {
+      clearTimeout(optionHoldTimerRef.current);
+      optionHoldTimerRef.current = null;
+    }
+    optionPressRef.current = null;
+  }, []);
+  React.useEffect(() => clearOptionHoldTimer, [clearOptionHoldTimer]);
+  // Set true when a long-press read fires, so the read's trailing click is swallowed
+  // rather than applied — reading is "show me," never "do it" (#457). State, not a
+  // ref, so the inline row onClick can read it without tripping react-hooks/refs;
+  // every fresh press resets it, so a real tap still applies.
+  const [swallowOptionClick, setSwallowOptionClick] = React.useState(false);
+  // Reveal a row's preview in the pane (hover on desktop, hold on touch) without
+  // applying. Reads the row from its dataset so the ref-touching pointer handlers
+  // below can stay stable, bare, by-reference callbacks (the pattern the node peek
+  // uses) rather than render-time closures — react-hooks/refs bars `.current` in
+  // render. The reveal itself sets no refs.
+  const revealOptionFrom = React.useCallback((el: HTMLElement) => {
+    const type = el.dataset.optionType as 'reduce' | 'expand' | 'factor' | 'identity' | 'substitute';
+    setHoveredOption({ type, index: Number(el.dataset.optionIndex) });
+    if (type !== 'substitute') {
+      setHoverReducePath(path);
+      setHoverReduceIndex(Number(el.dataset.reduceIndex));
+    }
+  }, [path, setHoverReducePath, setHoverReduceIndex]);
+  // Hold a row to read it: after LONG_PRESS_PEEK_MS still-held, reveal its preview
+  // and arm the trailing-click swallow. Mirrors the node peek (drift cancels, hold
+  // fires) but local to the rows — the chooser is deliberately not a Tooltip.
+  const handleOptionPointerDown = React.useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    // The menu is portaled but React events still bubble the component tree — keep
+    // this press out of the node's drag/peek arming (the row's click already does).
+    e.stopPropagation();
+    setSwallowOptionClick(false); // a fresh press: a quick tap that follows applies
+    if (e.pointerType !== 'touch') return; // hold-to-read is touch-only; hover previews on enter
+    const el = e.currentTarget; // captured now — currentTarget is null by the time the timer fires
+    clearOptionHoldTimer();
+    optionPressRef.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    optionHoldTimerRef.current = setTimeout(() => {
+      optionHoldTimerRef.current = null;
+      optionPressRef.current = null;
+      setSwallowOptionClick(true);
+      revealOptionFrom(el);
+    }, LONG_PRESS_PEEK_MS);
+  }, [clearOptionHoldTimer, revealOptionFrom]);
+  const handleOptionPointerMove = React.useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    const start = optionPressRef.current;
+    if (!start || start.id !== e.pointerId) return;
+    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) < DRAG_NUDGE_THRESHOLD_PX) return;
+    // Drifted past the threshold — a scroll, not a hold; cancel the pending read.
+    clearOptionHoldTimer();
+  }, [clearOptionHoldTimer]);
+
   const handlePointerDown = (e: React.PointerEvent) => {
     // A press that starts on a handle (or any button) inside this node is that
     // control's own gesture, not a node drag. Without this bail-out the press
@@ -2146,6 +2207,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                   <button
                     key={i}
                     role="menuitem"
+                    // The reveal (hover or hold) reads the row from these — see
+                    // revealOptionFrom, kept dataset-driven so its pointer handlers
+                    // stay stable/bare and out of react-hooks/refs' render scope.
+                    data-option-type={stack.type}
+                    data-option-index={i}
+                    data-reduce-index={stack.type !== 'substitute' ? actions.indexOf(opt.originalOption as ReducibleActionInfo) : -1}
                     // Roving cursor within the menu (#257, PR D): exactly one option
                     // is in the tab order; arrows move the active one. Focus is
                     // managed imperatively, so the rest sit at tabIndex -1.
@@ -2154,15 +2221,22 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                     onKeyDown={handleMenuKeyDown}
                     // `group` drives the trailing arrow's hover/focus brightening.
                     className={`group w-full min-w-0 text-left px-2 py-1.5 flex items-center gap-2 cursor-pointer select-none ${THEME_GLASS.CHOOSER_OPTION_ROW}`}
-                    onMouseEnter={() => {
-                      setHoveredOption({ type: stack.type, index: i });
-                      if (stack.type !== 'substitute') {
-                        setHoverReducePath(path);
-                        setHoverReduceIndex(actions.indexOf(opt.originalOption as ReducibleActionInfo));
-                      }
-                    }}
+                    onMouseEnter={(e) => revealOptionFrom(e.currentTarget)}
+                    // Hold a row to read it (#457): reveals this row's preview in
+                    // the pane without applying. Same reveal a hover sets, so it
+                    // persists until another row is read or the menu closes.
+                    onPointerDown={handleOptionPointerDown}
+                    onPointerMove={handleOptionPointerMove}
+                    onPointerUp={clearOptionHoldTimer}
+                    onPointerCancel={clearOptionHoldTimer}
                     onClick={(e) => {
                       e.stopPropagation();
+                      // Swallow the trailing click a long-press read emits so the
+                      // read never doubles as an apply (#457); the preview stays up.
+                      if (swallowOptionClick) {
+                        setSwallowOptionClick(false);
+                        return;
+                      }
                       opt.onApply();
                       closeMenu();
                     }}
@@ -2229,7 +2303,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                 </div>
                 {!previewOption && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none py-3 px-1.5">
-                    <span className={`text-sm italic select-none ${THEME_GLASS.TEXT_MUTED}`}>Hover an option to preview</span>
+                    <span className={`text-sm italic select-none ${THEME_GLASS.TEXT_MUTED}`}>{canHover ? 'Hover an option to preview' : 'Hold an option to preview'}</span>
                   </div>
                 )}
               </div>

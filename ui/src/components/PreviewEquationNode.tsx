@@ -9,9 +9,14 @@ import type * as math from 'mathjs';
 import { currentEquationAtom } from '../store/equation';
 import { Equation, getNodeByPath, getFunctionName, formatNumber, isCommutativeChainLink } from 'math-engine-client';
 import { OPERATOR_DISPLAY, splitSubscript, isImaginaryUnit } from '../constants/mathSymbols';
-import { THEME_GLASS } from '../constants/theme';
+import { THEME_GLASS, EQUATION_PREVIEW_PALETTE_DIM } from '../constants/theme';
 import { precedenceOf, PREC } from 'math-engine';
 import { useEquationPreviewPalette } from './EquationPreviewPaletteContext';
+import {
+  usePreviewDiffCarriedIds,
+  useInChangedRegion,
+  PreviewChangedRegionContext,
+} from './EquationPreviewDiffContext';
 import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
 import {
   hasTallRootIndex,
@@ -91,7 +96,17 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
   const explore = React.useContext(ExploreContext);
   // Leaf glyph colours, swapped to a light palette by the image-export container
   // when rendering on a white/transparent background (#335). Defaults to dark.
-  const palette = useEquationPreviewPalette();
+  const basePalette = useEquationPreviewPalette();
+  // Diff emphasis for transform-result previews (#423): a non-null set holds the
+  // ids of nodes that carried over unchanged from the live equation. A carried
+  // node recedes to the dim palette; changed/new nodes keep the vivid base palette
+  // so the eye lands on the actual change. Membership is a per-node id lookup;
+  // because dimming rides the leaf-colour channel (not opacity) it never compounds
+  // through nesting, so a changed leaf inside a carried parent still reads bright.
+  const carriedIds = usePreviewDiffCarriedIds();
+  // True once an ancestor node changed: everything inside a changed subtree stays
+  // vivid, so the whole transformed region reads as the change (#423).
+  const inChangedRegion = useInChangedRegion();
 
   const node = React.useMemo(() => {
     if (customNode) return customNode;
@@ -183,6 +198,23 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
   if (!node) return null;
 
   const nodeId = (node as unknown as { id?: string })?.id || (path ? `preview_${path}` : undefined);
+
+  // In diff mode, a node whose id survived from the live equation carried over.
+  // It recedes to the dim palette only if it's *also* outside any change (no
+  // ancestor changed) — genuinely untouched context. A carried node inside a
+  // changed subtree stays vivid so the whole transformed region reads as one
+  // change instead of stray dim islands (#423). Every glyph below draws from
+  // `palette`, so this single swap dims exactly this node's own glyphs.
+  const selfCarried = carriedIds != null && !!nodeId && carriedIds.has(nodeId);
+  const isCarried = selfCarried && !inChangedRegion;
+  const palette = isCarried ? EQUATION_PREVIEW_PALETTE_DIM : basePalette;
+  // Descendants are inside a change once this node (or an ancestor) changed. Only
+  // meaningful in diff mode; outside it the flag is inert.
+  const childInChangedRegion = inChangedRegion || (carriedIds != null && !selfCarried);
+  // The topmost node of a changed subtree — changed, with no changed ancestor. The
+  // preview auto-scrolls to the first of these so the change is centred even when
+  // the equation clamps at min scale and scrolls horizontally (#423 part 3).
+  const isChangeRegionRoot = carriedIds != null && !selfCarried && !inChangedRegion;
 
   // Recursive Render logic depending on Node type
   const renderContent = () => {
@@ -615,12 +647,15 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
   const exploreProps = isStop ? { ref: registerExploreItem } : {};
 
   return (
-    <div
-      data-flip-id={nodeId}
-      className={`relative inline-flex items-center justify-center ${isActiveStop ? THEME_GLASS.EXPLORE_CURSOR : ''}`}
-      {...exploreProps}
-    >
-      {rendered}
-    </div>
+    <PreviewChangedRegionContext.Provider value={childInChangedRegion}>
+      <div
+        data-flip-id={nodeId}
+        data-preview-change-root={isChangeRegionRoot ? '' : undefined}
+        className={`relative inline-flex items-center justify-center ${isActiveStop ? THEME_GLASS.EXPLORE_CURSOR : ''}`}
+        {...exploreProps}
+      >
+        {rendered}
+      </div>
+    </PreviewChangedRegionContext.Provider>
   );
 };

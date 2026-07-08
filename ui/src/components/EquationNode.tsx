@@ -17,6 +17,8 @@ import {
   candidatePathsAtom,
   hoverReducePathAtom,
   hoverReduceIndexAtom,
+  hoverRegionPathAtom,
+  hoverRegionTypeAtom,
   filteredReduciblePathsAtom,
   substitutionPathsAtom,
   toggleRootSignAtom,
@@ -40,6 +42,7 @@ import type { ReductionOption } from 'math-engine';
 import { ArrowLeftRight, Zap, UnfoldHorizontal, FoldHorizontal, RefreshCw, Replace, TriangleAlert, ArrowRight } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
+import { PreviewDiffProvider } from './EquationPreviewDiffContext';
 import { UndefinedInlineTooltipContent, UNDEFINED_INLINE_LABEL } from './UndefinedWarning';
 import { useMathScale } from '../hooks/useMathScale';
 import { useReducedMotion } from '../hooks/useReducedMotion';
@@ -86,12 +89,18 @@ const DRAG_NUDGE_THRESHOLD_PX = 24;
 // memory, and long enough that it never fires on a quick tap-to-select.
 const LONG_PRESS_PEEK_MS = 500;
 
+// A transform-result preview row, with diff emphasis (#423): carried-over nodes
+// recede, changed/new nodes stay vivid, keyed off the id diff against the live
+// equation. The provider no-ops (renders as before) when the diff has nothing to
+// say — a full rebuild or no change.
 const renderEquationPreviewRow = (eq: Equation, muted: boolean) => (
-  <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
-    <PreviewEquationNode path="lhs" customEquation={eq} />
-    <span className={`text-[1.3em] font-mono px-0.5 select-none ${muted ? 'text-transparent' : 'text-indigo-300'}`}>{RELATION_DISPLAY[eq.relation ?? '='] ?? '='}</span>
-    <PreviewEquationNode path="rhs" customEquation={eq} />
-  </div>
+  <PreviewDiffProvider previewEquation={eq}>
+    <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
+      <PreviewEquationNode path="lhs" customEquation={eq} />
+      <span className={`text-[1.3em] font-mono px-0.5 select-none ${muted ? 'text-transparent' : 'text-indigo-300'}`}>{RELATION_DISPLAY[eq.relation ?? '='] ?? '='}</span>
+      <PreviewEquationNode path="rhs" customEquation={eq} />
+    </div>
+  </PreviewDiffProvider>
 );
 
 /**
@@ -102,14 +111,44 @@ const renderEquationPreviewRow = (eq: Equation, muted: boolean) => (
  * of spilling out of the popup body. Optional `sizers` reserve the widest of
  * several stacked options so a hover-swapped preview never reflows. extraBuffer=0
  * keeps the auto-height container from ratcheting the scale down on resize.
+ *
+ * `centerOnChange` (any value that changes when the shown result changes) triggers
+ * an auto-scroll: once the scale settles, the first diff-emphasised change
+ * (`[data-preview-change-root]`, #423) is centred horizontally, so a change that
+ * clamped past min scale and scrolled off-screen is brought into view. Dimming
+ * fixes findability; this fixes legibility.
  */
 const ScaledEquationFit: React.FC<{
   measureEq?: Equation | null;
   className?: string;
   sizers?: React.ReactNode;
+  centerOnChange?: unknown;
   children: React.ReactNode;
-}> = ({ measureEq = null, className = 'w-full max-w-full', sizers, children }) => {
-  const { containerRef, contentRef } = useMathScale(measureEq, [], 0, PREVIEW_MIN_SCALE, 1);
+}> = ({ measureEq = null, className = 'w-full max-w-full', sizers, centerOnChange, children }) => {
+  const { containerRef, contentRef, scale } = useMathScale(measureEq, [], 0, PREVIEW_MIN_SCALE, 1);
+  React.useEffect(() => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content) return;
+    // Defer the measure-and-scroll to the next frame: reading getBoundingClientRect
+    // here would force a synchronous reflow inside useMathScale's own resize/scale
+    // cycle, which the ResizeObserver can't settle in one pass ("loop completed with
+    // undelivered notifications"). The rAF runs before paint, so the scroll still
+    // lands without a visible jump.
+    const raf = requestAnimationFrame(() => {
+      const anchor = content.querySelector('[data-preview-change-root]') as HTMLElement | null;
+      if (!anchor) return;
+      // Centre the first changed region within the horizontally-scrolling container.
+      // Only scrollLeft is touched — vertical and page scroll stay put; the browser
+      // clamps the target into [0, scrollWidth − clientWidth], so a change that
+      // already fits (no overflow) leaves scrollLeft at 0.
+      const cRect = container.getBoundingClientRect();
+      const aRect = anchor.getBoundingClientRect();
+      const anchorCenter = (aRect.left + aRect.right) / 2 - cRect.left + container.scrollLeft;
+      container.scrollLeft = anchorCenter - container.clientWidth / 2;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [scale, centerOnChange, containerRef, contentRef]);
   return (
     <div ref={containerRef} className={`${className} overflow-x-auto scrollbar-thin py-0.5`}>
       <div ref={contentRef} className="grid place-items-center min-w-max mx-auto">
@@ -162,6 +201,17 @@ const STACK_CONFIG = {
     iconClass: 'text-white stroke-[2.5]',
   },
 } as const;
+
+// Accent ring+glow the live equation's affected subtree wears while its handle or
+// option is hovered / its menu is open, keyed by stack family so the lit region
+// matches the hovered handle's colour (#423 part 2).
+const REDUCE_REGION_CLASS: Record<'reduce' | 'expand' | 'factor' | 'identity' | 'substitute', string> = {
+  reduce: THEME_GLASS.REDUCE_REGION_SIMPLIFY,
+  expand: THEME_GLASS.REDUCE_REGION_EXPAND,
+  factor: THEME_GLASS.REDUCE_REGION_FACTOR,
+  identity: THEME_GLASS.REDUCE_REGION_IDENTITY,
+  substitute: THEME_GLASS.REDUCE_REGION_SUBSTITUTE,
+};
 
 // Geometry for the click-opened interaction chooser (a self-contained popover,
 // deliberately NOT a Tooltip, so the global single-active-tooltip mechanism can't
@@ -331,6 +381,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
   const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
   const [, setHoverReduceIndex] = useAtom(hoverReduceIndexAtom);
+  const [hoverRegionPath, setHoverRegionPath] = useAtom(hoverRegionPathAtom);
+  const [hoverRegionType, setHoverRegionType] = useAtom(hoverRegionTypeAtom);
   const reduciblePaths = useAtomValue(filteredReduciblePathsAtom);
   const substitutionPaths = useAtomValue(substitutionPathsAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
@@ -383,6 +435,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     setHoveredOption(null);
     setHoverReducePath(null);
     setHoverReduceIndex(null);
+    setHoverRegionPath(null);
+    setHoverRegionType(null);
     // Touch has no hover-leave: opening the menu (via a tap on the handle)
     // synthesizes a mouseenter that pins hoverPath to this node, highlighting it,
     // and no leave ever fires. Every dismiss path routes through closeMenu — the
@@ -391,7 +445,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     // not just on a second handle tap (#388). Hover devices keep their real
     // enter/leave, so this is touch-only.
     if (!canHover) setHoverPath(null);
-  }, [canHover, setHoverPath, setHoverReducePath, setHoverReduceIndex]);
+  }, [canHover, setHoverPath, setHoverReducePath, setHoverReduceIndex, setHoverRegionPath, setHoverRegionType]);
 
   // Close the menu and hand focus back to the handle that opened it. The exit
   // path for Escape / outside-click — never a permanent trap (WCAG 2.1.2).
@@ -495,12 +549,18 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       });
       setOpenMenuType(type);
       setHoveredOption(null);
+      // Light the affected region for every family (substitute included).
+      setHoverRegionPath(path);
+      setHoverRegionType(type);
+      // hoverReducePath stays reduce-only: it also drives reduce-specific step
+      // labelling and select-tooltip suppression, which a substitute path would
+      // corrupt.
       if (type !== 'substitute') {
         setHoverReducePath(path);
         setHoverReduceIndex(null);
       }
     },
-    [path, setHoverReducePath, setHoverReduceIndex],
+    [path, setHoverReducePath, setHoverReduceIndex, setHoverRegionPath, setHoverRegionType],
   );
 
   // The circle marks the reduce/substitution handle itself when one produces the
@@ -824,11 +884,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const revealOptionFrom = React.useCallback((el: HTMLElement) => {
     const type = el.dataset.optionType as 'reduce' | 'expand' | 'factor' | 'identity' | 'substitute';
     setHoveredOption({ type, index: Number(el.dataset.optionIndex) });
+    // Light the affected region for every family; hoverReducePath stays reduce-only.
+    setHoverRegionPath(path);
+    setHoverRegionType(type);
     if (type !== 'substitute') {
       setHoverReducePath(path);
       setHoverReduceIndex(Number(el.dataset.reduceIndex));
     }
-  }, [path, setHoverReducePath, setHoverReduceIndex]);
+  }, [path, setHoverReducePath, setHoverReduceIndex, setHoverRegionPath, setHoverRegionType]);
   // Hold a row to read it: after LONG_PRESS_PEEK_MS still-held, reveal its preview
   // and arm the trailing-click swallow. Mirrors the node peek (drift cancels, hold
   // fires) but local to the rows — the chooser is deliberately not a Tooltip.
@@ -1204,6 +1267,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     : canClick
     ? THEME_GLASS.CARD_CANDIDATE
     : THEME_GLASS.CARD_CANDIDATE + ' cursor-default';
+
+  // This node roots the region a hovered/open handle acts on: light it in the
+  // stack's accent colour so the option row, the lit live region, and the dimmed
+  // preview read as one change (#423 part 2). Driven by hoverRegionPath — which
+  // every family sets, substitute included — not the reduce-only hoverReducePath.
+  // Only the region root wears the ring; it wraps the whole affected subtree, so
+  // one outline lights the lot.
+  const reduceRegionClass =
+    hoverRegionPath === path && hoverRegionType ? REDUCE_REGION_CLASS[hoverRegionType] : '';
 
   // Recursive Render logic depending on Node type
   const renderContent = () => {
@@ -1943,7 +2015,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       data-eq-node=""
       data-node-path={path}
       style={customStyle}
-      className={`relative inline-flex items-center justify-center border rounded-[0.4em] select-none ${THEME_GLASS.NODE_FOCUS_RING} ${semanticStyle}`}
+      className={`relative inline-flex items-center justify-center border rounded-[0.4em] select-none ${THEME_GLASS.NODE_FOCUS_RING} ${semanticStyle} ${reduceRegionClass}`}
       {...interactiveProps}
       onMouseEnter={() => {
         setHoverPath(path);
@@ -2133,21 +2205,30 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                     // subexpression the handle acts on, so the peek reads against
                     // that term. Hover-capable pointers only: a touch tap
                     // synthesizes a mouseenter with no matching leave, which would
-                    // strand the highlight. Substitute handles carry no reduce
-                    // highlight (mirrors openStackMenu).
-                    if (!canHover || stack.type === 'substitute') return;
-                    setHoverReducePath(path);
-                    setHoverReduceIndex(null);
+                    // strand the highlight.
+                    if (!canHover) return;
+                    // Light the affected region for every family, substitute
+                    // included; hoverReducePath stays reduce-only (see openStackMenu).
+                    setHoverRegionPath(path);
+                    setHoverRegionType(stack.type);
+                    if (stack.type !== 'substitute') {
+                      setHoverReducePath(path);
+                      setHoverReduceIndex(null);
+                    }
                   }}
                   onMouseLeave={(e) => {
                     e.stopPropagation();
                     // Clear the hover highlight — unless this handle's chooser is
                     // open, in which case the open chooser and its option-row hovers
                     // own the highlight, so it must persist past the pointer leaving.
-                    if (!canHover || stack.type === 'substitute') return;
+                    if (!canHover) return;
                     if (openMenuType === stack.type) return;
-                    setHoverReducePath(null);
-                    setHoverReduceIndex(null);
+                    setHoverRegionPath(null);
+                    setHoverRegionType(null);
+                    if (stack.type !== 'substitute') {
+                      setHoverReducePath(null);
+                      setHoverReduceIndex(null);
+                    }
                   }}
                   onClick={(e) => {
                     // Click commits (#456): toggle the chooser. Enter/Space also
@@ -2290,6 +2371,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                   <ScaledEquationFit
                     key={`${path}:${openMenuType}`}
                     measureEq={stack.options[0]?.equation ?? null}
+                    centerOnChange={previewOption?.equation ?? null}
                     sizers={stack.options.map((opt, i) => (
                       // Invisible sizers reserve the LARGEST option's size (no hover
                       // reflow) and set the single scale factor.
@@ -2398,7 +2480,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
           </span>
         )}
         <div className="w-full border-t border-white/10 my-1" />
-        <ScaledEquationFit measureEq={targetEquation} className="max-w-[280px] sm:max-w-[340px]">
+        <ScaledEquationFit measureEq={targetEquation} centerOnChange={targetEquation} className="max-w-[280px] sm:max-w-[340px]">
           {renderEquationPreviewRow(targetEquation, false)}
         </ScaledEquationFit>
       </div>

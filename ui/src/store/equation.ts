@@ -1109,6 +1109,15 @@ export const sourcePathAtom = atom<string | null>(null);
 export const hoverPathAtom = atom<string | null>(null);
 export const hoverReducePathAtom = atom<string | null>(null);
 export const hoverReduceIndexAtom = atom<number | null>(null);
+// The live equation subtree a hovered/open handle acts on, and its stack family,
+// so the canvas can light that region in the family's accent colour (#423 part 2).
+// Deliberately separate from hoverReducePath: this fires for *every* family —
+// substitute included — whereas hoverReducePath stays reduce-only because it also
+// drives reduce-specific history-step labelling and select-tooltip suppression, and
+// pointing it at a substitute path would mislabel/misgate those. A stale type is
+// inert; the region only renders where hoverRegionPath points.
+export const hoverRegionPathAtom = atom<string | null>(null);
+export const hoverRegionTypeAtom = atom<'reduce' | 'expand' | 'factor' | 'identity' | 'substitute' | null>(null);
 export const hoveredLoopTargetIdAtom = atom<string | null>(null);
 // True while the user hovers a full-derivation copy trigger; the history tree
 // dims off-path nodes so the export scope (root -> selected) is visible (#46).

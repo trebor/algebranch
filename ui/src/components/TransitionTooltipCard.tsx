@@ -191,8 +191,11 @@ export const TransitionTooltipCard: React.FC<TransitionTooltipCardProps> = ({
         </span>
       </div>
 
+      {/* Title: the concise operation name (e.g. "Factor", "Distribute"). The
+          full before → after is typeset just below, so the title stays short
+          rather than restating the whole sentence carried in `change.text`. */}
       <span className={THEME_GLASS.TOOLTIP_TITLE}>
-        {sentenceCase(description)}
+        {sentenceCase(change?.kind === 'rewrite' && change.label ? change.label : description)}
       </span>
 
       {/* Body: Math representation of the step */}

@@ -95,12 +95,12 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
     expect(equationToString(sixthOptionBoth!.simplified)).toBe('x = 2 ^ 6');
   });
 
-  test('should correctly label power expansions as Expand Power', () => {
+  test('should label unfolding a power as Express as Repeated Multiplication', () => {
     const eq = parseEquation('x = y ^ 2');
     const reductions = getReducibleOptions(eq);
 
     expect(reductions['rhs']).toBeDefined();
-    const expandOption = reductions['rhs'].find(r => r.label === 'Expand Power');
+    const expandOption = reductions['rhs'].find(r => r.label === 'Express as Repeated Multiplication');
     expect(expandOption).toBeDefined();
     expect(equationToString(expandOption!.simplified)).toBe('x = y * y');
   });
@@ -258,11 +258,11 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
       expect(distribute!.type).toBe('expand');
     });
 
-    test('expand-power carries the Expand handle type', () => {
+    test('unfolding a power carries the Rewrite handle type (#466)', () => {
       const eq = parseEquation('x = y ^ 2');
-      const expandPower = (getReducibleOptions(eq)['rhs'] || []).find(o => o.label === 'Expand Power');
+      const expandPower = (getReducibleOptions(eq)['rhs'] || []).find(o => o.label === 'Express as Repeated Multiplication');
       expect(expandPower).toBeDefined();
-      expect(expandPower!.type).toBe('expand');
+      expect(expandPower!.type).toBe('identity');
     });
 
     test('factoring carries the Factor handle type', () => {

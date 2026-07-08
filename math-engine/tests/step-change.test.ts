@@ -178,12 +178,16 @@ describe('describeReduction — in-place rewrites', () => {
     expect(change).toMatchObject({ kind: 'rewrite', op: 'expand', text: 'distribute' });
   });
 
-  it('tags expand-power with the Expand op (#427)', () => {
+  it('tags unfolding a power with the Rewrite identity op, mirroring repeated addition (#466)', () => {
     const e = eq('y = x ^ 2');
-    const option = findOption('y = x ^ 2', 'Expand Power');
+    const option = findOption('y = x ^ 2', 'Express as Repeated Multiplication');
     expect(option).toBeDefined();
     const change = describeReduction(e, option!);
-    expect(change).toMatchObject({ kind: 'rewrite', op: 'expand' });
+    expect(change).toMatchObject({
+      kind: 'rewrite',
+      op: 'identity',
+      text: 'express x ^ 2 as repeated multiplication: x * x',
+    });
   });
 
   it('describes rationalizing a radical denominator with its own verb (#66)', () => {

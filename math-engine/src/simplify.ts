@@ -1143,6 +1143,50 @@ const multiplyFactors = (a: math.MathNode, b: math.MathNode): math.MathNode => {
   return new mjs.OperatorNode('*', 'multiply', [a, b]);
 };
 
+/**
+ * The magnitude of a node that carries a leading negative — the operand of a
+ * unary minus (`−A` → `A`) or the absolute value of a negative constant
+ * (`−1` → `1`). Returns null for anything non-negative, seeing through
+ * parentheses first.
+ */
+const stripLeadingNegative = (node: math.MathNode): math.MathNode | null => {
+  const n = unwrapParens(node);
+  if (n.type === 'OperatorNode' && (n as math.OperatorNode).op === '-' && (n as math.OperatorNode).args.length === 1) {
+    return (n as math.OperatorNode).args[0];
+  }
+  if (n.type === 'ConstantNode') {
+    const v = Number((n as math.ConstantNode).value);
+    if (Number.isFinite(v) && v < 0) return new mjs.ConstantNode(-v);
+  }
+  return null;
+};
+
+/**
+ * Cancel a product of two negatives: `−A · −B → A · B`, with a trivial `×1`
+ * folded away so `−sqrt(y) · −1 → sqrt(y)` (#464).
+ *
+ * This is a *local* sign cleanup — it rewrites only the top-level product's sign
+ * structure and leaves A and B untouched — which is exactly why it lives here as
+ * its own granular step rather than riding the mathjs `simplify` fallback. That
+ * fallback is gated by `subtreeHasFinerSimplification` (#59), so a foldable
+ * constant buried inside A (e.g. the `181³` in a radicand) used to suppress the
+ * whole thing, hiding the obvious double-negative removal that sits *above* the
+ * radicand. Extracting the sign fold restores it independent of the operands'
+ * inner complexity; the inner fold stays a separate, finer step at its own path.
+ *
+ * Returns null unless `node` is a binary `*` whose *both* operands carry a
+ * leading negative.
+ */
+const tryFoldNegatedProduct = (node: math.MathNode): math.MathNode | null => {
+  if (node.type !== 'OperatorNode') return null;
+  const op = node as math.OperatorNode;
+  if (op.op !== '*' || op.args.length !== 2) return null;
+  const magA = stripLeadingNegative(op.args[0]);
+  const magB = stripLeadingNegative(op.args[1]);
+  if (!magA || !magB) return null;
+  return multiplyFactors(magA, magB);
+};
+
 interface SignedTerm {
   readonly sign: 1 | -1;
   readonly node: math.MathNode;
@@ -1499,6 +1543,18 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
     const distributedNode = tryDistribution(node);
     if (distributedNode) {
       const candidate = replaceNodeAtPath(eq, p, distributedNode);
+      if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
+        return candidate;
+      }
+    }
+
+    // 2.8 Cancel a product of two negatives (−A · −1 → A). A local sign fold,
+    // deliberately ungated by `subtreeHasFinerSimplification` (unlike the step-5
+    // mathjs fallback) so a finer simplification buried inside A doesn't hide the
+    // double-negative removal sitting above it (#464).
+    const negFolded = tryFoldNegatedProduct(node);
+    if (negFolded) {
+      const candidate = replaceNodeAtPath(eq, p, negFolded);
       if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
         return candidate;
       }

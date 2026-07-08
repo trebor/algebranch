@@ -40,6 +40,7 @@ import type { ReductionOption } from 'math-engine';
 import { ArrowLeftRight, Zap, UnfoldHorizontal, FoldHorizontal, RefreshCw, Replace, TriangleAlert, ArrowRight } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
+import { PreviewDiffProvider } from './EquationPreviewDiffContext';
 import { UndefinedInlineTooltipContent, UNDEFINED_INLINE_LABEL } from './UndefinedWarning';
 import { useMathScale } from '../hooks/useMathScale';
 import { useReducedMotion } from '../hooks/useReducedMotion';
@@ -86,12 +87,18 @@ const DRAG_NUDGE_THRESHOLD_PX = 24;
 // memory, and long enough that it never fires on a quick tap-to-select.
 const LONG_PRESS_PEEK_MS = 500;
 
+// A transform-result preview row, with diff emphasis (#423): carried-over nodes
+// recede, changed/new nodes stay vivid, keyed off the id diff against the live
+// equation. The provider no-ops (renders as before) when the diff has nothing to
+// say — a full rebuild or no change.
 const renderEquationPreviewRow = (eq: Equation, muted: boolean) => (
-  <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
-    <PreviewEquationNode path="lhs" customEquation={eq} />
-    <span className={`text-[1.3em] font-mono px-0.5 select-none ${muted ? 'text-transparent' : 'text-indigo-300'}`}>{RELATION_DISPLAY[eq.relation ?? '='] ?? '='}</span>
-    <PreviewEquationNode path="rhs" customEquation={eq} />
-  </div>
+  <PreviewDiffProvider previewEquation={eq}>
+    <div className="flex items-center justify-center gap-1.5 flex-nowrap text-[1.3em]">
+      <PreviewEquationNode path="lhs" customEquation={eq} />
+      <span className={`text-[1.3em] font-mono px-0.5 select-none ${muted ? 'text-transparent' : 'text-indigo-300'}`}>{RELATION_DISPLAY[eq.relation ?? '='] ?? '='}</span>
+      <PreviewEquationNode path="rhs" customEquation={eq} />
+    </div>
+  </PreviewDiffProvider>
 );
 
 /**

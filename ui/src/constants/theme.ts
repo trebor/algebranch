@@ -504,6 +504,25 @@ export const EQUATION_PREVIEW_PALETTE_DARK: EquationPreviewPalette = {
   relation: 'text-indigo-300',
 };
 
+/**
+ * Recede palette for the carried-over (unchanged) nodes of a transform preview
+ * (#423). Every glyph collapses to a faint neutral grey so the changed/new nodes —
+ * which keep the vivid semantic dark palette — read as the figure and the carried
+ * context reads as ground. Tuned on the dark glass theme via `npm run shoot`; on a
+ * quadratic-formula-sized preview the grey majority must recede without turning to
+ * mud, so the change stays legible even at PREVIEW_MIN_SCALE.
+ */
+export const EQUATION_PREVIEW_PALETTE_DIM: EquationPreviewPalette = {
+  number: 'text-white/30',
+  variable: 'text-white/30',
+  operator: 'text-white/25',
+  fnName: 'text-white/30',
+  paren: 'text-white/15',
+  fractionBar: 'border-white/15',
+  radicalBar: 'border-white/15',
+  relation: 'text-white/30',
+};
+
 export const EQUATION_PREVIEW_PALETTE_LIGHT: EquationPreviewPalette = {
   number: 'text-amber-600',
   variable: 'text-sky-700',

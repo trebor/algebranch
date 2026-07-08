@@ -1,5 +1,9 @@
 # Scope & Capabilities
 
+[User Guide](user-guide.md) • [Features Reference](features.md) • [**Scope & Capabilities**](scope.md) • [FAQ](faq.md) • [Documentation Index](index.md)
+
+---
+
 This page outlines what Algebranch can do, what it cannot do currently, and where the project is headed. Algebranch is built to help you learn and practice algebra, which means its features are designed around specific mathematical bounds.
 
 ---
@@ -17,6 +21,8 @@ Supported capabilities include:
 *   **Completing the Square**: Transforming quadratic expressions to complete the square.
 *   **Substitution**: Replacing variables with equivalent expressions across multiple workspace tabs.
 *   **Visual Graphing**: Graphing equations to see variable relationships and intersection points.
+*   **Complex Numbers**: Full arithmetic, powers, and roots using the imaginary unit $\mathbb{i}$ (using the unique Unicode codepoint `ⅈ` to distinguish it from a variable $i$), including conjugate rationalization of denominators and power simplification (e.g. $\mathbb{i}^2 = -1$). Gated on the `allowComplex` setting.
+*   **Absolute Value**: Full algebraic operations and transpositions involving the absolute value function (`abs(x)` or rendered as $|x|$), including product, quotient, square identities, and principal root of squares (e.g. $\sqrt{x^2} = |x|$).
 
 For the exhaustive list of every supported transformation, global operation, and interface setting, please see the [Features Reference](features.md).
 
@@ -30,8 +36,6 @@ Algebranch focuses specifically on core algebraic manipulations. The following a
 *   **Summation & Product Notation**: Summation ($\sum$) and product ($\prod$) operators are not available. See [#182](https://github.com/trebor/algebranch/issues/182).
 *   **Factorial**: The factorial operator ($!$) is not supported. See [#181](https://github.com/trebor/algebranch/issues/181).
 *   **Floor, Ceiling, & Modulo**: These discrete functions are not supported. See [#180](https://github.com/trebor/algebranch/issues/180).
-*   **Absolute Value**: The absolute value operator ($|x|$) is not supported yet. See [#179](https://github.com/trebor/algebranch/issues/179).
-*   **Complex Numbers**: Arithmetic and roots involving the imaginary unit $i$ are not supported. See [#105](https://github.com/trebor/algebranch/issues/105).
 *   **Sets, Logic, & Linear Algebra**: Matrix math, vectors, logical operators, and set notation are not supported. See [#184](https://github.com/trebor/algebranch/issues/184).
 *   **Unit Conversions**: Converting units, such as meters to feet, is not supported. See [#36](https://github.com/trebor/algebranch/issues/36).
 
@@ -51,7 +55,7 @@ This design choice has major benefits:
 2.  **Implementation Speed**: Numeric checking is incredibly fast, allowing real-time step validation in the browser.
 
 However, it also frames which operators are easy or hard to add:
-*   **Continuous Real Operators**: Functions like absolute value, floor/ceil, and trigonometric functions are relatively easy to support because they map cleanly to real numbers.
+*   **Continuous Real Operators**: Functions like floor/ceil, and trigonometric functions are relatively easy to support because they map cleanly to real numbers.
 *   **Discrete & Complex Domains**: Operators that jump domains, including complex roots, vector arithmetic, and logic, require extending the engine's internal coordinate space and random sampling strategy.
 
 To learn more about the engineering plan and coordinate systems, follow the live roadmap in the [epic: operator roadmap toward advanced math](https://github.com/trebor/algebranch/issues/185) issue, tracked at [#185](https://github.com/trebor/algebranch/issues/185).

@@ -55,6 +55,19 @@ Or **[open the workspace →](https://algebranch.org)** to pick from the 80+ exa
 
 ---
 
+## 📖 Documentation
+
+For detailed guides, mathematical scope, and feature references, see our documentation:
+
+*   **[User Guide](docs/user-guide.md)** — Learn the two-click selection model, branching history tree, and workspace sharing.
+*   **[Features Reference](docs/features.md)** — A complete reference of all transpositions, global operations, and keyboard shortcuts.
+*   **[Scope & Capabilities](docs/scope.md)** — What math Algebranch supports and where the project is headed.
+*   **[FAQ](docs/faq.md)** — Frequently asked questions about offline storage, mobile support, and troubleshooting.
+
+You can browse the full documentation starting from the **[Documentation Index](docs/index.md)**.
+
+---
+
 ## ⚙️ Running Locally
 
 Requires **Node.js 18+** and npm. It is an npm-workspaces monorepo, so run every command from the repo root. The dev server runs at [http://localhost:3000](http://localhost:3000).

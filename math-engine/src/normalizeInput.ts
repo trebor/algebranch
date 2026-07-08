@@ -193,11 +193,17 @@ const extractRadicand = (after: string): { inner: string; consumed: number } => 
   return { inner: '', consumed: 0 };
 };
 
+// Single-glyph nth-root radicals carry their index intrinsically (#394):
+// ∛ (U+221B) and ∜ (U+221C), unlike `√` which reads its index from a
+// preceding superscript run.
+const FIXED_RADICAL_INDEX: Record<string, string> = { '∛': '3', '∜': '4' };
+
 /**
  * Rewrite Unicode radicals to function calls, honoring a leading superscript
- * *index* as an nth-root: `³√(x)` → `nthRoot(x, 3)`, `√x` → `sqrt(x)`. Must run
- * before superscripts are turned into exponents, or the index `³` is misread as
- * a power and produces the invalid `^3√(x)` (#398 regression).
+ * *index* as an nth-root: `³√(x)` → `nthRoot(x, 3)`, `√x` → `sqrt(x)`. The
+ * fixed-index glyphs `∛`/`∜` map straight to `nthRoot(x, 3)`/`nthRoot(x, 4)`.
+ * Must run before superscripts are turned into exponents, or the index `³` is
+ * misread as a power and produces the invalid `^3√(x)` (#398 regression).
  */
 const convertRadicals = (s: string): string => {
   let out = '';
@@ -220,12 +226,26 @@ const convertRadicals = (s: string): string => {
         out += `sqrt(${inner})`;
       }
       i += 1 + consumed;
+    } else if (FIXED_RADICAL_INDEX[s[i]]) {
+      const { inner, consumed } = extractRadicand(s.slice(i + 1));
+      out += `nthRoot(${inner}, ${FIXED_RADICAL_INDEX[s[i]]})`;
+      i += 1 + consumed;
     } else {
       out += s[i];
       i++;
     }
   }
   return out;
+};
+
+// Unicode vulgar fractions → parenthesized quotients (#394). Parens keep a
+// leading coefficient a product — `½x` → `(1/2)*x`, not `1/2*x`. Mixed numbers
+// like `2½` are genuinely ambiguous and out of scope: they become `2*(1/2)`.
+const VULGAR_FRACTIONS: Record<string, string> = {
+  '½': '(1/2)', '⅓': '(1/3)', '⅔': '(2/3)', '¼': '(1/4)', '¾': '(3/4)',
+  '⅕': '(1/5)', '⅖': '(2/5)', '⅗': '(3/5)', '⅘': '(4/5)', '⅙': '(1/6)',
+  '⅚': '(5/6)', '⅐': '(1/7)', '⅛': '(1/8)', '⅜': '(3/8)', '⅝': '(5/8)',
+  '⅞': '(7/8)', '⅑': '(1/9)', '⅒': '(1/10)',
 };
 
 const unicodePass = (s: string): string => {
@@ -239,8 +259,14 @@ const unicodePass = (s: string): string => {
   out = out
     .replace(/÷/g, '/')
     .replace(/×/g, '*')
-    .replace(/⋅/g, '*')
-    .replace(/−/g, '-'); // U+2212 minus sign
+    .replace(/⋅/g, '*') // U+22C5 dot operator
+    .replace(/·/g, '*') // U+00B7 middle dot (keyboard-typed)
+    .replace(/−/g, '-') // U+2212 minus sign
+    .replace(/≤/g, '<=') // U+2264
+    .replace(/≥/g, '>='); // U+2265
+  for (const [glyph, repl] of Object.entries(VULGAR_FRACTIONS)) {
+    out = out.split(glyph).join(repl);
+  }
   for (const [glyph, name] of Object.entries(getGreekGlyphToName())) {
     out = out.split(glyph).join(name);
   }

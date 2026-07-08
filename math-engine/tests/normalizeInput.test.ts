@@ -59,6 +59,25 @@ describe('normalizeMathInput — Unicode math', () => {
   test('unicode minus U+2212', () => {
     expectEquivalent('x − 4 = 0', 'x - 4 = 0');
   });
+  test('middle dot U+00B7 → *', () => {
+    // The keyboard-typed multiplication dot, distinct from U+22C5 `⋅`.
+    expectEquivalent('2·x = 4', '2 * x = 4');
+  });
+  test('≤ and ≥ relation glyphs', () => {
+    expectEquivalent('x ≤ 5', 'x <= 5');
+    expectEquivalent('x ≥ 5', 'x >= 5');
+  });
+  test('vulgar fraction glyphs → (a/b)', () => {
+    // Parenthesized so a leading coefficient stays a product: ½x → (1/2)*x.
+    expectEquivalent('½ + x = 1', '1/2 + x = 1');
+    expectEquivalent('x = ⅓', 'x = 1/3');
+    expectEquivalent('¾ * x = ⅔', '3/4 * x = 2/3');
+    expectEquivalent('½ * x = 1', '(1/2) * x = 1');
+  });
+  test('cube- and fourth-root glyphs ∛ ∜', () => {
+    expectEquivalent('∛x = 2', 'nthRoot(x, 3) = 2');
+    expectEquivalent('∜(x + 1) = 2', 'nthRoot(x + 1, 4) = 2');
+  });
 });
 
 describe('normalizeMathInput — Python / SymPy', () => {

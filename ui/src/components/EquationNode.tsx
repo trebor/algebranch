@@ -163,10 +163,11 @@ const STACK_CONFIG = {
   },
 } as const;
 
-// Hover behavior for the multi-option interaction menu (a self-contained popover,
+// Geometry for the click-opened interaction chooser (a self-contained popover,
 // deliberately NOT a Tooltip, so the global single-active-tooltip mechanism can't
-// steal it closed while the cursor traverses from the handle to the menu).
-const MENU_HOVER_CLOSE_GRACE_MS = 280; // grace period bridging handle <-> menu hover
+// steal it closed). It opens only on click/tap/Enter/Space (#456) and dismisses
+// on outside-click, Escape, a re-click of the handle, or applying an option — so
+// there is no hover grace timer to bridge.
 const MENU_ANCHOR_GAP_PX = 8;          // gap between the handle and the menu card
 const MENU_HALF_WIDTH_PX = 180;        // approx half-width, for horizontal edge clamping
 
@@ -360,17 +361,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // Which option's equation preview the open menu is showing, keyed by stack type
   // so a stale hover from one stack never leaks into another.
   const [hoveredOption, setHoveredOption] = React.useState<{ type: 'reduce' | 'expand' | 'factor' | 'identity' | 'substitute'; index: number } | null>(null);
-  // The multi-option menu is a hover popover, not a Tooltip: openMenuType is the
-  // stack whose menu is open, menuAnchor is its on-screen anchor, and a grace timer
-  // bridges the hover gap between the handle and the menu.
+  // The interaction chooser is a click-opened popover, not a Tooltip: openMenuType
+  // is the stack whose menu is open and menuAnchor is its on-screen anchor. It
+  // opens only on click/tap/Enter/Space (#456), so there is no hover grace timer.
   const [openMenuType, setOpenMenuType] = React.useState<'reduce' | 'expand' | 'factor' | 'identity' | 'substitute' | null>(null);
   const [menuAnchor, setMenuAnchor] = React.useState<{ top: number; left: number; placement: 'above' | 'below' } | null>(null);
-  const menuCloseTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keyboard focus model for the multi-option menu (#257, PR D). A keyboard-opened
   // menu is a modal-style transient popover: focus moves to the first option and
   // arrow keys rove it; Escape / outside-click close it and return focus to the
-  // handle. A hover-opened menu leaves focus alone — a pointer user is never yanked
-  // in. menuOpenedViaKeyboardRef records which path opened it; menuTriggerElRef is
+  // handle. A pointer-opened menu leaves focus alone — a click/tap user is never
+  // yanked in. menuOpenedViaKeyboardRef records which path opened it; menuTriggerElRef is
   // the handle to restore focus to; menuOptionRefs is the ordered option registry.
   const [menuActiveIndex, setMenuActiveIndex] = React.useState(0);
   const menuOpenedViaKeyboardRef = React.useRef(false);
@@ -378,14 +378,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const menuContainerRef = React.useRef<HTMLDivElement | null>(null);
   const menuOptionRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
 
-  const cancelMenuClose = React.useCallback(() => {
-    if (menuCloseTimer.current) {
-      clearTimeout(menuCloseTimer.current);
-      menuCloseTimer.current = null;
-    }
-  }, []);
   const closeMenu = React.useCallback(() => {
-    cancelMenuClose();
     setOpenMenuType(null);
     setHoveredOption(null);
     setHoverReducePath(null);
@@ -398,15 +391,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     // not just on a second handle tap (#388). Hover devices keep their real
     // enter/leave, so this is touch-only.
     if (!canHover) setHoverPath(null);
-  }, [cancelMenuClose, canHover, setHoverPath, setHoverReducePath, setHoverReduceIndex]);
-  // Leaving the handle or the menu schedules a close after a grace period; moving
-  // onto the other one cancels it. This is the entire open/close model — no global
-  // tooltip state involved, so nothing external can dismiss the menu mid-traversal.
-  const scheduleMenuClose = React.useCallback(() => {
-    cancelMenuClose();
-    menuCloseTimer.current = setTimeout(closeMenu, MENU_HOVER_CLOSE_GRACE_MS);
-  }, [cancelMenuClose, closeMenu]);
-  React.useEffect(() => cancelMenuClose, [cancelMenuClose]);
+  }, [canHover, setHoverPath, setHoverReducePath, setHoverReduceIndex]);
 
   // Close the menu and hand focus back to the handle that opened it. The exit
   // path for Escape / outside-click — never a permanent trap (WCAG 2.1.2).
@@ -461,7 +446,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   );
 
   // Keyboard-opened menus move focus to the first option once the portal commits;
-  // hover-opened menus leave focus on the page (no yank for a pointer user).
+  // pointer-opened (click/tap) menus leave focus on the page (no yank for a pointer user).
   React.useEffect(() => {
     if (openMenuType && menuOpenedViaKeyboardRef.current) {
       menuOptionRefs.current[0]?.focus();
@@ -487,12 +472,11 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     return () => document.removeEventListener('pointerdown', onPointerDown, true);
   }, [openMenuType, closeMenuAndRestoreFocus]);
 
-  // Open a multi-option handle's menu anchored to its button. Shared by hover
-  // (onMouseEnter) and keyboard/click (Enter/Space) so the menu is reachable
-  // without a pointer (#231).
+  // Open a handle's chooser anchored to its button. Shared by click/tap and
+  // keyboard (Enter/Space) — the only ways it opens now that hover just informs
+  // (#456) — so the chooser is reachable with or without a pointer (#231).
   const openStackMenu = React.useCallback(
     (el: HTMLElement, type: 'reduce' | 'expand' | 'factor' | 'identity' | 'substitute', viaKeyboard = false) => {
-      cancelMenuClose();
       menuTriggerElRef.current = el;
       menuOpenedViaKeyboardRef.current = viaKeyboard;
       setMenuActiveIndex(0);
@@ -516,7 +500,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         setHoverReduceIndex(null);
       }
     },
-    [cancelMenuClose, path, setHoverReducePath, setHoverReduceIndex],
+    [path, setHoverReducePath, setHoverReduceIndex],
   );
 
   // The circle marks the reduce/substitution handle itself when one produces the
@@ -1996,7 +1980,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
           {interactionStacks.map((stack) => {
             const config = STACK_CONFIG[stack.type];
             const IconComponent = config.icon;
-            const single = stack.options.length === 1 ? stack.options[0] : null;
 
             // Roving integration (#257): the handle is its own item in the shared
             // sequence. It registers only while navigable (toolbar live), so a
@@ -2044,61 +2027,85 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
             );
 
             // Every handle — single- or multi-option — opens the same
-            // self-contained popover (#369). Uniform gesture: hover/click both
-            // reveal the chooser, so a click never silently mutates the equation.
-            // Deliberately not a Tooltip, so it's immune to the global
-            // single-active-tooltip churn that was dismissing it mid-traversal.
+            // self-contained chooser (#369). Hover only informs now (#456): it
+            // reveals a peek tooltip (the handle's accessible name) and highlights
+            // the subexpression the handle affects; the chooser opens solely on
+            // click/tap/Enter/Space, so a click never silently mutates the equation.
+            //
+            // The handle names its operation FAMILY, not the specific option
+            // (#456): Simplify · Expand · Factor · Rewrite · Substitute, keyed off
+            // the same `type` that drives its color and icon. So the tooltip and
+            // the accessible name reinforce the handle's iconography rather than
+            // echoing a verbose or Unicode-laden per-case label (e.g. "Collapse
+            // √x → x", "Express as Square"). The specific case lives in the menu
+            // rows the handle opens, where a full preview disambiguates it.
+            const accessibleName = config.singularLabel;
+            // Wrapping the handle in the shared Tooltip carries the peek content for
+            // free — hover reveals it, a touch long-press peeks it (#455), and the
+            // trailing-click swallow is built in. Suppress it (controlled off) while
+            // this handle's chooser is open (the chooser speaks for it) and while
+            // the tree is mid-slide (#234), matching the node tooltips' own gating.
+            const peekSuppressed = openMenuType === stack.type || isTreeAnimating;
             return (
-              <button
+              <Tooltip
                 key={stack.type}
-                className={buttonClass}
-                style={buttonStyle}
-                // Roving item folded into the expression's single Tab stop (#257);
-                // arrow keys rove, Escape closes the menu or releases focus.
-                ref={handleRef}
-                tabIndex={handleTabIndex}
-                // A single-option handle keeps its descriptive option label as its
-                // accessible name (better for screen readers than "Show
-                // simplification"); multi-option handles read "Show {plural}".
-                aria-label={single ? (single.label || config.singularLabel) : `Show ${config.pluralLabel}`}
-                aria-haspopup="menu"
-                aria-expanded={openMenuType === stack.type}
-                onMouseEnter={(e) => {
-                  e.stopPropagation();
-                  // Hover-open is for hover-capable pointers only (#388). On touch
-                  // the tap synthesizes a mouseenter that would open the menu and
-                  // then be toggled shut by the trailing click — so the chooser
-                  // never stayed up. Ignoring hover here lets the tap (onClick)
-                  // own opening it, and it stays until an outside tap dismisses.
-                  if (!canHover) return;
-                  // Don't auto-open the option menu on hover while the tree is
-                  // mid-slide (#234) — same rationale as the handle tooltips.
-                  if (isTreeAnimating) return;
-                  openStackMenu(e.currentTarget, stack.type);
-                }}
-                onMouseLeave={(e) => {
-                  e.stopPropagation();
-                  // Touch has no hover-leave; the outside-tap dismiss (and the
-                  // tap-again toggle) handle closing there instead.
-                  if (!canHover) return;
-                  scheduleMenuClose();
-                }}
-                onClick={(e) => {
-                  // Keyboard parity (#231): Enter/Space fire a click, so toggling
-                  // the menu here makes the stack operable without a pointer. A
-                  // keyboard-activated click reports detail === 0, which routes the
-                  // menu into its focus-grabbing modal-style mode (#257, PR D).
-                  e.stopPropagation();
-                  if (openMenuType === stack.type) {
-                    closeMenu();
-                  } else {
-                    openStackMenu(e.currentTarget, stack.type, e.detail === 0);
-                  }
-                }}
-                onKeyDown={(e) => handleRovingKeyDown(e, stack.type)}
+                content={accessibleName}
+                position="top"
+                visible={peekSuppressed ? false : undefined}
               >
-                {buttonInner}
-              </button>
+                <button
+                  className={buttonClass}
+                  style={buttonStyle}
+                  // Roving item folded into the expression's single Tab stop (#257);
+                  // arrow keys rove, Escape closes the menu or releases focus.
+                  ref={handleRef}
+                  tabIndex={handleTabIndex}
+                  // Accessible name = the operation family (see accessibleName):
+                  // one consistent word a screen-reader user hears per handle,
+                  // matching the visible peek, with the specifics in the menu it opens.
+                  aria-label={accessibleName}
+                  aria-haspopup="menu"
+                  aria-expanded={openMenuType === stack.type}
+                  onMouseEnter={(e) => {
+                    e.stopPropagation();
+                    // Hover informs (#456): open nothing — just highlight which
+                    // subexpression the handle acts on, so the peek reads against
+                    // that term. Hover-capable pointers only: a touch tap
+                    // synthesizes a mouseenter with no matching leave, which would
+                    // strand the highlight. Substitute handles carry no reduce
+                    // highlight (mirrors openStackMenu).
+                    if (!canHover || stack.type === 'substitute') return;
+                    setHoverReducePath(path);
+                    setHoverReduceIndex(null);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.stopPropagation();
+                    // Clear the hover highlight — unless this handle's chooser is
+                    // open, in which case the open chooser and its option-row hovers
+                    // own the highlight, so it must persist past the pointer leaving.
+                    if (!canHover || stack.type === 'substitute') return;
+                    if (openMenuType === stack.type) return;
+                    setHoverReducePath(null);
+                    setHoverReduceIndex(null);
+                  }}
+                  onClick={(e) => {
+                    // Click commits (#456): toggle the chooser. Enter/Space also
+                    // fire a click, so this is the sole open path for pointer and
+                    // keyboard alike (#231). A keyboard-activated click reports
+                    // detail === 0, which routes the chooser into its focus-grabbing
+                    // modal-style mode (#257, PR D).
+                    e.stopPropagation();
+                    if (openMenuType === stack.type) {
+                      closeMenu();
+                    } else {
+                      openStackMenu(e.currentTarget, stack.type, e.detail === 0);
+                    }
+                  }}
+                  onKeyDown={(e) => handleRovingKeyDown(e, stack.type)}
+                >
+                  {buttonInner}
+                </button>
+              </Tooltip>
             );
           })}
           {openMenuType && menuAnchor && typeof document !== 'undefined' && (() => {
@@ -2157,10 +2164,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       opt.onApply();
-                      // closeMenu() clears the hover-grace timer ref; this is an
-                      // event handler, not render, so the ref read is safe. The
-                      // rule's static analysis can't prove the call site.
-                      // eslint-disable-next-line react-hooks/refs
                       closeMenu();
                     }}
                   >
@@ -2252,8 +2255,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                   zIndex: 9999,
                 }}
                 className="relative flex flex-col items-stretch gap-1 py-1.5 px-1 min-w-[210px] max-w-[300px] sm:max-w-[360px] text-left rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md shadow-2xl shadow-[0_0_30px_rgba(129,140,248,0.45)] pointer-events-auto font-sans normal-case select-none"
-                onMouseEnter={cancelMenuClose}
-                onMouseLeave={scheduleMenuClose}
               >
                 {sections.map((section, idx) => (
                   <React.Fragment key={idx}>

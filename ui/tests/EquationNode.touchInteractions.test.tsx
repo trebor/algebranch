@@ -14,6 +14,8 @@ import {
   targetPathsAtom,
   sourcePathAtom,
   hoverPathAtom,
+  hoverReducePathAtom,
+  isTreeAnimatingAtom,
   dragNudgeAtom,
   type WorkspaceTab,
 } from '@/store/equation';
@@ -61,6 +63,20 @@ function makeHandleStore() {
   store.set(reduciblePathsAtom, {
     'lhs/1': [
       { equation: parseEquation('x=4'), type: 'reduce', label: 'Simplify Alpha' },
+    ] as never,
+  });
+  return store;
+}
+
+// A multi-option reduce handle on the same candidate. Its accessible name is the
+// family label "Simplify" (#456) — distinct from every option-row label ("Simplify
+// Alpha"/"Beta"), so a peek-tooltip assertion can't be confused for an open menu row.
+function makeMultiHandleStore() {
+  const store = makeStore();
+  store.set(reduciblePathsAtom, {
+    'lhs/1': [
+      { equation: parseEquation('x=4'), type: 'reduce', label: 'Simplify Alpha' },
+      { equation: parseEquation('x=-4'), type: 'reduce', label: 'Simplify Beta' },
     ] as never,
   });
   return store;
@@ -275,7 +291,7 @@ describe('EquationNode touch handle chooser (#388)', () => {
     installMatchMedia(false); // phone: no hover
     const store = makeHandleStore();
     renderLhs(store);
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
 
     // Real touch synthesizes BOTH a mouseenter and a click. With hover-open live
     // (the old behavior) the mouseenter opens and the click toggles it shut. On a
@@ -290,7 +306,7 @@ describe('EquationNode touch handle chooser (#388)', () => {
     installMatchMedia(false);
     const store = makeHandleStore();
     renderLhs(store);
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
 
     fireEvent.mouseEnter(handle);
     fireEvent.click(handle, { detail: 1 });
@@ -304,7 +320,7 @@ describe('EquationNode touch handle chooser (#388)', () => {
     installMatchMedia(false);
     const store = makeHandleStore();
     renderLhs(store);
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
 
     // A tap opens the menu; on touch the synthesized mouseenter also highlights
     // the node (hoverPath = its path). jsdom doesn't synthesize that enter, so
@@ -325,7 +341,7 @@ describe('EquationNode touch handle chooser (#388)', () => {
     installMatchMedia(false);
     const store = makeHandleStore();
     renderLhs(store);
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
 
     // Open the menu; model the highlight the tap's synthesized mouseenter leaves.
     fireEvent.click(handle, { detail: 1 });
@@ -343,7 +359,7 @@ describe('EquationNode touch handle chooser (#388)', () => {
     installMatchMedia(false);
     const store = makeHandleStore();
     renderLhs(store);
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
 
     // The handle hangs off a movable candidate. A finger pressing a small handle
     // drifts a few pixels; that press must stay the handle's own gesture and never
@@ -360,17 +376,115 @@ describe('EquationNode touch handle chooser (#388)', () => {
   });
 });
 
-describe('EquationNode desktop hover is unchanged (#388)', () => {
+describe('EquationNode desktop handle: hover informs, click commits (#456)', () => {
   beforeEach(() => installMatchMedia(true)); // hover-capable
 
-  it('hover still opens the handle menu on a hover-capable device', () => {
+  it('hovering a handle does NOT open the chooser — it reveals the peek tooltip and sets the target highlight', async () => {
     const store = makeHandleStore();
     renderLhs(store);
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
 
     fireEvent.mouseEnter(handle);
 
+    // Hover no longer spawns the chooser — that is the whole point of #456.
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
+    // It still highlights which subexpression the handle affects…
+    expect(store.get(hoverReducePathAtom)).toBe('lhs/1');
+    // …and reveals the purely informational peek tooltip — the operation family
+    // name "Simplify" (#456), not the specific option label "Simplify Alpha".
+    expect(await screen.findByText('Simplify', undefined, { timeout: 2000 })).toBeInTheDocument();
+    expect(screen.queryByText('Simplify Alpha')).not.toBeInTheDocument();
+  });
+
+  it('leaving the handle clears the target highlight', () => {
+    const store = makeHandleStore();
+    renderLhs(store);
+    const handle = screen.getByRole('button', { name: 'Simplify' });
+
+    fireEvent.mouseEnter(handle);
+    expect(store.get(hoverReducePathAtom)).toBe('lhs/1');
+
+    fireEvent.mouseLeave(handle);
+    expect(store.get(hoverReducePathAtom)).toBeNull();
+  });
+
+  it('a click opens the chooser (parity with a touch tap)', () => {
+    const store = makeHandleStore();
+    renderLhs(store);
+    const handle = screen.getByRole('button', { name: 'Simplify' });
+
+    fireEvent.click(handle, { detail: 1 });
+
     expect(screen.getAllByRole('menuitem')).toHaveLength(1);
+  });
+
+  it('a re-click toggles the chooser closed', () => {
+    const store = makeHandleStore();
+    renderLhs(store);
+    const handle = screen.getByRole('button', { name: 'Simplify' });
+
+    fireEvent.click(handle, { detail: 1 });
+    expect(screen.getAllByRole('menuitem')).toHaveLength(1);
+
+    fireEvent.click(handle, { detail: 1 });
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
+  });
+
+  it('the chooser STAYS open when the pointer leaves the handle (no grace-timer close)', () => {
+    vi.useFakeTimers();
+    const store = makeHandleStore();
+    renderLhs(store);
+    const handle = screen.getByRole('button', { name: 'Simplify' });
+
+    fireEvent.click(handle, { detail: 1 });
+    expect(screen.getAllByRole('menuitem')).toHaveLength(1);
+
+    // The old hover model scheduled a grace-timer close on mouseleave; a
+    // click-gated chooser persists until an explicit dismiss — even after any
+    // amount of idle time with the pointer away.
+    fireEvent.mouseLeave(handle);
+    act(() => vi.advanceTimersByTime(2000));
+    expect(screen.getAllByRole('menuitem')).toHaveLength(1);
+  });
+
+  it('an outside click dismisses the chooser', () => {
+    const store = makeHandleStore();
+    renderLhs(store);
+    const handle = screen.getByRole('button', { name: 'Simplify' });
+
+    fireEvent.click(handle, { detail: 1 });
+    expect(screen.getAllByRole('menuitem')).toHaveLength(1);
+
+    act(() => pointer(document.body, 'pointerdown', 5, 5));
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
+  });
+
+  it('suppresses the handle peek tooltip while that handle chooser is open', () => {
+    vi.useFakeTimers();
+    const store = makeMultiHandleStore();
+    renderLhs(store);
+    const handle = screen.getByRole('button', { name: 'Simplify' });
+
+    fireEvent.click(handle, { detail: 1 });
+    // Menu open → hovering the handle must NOT also reveal its peek tooltip. The
+    // peek content is the family name "Simplify"; the open menu's rows read
+    // "Simplify Alpha"/"Beta", so an exact-text query catches only the peek.
+    fireEvent.mouseEnter(handle);
+    act(() => vi.advanceTimersByTime(1000)); // past the show-delay
+    expect(screen.queryByText('Simplify')).not.toBeInTheDocument();
+  });
+
+  it('suppresses the handle peek tooltip while the tree is animating', () => {
+    vi.useFakeTimers();
+    const store = makeMultiHandleStore();
+    act(() => store.set(isTreeAnimatingAtom, true));
+    renderLhs(store);
+    const handle = screen.getByRole('button', { name: 'Simplify' });
+
+    fireEvent.mouseEnter(handle);
+    // Advance well past the tooltip show-delay; a mid-slide peek stays suppressed.
+    act(() => vi.advanceTimersByTime(1000));
+    expect(screen.queryByText('Simplify')).not.toBeInTheDocument();
   });
 
   it('hover still reveals the Select-Term tooltip on a candidate node', async () => {
@@ -380,8 +494,7 @@ describe('EquationNode desktop hover is unchanged (#388)', () => {
 
     fireEvent.mouseEnter(term);
 
-    // The controlled Select-Term tooltip must still appear on desktop hover — the
-    // regression that briefly hid every node tooltip lived here (#388).
+    // The controlled Select-Term tooltip is a node affordance, untouched by #456.
     expect(await screen.findByText('Select Term', undefined, { timeout: 2000 })).toBeInTheDocument();
   });
 });

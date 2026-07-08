@@ -209,7 +209,7 @@ describe('EquationNode roving navigation (#257, PR B)', () => {
     store.set(candidatePathsAtom, new Set(['lhs', 'lhs/0', 'lhs/1', 'rhs']));
     renderTree(store);
 
-    const handle = screen.getByRole('button', { name: /substitute x = 7/i });
+    const handle = screen.getByRole('button', { name: 'Substitute' });
     // The term aria-label now reads as spoken math (#256): "x plus 5", not "x + 5".
     const lhsTerm = screen.getByRole('treeitem', { name: /^x plus 5, Enter to select/i });
     expect(handle).toHaveAttribute('tabindex', '-1');
@@ -241,14 +241,14 @@ describe('EquationNode roving navigation (#257, PR B)', () => {
     renderTree(store);
 
     // Before the scan, the handle is the only actionable item, so it is the stop.
-    expect(screen.getByRole('button', { name: /substitute x = 2/i })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('button', { name: 'Substitute' })).toHaveAttribute('tabindex', '0');
 
     // The transposition scan lands (real activePaths for 2*x+1=5).
     act(() => store.set(candidatePathsAtom, new Set(['lhs', 'lhs/0', 'lhs/1', 'rhs'])));
 
     // Re-query after the re-render (the prior nodes are replaced).
     expect(screen.getByRole('treeitem', { name: /^2 times x plus 1, Enter to select/i })).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('button', { name: /substitute x = 2/i })).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('button', { name: 'Substitute' })).toHaveAttribute('tabindex', '-1');
   });
 
   it('steps Escape out to the enclosing term, re-speaking it — not ejecting to the top (#271)', () => {

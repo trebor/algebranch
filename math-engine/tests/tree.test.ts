@@ -150,4 +150,25 @@ describe('ensureNodeIds — de-aliases shared node objects (#400)', () => {
     // Stable ids survive an id-clean pass unchanged.
     expect((out.lhs as unknown as { id: string }).id).toBe((eq.lhs as unknown as { id: string }).id);
   });
+
+  // Regression: `√(181−b²)·√(181−b²)·√(181−b²)+b³=1729`, once combined and then
+  // expanded, produced a reduction preview whose `ensureNodeIds` output still held
+  // duplicate ids (`node_4dmn0a_5` twice), tripping React's "same key" render error.
+  // Root cause: the generator handed out `node_<prefix>_<counter>` without checking
+  // `seenIds`, so a preserved id sharing the current prefix could be re-minted for a
+  // de-aliased node. Walking the real reduction graph exercises the exact trigger.
+  test('reduction previews down a real transform chain keep every id unique (#462)', () => {
+    let eq = ensureNodeIds(parseEquation('sqrt(181 - b^2) * sqrt(181 - b^2) * sqrt(181 - b^2) + b^3 = 1729'));
+    for (let step = 0; step < 4; step++) {
+      const options = Object.values(getReducibleOptions(eq)).flat();
+      if (options.length === 0) break;
+      // Every option is rendered as a preview (via ensureNodeIds) — none may alias.
+      for (const option of options) {
+        expectNoAliasing(ensureNodeIds(option.simplified));
+      }
+      // Advance the chain by committing the first option, exactly as the store does.
+      eq = ensureNodeIds(options[0].simplified);
+      expectNoAliasing(eq);
+    }
+  });
 });

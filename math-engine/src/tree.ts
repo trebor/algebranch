@@ -413,10 +413,20 @@ export const ensureNodeIds = (eq: Equation): Equation => {
   // Convert hash to positive base-36 string for a clean alphanumeric prefix
   const hashPrefix = Math.abs(hash).toString(36);
 
-  const generateId = () => `node_${hashPrefix}_${counter++}`;
-
   // Track all assigned unique IDs in this tree pass to prevent sibling duplicates
   const seenIds = new Set<string>();
+  // The counter alone doesn't guarantee freshness: a node can *retain* an id of
+  // the form `node_<hashPrefix>_<n>` from an earlier pass over the same-stringed
+  // equation (the prefix is derived from that string), which the running counter
+  // will eventually re-mint. Skip any id already claimed this pass so a de-aliased
+  // or backfilled node never collides with a preserved one (#462).
+  const generateId = () => {
+    let id: string;
+    do {
+      id = `node_${hashPrefix}_${counter++}`;
+    } while (seenIds.has(id));
+    return id;
+  };
   // Track object identities so an aliased node (the *same* object occupying two
   // tree slots, #400) can be detected and de-aliased. Re-assigning a fresh id to
   // a shared object can't fix aliasing — both slots still read the one object —

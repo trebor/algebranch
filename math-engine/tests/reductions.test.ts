@@ -297,6 +297,42 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
     });
   });
 
+  describe('folding a product of two negatives (−A · −1 → A)', () => {
+    test('cancels the double negative on -sqrt(y) * -1', () => {
+      const eq = parseEquation('x = -sqrt(y) * -1');
+      const fold = (getReducibleOptions(eq)['rhs'] || []).find(o => o.label === 'Simplify');
+      expect(fold).toBeDefined();
+      expect(fold!.type).toBe('reduce');
+      expect(equationToString(fold!.simplified)).toBe('x = sqrt(y)');
+    });
+
+    test('cancels the double negative on -1 * -sqrt(y)', () => {
+      const eq = parseEquation('x = -1 * -sqrt(y)');
+      const fold = (getReducibleOptions(eq)['rhs'] || []).find(o => o.label === 'Simplify');
+      expect(fold).toBeDefined();
+      expect(equationToString(fold!.simplified)).toBe('x = sqrt(y)');
+    });
+
+    // #59 gate regression: a foldable constant *inside* the radicand (9^2) must
+    // not suppress the top-level sign fold. The sign cleanup is local to the
+    // product and leaves the radicand untouched; the inner fold remains a
+    // separate, finer step at its own path.
+    test('folds the sign even when the radicand has a finer simplification', () => {
+      const eq = parseEquation('x = -sqrt(9^2 + y) * -1');
+      const fold = (getReducibleOptions(eq)['rhs'] || []).find(o => o.label === 'Simplify');
+      expect(fold).toBeDefined();
+      expect(fold!.type).toBe('reduce');
+      expect(equationToString(fold!.simplified)).toBe('x = sqrt(9 ^ 2 + y)');
+    });
+
+    test('folds -1 * -sqrt(9^2 + y) with a finer radicand simplification', () => {
+      const eq = parseEquation('x = -1 * -sqrt(9^2 + y)');
+      const fold = (getReducibleOptions(eq)['rhs'] || []).find(o => o.label === 'Simplify');
+      expect(fold).toBeDefined();
+      expect(equationToString(fold!.simplified)).toBe('x = sqrt(9 ^ 2 + y)');
+    });
+  });
+
   test('should offer simplification and multiplication options for -y - y = -8', () => {
     const eq = parseEquation('-y - y = -8');
     const reductions = getReducibleOptions(eq);

@@ -211,6 +211,10 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
   // Descendants are inside a change once this node (or an ancestor) changed. Only
   // meaningful in diff mode; outside it the flag is inert.
   const childInChangedRegion = inChangedRegion || (carriedIds != null && !selfCarried);
+  // The topmost node of a changed subtree — changed, with no changed ancestor. The
+  // preview auto-scrolls to the first of these so the change is centred even when
+  // the equation clamps at min scale and scrolls horizontally (#423 part 3).
+  const isChangeRegionRoot = carriedIds != null && !selfCarried && !inChangedRegion;
 
   // Recursive Render logic depending on Node type
   const renderContent = () => {
@@ -646,6 +650,7 @@ export const PreviewEquationNode: React.FC<PreviewEquationNodeProps> = ({
     <PreviewChangedRegionContext.Provider value={childInChangedRegion}>
       <div
         data-flip-id={nodeId}
+        data-preview-change-root={isChangeRegionRoot ? '' : undefined}
         className={`relative inline-flex items-center justify-center ${isActiveStop ? THEME_GLASS.EXPLORE_CURSOR : ''}`}
         {...exploreProps}
       >

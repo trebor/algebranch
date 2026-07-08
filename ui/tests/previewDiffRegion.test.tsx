@@ -92,4 +92,41 @@ describe('preview diff region rule (#423)', () => {
     expect(xs).toHaveLength(2);
     for (const x of xs) expect(x.className).toContain(bright);
   });
+
+  it('marks the changed-region root as the auto-scroll anchor, once, at the boundary', () => {
+    // c + a*b = d, only the inner `*` (lhs/1) changed. The scroll anchor is the
+    // `*` boundary — not its inner a/b, and not the carried c/d.
+    const eq = ensureNodeIds(parseEquation('c + a*b = d'));
+    const allIds = collectNodeIds(eq);
+    const changedStar = idAt(eq, 'lhs/1');
+    const carried = new Set([...allIds].filter((id) => id !== changedStar));
+
+    const store = makeStore();
+    const { container } = render(
+      <Provider store={store}>
+        <EquationPreviewDiffContext.Provider value={carried}>
+          <PreviewEquationNode path="lhs" customEquation={eq} />
+          <PreviewEquationNode path="rhs" customEquation={eq} />
+        </EquationPreviewDiffContext.Provider>
+      </Provider>,
+    );
+
+    const anchors = container.querySelectorAll('[data-preview-change-root]');
+    expect(anchors).toHaveLength(1);
+    // The anchor is the whole changed subtree a*b — it contains a and b, not c.
+    expect(anchors[0].textContent).toContain('a');
+    expect(anchors[0].textContent).toContain('b');
+    expect(anchors[0].textContent).not.toContain('c');
+  });
+
+  it('marks no anchor outside diff mode', () => {
+    const eq = ensureNodeIds(parseEquation('c + a*b = d'));
+    const store = makeStore();
+    const { container } = render(
+      <Provider store={store}>
+        <PreviewEquationNode path="lhs" customEquation={eq} />
+      </Provider>,
+    );
+    expect(container.querySelectorAll('[data-preview-change-root]')).toHaveLength(0);
+  });
 });

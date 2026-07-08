@@ -110,14 +110,44 @@ const renderEquationPreviewRow = (eq: Equation, muted: boolean) => (
  * of spilling out of the popup body. Optional `sizers` reserve the widest of
  * several stacked options so a hover-swapped preview never reflows. extraBuffer=0
  * keeps the auto-height container from ratcheting the scale down on resize.
+ *
+ * `centerOnChange` (any value that changes when the shown result changes) triggers
+ * an auto-scroll: once the scale settles, the first diff-emphasised change
+ * (`[data-preview-change-root]`, #423) is centred horizontally, so a change that
+ * clamped past min scale and scrolled off-screen is brought into view. Dimming
+ * fixes findability; this fixes legibility.
  */
 const ScaledEquationFit: React.FC<{
   measureEq?: Equation | null;
   className?: string;
   sizers?: React.ReactNode;
+  centerOnChange?: unknown;
   children: React.ReactNode;
-}> = ({ measureEq = null, className = 'w-full max-w-full', sizers, children }) => {
-  const { containerRef, contentRef } = useMathScale(measureEq, [], 0, PREVIEW_MIN_SCALE, 1);
+}> = ({ measureEq = null, className = 'w-full max-w-full', sizers, centerOnChange, children }) => {
+  const { containerRef, contentRef, scale } = useMathScale(measureEq, [], 0, PREVIEW_MIN_SCALE, 1);
+  React.useEffect(() => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content) return;
+    // Defer the measure-and-scroll to the next frame: reading getBoundingClientRect
+    // here would force a synchronous reflow inside useMathScale's own resize/scale
+    // cycle, which the ResizeObserver can't settle in one pass ("loop completed with
+    // undelivered notifications"). The rAF runs before paint, so the scroll still
+    // lands without a visible jump.
+    const raf = requestAnimationFrame(() => {
+      const anchor = content.querySelector('[data-preview-change-root]') as HTMLElement | null;
+      if (!anchor) return;
+      // Centre the first changed region within the horizontally-scrolling container.
+      // Only scrollLeft is touched — vertical and page scroll stay put; the browser
+      // clamps the target into [0, scrollWidth − clientWidth], so a change that
+      // already fits (no overflow) leaves scrollLeft at 0.
+      const cRect = container.getBoundingClientRect();
+      const aRect = anchor.getBoundingClientRect();
+      const anchorCenter = (aRect.left + aRect.right) / 2 - cRect.left + container.scrollLeft;
+      container.scrollLeft = anchorCenter - container.clientWidth / 2;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [scale, centerOnChange, containerRef, contentRef]);
   return (
     <div ref={containerRef} className={`${className} overflow-x-auto scrollbar-thin py-0.5`}>
       <div ref={contentRef} className="grid place-items-center min-w-max mx-auto">
@@ -2322,6 +2352,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                   <ScaledEquationFit
                     key={`${path}:${openMenuType}`}
                     measureEq={stack.options[0]?.equation ?? null}
+                    centerOnChange={previewOption?.equation ?? null}
                     sizers={stack.options.map((opt, i) => (
                       // Invisible sizers reserve the LARGEST option's size (no hover
                       // reflow) and set the single scale factor.
@@ -2430,7 +2461,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
           </span>
         )}
         <div className="w-full border-t border-white/10 my-1" />
-        <ScaledEquationFit measureEq={targetEquation} className="max-w-[280px] sm:max-w-[340px]">
+        <ScaledEquationFit measureEq={targetEquation} centerOnChange={targetEquation} className="max-w-[280px] sm:max-w-[340px]">
           {renderEquationPreviewRow(targetEquation, false)}
         </ScaledEquationFit>
       </div>

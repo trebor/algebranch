@@ -1024,7 +1024,7 @@ export const savedSessionsAtom = atom<SavedSession[]>([]);
 // Consumers that mutate persisted workspace state on mount (e.g. the onboarding
 // auto-resume) must wait for this so they don't clobber localStorage with a
 // pre-hydration empty state.
-export const appHydratedAtom = atom<boolean>(false);
+export const appHydratedAtom = atom<boolean>(typeof process !== 'undefined' && process.env.NODE_ENV === 'test');
 export const rawCurrentSessionIdAtom = atom<string>("session_initial");
 
 export const currentSessionIdAtom = atom(

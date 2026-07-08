@@ -94,7 +94,7 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
   it('moves focus to the first menu option when opened via keyboard', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     act(() => handle.focus());
 
     keyboardClick(handle);
@@ -104,24 +104,25 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
     expect(document.activeElement).toBe(options[0]);
   });
 
-  it('does NOT steal focus when opened by hover/mouse', () => {
+  it('does NOT steal focus when opened by a mouse click', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     act(() => handle.focus());
 
-    // Hover-open path: openStackMenu without the keyboard flag.
-    fireEvent.mouseEnter(handle);
+    // Pointer-open path (#456): a mouse click (detail >= 1) opens without the
+    // keyboard flag, so focus is left on the page rather than pulled into the menu.
+    mouseClick(handle);
 
     expect(screen.getAllByRole('menuitem')).toHaveLength(2);
-    // Focus stays on the handle — a hovering mouse user is not yanked into the menu.
+    // Focus stays on the handle — a clicking mouse user is not yanked into the menu.
     expect(document.activeElement).toBe(handle);
   });
 
   it('roves the options with ArrowDown / ArrowUp (wrapping)', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     act(() => handle.focus());
     keyboardClick(handle);
 
@@ -143,7 +144,7 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
   it('jumps to first/last with Home/End', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     act(() => handle.focus());
     keyboardClick(handle);
 
@@ -157,7 +158,7 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
   it('closes on Escape and restores focus to the handle', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     act(() => handle.focus());
     keyboardClick(handle);
 
@@ -171,7 +172,7 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
   it('applies and closes when an option is activated', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     act(() => handle.focus());
     keyboardClick(handle);
 
@@ -185,7 +186,7 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
   it('exposes the option list as a role="menu" with only one tab stop', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     mouseClick(handle);
 
     const menu = screen.getByRole('menu');
@@ -198,7 +199,7 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
   it('keeps the count header for a multi-option menu', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     mouseClick(handle);
 
     expect(screen.getByText(/simplifications available/i)).toBeInTheDocument();
@@ -207,7 +208,7 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
   it('marks option rows non-selectable so a touch tap never starts text selection', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     mouseClick(handle);
 
     // On touch, pressing a label can begin native text selection instead of
@@ -221,7 +222,7 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
   it('locks the entire popover against selection — preview and header, not just rows', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    mouseClick(screen.getByRole('button', { name: /show simplifications/i }));
+    mouseClick(screen.getByRole('button', { name: 'Simplify' }));
 
     // The whole popover opts out of text selection, so a stray press-drag on the
     // preview or count header never highlights anything either. Term selection,
@@ -234,7 +235,7 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
   it('leaves the empty stack preview inert — a tap neither applies nor leaks (#390)', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    mouseClick(screen.getByRole('button', { name: /show simplifications/i }));
+    mouseClick(screen.getByRole('button', { name: 'Simplify' }));
 
     // No row is chosen yet, so the multi-option preview shows nothing definite —
     // there is nothing to apply. Tapping it must stay inert: the menu stays open
@@ -249,7 +250,7 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
   it('gives every option row an apply cue so it reads as a button (#369)', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     mouseClick(handle);
 
     // One trailing "apply" affordance per option row.
@@ -260,7 +261,7 @@ describe('multi-option handle menu focus (#257, PR D)', () => {
   it('renders preview sizers even when no option is hovered (preventing size jumps)', () => {
     const store = makeMultiOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /show simplifications/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     mouseClick(handle);
 
     // Verify the "Hover an option to preview" hint is present
@@ -290,7 +291,7 @@ describe('single-option handle opens the menu too (#369)', () => {
     const store = makeSingleOptionStore();
     renderTree(store);
     // A single-option handle carries its option label as its accessible name.
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     expect(handle).toHaveAttribute('aria-haspopup', 'menu');
 
     mouseClick(handle);
@@ -302,7 +303,7 @@ describe('single-option handle opens the menu too (#369)', () => {
   it('applies the sole option when the preview is tapped, never leaking to the node behind (#390)', () => {
     const store = makeSingleOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     mouseClick(handle);
 
     // Opening the menu selects nothing.
@@ -323,7 +324,7 @@ describe('single-option handle opens the menu too (#369)', () => {
   it('auto-previews the sole option (no "hover to preview" placeholder)', () => {
     const store = makeSingleOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     mouseClick(handle);
 
     // The menu is open...
@@ -336,7 +337,7 @@ describe('single-option handle opens the menu too (#369)', () => {
   it('applies and closes when the sole option is activated', () => {
     const store = makeSingleOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     mouseClick(handle);
 
     fireEvent.click(screen.getByRole('menuitem', { name: /simplify alpha/i }));
@@ -346,7 +347,7 @@ describe('single-option handle opens the menu too (#369)', () => {
   it('omits the redundant header for a single-option menu', () => {
     const store = makeSingleOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     mouseClick(handle);
 
     // The row still names the action...
@@ -360,7 +361,7 @@ describe('single-option handle opens the menu too (#369)', () => {
   it('opens via keyboard and moves focus to the sole option', () => {
     const store = makeSingleOptionStore();
     renderTree(store);
-    const handle = screen.getByRole('button', { name: /simplify alpha/i });
+    const handle = screen.getByRole('button', { name: 'Simplify' });
     act(() => handle.focus());
 
     keyboardClick(handle);

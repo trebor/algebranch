@@ -110,6 +110,42 @@ describe('HeaderOverflowMenu', () => {
     expect(aboutIndex).toBe(githubIndex + 1);
   });
 
+  it('shows each item\'s keyboard-shortcut keycap, mirroring the global bindings', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /more options/i }));
+    const menu = screen.getByRole('menu');
+
+    const keycapFor = (name: RegExp) =>
+      within(within(menu).getByRole('menuitem', { name })).getByText(
+        (_content, el) => el?.tagName.toLowerCase() === 'kbd',
+      );
+
+    expect(keycapFor(/settings/i).textContent).toBe(',');
+    expect(keycapFor(/help/i).textContent).toBe('?');
+    expect(keycapFor(/^shortcuts$/i).textContent).toBe('K');
+    expect(keycapFor(/about/i).textContent).toBe('A');
+  });
+
+  it('keeps the keycaps out of the menu-item accessible names (aria-hidden)', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /more options/i }));
+    const menu = screen.getByRole('menu');
+
+    // Names stay clean — the keycap glyph must not leak into the label a screen
+    // reader announces (would read e.g. "Shortcuts K").
+    expect(within(menu).getByRole('menuitem', { name: /^shortcuts$/i })).toBeTruthy();
+    expect(within(menu).getByRole('menuitem', { name: /^settings$/i })).toBeTruthy();
+  });
+
+  it('has no keycap on the GitHub link (it has no shortcut)', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /more options/i }));
+    const menu = screen.getByRole('menu');
+
+    const github = within(menu).getByRole('menuitem', { name: /github/i });
+    expect(github.querySelector('kbd')).toBeNull();
+  });
+
   it('closes the menu when Escape is pressed', async () => {
     renderMenu();
     await userEvent.click(screen.getByRole('button', { name: /more options/i }));

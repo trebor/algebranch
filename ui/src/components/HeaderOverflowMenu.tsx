@@ -92,6 +92,11 @@ export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
       </Tooltip>
 
       {open && (
+        // Each item echoes its global keyboard shortcut as a trailing keycap so
+        // users can learn them. The glyphs mirror the bare-key bindings declared
+        // in page.tsx (Settings `,`, Help `?`, Shortcuts `K`, About `A`); GitHub
+        // has no shortcut. Keycaps are aria-hidden so they never leak into a menu
+        // item's accessible name.
         <div role="menu" className={THEME_GLASS.OVERFLOW_MENU}>
           <button
             type="button"
@@ -101,6 +106,7 @@ export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
           >
             <SettingsIcon size={14} className={THEME_GLASS.HEADER_ICON_SETTINGS} />
             <span>Settings</span>
+            <kbd aria-hidden="true" className={`ml-auto ${THEME_GLASS.SHORTCUT_KEYCAP_SM}`}>,</kbd>
           </button>
           <button
             type="button"
@@ -110,6 +116,7 @@ export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
           >
             <HelpCircle size={14} className="text-indigo-400" />
             <span>Help</span>
+            <kbd aria-hidden="true" className={`ml-auto ${THEME_GLASS.SHORTCUT_KEYCAP_SM}`}>?</kbd>
           </button>
           <button
             type="button"
@@ -119,6 +126,7 @@ export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
           >
             <Keyboard size={14} className="text-indigo-400" />
             <span>Shortcuts</span>
+            <kbd aria-hidden="true" className={`ml-auto ${THEME_GLASS.SHORTCUT_KEYCAP_SM}`}>K</kbd>
           </button>
           <a
             role="menuitem"
@@ -139,6 +147,7 @@ export const HeaderOverflowMenu: React.FC<HeaderOverflowMenuProps> = ({
           >
             <Info size={14} className={THEME_GLASS.HEADER_ICON_ABOUT} />
             <span>About</span>
+            <kbd aria-hidden="true" className={`ml-auto ${THEME_GLASS.SHORTCUT_KEYCAP_SM}`}>A</kbd>
           </button>
         </div>
       )}

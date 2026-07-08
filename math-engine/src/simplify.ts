@@ -2097,11 +2097,17 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
       if (expandedForm) {
         const newEq = replaceNodeAtPath(eq, path, expandedForm);
         if (areEquationsEquivalent(eq, newEq)) {
+          // Unfolding a power into repeated multiplication (x² → x·x) is a
+          // reversible identity that moves *away* from canonical polynomial
+          // form, not toward it — so it rides the Rewrite handle, alongside its
+          // additive twin "Express as Repeated Addition" (2x → x+x), rather than
+          // Expand. Expand stays reserved for genuine toward-polynomial moves
+          // like Distribute (#466).
           rawReductions.push({
             path,
             simplified: newEq,
-            type: 'expand',
-            label: 'Expand Power'
+            type: 'identity',
+            label: 'Express as Repeated Multiplication'
           });
         }
       }

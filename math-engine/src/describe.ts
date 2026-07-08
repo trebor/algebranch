@@ -54,8 +54,9 @@ export type StepChange =
       readonly family: HandleFamily;
       // The finer prose classification, used for the step's wording (not the
       // badge). #427 split the product↔sum inverse pair out of the old buckets —
-      // 'expand' (distribute + expand-power) and 'factor'. 'distribute' lingers
-      // only so history nodes serialized before #427 still parse.
+      // 'expand' (distribute) and 'factor'. Power-unfolding briefly rode 'expand'
+      // too but rejoined 'identity' in #466. 'distribute' lingers only so history
+      // nodes serialized before #427 still parse.
       readonly op: 'evaluate' | 'simplify' | 'expand' | 'factor' | 'distribute' | 'identity' | 'quadratic' | 'quadratic_standard_form' | 'substitute';
       readonly detail?: string;
       readonly text: string;
@@ -274,8 +275,9 @@ const describeReductionBody = (eq: Equation, option: ReductionOption): RewriteBo
     return { kind: 'rewrite', op: 'quadratic', detail: option.label, text: 'apply the quadratic formula' };
   }
   // Distribution rides the Expand handle (#427), so its StepChange op is
-  // 'expand' while the prose stays "distribute". Expand Power also has type
-  // 'expand' but keeps its own phrasing, so key this off the label, not the type.
+  // 'expand' while the prose stays "distribute". It is the sole Expand member
+  // now that unfolding a power moved to Rewrite (#466), so keying off the label
+  // is belt-and-suspenders.
   if (option.type === 'expand' && option.label === 'Distribute') {
     return { kind: 'rewrite', op: 'expand', text: 'distribute' };
   }
@@ -353,8 +355,10 @@ const describeReductionBody = (eq: Equation, option: ReductionOption): RewriteBo
       text: before && after ? `complete the square ${before} → ${after}` : 'complete the square',
     };
   }
-  // The Rewrite (identity) family plus the two structural moves split out of it
-  // in #427 — Factor and Expand Power — all describe from their label here.
+  // The Rewrite (identity) family plus Factor — the structural move split out of
+  // it in #427 — all describe from their label here. The 'expand' arm is now
+  // vestigial: Distribute returns above and power-unfolding rejoined identity in
+  // #466, so no 'expand' currently reaches here, but the guard stays defensive.
   if (option.type === 'identity' || option.type === 'factor' || option.type === 'expand') {
     const label = option.label ?? 'apply identity';
     // The history-tree edge badge (#103) mirrors the handle the student clicked,
@@ -406,14 +410,6 @@ const describeReductionBody = (eq: Equation, option: ReductionOption): RewriteBo
           op: familyOp,
           detail: label,
           text: `express ${before} as ${powerType}: ${after}`,
-        };
-      }
-      if (lowerLabel === 'expand power') {
-        return {
-          kind: 'rewrite',
-          op: familyOp,
-          detail: label,
-          text: `expand power ${before} → ${after}`,
         };
       }
       return {

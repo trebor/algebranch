@@ -11,8 +11,8 @@ import { THEME_GLASS } from '@/constants/theme';
 import {
   rawTabsAtom,
   rawActiveTabIdAtom,
-  hoverReducePathAtom,
-  hoverReduceTypeAtom,
+  hoverRegionPathAtom,
+  hoverRegionTypeAtom,
   type WorkspaceTab,
 } from '@/store/equation';
 
@@ -51,10 +51,10 @@ const ringClass = (token: string) => token.split(' ')[1];
 describe('EquationNode live reduce-region highlight (#423 part 2)', () => {
   afterEach(cleanup);
 
-  it('lights the hovered reduce-region root in the stack accent colour', () => {
+  it('lights the hovered region root in the stack accent colour', () => {
     const store = makeStore();
-    store.set(hoverReducePathAtom, 'lhs/1');
-    store.set(hoverReduceTypeAtom, 'reduce');
+    store.set(hoverRegionPathAtom, 'lhs/1');
+    store.set(hoverRegionTypeAtom, 'reduce');
     const { container } = renderLhs(store);
 
     const root = container.querySelector('[data-node-path="lhs/1"]');
@@ -62,10 +62,20 @@ describe('EquationNode live reduce-region highlight (#423 part 2)', () => {
     expect((root as Element).className).toContain(ringClass(THEME_GLASS.REDUCE_REGION_SIMPLIFY));
   });
 
+  it('lights a substitute region too — the family is not reduce-only', () => {
+    const store = makeStore();
+    store.set(hoverRegionPathAtom, 'lhs/1');
+    store.set(hoverRegionTypeAtom, 'substitute');
+    const { container } = renderLhs(store);
+
+    const root = container.querySelector('[data-node-path="lhs/1"]');
+    expect((root as Element).className).toContain(ringClass(THEME_GLASS.REDUCE_REGION_SUBSTITUTE));
+  });
+
   it('does not light sibling nodes outside the region', () => {
     const store = makeStore();
-    store.set(hoverReducePathAtom, 'lhs/1');
-    store.set(hoverReduceTypeAtom, 'reduce');
+    store.set(hoverRegionPathAtom, 'lhs/1');
+    store.set(hoverRegionTypeAtom, 'reduce');
     const { container } = renderLhs(store);
 
     const sibling = container.querySelector('[data-node-path="lhs/0"]');

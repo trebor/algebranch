@@ -17,7 +17,8 @@ import {
   candidatePathsAtom,
   hoverReducePathAtom,
   hoverReduceIndexAtom,
-  hoverReduceTypeAtom,
+  hoverRegionPathAtom,
+  hoverRegionTypeAtom,
   filteredReduciblePathsAtom,
   substitutionPathsAtom,
   toggleRootSignAtom,
@@ -380,7 +381,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const [hoverPath, setHoverPath] = useAtom(hoverPathAtom);
   const [hoverReducePath, setHoverReducePath] = useAtom(hoverReducePathAtom);
   const [, setHoverReduceIndex] = useAtom(hoverReduceIndexAtom);
-  const [hoverReduceType, setHoverReduceType] = useAtom(hoverReduceTypeAtom);
+  const [hoverRegionPath, setHoverRegionPath] = useAtom(hoverRegionPathAtom);
+  const [hoverRegionType, setHoverRegionType] = useAtom(hoverRegionTypeAtom);
   const reduciblePaths = useAtomValue(filteredReduciblePathsAtom);
   const substitutionPaths = useAtomValue(substitutionPathsAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
@@ -433,7 +435,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     setHoveredOption(null);
     setHoverReducePath(null);
     setHoverReduceIndex(null);
-    setHoverReduceType(null);
+    setHoverRegionPath(null);
+    setHoverRegionType(null);
     // Touch has no hover-leave: opening the menu (via a tap on the handle)
     // synthesizes a mouseenter that pins hoverPath to this node, highlighting it,
     // and no leave ever fires. Every dismiss path routes through closeMenu — the
@@ -442,7 +445,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     // not just on a second handle tap (#388). Hover devices keep their real
     // enter/leave, so this is touch-only.
     if (!canHover) setHoverPath(null);
-  }, [canHover, setHoverPath, setHoverReducePath, setHoverReduceIndex, setHoverReduceType]);
+  }, [canHover, setHoverPath, setHoverReducePath, setHoverReduceIndex, setHoverRegionPath, setHoverRegionType]);
 
   // Close the menu and hand focus back to the handle that opened it. The exit
   // path for Escape / outside-click — never a permanent trap (WCAG 2.1.2).
@@ -546,13 +549,18 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       });
       setOpenMenuType(type);
       setHoveredOption(null);
+      // Light the affected region for every family (substitute included).
+      setHoverRegionPath(path);
+      setHoverRegionType(type);
+      // hoverReducePath stays reduce-only: it also drives reduce-specific step
+      // labelling and select-tooltip suppression, which a substitute path would
+      // corrupt.
       if (type !== 'substitute') {
         setHoverReducePath(path);
         setHoverReduceIndex(null);
-        setHoverReduceType(type);
       }
     },
-    [path, setHoverReducePath, setHoverReduceIndex, setHoverReduceType],
+    [path, setHoverReducePath, setHoverReduceIndex, setHoverRegionPath, setHoverRegionType],
   );
 
   // The circle marks the reduce/substitution handle itself when one produces the
@@ -876,12 +884,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const revealOptionFrom = React.useCallback((el: HTMLElement) => {
     const type = el.dataset.optionType as 'reduce' | 'expand' | 'factor' | 'identity' | 'substitute';
     setHoveredOption({ type, index: Number(el.dataset.optionIndex) });
+    // Light the affected region for every family; hoverReducePath stays reduce-only.
+    setHoverRegionPath(path);
+    setHoverRegionType(type);
     if (type !== 'substitute') {
       setHoverReducePath(path);
       setHoverReduceIndex(Number(el.dataset.reduceIndex));
-      setHoverReduceType(type);
     }
-  }, [path, setHoverReducePath, setHoverReduceIndex, setHoverReduceType]);
+  }, [path, setHoverReducePath, setHoverReduceIndex, setHoverRegionPath, setHoverRegionType]);
   // Hold a row to read it: after LONG_PRESS_PEEK_MS still-held, reveal its preview
   // and arm the trailing-click swallow. Mirrors the node peek (drift cancels, hold
   // fires) but local to the rows — the chooser is deliberately not a Tooltip.
@@ -1258,12 +1268,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     ? THEME_GLASS.CARD_CANDIDATE
     : THEME_GLASS.CARD_CANDIDATE + ' cursor-default';
 
-  // This node roots the region a hovered/open reduce handle acts on: light it in
-  // the stack's accent colour so the option row, the lit live region, and the
-  // dimmed preview read as one change (#423 part 2). Only the region root wears
-  // the ring; it wraps the whole affected subtree, so one outline lights the lot.
+  // This node roots the region a hovered/open handle acts on: light it in the
+  // stack's accent colour so the option row, the lit live region, and the dimmed
+  // preview read as one change (#423 part 2). Driven by hoverRegionPath — which
+  // every family sets, substitute included — not the reduce-only hoverReducePath.
+  // Only the region root wears the ring; it wraps the whole affected subtree, so
+  // one outline lights the lot.
   const reduceRegionClass =
-    hoverReducePath === path && hoverReduceType ? REDUCE_REGION_CLASS[hoverReduceType] : '';
+    hoverRegionPath === path && hoverRegionType ? REDUCE_REGION_CLASS[hoverRegionType] : '';
 
   // Recursive Render logic depending on Node type
   const renderContent = () => {
@@ -2193,23 +2205,30 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                     // subexpression the handle acts on, so the peek reads against
                     // that term. Hover-capable pointers only: a touch tap
                     // synthesizes a mouseenter with no matching leave, which would
-                    // strand the highlight. Substitute handles carry no reduce
-                    // highlight (mirrors openStackMenu).
-                    if (!canHover || stack.type === 'substitute') return;
-                    setHoverReducePath(path);
-                    setHoverReduceIndex(null);
-                    setHoverReduceType(stack.type);
+                    // strand the highlight.
+                    if (!canHover) return;
+                    // Light the affected region for every family, substitute
+                    // included; hoverReducePath stays reduce-only (see openStackMenu).
+                    setHoverRegionPath(path);
+                    setHoverRegionType(stack.type);
+                    if (stack.type !== 'substitute') {
+                      setHoverReducePath(path);
+                      setHoverReduceIndex(null);
+                    }
                   }}
                   onMouseLeave={(e) => {
                     e.stopPropagation();
                     // Clear the hover highlight — unless this handle's chooser is
                     // open, in which case the open chooser and its option-row hovers
                     // own the highlight, so it must persist past the pointer leaving.
-                    if (!canHover || stack.type === 'substitute') return;
+                    if (!canHover) return;
                     if (openMenuType === stack.type) return;
-                    setHoverReducePath(null);
-                    setHoverReduceIndex(null);
-                    setHoverReduceType(null);
+                    setHoverRegionPath(null);
+                    setHoverRegionType(null);
+                    if (stack.type !== 'substitute') {
+                      setHoverReducePath(null);
+                      setHoverReduceIndex(null);
+                    }
                   }}
                   onClick={(e) => {
                     // Click commits (#456): toggle the chooser. Enter/Space also

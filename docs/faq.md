@@ -1,9 +1,13 @@
 # Frequently Asked Questions
 
+[User Guide](user-guide.md) • [Features Reference](features.md) • [Scope & Capabilities](scope.md) • [**FAQ**](faq.md) • [Documentation Index](index.md)
+
+---
+
 ### Is my work uploaded to a server?
 **No — the math you work on stays on your device.** Your workspace tabs, equation steps, and settings are saved inside your own web browser. The equations and derivations you create are never uploaded, and there is no account or login.
 
-We may collect anonymous, aggregated usage data—for example, which features get used—to understand how Algebranch is used and to improve it. That data never includes the content of your equations or steps. For more details on what we collect and how to opt out of analytics tracking, please read our [Privacy Policy](https://algebranch.org/privacy).
+If you explicitly opt in, we collect anonymous, aggregated usage data—for example, which features get used—to understand how Algebranch is used and to improve it. That data is disabled by default and never includes the content of your equations or steps. For more details on what we collect or to manage your preference, please read our [Privacy Policy](https://algebranch.org/privacy).
 
 ---
 
@@ -13,7 +17,7 @@ We may collect anonymous, aggregated usage data—for example, which features ge
 ---
 
 ### What math can't Algebranch do?
-Algebranch handles middle-school and high-school algebra, including linear equations, quadratic equations, factoring, and systems of equations. It does not currently support calculus, such as limits, derivatives, and integrals. It also does not support complex numbers, matrices, vectors, or unit conversions.
+Algebranch handles middle-school and high-school algebra, including linear equations, quadratic equations, complex numbers, factoring, and systems of equations. It does not currently support calculus, such as limits, derivatives, and integrals. It also does not support matrices, vectors, or unit conversions.
 
 For a detailed breakdown of what is supported and what is not, see the [Scope & Capabilities](scope.md) page.
 
@@ -29,8 +33,9 @@ We intentionally designed Algebranch with a **two-click selection model** (Click
 
 ### How do I save or share my work?
 *   **Auto-Save**: Your work is saved automatically to your browser as you type or manipulate equations.
-*   **Sharing**: Click the **Share** button. It offers two links — **Share Equation** (a short link to just the starting equation) and **Share Workspace** (a link carrying your full history tree — every step and branch — so the recipient sees your complete derivation). Both are encoded for you.
-*   **Exporting Derivations**: If you want to submit your homework or copy your steps into another document, click the export buttons to copy the full step-by-step history as clean Unicode text or as LaTeX code.
+*   **Sharing**: Click the **Share** button. It offers three links: **Share Equation** (just the starting equation), **Share Derivation** (only the steps in your active solution path, which generates a shorter URL), and **Share Workspace** (your entire workspace, including all tabs, steps, and alternative branches).
+*   **Exporting Derivations**: If you want to submit your homework or copy your steps into another document, click the export buttons (or use keyboard shortcuts under the `C` leader) to copy the full step-by-step history as clean Unicode text or as LaTeX code.
+*   **Clipboard Shortcuts**: You can also use standard copy/paste gestures (`Ctrl/Cmd + C` to copy the current equation as text, and `Ctrl/Cmd + V` on the workspace to paste and open a new equation).
 
 ---
 

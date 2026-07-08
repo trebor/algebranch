@@ -1,5 +1,9 @@
 # Algebranch User Guide
 
+[**User Guide**](user-guide.md) • [Features Reference](features.md) • [Scope & Capabilities](scope.md) • [FAQ](faq.md) • [Documentation Index](index.md)
+
+---
+
 ## What to Know First
 
 Three things shape how Algebranch works:
@@ -7,7 +11,7 @@ Three things shape how Algebranch works:
 ### 1. Your Work Stays on Your Computer
 Everything you create—your active workspaces, equation history trees, and settings—is saved in **this browser's storage** (using keys prefixed with `algebranch_`).
 *   **No account, no login.** The equations and derivations you build are never uploaded to a server.
-*   Algebranch may collect anonymous, aggregated usage data (such as which features get used) to improve the app. This never includes the content of your equations or steps. For more details on what we collect and how to opt out of analytics tracking, please read our [Privacy Policy](https://algebranch.org/privacy).
+*   **Optional anonymous analytics.** If you explicitly opt in, Algebranch collects anonymous, aggregated usage data (such as which features get used) to help us improve the app. This never includes the content of your equations or steps, and tracking is disabled by default. For more details on what we collect or to manage your preference, please read our [Privacy Policy](https://algebranch.org/privacy).
 *   **The implication**: If you clear your browser's data, use a private browsing session, or switch to a different browser or device, your workspaces and history will not be there. To carry your work across devices, you must use **share links** or export your derivations.
 
 ### 2. Single-Device / Single-Browser by Design
@@ -42,8 +46,17 @@ Solving equations in Algebranch is built around a simple, loop-based interaction
 2.  **Identify Targets**: Mathematically valid destinations (the **Targets**) will light up in emerald green.
 3.  **Transpose**: Click any green target. Algebranch will move the term and automatically balance the math—such as flipping an addition to a subtraction (e.g., `+ 4` becomes `- 4`) when crossing the equals sign, or changing a multiplier to a divisor.
 4.  **Simplify and Expand**:
-    *   **Simplify**: When an operation can be calculated or simplified (such as `11 + 4` to `15`, or `sqrt(x^2)` to `x`), an amber handle will appear. Click the amber handle to perform the simplification.
-    *   **Expand**: Click the amber handles to distribute terms, expand binomial products, or evaluate expressions.
+    *   **Simplify**: When an operation can be calculated or simplified (such as `11 + 4` to `15`, or `sqrt(x^2)` to `x`), an amber handle (⚡) will appear.
+    *   **Expand**: When terms can be distributed, expanded, or factored, similar operation handles appear.
+    *   **Click to Open**: Unlike dragging, handles do not open on hover. Click a handle to open its operation menu showing the available transforms. Click it again or click outside to close the menu. Hovering over a handle shows a brief tooltip naming its operation class and highlights the specific subexpression it will affect.
+
+### Live Previews & Visual Diffs
+
+When solving, Algebranch provides instant visual feedback to help you plan your next step:
+*   **Select-Term Preview**: Hovering over a candidate term (or holding/long-pressing it on mobile touch screens) previews what the equation will look like if you select it.
+*   **Move Preview**: Once a term is selected, hovering (or long-pressing on touch) over any green target previews the transposed equation.
+*   **Operation Preview**: Inside a handle's open menu, hovering over an option (or long-pressing it on touch) shows a preview of the simplified equation.
+*   **Visual Diffs**: In all previews, Algebranch dims the parts of the equation that remain unchanged, keeping the new or modified terms fully bright and vivid. This visual diff lets you spot the exact outcome of an operation instantly.
 
 ---
 
@@ -60,14 +73,28 @@ Every transposition and simplification you make is a distinct step in your deriv
 
 ## Deep Links & Sharing
 
-The **Share** button builds a link you can paste into a browser or a chat app. It offers two kinds:
+The **Share** button builds an encoded link you can copy and paste anywhere. It offers three sharing scopes to let you decide how much context to send:
 
-- **Share Equation** — a short link (`?eq=…`) holding just the starting equation. Opening it creates a fresh workspace at that equation, with no history. These are the links used throughout this documentation.
-- **Share Workspace** — a link (`?ws=…`) holding your whole derivation: every step and branch of the history tree, your current position in it, and the tab name, all compressed into the URL. Opening it recreates the entire workspace as a new tab.
+*   **Share Workspace** — Compresses the entire workspace (all tabs, branches, steps, and active selection) into a `?ws=…` link. The recipient will see your complete history tree exactly as you left it. Key shortcut: `C` then `W`.
+*   **Share Derivation** — Compresses only the active derivation path (the sequence of steps from the starting equation to your current step) into a `?ws=…` link. This is shorter than a full workspace link and focuses the reader on your specific solution. Key shortcut: `C` then `P`.
+*   **Share Equation** — Creates a short `?eq=…` link holding only the starting equation, opening a fresh workspace with no history. (Retired to the Share menu; no keyboard chord).
 
-Both kinds are encoded for you, so they survive being pasted anywhere. A workspace link carries the full history tree, so it is far longer than an equation link — share the equation to hand someone a starting point, and the workspace to show them your work.
+### Link-Size Guidance & Advice
+Because workspaces can grow large, Algebranch automatically measures the length of your share links and displays a size band badge in the Share menu:
+*   🟢 **Tiny Link** (≤ 280 characters): Ideal for QR codes, tweets, or older chat clients.
+*   🟢 **Compact Link** (≤ 2,000 characters): Safe for all modern web browsers and platforms.
+*   🟡 **Large Link** (> 2,000 characters): Some chat apps or QR encoders may truncate links of this size. If your workspace link lands in this band, Algebranch will display a warning and suggest using the narrower **Share Derivation** or **Share Equation** options to keep the link safe.
 
-You only need to encode characters like `+`, `=`, `/`, `(`, and `)` yourself if you hand-write an `?eq=` link instead of using the Share button.
+You only need to encode characters like `+`, `=`, `/`, `(`, and `)` yourself if you manually write an `?eq=` link instead of using the Share button.
+
+---
+
+## Clipboard & Copy-Paste Integration
+
+Algebranch features deep integration with your system clipboard for fast workflows without opening menus:
+*   **Idle Copy**: If no text is selected on the screen, pressing standard Copy (`Ctrl/Cmd + C`) automatically copies the current equation in plain Unicode text.
+*   **Instant Paste-to-Open**: Pressing standard Paste (`Ctrl/Cmd + V`) while not focused on an input field automatically opens the **New Equation** dialog pre-seeded with your clipboard text.
+    *   If the pasted text contains an algebraic relation (`=`, `<`, `>`, `<=`, or `>=`), Algebranch splits the text across the sides and sets the relation selector automatically.
 
 ### Example Links
 Each link opens a starting workspace directly on [algebranch.org](https://algebranch.org):

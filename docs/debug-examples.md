@@ -104,7 +104,7 @@ When reasoning about handles and badges in Algebranch, the math engine enforces 
 
 When navigating the live examples, verify these overlay placement and layout rules:
 
-*   **Stacking count overlay**: sits on the **top-right** corner of the handle — both on expression handles and on history connector handles.
+*   **Stacking count overlay**: *Retired (#435)* — Stacking count badges are no longer rendered on expression or history handles. Instead, multiple options are presented solely within the popover chooser menu.
 *   **Domain-restriction warning** — placement differs by surface:
     *   On an **expression handle**, the restriction surfaces only in the handle's **hover tooltip** ("assuming x ≠ 0"); there is no corner overlay on the expression handle. (The branch-only `EquationNode`→`HandleBadge` adoption that drew a bottom-right ⚠ on the expression handle is intentionally **not** applied here.)
     *   On a **history connector handle** (#103), the restriction shows as a ⚠ sub-badge on the **bottom-right** corner of the edge handle, and the edge tooltip repeats the caveat.

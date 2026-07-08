@@ -1,5 +1,9 @@
 # Algebranch Features Reference
 
+[User Guide](user-guide.md) • [**Features Reference**](features.md) • [Scope & Capabilities](scope.md) • [FAQ](faq.md) • [Documentation Index](index.md)
+
+---
+
 A brief entry for every transposition, transform, and interface feature in Algebranch.
 
 ---
@@ -31,8 +35,8 @@ Clicking the circled `=` operator opens the global operations menu, letting you 
 ## 2. Advanced Algebraic Identities & Transforms
 
 ### Factoring
-*   Factoring out common terms (e.g. `2 * x + 6` factors to `2 * (x + 3)`).
-*   Factoring quadratic trinomials and higher-order polynomials into binomial products.
+*   **Common Factoring**: Factor out single terms or multivariate greatest common factors (GCF) from expressions (e.g. `2 * x + 6` factors to `2 * (x + 3)`, and `x * y + x * z` factors to `x * (y + z)`).
+*   **Polynomial Factoring**: Factoring quadratic trinomials and higher-order polynomials into binomial products.
 
 ### Completing the Square
 *   Rewrites quadratic expressions of the form `x^2 + b * x` into a completed square representation: `(x + b/2)^2 - (b/2)^2`.
@@ -47,6 +51,7 @@ Clicking the circled `=` operator opens the global operations menu, letting you 
 *   **Radical Simplification**: Factor out perfect powers from inside roots (e.g. `sqrt(8)` simplifies to `2 * sqrt(2)`).
 *   **Rationalization**: Multiply numerators and denominators to eliminate roots in denominators.
 *   **Exact Irrationals**: Native, exact mathematical support for constants like $e$ and $\pi$.
+*   **Complex Numbers**: Extend negative square roots to the imaginary domain (e.g. `sqrt(-4)` becomes `2 * ⅈ` using the dedicated Unicode symbol `ⅈ` to avoid variable conflicts). Supports complex denominator rationalization by multiplying by the conjugate, and simplifies powers of `ⅈ` (such as `ⅈ^2` to `-1`). Controlled via the `allowComplex` setting (enabled by default).
 
 ### Substitution & Reverse Substitution
 *   **Substitution**: Swap any variable for a known equivalent expression defined in another workspace (e.g., if you have `y = 2 * x` in one workspace, you can click `y` in another workspace to substitute it with `2 * x`).
@@ -55,6 +60,11 @@ Clicking the circled `=` operator opens the global operations menu, letting you 
 ### Inequalities
 *   Full support for inequality relationships (`<`, `>`, `<=`, `>=`).
 *   Automatically preserves inequality rules during transpositions, including flipping the inequality direction when multiplying or dividing both sides by a negative coefficient.
+
+### Absolute Value
+*   **Splitting and Combining**: Split the absolute value of products and quotients (e.g. `abs(x * y)` becomes `abs(x) * abs(y)`, or `abs(x / y)` becomes `abs(x) / abs(y)`) and combine them back.
+*   **Square of Absolute Value**: Simplify the square of an absolute value to its plain argument squared (`abs(x)^2` becomes `x^2`).
+*   **Root of a Square**: Simplify the principal root of a square to its absolute value (`sqrt(x^2)` becomes `abs(x)`) or expand an absolute value back as a root (`abs(x)` becomes `sqrt(x^2)`).
 
 ---
 
@@ -74,8 +84,8 @@ Clicking the circled `=` operator opens the global operations menu, letting you 
     1.  Linear & Basic Algebra
     2.  Quadratics & Polynomials
     3.  Fractions, Radicals & Rationals
-    4.  Transcendental (Logs & Trig)
-    5.  Formulas (Physics, Geometry & Science)
+    4.  Transcendental, Logs & Trig
+    5.  Physics, Geometry & Science Formulas
 
 ### Workspaces & Tabs
 *   Keep multiple derivations active at the same time in separate workspace tabs.
@@ -83,11 +93,14 @@ Clicking the circled `=` operator opens the global operations menu, letting you 
 
 ### Share Links
 *   **Share Equation**: A short `?eq=` link to just the starting equation; opens a fresh workspace.
-*   **Share Workspace**: A `?ws=` link that compresses your full history tree, current position, and tab name into the URL; reopens the entire derivation as a new tab. See [Deep Links & Sharing](user-guide.md#deep-links--sharing) for details.
+*   **Share Derivation**: A compressed `?ws=` link scoped to the active derivation path only (the sequence of steps from the initial equation to your current step), resulting in a shorter URL.
+*   **Share Workspace**: A compressed `?ws=` link that captures your full history tree (all steps and branches), current position, and active tab name. See [Deep Links & Sharing](user-guide.md#deep-links--sharing) for details.
 
-### LaTeX and Unicode Export
-*   **LaTeX Export**: Copy your derivation history in LaTeX code, ready to paste directly into academic reports, homework documents, or LaTeX editors.
-*   **Unicode Export**: Export derivations in clean, plain-text Unicode notation for readable copy-pasting into chat apps or documents.
+### Clipboard & Export Integration
+*   **LaTeX Export**: Copy your derivation history in LaTeX code, ready to paste directly into academic reports or editors.
+*   **Unicode Export**: Copy derivations in clean, plain-text Unicode notation for readable copy-pasting.
+*   **Idle Copy**: Pressing standard Copy (`Ctrl/Cmd + C`) without any active text selection automatically copies the current equation in Unicode text format to your clipboard.
+*   **Paste-to-Open**: Pressing standard Paste (`Ctrl/Cmd + V`) while not focusing on a text input opens the **New Equation** dialog pre-seeded with your clipboard text (splitting on `=`, `<`, `>`, `<=`, or `>=` relations).
 
 ### Settings & Preferences
 *   **Disable "Evaluate to Decimal"**: Toggle off decimal approximations to keep fractions, roots, and irrationals in their exact symbolic forms.
@@ -123,8 +136,8 @@ Copy and share live under the `C` leader — press `C`, then a second key:
 | --- | --- |
 | `C` then `D` | Copy the full derivation as text |
 | `C` then `E` | Copy the current equation as text |
-| `C` then `L` | Copy an equation share link (`?eq=…`) |
-| `C` then `W` | Copy a workspace share link (`?ws=…`) |
+| `C` then `P` | Copy derivation share link (`?ws=…` active path only) |
+| `C` then `W` | Copy a workspace share link (`?ws=…` full tree) |
 
 With a modifier:
 

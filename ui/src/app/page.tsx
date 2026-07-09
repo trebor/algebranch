@@ -52,7 +52,7 @@ import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
 import { HelpModal } from '../components/HelpModal';
 import { buildWorkspaceUrl } from '../utils/feedbackUrl';
 import { decodeEqParam } from '../utils/eqParam';
-import { consumePendingShare } from '../utils/shareLink';
+import { consumePendingShare, resolveInitialWsSource } from '../utils/shareLink';
 import { safeCopyText } from '../utils/clipboard';
 import {
   currentEquationAtom,
@@ -604,8 +604,9 @@ export default function Home() {
 
         // 1. Check URL query string parameters first to load shared workspaces or
         // equations. A short-link handoff (`pendingShare`) is a compressed workspace
-        // payload too, so it takes the same path as `?ws=` when no query param is set.
-        const cleanStateStr = readWsParam(window.location.search) ?? pendingShare;
+        // payload too, so it takes the same path as `?ws=` — but an explicit `?ws=`
+        // always wins, keeping classic stateless links unaffected (#480).
+        const cleanStateStr = resolveInitialWsSource(readWsParam(window.location.search), pendingShare);
         if (cleanStateStr) {
           try {
             const decompressed = await decompressString(cleanStateStr);

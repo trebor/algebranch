@@ -186,3 +186,17 @@ export function consumePendingShare(): string | null {
     return null;
   }
 }
+
+/**
+ * Choose the initial workspace payload to load: an explicit `?ws=` param (`wsParam`)
+ * always wins over a `/s#key` short-link handoff (`pendingShare`). This precedence is
+ * the guarantee that classic stateless links are *unaffected* by short links (#480) —
+ * an explicit `?ws=` URL loads unchanged even if a stale handoff is still stashed.
+ * Returns null when neither is present, leaving the `?eq=` / saved-session paths to run.
+ */
+export function resolveInitialWsSource(
+  wsParam: string | null,
+  pendingShare: string | null,
+): string | null {
+  return wsParam ?? pendingShare;
+}

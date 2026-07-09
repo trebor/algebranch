@@ -21,6 +21,7 @@ import {
   exportPreviewActiveAtom,
   formatDerivation,
   getDerivationScope,
+  getDerivationSteps,
   getActivePathIds,
 } from '../store/equation';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
@@ -54,6 +55,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
   const setResetHistoryModalOpen = useSetAtom(resetHistoryModalOpenAtom);
   const setExportPreview = useSetAtom(exportPreviewActiveAtom);
   const isHydrated = useIsHydrated();
+
+  const derivationSteps = React.useMemo(
+    () => getDerivationSteps(tree, currentNodeId),
+    [tree, currentNodeId],
+  );
 
   const exportScope = getDerivationScope(tree, currentNodeId);
 
@@ -133,12 +139,19 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
             iconSize={16}
             variant="panel"
             tooltip={<HotkeyHint label="Copy full derivation" sequence={['C', 'D']} />}
-            disabled={isHydrated ? Object.keys(tree).length <= 1 : undefined}
+            // Gate on the ACTIVE PATH length (root → current), not the total node
+            // count: the control copies/exports that path, so at the root — a
+            // single-step path — there is nothing to export even when the tree has
+            // branches or later steps (#130). Mirrors the scope label just below.
+            disabled={isHydrated ? exportScope.stepCount <= 1 : undefined}
             trackAction="copy_derivation"
             trackCategory="history"
             trackLabel={currentNodeId}
             scopeLabel={`Full derivation · ${exportScope.stepCount} ${exportScope.stepCount === 1 ? 'step' : 'steps'}`}
             scopeEquation={exportScope.endpoint}
+            exportScope="derivation"
+            exportEquation={exportScope.endpoint}
+            exportSteps={derivationSteps}
             onPreviewChange={setExportPreview}
           />
           <Tooltip content={<HotkeyHint label="Undo step" keys="⌘Z" />}>

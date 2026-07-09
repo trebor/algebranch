@@ -7,6 +7,7 @@ import {
   backgroundColorFor,
   foregroundColorFor,
   equationImageFilename,
+  workedSolutionImageFilename,
 } from '@/utils/equationImage';
 
 describe('equationImage helpers', () => {
@@ -43,6 +44,19 @@ describe('equationImage helpers', () => {
       // An all-symbol equation slugs to nothing usable → generic fallback.
       const name = equationImageFilename(parseEquation('x=x'));
       expect(name).toBe('algebranch-x=x.png');
+    });
+  });
+
+  describe('workedSolutionImageFilename', () => {
+    it('keys off the problem equation with a distinct -solution- segment', () => {
+      expect(workedSolutionImageFilename(parseEquation('2*x=4'))).toBe('algebranch-solution-2-x=4.png');
+    });
+
+    it('stays filesystem-safe and .png', () => {
+      const name = workedSolutionImageFilename(parseEquation('sqrt(x)+1=3'));
+      expect(name.startsWith('algebranch-solution-')).toBe(true);
+      expect(name.endsWith('.png')).toBe(true);
+      expect(name).not.toMatch(/[\s/\\*?:"<>|]/);
     });
   });
 });

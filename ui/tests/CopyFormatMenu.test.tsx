@@ -165,10 +165,15 @@ describe('CopyFormatMenu', () => {
     expect(menu.parentElement).toBe(document.body);
   });
 
-  it('omits the image entry by default and shows it when imageEquation is given', async () => {
+  it('is text-only by default, and gains a scoped export entry when exportScope is set (#130)', async () => {
     const { rerender } = renderMenu();
     await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
-    expect(screen.queryByRole('menuitem', { name: /save as image/i })).toBeNull();
+    // Always the three text formats.
+    expect(screen.getByRole('menuitem', { name: /plain text/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /unicode/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /latex/i })).toBeInTheDocument();
+    // No export entry without a scope.
+    expect(screen.queryByRole('menuitem', { name: /save as image|export image/i })).toBeNull();
 
     await userEvent.keyboard('{Escape}');
     rerender(
@@ -178,14 +183,15 @@ describe('CopyFormatMenu', () => {
         trackAction="copy_step"
         trackCategory="history"
         trackLabel="node-1"
-        imageEquation={eq}
+        exportScope="equation"
+        exportEquation={eq}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: /copy format options/i }));
-    await userEvent.click(screen.getByRole('menuitem', { name: /save as image/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /export image or pdf/i }));
 
-    // The image export dialog opens; the format menu closes.
-    expect(await screen.findByRole('dialog', { name: /save as image/i })).toBeInTheDocument();
+    // The pre-scoped export dialog opens; the format menu closes.
+    expect(await screen.findByRole('dialog', { name: /export equation/i })).toBeInTheDocument();
     expect(screen.queryByRole('menu')).toBeNull();
   });
 

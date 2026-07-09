@@ -692,19 +692,35 @@ export const equationToFormat = (eq: Equation, format: ExportFormat): string => 
 };
 
 /**
- * Build a human-readable transcript of the active derivation path
- * (root -> currentNodeId): numbered steps, each line the equation plus a
- * justification — the structured change description (#42), falling back to the
- * coarse label for moves that aren't descriptor-wired. The `parentId` chain is a
- * unique path (loop bubbles are off-chain); the seen-guard is belt-and-suspenders.
- *
- * `format` (#46) selects how the equations are rendered; justifications stay plain.
+ * One step of the active derivation as structured data (#130): its 1-based
+ * position, the equation, and — for every step past the first — the justification
+ * and any domain assumptions kept as their own field (NOT folded into the text).
+ * The starting equation carries neither. This is the single source of truth both
+ * the string transcript (`formatDerivation`, #46) and the rendered worked-solution
+ * document (#130) compose from, so the two can never drift.
  */
-export const formatDerivation = (
+export interface DerivationStep {
+  readonly index: number;
+  readonly equation: Equation;
+  /** The step's reason — structured descriptor (#42), else the coarse label. */
+  readonly justification?: string;
+  /** Domain restrictions the step relies on, e.g. ['x ≠ 0'] (#63). */
+  readonly assumptions?: readonly string[];
+}
+
+/**
+ * Walk the active derivation path (root -> currentNodeId) into structured steps.
+ * The `parentId` chain is a unique path (loop bubbles are off-chain); the
+ * seen-guard is belt-and-suspenders. The starting step has no justification; each
+ * later step's justification is the sentence-cased (#125) structured descriptor
+ * (#42), falling back to the coarse label. Assumptions (#63) ride their own field
+ * so a document can render them apart from the reason and the transcript can fold
+ * them back in — see `formatDerivation`.
+ */
+export const getDerivationSteps = (
   tree: Record<string, HistoryNode>,
   currentNodeId: string,
-  format: ExportFormat = 'plain',
-): string => {
+): DerivationStep[] => {
   const chain: HistoryNode[] = [];
   const seen = new Set<string>();
   let id: string | null = currentNodeId;
@@ -715,24 +731,46 @@ export const formatDerivation = (
   }
   chain.reverse();
 
-  // The justification for a step: its structured descriptor (#42), falling back
-  // to the coarse label, with any domain restrictions (#63) folded in so a copied
-  // derivation never drops an assumed ≠0 condition.
-  const justificationOf = (node: HistoryNode): string | undefined => {
-    // Sentence-case to match the history rail (#125); see sentenceCase.
-    const base = sentenceCase(node.change?.text ?? node.label);
-    const assumptions = node.change?.assumptions;
-    return base && assumptions?.length ? `${base}, assuming ${assumptions.join(', ')}` : base;
-  };
+  return chain.map((node, i) => {
+    const justification = i === 0 ? undefined : sentenceCase(node.change?.text ?? node.label) || undefined;
+    const assumptions = i === 0 ? undefined : node.change?.assumptions;
+    return {
+      index: i + 1,
+      equation: node.equation,
+      ...(justification ? { justification } : {}),
+      ...(assumptions?.length ? { assumptions } : {}),
+    };
+  });
+};
+
+/**
+ * Build a human-readable transcript of the active derivation path
+ * (root -> currentNodeId): numbered steps, each line the equation plus a
+ * justification — with any domain restrictions (#63) folded into the reason so a
+ * copied derivation never drops an assumed ≠0 condition. Composes the same
+ * structured steps as the worked-solution document (`getDerivationSteps`, #130).
+ *
+ * `format` (#46) selects how the equations are rendered; justifications stay plain.
+ */
+export const formatDerivation = (
+  tree: Record<string, HistoryNode>,
+  currentNodeId: string,
+  format: ExportFormat = 'plain',
+): string => {
+  const steps = getDerivationSteps(tree, currentNodeId);
+
+  // Fold assumptions back into the reason string for the flat transcript, where
+  // there's no separate column to hang them off of.
+  const reasonOf = (step: DerivationStep): string | undefined =>
+    step.justification && step.assumptions?.length
+      ? `${step.justification}, assuming ${step.assumptions.join(', ')}`
+      : step.justification;
 
   // LaTeX exports as a single `aligned` math block (no `$`): renders directly in
   // KaTeX/MathJax and pastes into Overleaf, unlike a numbered `$…$` transcript.
   // Reasons sit in a `&&` column so the renderer aligns them tidily (#46).
   if (format === 'latex') {
-    const rows = chain.map((node, i) => {
-      const justification = i === 0 ? undefined : justificationOf(node);
-      return equationToLatexAligned(node.equation, justification);
-    });
+    const rows = steps.map((step) => equationToLatexAligned(step.equation, reasonOf(step)));
     return `\\begin{aligned}\n${rows.join(' \\\\\n')}\n\\end{aligned}`;
   }
 
@@ -740,9 +778,9 @@ export const formatDerivation = (
   // column so they line up under a monospace face — the column does the separating,
   // so no delimiter is needed (#46). (Unicode superscripts/√ aren't always exactly
   // one cell, so its alignment is best-effort.)
-  const lines = chain.map((node, i) => ({
-    left: `${i + 1}. ${equationToFormat(node.equation, format)}`,
-    reason: i === 0 ? undefined : justificationOf(node),
+  const lines = steps.map((step) => ({
+    left: `${step.index}. ${equationToFormat(step.equation, format)}`,
+    reason: reasonOf(step),
   }));
   const reasonColumn = Math.max(0, ...lines.filter((l) => l.reason).map((l) => Array.from(l.left).length));
   const REASON_GAP = 2;

@@ -4,7 +4,7 @@
 'use client';
 
 import React from 'react';
-import { Check, Variable, Layers, Route, ChevronDown } from 'lucide-react';
+import { Check, Variable, Layers, Route, ChevronDown, Link2, Loader2 } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { useReducedMotion } from '../hooks/useReducedMotion';
@@ -12,6 +12,7 @@ import { trackEvent } from '../utils/analytics';
 import { safeCopyText } from '../utils/clipboard';
 import { safeStorage } from '../utils/safeStorage';
 import { encodeEqParam } from '../utils/eqParam';
+import { createShareLink } from '../utils/shareLink';
 import type { ShareScope } from '../store/equation';
 
 const COPIED_TIMEOUT = 2000;
@@ -140,6 +141,9 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
 }) => {
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
+  // True during the short-link create round-trip (encrypt → POST → build link), so
+  // the pill can show a "Creating link…" state while the server call is in flight.
+  const [creating, setCreating] = React.useState(false);
   // True while the pill is hovered — arms the size computation so the primary
   // tooltip can show the link's size band on plain hover, before the menu opens.
   const [hovered, setHovered] = React.useState(false);
@@ -282,6 +286,46 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
     }
   };
 
+  // Short link (#480): encrypt the workspace client-side, POST the ciphertext, and
+  // copy a tiny first-party `/s#key` link (~38 chars, constant size). The key rides
+  // in the fragment and never reaches the server. If the round-trip fails (offline,
+  // rate-limited, or over the size cap) we fall back to copying the self-contained
+  // `?ws=` link, so sharing never dead-ends — the recipient still gets a live link.
+  const handleShareShortLink = async () => {
+    clearCloseTimer();
+    setOpen(false);
+    setHintConsumed(true);
+    setCreating(true);
+    try {
+      const compressed = await getCompressedWorkspace('full');
+      const origin = `${window.location.protocol}//${window.location.host}`;
+      const result = await createShareLink(compressed, origin);
+      if (result.status === 'ok') {
+        const success = await safeCopyText(result.url);
+        if (success) {
+          flashCopied();
+          trackEvent({ action: 'share_short_link', category: 'interaction' });
+        }
+        return;
+      }
+      // Fallback: copy the self-contained workspace link so the user still gets
+      // something shareable; label the event with why the short link was skipped.
+      const success = await safeCopyText(`${baseUrl()}?ws=${compressed}`);
+      if (success) {
+        flashCopied();
+        trackEvent({
+          action: 'share_short_link_fallback',
+          category: 'interaction',
+          label: result.status,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to create short link:', err);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const derivationDesc = `${derivationStepCount} step${derivationStepCount !== 1 ? 's' : ''}`;
 
   const primaryButton = (
@@ -292,7 +336,12 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
       aria-label="Share workspace link"
       className={THEME_GLASS.SHARE_PILL_PRIMARY}
     >
-      {copied ? (
+      {creating ? (
+        <>
+          <Loader2 size={iconSize} className="text-indigo-300 animate-spin" />
+          <span className="hidden sm:inline">Creating link…</span>
+        </>
+      ) : copied ? (
         <>
           <Check size={iconSize} className="text-emerald-400" />
           <span className="text-emerald-400 font-bold hidden sm:inline">Link Copied!</span>
@@ -362,20 +411,41 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
           <div className={THEME_GLASS.COPY_MENU_HEADER}>
             <span className={THEME_GLASS.COPY_MENU_HEADER_LABEL}>Create Share Link</span>
           </div>
+          {/* Short link (#480) — a tiny first-party algebranch.org/s link of constant
+              size, regardless of workspace size. The recommended way to share. */}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleShareShortLink}
+            className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_GLASS.SHARE_MENU_ITEM_PRIMARY} ${THEME_TRANSITIONS.FAST}`}
+          >
+            <Link2 size={14} className="mt-0.5 shrink-0 text-indigo-300" />
+            <span className="flex flex-col gap-0.5 flex-1 min-w-0">
+              <span className="flex items-center justify-between gap-2">
+                <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Short link</span>
+                <span className={THEME_GLASS.SHARE_MENU_ITEM_BADGE}>Recommended</span>
+              </span>
+              <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>
+                Tiny algebranch.org/s link · constant length
+              </span>
+            </span>
+          </button>
           {/* Workspace share — full tree, the largest link. */}
           <button
             type="button"
             role="menuitem"
             onClick={() => handleShareWorkspaceLink('full')}
-            className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_GLASS.SHARE_MENU_ITEM_PRIMARY} ${THEME_TRANSITIONS.FAST}`}
+            className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
           >
-            <Layers size={14} className="mt-0.5 shrink-0 text-indigo-300" />
+            <Layers size={14} className="mt-0.5 shrink-0 text-indigo-400/70" />
             <span className="flex flex-col gap-0.5 flex-1 min-w-0">
               <span className="flex items-center justify-between gap-2">
                 <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Share workspace</span>
                 <SequenceChips keys={['C', 'W']} className="opacity-60" />
               </span>
-              <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>All branches and steps</span>
+              <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>
+                All branches and steps · self-contained link
+              </span>
               <SizeBadge size={linkSizes.full} />
               <ItemAdvice size={linkSizes.full} hasSmallerScope />
             </span>

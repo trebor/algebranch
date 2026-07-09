@@ -6,6 +6,13 @@ import { render, screen, cleanup, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { ShareMenu, SHARE_HINT_STEP_THRESHOLD, SHARE_HINT_FLAG, classifyLinkSize, bandAdvice } from '@/components/ShareMenu';
 import { encodeEqParam } from '@/utils/eqParam';
+import { createShareLink } from '@/utils/shareLink';
+
+// The short-link create round-trip (encrypt → POST → build link) is unit-tested in
+// shareLink.test.ts with real crypto; here we mock it to pin only the ShareMenu
+// wiring — copy the returned link on success, fall back to `?ws=` on failure.
+vi.mock('@/utils/shareLink', () => ({ createShareLink: vi.fn() }));
+const mockCreateShareLink = vi.mocked(createShareLink);
 
 function mockClipboard() {
   const writeText = vi.fn().mockResolvedValue(undefined);
@@ -36,6 +43,7 @@ describe('ShareMenu', () => {
   beforeEach(() => {
     writeText = mockClipboard();
     localStorage.clear();
+    mockCreateShareLink.mockReset();
     // jsdom has no real matchMedia; treat motion as allowed unless a test opts in.
     delete (window as unknown as { matchMedia?: unknown }).matchMedia;
   });
@@ -59,6 +67,35 @@ describe('ShareMenu', () => {
     // Hovering the pill pre-computes the link sizes, so getWs may be called more
     // than once; the headline behavior is that the click copies the full ?ws= link.
     expect(getWs).toHaveBeenCalledWith('full');
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?ws=COMPRESSED')),
+    );
+  });
+
+  it('the short-link item copies the returned /s#key link (#480)', async () => {
+    mockCreateShareLink.mockResolvedValue({
+      status: 'ok',
+      url: 'https://algebranch.org/s#deadbeefdeadbeefdeadbe',
+    });
+    renderMenu({ getCompressedWorkspace: () => 'COMPRESSED' });
+
+    await userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /short link/i }));
+
+    expect(mockCreateShareLink).toHaveBeenCalledWith('COMPRESSED', expect.any(String));
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith('https://algebranch.org/s#deadbeefdeadbeefdeadbe'),
+    );
+  });
+
+  it('the short-link item falls back to a ?ws= link when creation fails (#480)', async () => {
+    mockCreateShareLink.mockResolvedValue({ status: 'error' });
+    renderMenu({ getCompressedWorkspace: () => 'COMPRESSED' });
+
+    await userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /short link/i }));
+
+    // Sharing never dead-ends: on failure the self-contained workspace link is copied.
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?ws=COMPRESSED')),
     );
@@ -151,15 +188,18 @@ describe('ShareMenu', () => {
     const openMenu = () =>
       userEvent.click(screen.getByRole('button', { name: /more sharing options/i }));
 
-    it('the menu lists workspace, derivation, and equation items (largest → smallest)', async () => {
+    it('the menu leads with the short link, then lists workspace, derivation, and equation (largest → smallest)', async () => {
       renderScoped();
       await openMenu();
       const menu = screen.getByRole('menu');
       const items = within(menu).getAllByRole('menuitem');
-      expect(items.length).toBeGreaterThanOrEqual(3);
-      expect(items[0].textContent).toMatch(/workspace/i);
-      expect(items[1].textContent).toMatch(/derivation/i);
-      expect(items[2].textContent).toMatch(/equation/i);
+      expect(items.length).toBeGreaterThanOrEqual(4);
+      // Short link (#480) is the recommended headline, above the self-contained
+      // `?ws=` scopes ordered largest → smallest.
+      expect(items[0].textContent).toMatch(/short link/i);
+      expect(items[1].textContent).toMatch(/workspace/i);
+      expect(items[2].textContent).toMatch(/derivation/i);
+      expect(items[3].textContent).toMatch(/equation/i);
     });
 
     it('the workspace item shares the full tree', async () => {

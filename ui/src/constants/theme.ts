@@ -284,6 +284,10 @@ export const THEME_GLASS = {
   SHARE_MENU_ITEM_PRIMARY: 'bg-indigo-600/10 hover:bg-indigo-600/25 text-white',
   SHARE_MENU_ITEM_TITLE: 'text-xs font-semibold',
   SHARE_MENU_ITEM_DESC: 'text-[0.625rem] leading-snug text-white/45',
+  // Small chip marking the recommended short-link row (#480). Uppercase, tinted to
+  // match the primary tint so it reads as an endorsement, not a warning.
+  SHARE_MENU_ITEM_BADGE:
+    'shrink-0 px-1.5 py-0.5 rounded-full bg-indigo-500/25 text-indigo-200 text-[0.5rem] font-bold uppercase tracking-wide',
   // Link-size characterization (#439): a qualitative band ("Tiny/Compact/Large")
   // advising whether the link pastes everywhere, with the exact char count muted
   // beside it. OK = safe to share anywhere; WARN = large enough that some chat

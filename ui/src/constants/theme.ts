@@ -190,6 +190,9 @@ export const THEME_GLASS = {
   PEEK_HANDLE: 'flex items-center justify-center w-16 h-5 rounded-full border border-white/10 bg-neutral-900/70 backdrop-blur-md text-white/50 hover:text-indigo-300 hover:bg-indigo-600/20 hover:border-indigo-500/50 shadow-lg shadow-black/40 transition-all duration-300 cursor-pointer active:scale-95',
   TOAST_ALERT: 'flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/25 bg-neutral-900/80 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]',
   TOAST_LOADING: 'flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/20 bg-neutral-900/60 backdrop-blur-md text-xs text-indigo-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]',
+  // Error toast (#481): a red-tinted variant for a chord that couldn't do its job
+  // (e.g. a short link that failed to mint) — loud enough that the miss is seen.
+  TOAST_ERROR: 'flex items-center gap-2 px-3 py-1.5 rounded-full border border-red-500/30 bg-neutral-900/80 backdrop-blur-md text-xs text-red-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]',
   SPINNER: 'animate-spin rounded-full border-indigo-500/20 border-t-indigo-400 shrink-0',
   ICON_BUTTON: 'p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-white/10 text-white/55 hover:text-white transition-all cursor-pointer shadow-md',
   ICON_BUTTON_DANGER: 'p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-red-500/10 text-white/55 hover:text-red-400 hover:border-red-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-md',
@@ -279,15 +282,9 @@ export const THEME_GLASS = {
   // Share scope menu (#241): wider than COPY_MENU so each row can carry a
   // selling subtitle describing what the link restores.
   SHARE_MENU: 'absolute right-0 top-full mt-1.5 z-50 w-64 p-1 rounded-xl bg-neutral-950/95 border border-indigo-500/30 backdrop-blur-md shadow-2xl flex flex-col gap-0.5 text-left',
-  SHARE_MENU_ITEM: 'flex items-start gap-2.5 w-full px-2.5 py-2 rounded-lg text-left text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none',
-  // The headline row (workspace): tinted so it reads as the recommended action.
-  SHARE_MENU_ITEM_PRIMARY: 'bg-indigo-600/10 hover:bg-indigo-600/25 text-white',
+  SHARE_MENU_ITEM: 'flex items-start gap-2.5 w-full px-2.5 py-2 rounded-lg text-left text-white/70 hover:text-white hover:bg-indigo-600/20 transition-colors cursor-pointer select-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/70',
   SHARE_MENU_ITEM_TITLE: 'text-xs font-semibold',
   SHARE_MENU_ITEM_DESC: 'text-[0.625rem] leading-snug text-white/45',
-  // Small chip marking the recommended short-link row (#480). Uppercase, tinted to
-  // match the primary tint so it reads as an endorsement, not a warning.
-  SHARE_MENU_ITEM_BADGE:
-    'shrink-0 px-1.5 py-0.5 rounded-full bg-indigo-500/25 text-indigo-200 text-[0.5rem] font-bold uppercase tracking-wide',
   // Link-size characterization (#439): a qualitative band ("Tiny/Compact/Large")
   // advising whether the link pastes everywhere, with the exact char count muted
   // beside it. OK = safe to share anywhere; WARN = large enough that some chat
@@ -296,11 +293,24 @@ export const THEME_GLASS = {
   SHARE_SIZE_BADGE_OK: 'text-emerald-300/80',
   SHARE_SIZE_BADGE_WARN: 'text-amber-300/90',
   SHARE_SIZE_BADGE_COUNT: 'text-white/35 font-normal tabular-nums',
-  // Large-link advice (#405): a muted explanatory note rendered *inside* a menu
-  // item when that item's own link lands in the WARN band, naming the truncation
-  // risk and (where a narrower scope exists) nudging toward it. The amber tint
-  // echoes the warn badge, but the sentence — not the color — carries the meaning.
+  // Large-link advice (#405): a muted explanatory note rendered *inside* an offline
+  // menu item when that item's own link lands in the WARN band, naming the truncation
+  // risk and — where a smaller link exists below — nudging toward it. The amber tint
+  // echoes the warn badge, but the sentence, not the color, carries the meaning.
   SHARE_MENU_ADVICE: 'mt-0.5 text-[0.625rem] leading-snug text-amber-200/80',
+  // Thin separator between the primary short-link rows and the offline section (#481).
+  SHARE_MENU_DIVIDER: 'h-px my-1 mx-1.5 bg-white/10',
+  // Collapsed "Links that work offline" disclosure toggle (#481): muted so it sits
+  // quietly below the recommended short links; the chevron flags its expand state.
+  SHARE_MENU_SECTION_TOGGLE:
+    'flex items-center justify-between w-full px-2.5 py-1.5 rounded-lg text-[0.6875rem] font-medium text-white/40 hover:text-white/75 hover:bg-white/5 transition-colors cursor-pointer select-none',
+  // The same toggle promoted to the primary choice when the network is down (#481):
+  // the short-link rows are disabled, so this becomes the highlighted next step.
+  SHARE_MENU_SECTION_TOGGLE_ACTIVE:
+    'flex items-center justify-between w-full px-2.5 py-1.5 rounded-lg text-[0.6875rem] font-semibold text-indigo-200 bg-indigo-600/15 hover:bg-indigo-600/25 transition-colors cursor-pointer select-none',
+  // Offline heads-up under the header (#481): names why the short links are grayed
+  // and points at the offline choices below, so the fallback is a conscious pick.
+  SHARE_MENU_OFFLINE_NOTE: 'px-2.5 pb-1.5 text-[0.625rem] leading-snug text-amber-200/80',
 
   // Workspace switcher (#247): on short/landscape viewports the horizontal tab
   // strip collapses into this pill + popover anchored top-left of the expression

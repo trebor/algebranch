@@ -612,10 +612,26 @@ export const deminifyReplayWorkspace = (payload: MinifiedReplayWorkspace): Demin
 };
 
 /**
- * What a `?ws=` share carries (#439): the whole workspace tree ('full', the
- * default) or just the root → current-node lineage ('path').
+ * What a share carries: the whole workspace tree ('full', the default), just the
+ * root → current-node lineage ('path', #439), or only the current equation on its
+ * own ('equation', #481 — the current node re-rooted as a fresh single-node
+ * workspace, so an equation share rides the same short-link delivery as the rest).
  */
-export type ShareScope = 'full' | 'path';
+export type ShareScope = 'full' | 'path' | 'equation';
+
+/**
+ * The current node re-rooted as a lone single-node tree (#481): parent and history
+ * dropped, so the payload replays to just that equation with no derivation. Pure —
+ * the input tree is untouched. Returns an empty tree if the node is absent.
+ */
+export const filterTreeToEquation = <N extends { parentId: string | null; childrenIds: string[] }>(
+  tree: Record<string, N>,
+  currentNodeId: string,
+): Record<string, N> => {
+  const node = tree[currentNodeId];
+  if (!node) return {};
+  return { [currentNodeId]: { ...node, parentId: null, childrenIds: [] } };
+};
 
 /**
  * The root → `currentNodeId` lineage as a standalone tree (#439): off-path nodes
@@ -660,6 +676,7 @@ export const serializeWorkspaceState = async (
   if (!tree || !currentNodeId) return '';
   let serialized = serializeTree(tree);
   if (scope === 'path') serialized = filterTreeToPath(serialized, currentNodeId);
+  if (scope === 'equation') serialized = filterTreeToEquation(serialized, currentNodeId);
   const minified = minifyReplayWorkspace({ tree: serialized, currentNodeId, name });
   const stateStr = JSON.stringify(minified);
   return await compressString(stateStr);
@@ -2582,7 +2599,7 @@ export const isTreeAnimatingAtom = atom(false);
 export interface ToastState {
   message: string;
   key: number;
-  type?: 'default' | 'update';
+  type?: 'default' | 'update' | 'error';
   onAction?: () => void;
   actionLabel?: string;
   persistent?: boolean;

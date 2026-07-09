@@ -4,10 +4,11 @@
 'use client';
 
 import React from 'react';
-import { Check, Variable, Layers, Route, ChevronDown, Link2, Loader2 } from 'lucide-react';
+import { Check, Variable, Layers, Route, ChevronDown, WifiOff, Loader2 } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { trackEvent } from '../utils/analytics';
 import { safeCopyText } from '../utils/clipboard';
 import { safeStorage } from '../utils/safeStorage';
@@ -27,7 +28,8 @@ export const SHARE_HINT_FLAG = 'algebranch_share_hint_shown';
 // Link-size characterization (#439): a raw char count is noise — what a user
 // needs is whether the link pastes cleanly. ≤280 fits a QR code or a tweet;
 // ≤2,000 is the real-world safe-URL ceiling; beyond that some chat apps and
-// QR encoders may trim it. We translate the computed length into that advice.
+// QR encoders may trim it. Since #481 short links are constant-size, this only
+// characterizes the self-contained "works offline" links, where length still bites.
 const LINK_SIZE_TINY = 280;
 const LINK_SIZE_SAFE = 2000;
 
@@ -45,10 +47,10 @@ export const classifyLinkSize = (n: number): LinkBand =>
 /**
  * Actionable advice for a link length (#405). Returns an explanation only for the
  * WARN band — naming *why* a large link is risky — and `null` for the safe bands,
- * so callers render nothing when the link pastes cleanly everywhere. When a
- * narrower share scope exists below this one (`hasSmallerScope`), it also nudges
- * toward it; the smallest scope (equation) omits that clause since nothing below
- * it would shrink the link.
+ * so callers render nothing when the link pastes cleanly everywhere. When a smaller
+ * self-contained link exists below this one (`hasSmallerScope`), it nudges toward it
+ * in plain words (#481 — no "narrower scope" jargon); the smallest one omits that
+ * clause since nothing below it would shrink the link.
  */
 export const bandAdvice = (
   n: number,
@@ -56,12 +58,12 @@ export const bandAdvice = (
 ): string | null => {
   if (classifyLinkSize(n).tone !== 'warn') return null;
   const risk = 'This link may be trimmed by some chat apps and QR encoders.';
-  return hasSmallerScope ? `${risk} Try a narrower scope below.` : risk;
+  return hasSmallerScope ? `${risk} A smaller link is below.` : risk;
 };
 
 /**
- * The advice sentence (#405) rendered inside a menu item when *that item's* own
- * link lands in the warn band — so the explanation sits with the large link and
+ * The advice sentence (#405) rendered inside an offline menu item when *that item's*
+ * own link lands in the warn band — so the explanation sits with the large link and
  * its containment is unambiguous. `role="note"` so screen readers announce it.
  */
 const ItemAdvice: React.FC<{ size: number | null; hasSmallerScope: boolean }> = ({
@@ -77,7 +79,7 @@ const ItemAdvice: React.FC<{ size: number | null; hasSmallerScope: boolean }> = 
   );
 };
 
-/** The qualitative band + muted exact count shown beside each menu item. */
+/** The qualitative band + muted exact count shown beside each offline menu item. */
 const SizeBadge: React.FC<{ size: number | null }> = ({ size }) => {
   if (size === null) return null;
   const band = classifyLinkSize(size);
@@ -96,12 +98,6 @@ const SizeBadge: React.FC<{ size: number | null }> = ({ size }) => {
     </span>
   );
 };
-
-/** Text-tone class for a link-size band — amber warns, emerald reassures. */
-const bandToneClass = (n: number): string =>
-  classifyLinkSize(n).tone === 'warn'
-    ? THEME_GLASS.SHARE_SIZE_BADGE_WARN
-    : THEME_GLASS.SHARE_SIZE_BADGE_OK;
 
 /** A leader-chord rendered as keycap chips joined by "then" (e.g. C then W). */
 const SequenceChips: React.FC<{ keys: string[]; className?: string }> = ({ keys, className = '' }) => (
@@ -124,7 +120,7 @@ interface ShareMenuProps {
   derivationStepCount?: number;
   /** Lucide icon pixel size. */
   iconSize?: number;
-  /** Fallback text for the primary pill tooltip before char-count is computed. */
+  /** Fallback text for the primary pill tooltip. */
   tooltip?: string;
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
   disabled?: boolean;
@@ -141,14 +137,19 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
 }) => {
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
-  // True during the short-link create round-trip (encrypt → POST → build link), so
-  // the pill can show a "Creating link…" state while the server call is in flight.
+  // True during a short-link create round-trip (encrypt → POST → build link), so the
+  // pill can show a "Creating link…" state while the server call is in flight.
   const [creating, setCreating] = React.useState(false);
-  // True while the pill is hovered — arms the size computation so the primary
-  // tooltip can show the link's size band on plain hover, before the menu opens.
-  const [hovered, setHovered] = React.useState(false);
-  // Computed URL character counts — populated async when the menu opens so each
-  // item can show "· N chars" without blocking the open interaction.
+  // Is the "works offline" section expanded? Collapsed by default so the recommended
+  // short links lead and the self-contained links stay out of the way (#481).
+  const [offlineOpen, setOfflineOpen] = React.useState(false);
+  // Did the last short-link attempt fail while online (server unreachable / over the
+  // size cap)? When so we do *not* silently copy a long URL — we surface it and steer
+  // the user to the offline links, so the long link is only ever a conscious pick.
+  const [shortLinkError, setShortLinkError] = React.useState(false);
+  // Computed URL character counts for the offline rows — populated async when that
+  // section is expanded, so each self-contained item can show its size band without
+  // blocking. Only the offline links have variable size worth characterizing.
   const [linkSizes, setLinkSizes] = React.useState<{
     full: number | null;
     path: number | null;
@@ -160,6 +161,10 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
     () => safeStorage.getItem(SHARE_HINT_FLAG) === 'true',
   );
   const reducedMotion = useReducedMotion();
+  // Short links need a server round-trip; when the network is down we don't want to
+  // silently hand back a long fallback URL. Instead we disable the short-link rows
+  // and steer the user to the self-contained "works offline" links (#481).
+  const online = useOnlineStatus();
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // Stable ref so the size-computation effect always calls the latest prop
@@ -175,6 +180,30 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
     }
   };
   React.useEffect(() => clearCloseTimer, []);
+
+  // Toggle the dropdown. On a fresh open, collapse the offline disclosure when online
+  // (lead with the recommended short links) but auto-expand it when offline — where
+  // the short links are disabled and the offline choices are the only path (#481).
+  const toggleMenu = () => {
+    if (!open) {
+      setOfflineOpen(!online);
+      setShortLinkError(false);
+    }
+    setOpen((v) => !v);
+  };
+
+  // The pill's headline action mints a full-workspace short link — but offline that
+  // would just fall back to a long URL behind the user's back. So offline the pill
+  // opens the menu (offline section expanded) and lets them choose consciously.
+  const handlePrimaryPill = () => {
+    if (!online) {
+      clearCloseTimer();
+      setOfflineOpen(true);
+      setOpen(true);
+      return;
+    }
+    handleShareShort('full');
+  };
 
   React.useEffect(() => {
     if (!open) return;
@@ -194,12 +223,12 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
     };
   }, [open]);
 
-  // Compute URL character counts once the pill is hovered or the menu opens, so
-  // each item — and the primary tooltip — can show its size band. All three
-  // sizes are set together when the async workspace/path compressions resolve;
-  // they persist afterward so re-hovers don't re-compress needlessly.
+  // Compute the self-contained URL char counts once the offline section is expanded,
+  // so each of its rows can show a size band. All three are set together when the
+  // async workspace/path compressions resolve; they persist afterward so a re-expand
+  // doesn't re-compress needlessly.
   React.useEffect(() => {
-    if (!open && !hovered) return;
+    if (!offlineOpen) return;
     const base = `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
     const eqSize = (equationString ? `${base}?eq=${encodeEqParam(equationString)}` : base).length;
     let cancelled = false;
@@ -215,7 +244,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
       });
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [open, hovered, equationString]);
+  }, [offlineOpen, equationString]);
 
   // Right-moment hint (#241): once the derivation is substantial, pulse the
   // Share pill *once ever* to nudge "you have a worked solution worth sending".
@@ -233,12 +262,8 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
     return () => clearTimeout(t);
   }, [showHint]);
 
-  const handleMouseEnter = () => {
-    clearCloseTimer();
-    setHovered(true);
-  };
+  const handleMouseEnter = () => clearCloseTimer();
   const handleMouseLeave = () => {
-    setHovered(false);
     clearCloseTimer();
     closeTimer.current = setTimeout(() => setOpen(false), MENU_CLOSE_GRACE);
   };
@@ -251,7 +276,66 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
     setTimeout(() => setCopied(false), COPIED_TIMEOUT);
   };
 
-  const handleShareEquation = () => {
+  // Short link (#480/#481): encrypt the scoped workspace client-side, POST the
+  // ciphertext, and copy a tiny first-party `/s#key` link (~38 chars, constant size).
+  // Every primary row + the pill routes here. On failure we deliberately copy
+  // *nothing*: rather than silently swap in a giant self-contained URL the user could
+  // paste unaware, we surface the failure and expand the offline links, so the long
+  // link is only ever a conscious pick (#481). Every primary row + the pill routes here.
+  const handleShareShort = async (scope: ShareScope) => {
+    clearCloseTimer();
+    setHintConsumed(true);
+    setShortLinkError(false);
+    setCreating(true);
+    try {
+      const compressed = await Promise.resolve(getCompressedWorkspace(scope));
+      const origin = `${window.location.protocol}//${window.location.host}`;
+      const result = await createShareLink(compressed, origin);
+      if (result.status === 'ok') {
+        const success = await safeCopyText(result.url);
+        if (success) {
+          setOpen(false);
+          flashCopied();
+          trackEvent({ action: 'share_short_link', category: 'interaction', label: scope });
+        }
+        return;
+      }
+      // Couldn't mint a short link — surface it and steer to the offline links.
+      setShortLinkError(true);
+      setOfflineOpen(true);
+      setOpen(true);
+      trackEvent({ action: 'share_short_link_failed', category: 'interaction', label: scope });
+    } catch (err) {
+      console.error('Failed to create short link:', err);
+      setShortLinkError(true);
+      setOfflineOpen(true);
+      setOpen(true);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Offline delivery: copy a self-contained `?ws=` link (full or path scope) that
+  // needs no server round-trip — the "works offline" affordance (#481).
+  const handleShareWorkspaceOffline = async (scope: ShareScope) => {
+    clearCloseTimer();
+    setOpen(false);
+    setHintConsumed(true);
+    try {
+      const compressed = await Promise.resolve(getCompressedWorkspace(scope));
+      const success = await safeCopyText(`${baseUrl()}?ws=${compressed}`);
+      if (success) {
+        flashCopied();
+        trackEvent({ action: 'share_workspace_link', category: 'interaction', label: scope });
+      }
+    } catch (err) {
+      console.error('Failed to copy share link:', err);
+    }
+  };
+
+  // Offline equation delivery: a self-contained `?eq=` link, the smallest and only
+  // link that never needs a backend at all.
+  const handleShareEquationOffline = () => {
     clearCloseTimer();
     setOpen(false);
     setHintConsumed(true);
@@ -268,70 +352,12 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
     }
   };
 
-  const handleShareWorkspaceLink = async (scope: ShareScope) => {
-    clearCloseTimer();
-    setOpen(false);
-    setHintConsumed(true);
-    try {
-      const compressed = await getCompressedWorkspace(scope);
-      const shareUrl = `${baseUrl()}?ws=${compressed}`;
-      safeCopyText(shareUrl).then((success) => {
-        if (success) {
-          flashCopied();
-          trackEvent({ action: 'share_workspace_link', category: 'interaction', label: scope });
-        }
-      });
-    } catch (err) {
-      console.error('Failed to copy share link:', err);
-    }
-  };
-
-  // Short link (#480): encrypt the workspace client-side, POST the ciphertext, and
-  // copy a tiny first-party `/s#key` link (~38 chars, constant size). The key rides
-  // in the fragment and never reaches the server. If the round-trip fails (offline,
-  // rate-limited, or over the size cap) we fall back to copying the self-contained
-  // `?ws=` link, so sharing never dead-ends — the recipient still gets a live link.
-  const handleShareShortLink = async () => {
-    clearCloseTimer();
-    setOpen(false);
-    setHintConsumed(true);
-    setCreating(true);
-    try {
-      const compressed = await getCompressedWorkspace('full');
-      const origin = `${window.location.protocol}//${window.location.host}`;
-      const result = await createShareLink(compressed, origin);
-      if (result.status === 'ok') {
-        const success = await safeCopyText(result.url);
-        if (success) {
-          flashCopied();
-          trackEvent({ action: 'share_short_link', category: 'interaction' });
-        }
-        return;
-      }
-      // Fallback: copy the self-contained workspace link so the user still gets
-      // something shareable; label the event with why the short link was skipped.
-      const success = await safeCopyText(`${baseUrl()}?ws=${compressed}`);
-      if (success) {
-        flashCopied();
-        trackEvent({
-          action: 'share_short_link_fallback',
-          category: 'interaction',
-          label: result.status,
-        });
-      }
-    } catch (err) {
-      console.error('Failed to create short link:', err);
-    } finally {
-      setCreating(false);
-    }
-  };
-
   const derivationDesc = `${derivationStepCount} step${derivationStepCount !== 1 ? 's' : ''}`;
 
   const primaryButton = (
     <button
       type="button"
-      onClick={() => handleShareWorkspaceLink('full')}
+      onClick={handlePrimaryPill}
       disabled={disabled}
       aria-label="Share workspace link"
       className={THEME_GLASS.SHARE_PILL_PRIMARY}
@@ -346,10 +372,13 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
           <Check size={iconSize} className="text-emerald-400" />
           <span className="text-emerald-400 font-bold hidden sm:inline">Link Copied!</span>
         </>
+      ) : !online ? (
+        <>
+          <WifiOff size={iconSize} className="text-amber-300/90" />
+          <span className="hidden sm:inline">Share workspace</span>
+        </>
       ) : (
         <>
-          {/* Layers glyph + explicit scope, matching the workspace menu item so
-              the button reads as "this copies the workspace" (#439). */}
           <Layers size={iconSize} className="text-indigo-300 group-hover:scale-110 transition-transform" />
           <span className="hidden sm:inline">Share workspace</span>
         </>
@@ -370,23 +399,14 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
         )}
         <Tooltip
           content={
-            // Two stacked lines so the size band and the chord each stay short —
-            // a single nowrap line overran the tooltip's max width (#439).
-            <span className="flex flex-col items-center gap-1 whitespace-nowrap">
-              <span>
-                {linkSizes.full !== null ? (
-                  <>
-                    <span className={bandToneClass(linkSizes.full)}>
-                      {`${classifyLinkSize(linkSizes.full).label} link`}
-                    </span>
-                    <span className="text-white/50">{` · ${linkSizes.full.toLocaleString()} chars`}</span>
-                  </>
-                ) : (
-                  (tooltip ?? 'Share workspace')
-                )}
+            !online ? (
+              <span className="whitespace-nowrap">Offline — pick a link that works offline</span>
+            ) : (
+              <span className="flex flex-col items-center gap-1 whitespace-nowrap">
+                <span>{tooltip ?? 'Share workspace'}</span>
+                <SequenceChips keys={['C', 'W']} />
               </span>
-              <SequenceChips keys={['C', 'W']} />
-            </span>
+            )
           }
           position={tooltipPosition}
           autoAlign={false}
@@ -396,7 +416,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
         <span aria-hidden="true" className={THEME_GLASS.SHARE_PILL_DIVIDER} />
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={toggleMenu}
           disabled={disabled}
           aria-haspopup="menu"
           aria-expanded={open}
@@ -409,80 +429,146 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
       {open && (
         <div role="menu" className={THEME_GLASS.SHARE_MENU}>
           <div className={THEME_GLASS.COPY_MENU_HEADER}>
-            <span className={THEME_GLASS.COPY_MENU_HEADER_LABEL}>Create Share Link</span>
+            <span className={THEME_GLASS.COPY_MENU_HEADER_LABEL}>Share</span>
           </div>
-          {/* Short link (#480) — a tiny first-party algebranch.org/s link of constant
-              size, regardless of workspace size. The recommended way to share. */}
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handleShareShortLink}
-            className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_GLASS.SHARE_MENU_ITEM_PRIMARY} ${THEME_TRANSITIONS.FAST}`}
-          >
-            <Link2 size={14} className="mt-0.5 shrink-0 text-indigo-300" />
-            <span className="flex flex-col gap-0.5 flex-1 min-w-0">
-              <span className="flex items-center justify-between gap-2">
-                <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Short link</span>
-                <span className={THEME_GLASS.SHARE_MENU_ITEM_BADGE}>Recommended</span>
-              </span>
-              <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>
-                Tiny algebranch.org/s link · constant length
-              </span>
+
+          {/* Heads-up note (#481): either the network is down (short links disabled)
+              or a mint just failed. Either way, name why and point at the offline
+              choices below — so a long link is only ever a conscious pick. */}
+          {(!online || shortLinkError) && (
+            <span role="note" className={THEME_GLASS.SHARE_MENU_OFFLINE_NOTE}>
+              {!online
+                ? "You're offline. Short links need a connection — use a link that works offline below."
+                : "Couldn't create a short link. Use a link that works offline below."}
             </span>
-          </button>
-          {/* Workspace share — full tree, the largest link. */}
+          )}
+
+          {/* Primary rows (#481): one opaque short link per scope — the same tiny
+              /s link shape everywhere, so there is one thing to recognize. Disabled
+              when offline, where the short-link server can't be reached. */}
           <button
             type="button"
             role="menuitem"
-            onClick={() => handleShareWorkspaceLink('full')}
+            disabled={!online}
+            onClick={() => handleShareShort('full')}
             className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
           >
-            <Layers size={14} className="mt-0.5 shrink-0 text-indigo-400/70" />
+            <Layers size={14} className="mt-0.5 shrink-0 text-indigo-300" />
             <span className="flex flex-col gap-0.5 flex-1 min-w-0">
               <span className="flex items-center justify-between gap-2">
-                <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Share workspace</span>
+                <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Whole workspace</span>
                 <SequenceChips keys={['C', 'W']} className="opacity-60" />
               </span>
-              <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>
-                All branches and steps · self-contained link
-              </span>
-              <SizeBadge size={linkSizes.full} />
-              <ItemAdvice size={linkSizes.full} hasSmallerScope />
+              <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>Every branch and step</span>
             </span>
           </button>
-          {/* Derivation share — root → current node only, a shorter link. */}
           <button
             type="button"
             role="menuitem"
-            onClick={() => handleShareWorkspaceLink('path')}
+            disabled={!online}
+            onClick={() => handleShareShort('path')}
             className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
           >
-            <Route size={14} className="mt-0.5 shrink-0 text-indigo-400/70" />
+            <Route size={14} className="mt-0.5 shrink-0 text-indigo-300" />
             <span className="flex flex-col gap-0.5 flex-1 min-w-0">
               <span className="flex items-center justify-between gap-2">
-                <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Share derivation</span>
-                <SequenceChips keys={['C', 'P']} className="opacity-60" />
+                <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>This derivation</span>
+                <SequenceChips keys={['C', 'D']} className="opacity-60" />
               </span>
-              <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>{derivationDesc}</span>
-              <SizeBadge size={linkSizes.path} />
-              <ItemAdvice size={linkSizes.path} hasSmallerScope />
+              <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>Your path from start to here</span>
             </span>
           </button>
-          {/* Equation share — just the starting equation, the smallest link. */}
           <button
             type="button"
             role="menuitem"
-            onClick={handleShareEquation}
+            disabled={!online}
+            onClick={() => handleShareShort('equation')}
             className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
           >
-            <Variable size={14} className="mt-0.5 shrink-0 text-indigo-400/70" />
+            <Variable size={14} className="mt-0.5 shrink-0 text-indigo-300" />
             <span className="flex flex-col gap-0.5 flex-1 min-w-0">
-              <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Share equation</span>
-              <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>Just the starting equation</span>
-              <SizeBadge size={linkSizes.eq} />
-              <ItemAdvice size={linkSizes.eq} hasSmallerScope={false} />
+              <span className="flex items-center justify-between gap-2">
+                <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Just the equation</span>
+                <SequenceChips keys={['C', 'E']} className="opacity-60" />
+              </span>
+              <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>The equation on its own</span>
             </span>
           </button>
+
+          <span aria-hidden="true" className={THEME_GLASS.SHARE_MENU_DIVIDER} />
+
+          {/* Offline section (#481): the self-contained links, collapsed by default so
+              they stay out of the way. This is the only place the #439/#405 size-band
+              machinery still lives — short links make it moot on the primary path. */}
+          <button
+            type="button"
+            role="menuitem"
+            aria-expanded={offlineOpen}
+            onClick={() => setOfflineOpen((v) => !v)}
+            className={
+              online && !shortLinkError
+                ? THEME_GLASS.SHARE_MENU_SECTION_TOGGLE
+                : THEME_GLASS.SHARE_MENU_SECTION_TOGGLE_ACTIVE
+            }
+          >
+            <span className="flex items-center gap-1.5">
+              <WifiOff size={12} className="shrink-0" />
+              Links that work offline
+            </span>
+            <ChevronDown
+              size={12}
+              className={`shrink-0 transition-transform ${offlineOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {offlineOpen && (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                aria-label="Offline workspace link"
+                onClick={() => handleShareWorkspaceOffline('full')}
+                className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
+              >
+                <Layers size={14} className="mt-0.5 shrink-0 text-indigo-400/70" />
+                <span className="flex flex-col gap-0.5 flex-1 min-w-0">
+                  <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Whole workspace</span>
+                  <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>Every branch and step</span>
+                  <SizeBadge size={linkSizes.full} />
+                  <ItemAdvice size={linkSizes.full} hasSmallerScope />
+                </span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                aria-label="Offline derivation link"
+                onClick={() => handleShareWorkspaceOffline('path')}
+                className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
+              >
+                <Route size={14} className="mt-0.5 shrink-0 text-indigo-400/70" />
+                <span className="flex flex-col gap-0.5 flex-1 min-w-0">
+                  <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>This derivation</span>
+                  <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>{derivationDesc}</span>
+                  <SizeBadge size={linkSizes.path} />
+                  <ItemAdvice size={linkSizes.path} hasSmallerScope />
+                </span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                aria-label="Offline equation link"
+                onClick={handleShareEquationOffline}
+                className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
+              >
+                <Variable size={14} className="mt-0.5 shrink-0 text-indigo-400/70" />
+                <span className="flex flex-col gap-0.5 flex-1 min-w-0">
+                  <span className={THEME_GLASS.SHARE_MENU_ITEM_TITLE}>Just the equation</span>
+                  <span className={THEME_GLASS.SHARE_MENU_ITEM_DESC}>The equation on its own</span>
+                  <SizeBadge size={linkSizes.eq} />
+                  <ItemAdvice size={linkSizes.eq} hasSmallerScope={false} />
+                </span>
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

@@ -138,7 +138,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onCloseMobile, noBor
             getText={(format) => formatDerivation(tree, currentNodeId, format)}
             iconSize={16}
             variant="panel"
-            tooltip={<HotkeyHint label="Copy full derivation" sequence={['C', 'D']} />}
+            tooltip={<HotkeyHint label="Copy full derivation" />}
             // Gate on the ACTIVE PATH length (root → current), not the total node
             // count: the control copies/exports that path, so at the root — a
             // single-step path — there is nothing to export even when the tree has
@@ -297,7 +297,7 @@ export const TimelineContent: React.FC<TimelineContentProps> = ({ onCloseMobile 
             getText={(format) => formatDerivation(tree, currentNodeId, format)}
             iconSize={16}
             variant="panel"
-            tooltip={<HotkeyHint label="Copy full derivation" sequence={['C', 'D']} />}
+            tooltip={<HotkeyHint label="Copy full derivation" />}
             disabled={isHydrated ? sortedNodes.length <= 1 : undefined}
             trackAction="copy_derivation"
             trackCategory="history"

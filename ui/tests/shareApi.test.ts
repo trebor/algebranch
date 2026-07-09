@@ -8,7 +8,7 @@
 // is just glue over `createShare`; every meaningful branch — validation, the
 // 64 KB cap, and the store-if-absent collision signal — lives and is pinned here.
 import { describe, it, expect } from 'vitest';
-import { createShare, MAX_CIPHERTEXT_BYTES } from '@/server/share/shareApi';
+import { createShare, readShare, MAX_CIPHERTEXT_BYTES } from '@/server/share/shareApi';
 import type { ShareStore } from '@/server/share/shareStore';
 
 // 14 base62 chars — a well-shaped id (matches SHARE_ID_PATTERN).
@@ -90,5 +90,38 @@ describe('createShare', () => {
     const atCap = 'a'.repeat(MAX_CIPHERTEXT_BYTES);
     const result = await createShare({ id: VALID_ID, ciphertext: atCap }, store);
     expect(result.status).toBe(200);
+  });
+});
+
+describe('readShare', () => {
+  it('returns the stored ciphertext for a known id (200)', async () => {
+    const { store } = fakeStore({ [VALID_ID]: CIPHERTEXT });
+    const result = await readShare(VALID_ID, store);
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ ciphertext: CIPHERTEXT });
+  });
+
+  it('returns 404 for an unknown but well-shaped id', async () => {
+    const { store } = fakeStore();
+    const result = await readShare(VALID_ID, store);
+    expect(result.status).toBe(404);
+  });
+
+  it('rejects a wrong-shape id before touching the store (400)', async () => {
+    const { store, data } = fakeStore();
+    // A store spy: a `get` on a bad id would be a bug, so track calls.
+    let getCalls = 0;
+    const spied: ShareStore = {
+      put: store.put,
+      async get(id) {
+        getCalls++;
+        return data.has(id) ? data.get(id)! : null;
+      },
+    };
+    for (const badId of ['tooshort', 'a1B2c3D4e5F6g7X' /* 15 */, 'a1B2c3-4e5F6g7' /* dash */, '']) {
+      const result = await readShare(badId, spied);
+      expect(result.status).toBe(400);
+    }
+    expect(getCalls).toBe(0);
   });
 });

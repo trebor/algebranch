@@ -23,10 +23,15 @@ import type { ShareStore } from './shareStore';
  */
 export const MAX_CIPHERTEXT_BYTES = 64 * 1024;
 
-/** A minimal HTTP-ish result the route wrapper maps onto `Response.json`. */
-export type ShareApiResult =
+/** Result of a create request — the route wrapper maps it onto `Response.json`. */
+export type CreateShareResult =
   | { status: 200; body: { id: string } }
   | { status: 400 | 409 | 413 | 500; body: { error: string } };
+
+/** Result of a read request — 200 carries the opaque ciphertext, errors an `error`. */
+export type ReadShareResult =
+  | { status: 200; body: { ciphertext: string } }
+  | { status: 400 | 404 | 500; body: { error: string } };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -41,7 +46,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * and overwriting would break that live link. The caller (client) must regenerate
  * its key — which yields a fresh id — and retry; the server never overwrites.
  */
-export async function createShare(input: unknown, store: ShareStore): Promise<ShareApiResult> {
+export async function createShare(input: unknown, store: ShareStore): Promise<CreateShareResult> {
   if (!isRecord(input)) {
     return { status: 400, body: { error: 'Expected a JSON object body.' } };
   }
@@ -63,4 +68,21 @@ export async function createShare(input: unknown, store: ShareStore): Promise<Sh
     return { status: 409, body: { error: 'Id already exists.' } };
   }
   return { status: 200, body: { id } };
+}
+
+/**
+ * Fetch the ciphertext stored under `id`. Shape-check the id first — a malformed id
+ * can never have been stored, so we reject it (400) without a pointless store hit —
+ * then read: the ciphertext on a hit (200), or 404 on a miss. The store is
+ * zero-knowledge, so we return the ciphertext verbatim and never inspect it.
+ */
+export async function readShare(id: string, store: ShareStore): Promise<ReadShareResult> {
+  if (!SHARE_ID_PATTERN.test(id)) {
+    return { status: 400, body: { error: 'Malformed id.' } };
+  }
+  const ciphertext = await store.get(id);
+  if (ciphertext === null) {
+    return { status: 404, body: { error: 'Not found.' } };
+  }
+  return { status: 200, body: { ciphertext } };
 }

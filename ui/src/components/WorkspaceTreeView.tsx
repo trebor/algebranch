@@ -477,7 +477,8 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
               trackLabel={node.id}
               scopeLabel="This step"
               scopeEquation={node.equation}
-              imageEquation={node.equation}
+              exportScope="equation"
+              exportEquation={node.equation}
               stopPropagation
               onOpenChange={(isOpen) => {
                 if (isOpen) {

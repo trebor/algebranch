@@ -42,20 +42,37 @@ export function foregroundColorFor(bg: ImageBackground): string {
 const MAX_SLUG = 48;
 
 /**
- * Download filename for an exported equation, e.g. `algebranch-x^2-9=0.png`. Built
- * from the plain-text form with anything that isn't a safe, readable math
- * character collapsed to a single hyphen, so it can't contain path separators,
- * whitespace, or glob characters. Falls back to a generic name when nothing usable
- * survives.
+ * A filesystem-safe slug from an equation's plain-text form: anything that isn't a
+ * safe, readable math character collapses to a single hyphen, so the result can't
+ * contain path separators, whitespace, or glob characters. Empty when nothing
+ * usable survives, so callers can supply their own fallback.
  */
-export function equationImageFilename(eq: Equation): string {
-  const slug = equationToFormat(eq, 'plain')
+function equationSlug(eq: Equation): string {
+  return equationToFormat(eq, 'plain')
     .replace(/\s+/g, '')
     .replace(/[^a-zA-Z0-9=+^-]+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, MAX_SLUG);
+}
+
+/**
+ * Download filename for an exported equation, e.g. `algebranch-x^2-9=0.png`.
+ * Falls back to a generic name when the slug is empty.
+ */
+export function equationImageFilename(eq: Equation): string {
+  const slug = equationSlug(eq);
   return slug ? `algebranch-${slug}.png` : 'algebranch-equation.png';
+}
+
+/**
+ * Download filename for a worked-solution PNG (#130), keyed off the original
+ * problem equation, e.g. `algebranch-solution-2x=4.png`. Distinct `-solution-`
+ * segment so a saved worked solution reads apart from a single-equation image.
+ */
+export function workedSolutionImageFilename(problem: Equation): string {
+  const slug = equationSlug(problem);
+  return slug ? `algebranch-solution-${slug}.png` : 'algebranch-solution.png';
 }
 
 /**

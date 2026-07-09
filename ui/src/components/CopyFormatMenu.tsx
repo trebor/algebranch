@@ -6,15 +6,15 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useSetAtom } from 'jotai';
-import { Copy, Check, ChevronDown, ImageDown, Type, Sigma, Code } from 'lucide-react';
+import { Copy, Check, ChevronDown, Type, Sigma, Code, FileDown } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Equation } from 'math-engine-client';
 import { Tooltip } from './Tooltip';
 import { PreviewEquationNode } from './PreviewEquationNode';
-import { ImageExportDialog } from './ImageExportDialog';
+import { ExportDialog } from './ExportDialog';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
-import type { ExportFormat } from '../store/equation';
+import type { ExportFormat, DerivationStep } from '../store/equation';
 import { toastAtom } from '../store/equation';
 import { safeCopyText } from '../utils/clipboard';
 
@@ -101,11 +101,16 @@ interface CopyFormatMenuProps {
   /** Equation to render typeset in the menu header — names *which* equation is copied (#243). */
   scopeEquation?: Equation;
   /**
-   * When provided, the menu gains a "Save as image…" entry that opens the PNG
-   * export dialog for this single equation (#335). Omit in multi-equation contexts
-   * (e.g. full-derivation copy) where a single-equation image makes no sense.
+   * When set, the menu gains an export entry that opens the pre-scoped
+   * {@link ExportDialog} — image/PDF export lives in the same Copy control as the
+   * text formats, scoped by where the control lives (#130): `equation` on a single
+   * step, `derivation` in the History header. Omit for a text-only copy menu.
    */
-  imageEquation?: Equation;
+  exportScope?: 'equation' | 'derivation';
+  /** The equation the export renders (equation scope) / endpoint (derivation filename). */
+  exportEquation?: Equation;
+  /** The derivation steps — required when `exportScope` is `derivation`. */
+  exportSteps?: readonly DerivationStep[];
   /**
    * Fired while the trigger is hovered or the menu is open (#46), so a caller can
    * illuminate the export path in the tree. Kept as a callback to keep this
@@ -136,7 +141,9 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   stopPropagation,
   scopeLabel,
   scopeEquation,
-  imageEquation,
+  exportScope,
+  exportEquation,
+  exportSteps,
   onPreviewChange,
   onOpenChange,
   focusable = true,
@@ -144,7 +151,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   const triggerTabIndex = focusable ? undefined : -1;
   const setToast = useSetAtom(toastAtom);
   const [open, setOpen] = React.useState(false);
-  const [imageOpen, setImageOpen] = React.useState(false);
+  const [exportOpen, setExportOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
@@ -373,7 +380,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
               {label}
             </button>
           ))}
-          {imageEquation && (
+          {exportScope && (
             <button
               type="button"
               role="menuitem"
@@ -383,22 +390,24 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
                 setOpen(false);
                 setMenuPos(null);
                 setHovered(false);
-                setImageOpen(true);
+                setExportOpen(true);
               }}
               className={`${THEME_GLASS.COPY_MENU_ITEM} ${THEME_TRANSITIONS.FAST} border-t border-white/5`}
             >
-              <ImageDown size={13} className={THEME_GLASS.COPY_MENU_ITEM_ICON} />
-              Save as image…
+              <FileDown size={13} className={THEME_GLASS.COPY_MENU_ITEM_ICON} />
+              Export image or PDF…
             </button>
           )}
         </div>,
         document.body
       )}
-      {imageEquation && (
-        <ImageExportDialog
-          equation={imageEquation}
-          isOpen={imageOpen}
-          onClose={() => setImageOpen(false)}
+      {exportScope && exportEquation && (
+        <ExportDialog
+          scope={exportScope}
+          equation={exportEquation}
+          steps={exportSteps}
+          isOpen={exportOpen}
+          onClose={() => setExportOpen(false)}
         />
       )}
     </div>

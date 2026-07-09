@@ -234,3 +234,43 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Worked-solution export (#130): the dialog renders the document a second time
+   into this off-screen holder so Print / Save-as-PDF yields a clean, unclipped
+   page. On screen the holder is sized to nothing and its overflow hidden, so the
+   fixed-width document inside is invisible — yet still laid out, so equation
+   measurements (radical index placement) are correct when it prints. */
+.export-print-portal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.export-print-portal > * {
+  width: 760px;
+}
+
+@media print {
+  /* Isolate the printed page to the worked-solution document: hide every other
+     element (app chrome, the dialog modal, its backdrop) and reveal only the
+     off-screen print holder, pulled back into normal flow at the page origin. */
+  body * {
+    visibility: hidden !important;
+  }
+  .export-print-portal,
+  .export-print-portal * {
+    visibility: visible !important;
+  }
+  .export-print-portal {
+    position: absolute;
+    width: auto;
+    height: auto;
+    overflow: visible;
+  }
+  .export-print-portal > * {
+    width: 100%;
+  }
+}

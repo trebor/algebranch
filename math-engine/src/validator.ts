@@ -1445,6 +1445,24 @@ const collectValidMoves = (
       ? [originalEq.relation as RelationOperator, flipRelation(originalEq.relation)]
       : ['='];
 
+    // Canonical no-op signature of a candidate: its rendered form after the SAME
+    // normalization every move gets on its way out of generateValidMoves
+    // (canonicalizeAssociativeChains → ensureNodeIds, which also strips redundant
+    // parentheses). Comparing raw mathjs `.toString()` instead was fooled by cosmetic
+    // parenthesisation — dragging a factor onto the term it already multiplies (the
+    // `x` in `(3·x−1)·x` onto `(3·x−1)`) yields `((3·x−1)·x) + …`, a string differing
+    // from the original only by a paren pair, so the move was recorded as real; the
+    // canonical form then collapsed it back and computeMathSync's render filter stripped
+    // it, leaving the source selectable with zero destinations. Normalizing BOTH sides
+    // here catches that no-op at the source, so hasValidMove and generateValidMoves agree
+    // (the equation-level #367 signature filter stays as defense-in-depth). A genuine
+    // commutative reorder (`a·b`→`b·a`) renders differently and is correctly kept.
+    const canonicalSignature = (eq: Equation, rel: RelationOperator): string => {
+      const norm = ensureNodeIds(canonicalizeAssociativeChains(eq));
+      return `${norm.lhs.toString()} ${rel} ${norm.rhs.toString()}`;
+    };
+    const originalSignature = canonicalSignature(originalEq, originalEq.relation ?? '=');
+
     // #377: the source's maximal same-operator associative chain (if it sits in
     // one). Any target that is another operand of this same chain would produce
     // a pure commutative reorder — dropped below.
@@ -1557,11 +1575,7 @@ const collectValidMoves = (
         if (preferredLocked && !isPreferred) return;
         for (const rel of relationVariants) {
           const candRel: Equation = isInequality ? { ...candidateEq, relation: rel } : candidateEq;
-          const isNoOp = (
-            originalEq.lhs.toString() === candRel.lhs.toString() &&
-            originalEq.rhs.toString() === candRel.rhs.toString() &&
-            (originalEq.relation ?? '=') === rel
-          );
+          const isNoOp = canonicalSignature(candRel, rel) === originalSignature;
           if (isNoOp) continue;
 
           let isEquivalent = false;

@@ -257,8 +257,6 @@ describe('computeMathSync — no-op offer suppression (#367)', () => {
   // (equationToString) is order- and paren-sensitive, so a genuine commutative reorder
   // (a·b → b·a, a different string) is NOT collapsed; only a true byte-for-byte no-op is.
 
-  const sig = (eqStr: string): string => equationToString(parseEquation(eqStr));
-
   // No offered result — reduction option or drop target — may render identically to
   // the current equation, for any source selection. This is the generic invariant.
   const noOfferedNoOp = (eqStr: string): void => {
@@ -283,16 +281,17 @@ describe('computeMathSync — no-op offer suppression (#367)', () => {
     }
   };
 
-  test('the (x+2)·3=0 drop-onto-sibling no-op target is suppressed; the real cross-equals move survives', () => {
-    // Selecting `3` (lhs/1) and dropping it onto `(x+2)` (lhs/0) reproduces
-    // `(x + 2) * 3 = 0` byte-for-byte — a no-op move (the repro from #367).
+  test('the (x+2)·3=0 drop-onto-sibling no-op target is suppressed at the move layer; the real cross-equals move survives', () => {
+    // Selecting `3` (lhs/1) and dropping it onto `(x+2)` (lhs/0) would reproduce
+    // `(x + 2) * 3 = 0` byte-for-byte — a no-op move (the repro from #367). The move
+    // engine now recognises that as a no-op via its canonical-render check and never
+    // emits it as a raw candidate (the #367 follow-up), so the drop target is absent
+    // from generateValidMoves itself, not merely filtered afterwards in computeMathSync.
     const eq = parseEquation('(x + 2) * 3 = 0');
-    const targets = computeMathSync(eq, 'lhs/1').targetPaths; // source = the 3
-    // Guard: the move engine DOES still generate the no-op as a candidate target, so a
-    // missing key means suppression removed it, not that no move existed.
     const rawMoves = generateValidMoves(eq, 'lhs/1');
-    expect(sig('(x + 2) * 3 = 0')).toBe(equationToString(rawMoves['lhs/0']));
-    expect(Object.keys(targets)).not.toContain('lhs/0'); // no-op target suppressed
+    expect(Object.keys(rawMoves)).not.toContain('lhs/0'); // no-op suppressed at source
+    const targets = computeMathSync(eq, 'lhs/1').targetPaths; // source = the 3
+    expect(Object.keys(targets)).not.toContain('lhs/0'); // and stays absent downstream
     expect(Object.keys(targets)).toContain('rhs'); // moving 3 across the equals survives
   });
 
@@ -316,6 +315,48 @@ describe('computeMathSync — no-op offer suppression (#367)', () => {
     expect(Object.keys(move.targetPaths)).toContain('rhs');
     const reduce = computeMathSync(parseEquation('x = 2 + 3'), null);
     expect(Object.keys(reduce.reduciblePaths).length).toBeGreaterThan(0);
+  });
+});
+
+describe('computeMathSync — no dead-end selectable nodes (#367 follow-up)', () => {
+  // A node is "active" (selectable/boxable as a drag source) iff hasValidMove finds
+  // a move for it. But that existence check compared candidates via raw mathjs
+  // toString, which is fooled by redundant parenthesisation: dragging a factor onto
+  // the very term it already multiplies — e.g. the `x` in `(3·x−1)·x` onto `(3·x−1)`
+  // — produces `((3·x−1)·x) + …`, a string differing from the original only by a pair
+  // of parens. So hasValidMove said "active", yet generateValidMoves' canonical
+  // normalization collapsed the move back to the original and computeMathSync's
+  // render-based no-op filter then stripped it — leaving the node selectable with
+  // zero destinations. Invariant: every active path must have at least one target.
+  const deadEndActivePaths = (eqStr: string): string[] => {
+    const eq = parseEquation(eqStr);
+    const { activePaths } = computeMathSync(eq, null);
+    return activePaths.filter(
+      (source) => Object.keys(computeMathSync(eq, source).targetPaths).length === 0,
+    );
+  };
+
+  test('the factor-onto-its-own-multiplier no-op is not offered as a selectable node', () => {
+    // Repro: `x` (lhs/0/1) and `2` (lhs/1/1) each sit as the sole extra factor of a
+    // `(3·x−1)·_` product. Their only candidate move is a no-op onto `(3·x−1)`, so
+    // they must not be selectable at all.
+    const { activePaths } = computeMathSync(parseEquation('(3*x-1)*x + (3*x-1)*2 = 0'), null);
+    expect(activePaths).not.toContain('lhs/0/1'); // the x
+    expect(activePaths).not.toContain('lhs/1/1'); // the 2
+  });
+
+  test('no active node is a dead end, across a battery (RHS zero and non-zero)', () => {
+    for (const s of [
+      '(3*x-1)*x + (3*x-1)*2 = 0',
+      '(3*x-1)*x + (3*x-1)*2 = 5',
+      '(x + 2) * 3 = 0',
+      'x*(x-1)*(x+1)*(x+2) = 3',
+      'x + 3 = 7',
+      '2*x + 3 = 7',
+      'a + b + c = d',
+    ]) {
+      expect({ eq: s, deadEnds: deadEndActivePaths(s) }).toEqual({ eq: s, deadEnds: [] });
+    }
   });
 });
 

@@ -184,4 +184,40 @@ describe('path-only share (#439)', () => {
       expect(equationToString(rebuilt[de.currentNodeId].equation)).toBe(equationToString(tree['0'].equation));
     });
   });
+
+  // Equation scope (#481): share *just the current equation* as a fresh single-node
+  // workspace — the current node re-rooted (no parent, no history, no branches),
+  // regardless of how deep it sits. This is what lets an equation share ride the
+  // same short-link delivery as the workspace/derivation scopes.
+  describe("serializeWorkspaceState 'equation' scope (#481)", () => {
+    it('emits a single re-rooted node carrying the current equation, whatever the depth', async () => {
+      const { tree, current } = branchingTree(); // `current` sits two steps deep
+      const compressed = await serializeWorkspaceState(tree, current, 'Work', 'equation');
+      const payload = JSON.parse(await decompressString(compressed));
+      expect(payload.r).toHaveLength(1);
+
+      const de = deminifyReplayWorkspace(payload);
+      expect(de.name).toBe('Work');
+      expect(de.drift).toBe(false);
+      const rebuilt = deserializeTree(de.tree);
+      expect(Object.keys(rebuilt)).toHaveLength(1);
+      const only = rebuilt[de.currentNodeId];
+      expect(only.parentId).toBeNull();
+      expect(only.childrenIds).toEqual([]);
+      expect(equationToString(only.equation)).toBe(equationToString(tree[current].equation));
+    });
+
+    it('drops all branches and ancestors — only the current equation survives', async () => {
+      const { tree, path, dead, current } = branchingTree();
+      const compressed = await serializeWorkspaceState(tree, current, 'Work', 'equation');
+      const de = deminifyReplayWorkspace(JSON.parse(await decompressString(compressed)));
+      const eqs = Object.values(deserializeTree(de.tree)).map((n) => equationToString(n.equation));
+      // The two ancestors on the winning path (root, first step) and both dead
+      // branches are gone; only the current node's equation remains.
+      for (const gone of [...path.slice(0, -1), ...dead]) {
+        expect(eqs).not.toContain(equationToString(tree[gone].equation));
+      }
+      expect(eqs).toEqual([equationToString(tree[current].equation)]);
+    });
+  });
 });

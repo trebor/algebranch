@@ -50,9 +50,8 @@ import { useKeyboardShortcuts, ShortcutConfig } from '../hooks/useKeyboardShortc
 import { useClipboardBridge } from '../hooks/useClipboardBridge';
 import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
 import { HelpModal } from '../components/HelpModal';
-import { buildWorkspaceUrl } from '../utils/feedbackUrl';
 import { decodeEqParam } from '../utils/eqParam';
-import { consumePendingShare, resolveInitialWsSource } from '../utils/shareLink';
+import { consumePendingShare, resolveInitialWsSource, createShareLink } from '../utils/shareLink';
 import { safeCopyText } from '../utils/clipboard';
 import {
   currentEquationAtom,
@@ -77,6 +76,7 @@ import {
   serializeTree,
   deserializeTree,
   serializeWorkspaceState,
+  type ShareScope,
   deminifyWorkspace,
   deminifyReplayWorkspace,
   SUPPORTED_WS_REPLAY_VERSIONS,
@@ -135,14 +135,13 @@ import {
   anyModalOpenAtom,
   activeZoomModeAtom,
   equationToFormat,
-  formatDerivation,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import { APP_TAGLINE } from '../constants/brand';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil, AlertTriangle } from 'lucide-react';
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -1067,10 +1066,47 @@ export default function Home() {
     trackEvent({ action: `shortcut_equals_${type}`, category: 'keyboard' });
   };
 
+  // Scope → the noun the success toast names (#481). Matches the Share-menu rows:
+  // C E / C D / C W copy an equation / derivation / workspace link respectively.
+  const SHORT_LINK_CHORD_NOUN: Record<ShareScope, string> = {
+    equation: 'Equation',
+    path: 'Derivation',
+    full: 'Workspace',
+  };
+
+  /* eslint-disable react-hooks/purity */
+  // Copy a short link for `scope` from a keyboard chord (#481). Unlike the Share
+  // menu rows, a chord copies a short link or *nothing*: when offline, or if the
+  // mint fails, it toasts a signpost to the Share menu rather than silently copying
+  // a giant self-contained URL the user could paste unaware. This keeps the chord's
+  // clipboard promise honest — a short link, or a clear reason it couldn't make one.
+  const copyShortLinkChord = async (scope: ShareScope, trackAction: string) => {
+    const noun = SHORT_LINK_CHORD_NOUN[scope];
+    try {
+      const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName, scope);
+      if (!compressed) return; // nothing to share
+      if (!navigator.onLine) {
+        setToast({ message: "You're offline — open Share for a link that works offline.", key: Date.now(), type: 'error' });
+        return;
+      }
+      const result = await createShareLink(compressed, window.location.origin);
+      if (result.status !== 'ok') {
+        setToast({ message: "Couldn't create a short link — open Share for a link that works offline.", key: Date.now(), type: 'error' });
+        return;
+      }
+      const success = await safeCopyText(result.url);
+      if (success) {
+        setToast({ message: `${noun} link copied`, key: Date.now() });
+        trackEvent({ action: trackAction, category: 'keyboard' });
+      }
+    } catch (err) {
+      console.error('Failed to copy share link:', err);
+    }
+  };
+
   // Keyboard Shortcuts (Issue #17, expanded in #126). Defined as a single
   // source-of-truth array so the live handler and the `?` cheat-sheet overlay
   // render from the same bindings and can't drift.
-  /* eslint-disable react-hooks/purity */
   const shortcutBindings: ShortcutConfig[] = [
     {
       key: 'z',
@@ -1300,86 +1336,50 @@ export default function Home() {
       category: 'Accessibility',
     },
     {
-      // Copy/share family under the `C` leader (#239). `C D` copies the whole
-      // workspace transcript — the active derivation path, root → current.
-      // Leader keys are bare, so native Cmd/Ctrl+C text-copy is untouched.
-      leader: 'c',
-      key: 'd',
-      action: () => {
-        safeCopyText(formatDerivation(tree, currentNodeId, 'unicode'))
-          .then((success) => {
-            if (success) {
-              setToast({ message: 'Derivation copied', key: Date.now() });
-              trackEvent({ action: 'shortcut_copy_derivation', category: 'keyboard' });
-            }
-          })
-          .catch((err) => console.error('Failed to copy derivation:', err));
-      },
-      description: 'Copy full derivation as text',
-      category: 'Copy & Share',
-    },
-    {
-      // `C E` copies just the current equation as Unicode text — "copy as text"
-      // means the pretty rendered form everywhere (card default, ⌘C, C E, C D).
-      leader: 'c',
-      key: 'e',
-      action: () => {
-        if (!currentEq) return;
-        safeCopyText(equationToFormat(currentEq, 'unicode'))
-          .then((success) => {
-            if (success) {
-              setToast({ message: 'Equation copied', key: Date.now() });
-              trackEvent({ action: 'shortcut_copy_equation', category: 'keyboard' });
-            }
-          })
-          .catch((err) => console.error('Failed to copy equation:', err));
-      },
+      // ⌘C / ⌘V are handled by useClipboardBridge (native copy/paste events), not
+      // this keydown handler — but they're the *frequent* copy path, so we surface
+      // them in the cheat-sheet as display-only rows. `displayOnly` bindings are
+      // filtered out before reaching the handler so they never hijack native copy.
+      key: 'c',
+      meta: true,
+      action: () => {},
       description: 'Copy equation as text',
       category: 'Copy & Share',
+      displayOnly: true,
     },
     {
-      // `C W` copies a `?ws=` deep link that restores the entire workspace
-      // (full history tree + name).
+      key: 'v',
+      meta: true,
+      action: () => {},
+      description: 'New equation from clipboard',
+      category: 'Copy & Share',
+      displayOnly: true,
+    },
+    {
+      // Copy/share family under the `C` leader (#239, reshaped in #481). Since ⌘C
+      // owns equation-as-text, the leader chords are now all *share links*, one per
+      // Share-menu scope: C E / C D / C W → equation / derivation / workspace. Each
+      // copies a short link or, when it can't (offline / mint failed), fires a red
+      // error toast and copies nothing — never a silent giant fallback URL. Leader
+      // keys are bare, so native ⌘C text-copy is untouched.
       leader: 'c',
-      key: 'w',
-      action: async () => {
-        try {
-          const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName);
-          const url = buildWorkspaceUrl(window.location.origin, compressed);
-          if (!url) return;
-          const success = await safeCopyText(url);
-          if (success) {
-            setToast({ message: 'Workspace link copied', key: Date.now() });
-            trackEvent({ action: 'shortcut_share_workspace', category: 'keyboard' });
-          }
-        } catch (err) {
-          console.error('Failed to copy workspace link:', err);
-        }
-      },
-      description: 'Copy workspace share link',
+      key: 'e',
+      action: () => copyShortLinkChord('equation', 'shortcut_share_equation_link'),
+      description: 'Copy equation link',
       category: 'Copy & Share',
     },
     {
-      // `C P` copies a `?ws=` deep link scoped to the active derivation *path*
-      // (root → current node) — the shorter "share your worked solution" link
-      // from #439. The equation-only link retires to the Share menu (no chord).
       leader: 'c',
-      key: 'p',
-      action: async () => {
-        try {
-          const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName, 'path');
-          const url = buildWorkspaceUrl(window.location.origin, compressed);
-          if (!url) return;
-          const success = await safeCopyText(url);
-          if (success) {
-            setToast({ message: 'Derivation link copied', key: Date.now() });
-            trackEvent({ action: 'shortcut_share_derivation_link', category: 'keyboard' });
-          }
-        } catch (err) {
-          console.error('Failed to copy derivation link:', err);
-        }
-      },
-      description: 'Copy derivation share link',
+      key: 'd',
+      action: () => copyShortLinkChord('path', 'shortcut_share_derivation_link'),
+      description: 'Copy derivation link',
+      category: 'Copy & Share',
+    },
+    {
+      leader: 'c',
+      key: 'w',
+      action: () => copyShortLinkChord('full', 'shortcut_share_workspace'),
+      description: 'Copy workspace link',
       category: 'Copy & Share',
     },
     {
@@ -1586,10 +1586,15 @@ export default function Home() {
   /* eslint-enable react-hooks/purity */
 
   const modalNavigationKeys = new Set(['?', 'k', 'a', 'f', ',']);
-  const workspaceBindings = shortcutBindings.filter(
+  // Display-only bindings (⌘C / ⌘V) document keys handled by useClipboardBridge, so
+  // they must never reach the live handler — its no-op action would preventDefault
+  // and swallow the native copy/paste. They stay in `shortcutBindings` for the
+  // cheat-sheet, which renders the full array.
+  const handlerBindings = shortcutBindings.filter((s) => !s.displayOnly);
+  const workspaceBindings = handlerBindings.filter(
     (s) => !modalNavigationKeys.has(s.key.toLowerCase())
   );
-  const modalNavigationBindings = shortcutBindings.filter(
+  const modalNavigationBindings = handlerBindings.filter(
     (s) => modalNavigationKeys.has(s.key.toLowerCase())
   );
 
@@ -1598,7 +1603,7 @@ export default function Home() {
     onPendingLeader: (leader) => {
       if (leader === 'c') {
         setToast({
-          message: 'Copy / share — E equation · D derivation · W workspace · P path',
+          message: 'Copy a share link — E equation · D derivation · W workspace',
           key: Date.now(),
         });
       }
@@ -1888,9 +1893,11 @@ export default function Home() {
               )}
               {/* Calculating Math Engine Spinner / Toast Notification */}
               {toast ? (
-                <div key={`toast-${toast.key}`} className={`absolute top-4 left-4 z-30 short-screen-toast-offset ${THEME_GLASS.TOAST_ALERT} flex items-center gap-2`}>
+                <div key={`toast-${toast.key}`} className={`absolute top-4 left-4 z-30 short-screen-toast-offset ${toast.type === 'error' ? THEME_GLASS.TOAST_ERROR : THEME_GLASS.TOAST_ALERT} flex items-center gap-2`}>
                   {toast.type === 'update' ? (
                     <RefreshCw size={12} className="text-indigo-400 shrink-0 animate-[spin_3s_linear_infinite]" />
+                  ) : toast.type === 'error' ? (
+                    <AlertTriangle size={12} className="text-red-400 shrink-0" />
                   ) : (
                     <Check size={12} className="text-emerald-400 shrink-0" />
                   )}

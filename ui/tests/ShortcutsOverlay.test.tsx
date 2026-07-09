@@ -129,6 +129,41 @@ describe('ShortcutsOverlay', () => {
     expect(keycaps).not.toContain('k');
   });
 
+  it('documents display-only bindings like ⌘C / ⌘V so keys handled elsewhere still appear (#481)', () => {
+    const store = createStore();
+    store.set(shortcutsOverlayOpenAtom, true);
+
+    render(
+      <Provider store={store}>
+        <ShortcutsOverlay
+          shortcuts={[
+            {
+              key: 'c',
+              meta: true,
+              action: () => {},
+              description: 'Copy equation as text',
+              category: 'Copy & Share',
+              displayOnly: true,
+            },
+            {
+              key: 'v',
+              meta: true,
+              action: () => {},
+              description: 'New equation from clipboard',
+              category: 'Copy & Share',
+              displayOnly: true,
+            },
+          ]}
+        />
+      </Provider>
+    );
+
+    // Display-only rows render like any other — they exist purely to document
+    // the native ⌘C / ⌘V, which the live handler never sees.
+    expect(screen.getByText('Copy equation as text')).toBeTruthy();
+    expect(screen.getByText('New equation from clipboard')).toBeTruthy();
+  });
+
   it('closes shortcuts overlay when k is pressed', async () => {
     const store = createStore();
     store.set(shortcutsOverlayOpenAtom, true);

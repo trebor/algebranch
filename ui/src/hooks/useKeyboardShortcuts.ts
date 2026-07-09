@@ -51,6 +51,14 @@ export interface ShortcutConfig {
   keyLabel?: string;
   /** When `true`, the binding works but is omitted from the cheat-sheet. */
   hidden?: boolean;
+  /**
+   * When `true`, the binding is *only* documented in the cheat-sheet and is never
+   * registered with the live handler — for keys handled elsewhere (e.g. ⌘C / ⌘V go
+   * through `useClipboardBridge`'s native copy/paste events). The caller must filter
+   * these out before passing bindings to {@link useKeyboardShortcuts}, or the no-op
+   * action would `preventDefault` and hijack the native key.
+   */
+  displayOnly?: boolean;
   /** Set to `false` to temporarily disable this shortcut. Defaults to `true`. */
   enabled?: boolean;
 }

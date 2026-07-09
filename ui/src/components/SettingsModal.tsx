@@ -18,6 +18,8 @@ import {
   importWorkspacesModalOpenAtom,
   TEXT_SIZE_OPTIONS,
   clampChromeScale,
+  ANIMATION_SPEED_OPTIONS,
+  clampAnimationSpeed,
 } from '../store/equation';
 import { consentAtom } from '../store/consent';
 import { THEME_GLASS } from '../constants/theme';
@@ -73,6 +75,17 @@ export const SettingsModal: React.FC = () => {
       action: 'set_text_size',
       category: 'settings',
       label: String(scale),
+    });
+  };
+
+  const activeAnimationSpeed = clampAnimationSpeed(settings.animationSpeed);
+
+  const handleSelectAnimationSpeed = (speed: number) => {
+    setSettings((prev) => ({ ...prev, animationSpeed: speed }));
+    trackEvent({
+      action: 'set_animation_speed',
+      category: 'settings',
+      label: String(speed),
     });
   };
 
@@ -171,6 +184,43 @@ export const SettingsModal: React.FC = () => {
                         aria-checked={isActive}
                         aria-label={opt.label}
                         onClick={() => handleSelectTextSize(opt.scale)}
+                        className={`${THEME_GLASS.SEGMENT_BTN} flex-1 ${
+                          isActive
+                            ? THEME_GLASS.SEGMENT_BTN_ACTIVE
+                            : THEME_GLASS.SEGMENT_BTN_IDLE
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={THEME_GLASS.SETTING_ROW_STACKED}>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold text-white">
+                    Animation speed
+                  </span>
+                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                    Adjust transition speeds for transpositions and operations. Reduced motion overrides this setting.
+                  </span>
+                </div>
+                <div
+                  role="radiogroup"
+                  aria-label="Animation speed"
+                  className={`${THEME_GLASS.SEGMENT_GROUP} w-full`}
+                >
+                  {ANIMATION_SPEED_OPTIONS.map((opt) => {
+                    const isActive = activeAnimationSpeed === opt.speed;
+                    return (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        role="radio"
+                        aria-checked={isActive}
+                        aria-label={opt.label}
+                        onClick={() => handleSelectAnimationSpeed(opt.speed)}
                         className={`${THEME_GLASS.SEGMENT_BTN} flex-1 ${
                           isActive
                             ? THEME_GLASS.SEGMENT_BTN_ACTIVE

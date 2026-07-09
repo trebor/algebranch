@@ -52,6 +52,7 @@ import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
 import { HelpModal } from '../components/HelpModal';
 import { buildWorkspaceUrl } from '../utils/feedbackUrl';
 import { decodeEqParam } from '../utils/eqParam';
+import { consumePendingShare } from '../utils/shareLink';
 import { safeCopyText } from '../utils/clipboard';
 import {
   currentEquationAtom,
@@ -530,9 +531,16 @@ export default function Home() {
         // Hydrate workspace tabs state
         hydrateWorkspaceTabs();
 
-        // If the URL contains an equation (?eq=) or workspace (?ws=) parameter,
-        // bypass the first-run onboarding tutorial so the user sees the content immediately.
-        const hasUrlParam = readWsParam(window.location.search) || readEqParam(window.location.search);
+        // A `/s#key` short link (#480) resolves + decrypts on the `/s` page, then
+        // hands its compressed payload here out-of-band (sessionStorage, never the
+        // URL). Consume it once — it is byte-identical to a `?ws=` value, so it
+        // flows through the exact same loader below.
+        const pendingShare = consumePendingShare();
+
+        // If the URL carries an equation (?eq=) or workspace (?ws=) parameter — or a
+        // short link handed one off — bypass the first-run onboarding tutorial so the
+        // user sees the content immediately.
+        const hasUrlParam = pendingShare || readWsParam(window.location.search) || readEqParam(window.location.search);
         if (hasUrlParam) {
           try {
             safeLocalStorage.setItem('algebranch_onboarding_completed', 'true');
@@ -594,8 +602,10 @@ export default function Home() {
           console.error('Failed to load saved sessions list:', err);
         }
 
-        // 1. Check URL query string parameters first to load shared workspaces or equations
-        const cleanStateStr = readWsParam(window.location.search);
+        // 1. Check URL query string parameters first to load shared workspaces or
+        // equations. A short-link handoff (`pendingShare`) is a compressed workspace
+        // payload too, so it takes the same path as `?ws=` when no query param is set.
+        const cleanStateStr = readWsParam(window.location.search) ?? pendingShare;
         if (cleanStateStr) {
           try {
             const decompressed = await decompressString(cleanStateStr);

@@ -1,0 +1,87 @@
+// @vitest-environment node
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Robert Harris
+
+// The recipient half of first-party short links (#480): resolve `/s#<key>` to the
+// compressed workspace payload. `loadSharePayload` is the whole testable chain —
+// fragment → key → derived id → GET /api/share/<id> → decrypt — with the network
+// injected and real Web Crypto (node env). The `/s` page component is thin glue
+// over it; every failure branch a recipient can hit is pinned here.
+import { describe, it, expect } from 'vitest';
+import {
+  generateShareKey,
+  keyToFragment,
+  deriveShareId,
+  encryptWorkspace,
+} from '@/utils/shareCrypto';
+import { loadSharePayload } from '@/utils/shareLink';
+
+type FetchLike = Parameters<typeof loadSharePayload>[1];
+
+/** A fetch that serves `{ ciphertext }` for known ids and 404s the rest. */
+function fakeFetch(store: Record<string, string>): NonNullable<FetchLike> {
+  return async (url: string) => {
+    const id = url.split('/').pop() ?? '';
+    if (id in store) {
+      return { ok: true, status: 200, json: async () => ({ ciphertext: store[id] }) };
+    }
+    return { ok: false, status: 404, json: async () => ({ error: 'Not found.' }) };
+  };
+}
+
+describe('loadSharePayload', () => {
+  it('round-trips a stored ciphertext back to the plaintext payload', async () => {
+    const key = generateShareKey();
+    const payload = 'COMPRESSED_WS_PAYLOAD_base64url';
+    const id = await deriveShareId(key);
+    const blob = await encryptWorkspace(payload, key);
+
+    const result = await loadSharePayload('#' + keyToFragment(key), fakeFetch({ [id]: blob }));
+    expect(result).toEqual({ status: 'ok', payload });
+  });
+
+  it('reports a malformed fragment that is not a valid key', async () => {
+    const never = (() => {
+      throw new Error('fetch should not be called for a malformed fragment');
+    }) as unknown as NonNullable<FetchLike>;
+    for (const hash of ['', '#', '#not-a-valid-key', '#!!!']) {
+      expect(await loadSharePayload(hash, never)).toEqual({ status: 'malformed' });
+    }
+  });
+
+  it('reports not-found when the id is absent from the store (404)', async () => {
+    const key = generateShareKey();
+    const result = await loadSharePayload('#' + keyToFragment(key), fakeFetch({}));
+    expect(result).toEqual({ status: 'not-found' });
+  });
+
+  it('reports corrupt when the ciphertext decrypts under a different key', async () => {
+    // id is derived from `key`, but the stored ciphertext was sealed with `other`,
+    // so GCM auth fails → the link fetched fine but cannot be read.
+    const key = generateShareKey();
+    const other = generateShareKey();
+    const id = await deriveShareId(key);
+    const blob = await encryptWorkspace('someone elses work', other);
+
+    const result = await loadSharePayload('#' + keyToFragment(key), fakeFetch({ [id]: blob }));
+    expect(result).toEqual({ status: 'corrupt' });
+  });
+
+  it('reports an error when the network throws', async () => {
+    const key = generateShareKey();
+    const throwing: NonNullable<FetchLike> = async () => {
+      throw new Error('network down');
+    };
+    expect(await loadSharePayload('#' + keyToFragment(key), throwing)).toEqual({ status: 'error' });
+  });
+
+  it('reports an error on a non-404 failure status (e.g. 500)', async () => {
+    const key = generateShareKey();
+    const failing: NonNullable<FetchLike> = async () => ({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: 'Share store unavailable.' }),
+    });
+    expect(await loadSharePayload('#' + keyToFragment(key), failing)).toEqual({ status: 'error' });
+  });
+});

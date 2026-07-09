@@ -4,7 +4,9 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useAtomValue } from 'jotai';
 import { THEME_ANIMATIONS } from '../constants/theme';
+import { settingsAtom } from '../store/equation';
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
@@ -40,6 +42,9 @@ export function useFLIPAnimation(
 ) {
   const boundingBoxRef = useRef<Map<string, DOMRect>>(new Map());
   const animatingTimeoutRef = useRef(0);
+  const settings = useAtomValue(settingsAtom);
+  const currentSpeed = settings.animationSpeed || 1;
+  const durationMs = Math.round(THEME_ANIMATIONS.TRANSITION_DURATION_MS / currentSpeed);
 
   useIsomorphicLayoutEffect(() => {
     const container = containerRef.current;
@@ -127,14 +132,14 @@ export function useFLIPAnimation(
       window.clearTimeout(animatingTimeoutRef.current);
       animatingTimeoutRef.current = window.setTimeout(() => {
         onAnimatingChange?.(false);
-      }, THEME_ANIMATIONS.TRANSITION_DURATION_MS + 50);
+      }, durationMs + 50);
 
       // Force a reflow so the inverted positions are committed as the
       // transition's "from" geometry, then PLAY in the same frame.
       void container.getBoundingClientRect();
       toPlay.forEach((el) => {
         el.style.transform = '';
-        el.style.transition = `transform ${THEME_ANIMATIONS.TRANSITION_DURATION_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+        el.style.transition = `transform ${durationMs}ms cubic-bezier(0.4, 0, 0.2, 1)`;
 
         // Hand styling back to React once the slide finishes.
         const cleanup = (e: TransitionEvent) => {

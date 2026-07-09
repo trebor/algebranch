@@ -584,10 +584,10 @@ export const deserializeNode = (sNode: SerializedNode): math.MathNode => {
 };
 
 export const deserializeEquation = (sEq: SerializedEquation): Equation => {
-  return {
+  return ensureNodeIds({
     lhs: deserializeNode(sEq.lhs),
     rhs: deserializeNode(sEq.rhs),
     relation: sEq.relation,
-  };
+  });
 };
 

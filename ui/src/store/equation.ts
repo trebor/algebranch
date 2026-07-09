@@ -1220,6 +1220,11 @@ export interface UserSettings {
    * without touching the auto-fitting equation canvas. 1 = browser default.
    */
   chromeScale: number;
+  /**
+   * Animation speed multiplier.
+   * Scales transition durations for equation layout step animations.
+   */
+  animationSpeed: number;
 }
 
 /** No-op chrome scale: honor the browser/OS font-size preference unchanged. */
@@ -1274,6 +1279,33 @@ export function cycleChromeScale(current: number, direction: 1 | -1 = 1): number
   return scales[next];
 }
 
+/** Default animation speed multiplier. */
+export const ANIMATION_SPEED_DEFAULT = 1;
+
+/**
+ * Discrete choices for the in-app animation speed multiplier.
+ * 0.25x is very slow (useful for recording or close tracking),
+ * 1x is normal, and 2x is fast.
+ */
+export const ANIMATION_SPEED_OPTIONS = [
+  { label: '0.25×', speed: 0.25 },
+  { label: '0.5×', speed: 0.5 },
+  { label: '1×', speed: ANIMATION_SPEED_DEFAULT },
+  { label: '2×', speed: 2 },
+] as const;
+
+/**
+ * Coerces any animation speed to a safe value in the options list.
+ */
+export const clampAnimationSpeed = (value: number): number => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return ANIMATION_SPEED_DEFAULT;
+  }
+  const min = ANIMATION_SPEED_OPTIONS[0].speed;
+  const max = ANIMATION_SPEED_OPTIONS[ANIMATION_SPEED_OPTIONS.length - 1].speed;
+  return Math.max(min, Math.min(max, value));
+};
+
 export const DEFAULT_SETTINGS: UserSettings = {
   // Exact-preferred baseline (#363): a fresh session keeps responses in exact
   // fractional/radical forms and does not offer the "Evaluate to Decimal" move
@@ -1283,6 +1315,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   allowComplex: true,
   seenEqualsHint: false,
   chromeScale: CHROME_SCALE_DEFAULT,
+  animationSpeed: ANIMATION_SPEED_DEFAULT,
 };
 
 export const settingsModalOpenAtom = atom(false);
@@ -2738,6 +2771,8 @@ export const hydrateWorkspaceTabsAtom = atom(
           // Sanitize the text-size knob: persisted/hand-edited junk must never
           // drive the root rem to an unusable extreme (#239).
           merged.chromeScale = clampChromeScale(merged.chromeScale);
+          // Sanitize the animation speed option.
+          merged.animationSpeed = clampAnimationSpeed(merged.animationSpeed);
           set(rawSettingsAtom, merged);
         } catch (err) {
           console.error('Failed to parse settings from localStorage:', err);

@@ -14,9 +14,10 @@ import {
   deriveShareId,
   encryptWorkspace,
 } from '@/utils/shareCrypto';
-import { loadSharePayload } from '@/utils/shareLink';
+import { loadSharePayload, createShareLink } from '@/utils/shareLink';
 
 type FetchLike = Parameters<typeof loadSharePayload>[1];
+type PostFetch = NonNullable<Parameters<typeof createShareLink>[2]>;
 
 /** A fetch that serves `{ ciphertext }` for known ids and 404s the rest. */
 function fakeFetch(store: Record<string, string>): NonNullable<FetchLike> {
@@ -83,5 +84,83 @@ describe('loadSharePayload', () => {
       json: async () => ({ error: 'Share store unavailable.' }),
     });
     expect(await loadSharePayload('#' + keyToFragment(key), failing)).toEqual({ status: 'error' });
+  });
+});
+
+describe('createShareLink', () => {
+  /** A POST fake that stores ciphertext by id and 409s a duplicate id (store-if-absent). */
+  function storingPost(store: Record<string, string>): PostFetch {
+    return async (_url, init) => {
+      const { id, ciphertext } = JSON.parse(init.body) as { id: string; ciphertext: string };
+      if (id in store) return { ok: false, status: 409 };
+      store[id] = ciphertext;
+      return { ok: true, status: 200 };
+    };
+  }
+
+  it('creates a link that opens back to the original payload (full round-trip)', async () => {
+    const store: Record<string, string> = {};
+    const payload = 'COMPRESSED_WS_PAYLOAD_base64url';
+
+    const created = await createShareLink(payload, 'https://algebranch.org', storingPost(store));
+    expect(created.status).toBe('ok');
+    if (created.status !== 'ok') return;
+
+    // The link is /s with the key in the fragment — no id, no payload in the URL.
+    const url = new URL(created.url);
+    expect(url.origin).toBe('https://algebranch.org');
+    expect(url.pathname).toBe('/s');
+    expect(url.hash.length).toBeGreaterThan(1);
+
+    // Feed the produced fragment to the recipient half → original payload back.
+    const opened = await loadSharePayload(url.hash, fakeFetch(store));
+    expect(opened).toEqual({ status: 'ok', payload });
+  });
+
+  it('regenerates the key and retries on a 409 collision until it stores', async () => {
+    const seenIds: string[] = [];
+    let calls = 0;
+    const post: PostFetch = async (_url, init) => {
+      const { id } = JSON.parse(init.body) as { id: string };
+      seenIds.push(id);
+      calls += 1;
+      return calls < 3 ? { ok: false, status: 409 } : { ok: true, status: 200 };
+    };
+
+    const created = await createShareLink('payload', 'https://algebranch.org', post);
+    expect(created.status).toBe('ok');
+    expect(calls).toBe(3);
+    // Each retry used a fresh random key, so every attempted id differs.
+    expect(new Set(seenIds).size).toBe(3);
+  });
+
+  it('reports too-large when the server rejects an oversized ciphertext (413)', async () => {
+    const post: PostFetch = async () => ({ ok: false, status: 413 });
+    expect(await createShareLink('payload', 'https://algebranch.org', post)).toEqual({
+      status: 'too-large',
+    });
+  });
+
+  it('reports an error when the network throws', async () => {
+    const post: PostFetch = async () => {
+      throw new Error('network down');
+    };
+    expect(await createShareLink('payload', 'https://algebranch.org', post)).toEqual({
+      status: 'error',
+    });
+  });
+
+  it('reports an error on an unexpected failure status (e.g. 500)', async () => {
+    const post: PostFetch = async () => ({ ok: false, status: 500 });
+    expect(await createShareLink('payload', 'https://algebranch.org', post)).toEqual({
+      status: 'error',
+    });
+  });
+
+  it('reports an error when retries are exhausted by relentless collisions', async () => {
+    const post: PostFetch = async () => ({ ok: false, status: 409 });
+    expect(await createShareLink('payload', 'https://algebranch.org', post)).toEqual({
+      status: 'error',
+    });
   });
 });

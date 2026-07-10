@@ -839,7 +839,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
                 key={`${parent.id}-${child.id}`}
                 d={d}
                 fill="none"
-                stroke={isPreviewPath ? "rgba(165, 180, 252, 0.95)" : child.isActive ? "rgba(129, 140, 248, 0.6)" : "rgba(255, 255, 255, 0.12)"}
+                stroke={isPreviewPath ? THEME_GLASS.TREE_LINE_STROKE_PREVIEW : child.isActive ? THEME_GLASS.TREE_LINE_STROKE_ACTIVE : THEME_GLASS.TREE_LINE_STROKE_INACTIVE}
                 strokeWidth={isPreviewPath ? 3 : child.isActive ? 2.5 : 1.5}
                 strokeDasharray={isPreviewPath ? FLOW_DASH_ARRAY : undefined}
                 strokeLinecap="round"
@@ -961,7 +961,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
               key={`edge-handle-${node.id}`}
               position="top"
               className={`max-w-[85vw] w-max p-4 z-50 text-left lowercase-none normal-case flex flex-col gap-2 pointer-events-auto font-sans ${THEME_GLASS.TOOLTIP_DETAILS}`}
-              wrapperClassName="absolute pointer-events-auto z-20 -translate-x-1/2 -translate-y-1/2"
+              wrapperClassName={`absolute pointer-events-auto z-20 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 ${child.isActive ? '' : 'opacity-40 hover:opacity-100'}`}
               style={{ left: pxToRem(xMid), top: pxToRem(yMid) }}
               content={
                 <TransitionTooltipCard

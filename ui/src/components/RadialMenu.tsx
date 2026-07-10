@@ -21,6 +21,7 @@ import { ArrowLeftRight, Plus, Minus, Divide } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { HotkeyHint } from './HotkeyHint';
 import { ImaginaryUnitButton } from './ImaginaryUnitButton';
+import { TermSlot } from './TermSlot';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { THEME_GLASS } from '../constants/theme';
 import { MULTIPLY_SYMBOL } from '../constants/mathSymbols';
@@ -388,7 +389,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                       ) : termInputAction.type === 'div' ? (
                         '÷'
                       ) : termInputAction.type === 'power' ? (
-                        <span>( )<sup>{spinnerValue}</sup></span>
+                        <span><TermSlot /><sup>{spinnerValue}</sup></span>
                       ) : (
                         <span><sup>{spinnerValue}</sup>√</span>
                       )}

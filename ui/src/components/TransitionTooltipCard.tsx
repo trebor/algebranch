@@ -5,6 +5,7 @@ import React from 'react';
 import { TriangleAlert } from 'lucide-react';
 import type * as math from 'mathjs';
 import { PreviewEquationNode } from './PreviewEquationNode';
+import { TermSlot } from './TermSlot';
 import { THEME_GLASS } from '../constants/theme';
 import { mjs } from 'math-engine';
 import type { StepChange } from 'math-engine';
@@ -52,10 +53,33 @@ export const TransitionTooltipCard: React.FC<TransitionTooltipCardProps> = ({
         if (change.op === 'power') {
           return (
             <div className="flex items-start justify-center py-2 font-mono">
-              <span className="text-3xl font-light text-indigo-400 select-none mr-1">( )</span>
+              <span className="text-3xl font-light select-none mr-1"><TermSlot /></span>
               <span className="text-base font-semibold text-white relative -top-2">
                 {parsedNode ? <PreviewEquationNode customNode={parsedNode} /> : change.operand}
               </span>
+            </div>
+          );
+        }
+
+        if (change.op === 'reciprocal') {
+          // The compound reciprocal move (#491): flip both sides, then multiply
+          // by the operand. Typeset as the two hops the sentence narrates —
+          // side → 1/side → operand/side — with each "side" drawn as an empty
+          // dashed term-slot: the same visual language as the app's drag
+          // targets, so the chip reads as "whichever side lands here".
+          const fractionOverSlot = (numerator: React.ReactNode) => (
+            <span className="inline-flex flex-col items-center leading-tight align-middle">
+              <span className="text-sm font-semibold text-white">{numerator}</span>
+              <span className={THEME_GLASS.TERM_SLOT_FRACTION_BAR}><TermSlot /></span>
+            </span>
+          );
+          return (
+            <div className="flex items-center justify-center gap-2 py-2 flex-wrap">
+              <TermSlot />
+              <span className="text-indigo-400 font-bold select-none">→</span>
+              {fractionOverSlot(<>1</>)}
+              <span className="text-indigo-400 font-bold select-none">→</span>
+              {fractionOverSlot(parsedNode ? <PreviewEquationNode customNode={parsedNode} /> : <>{change.operand}</>)}
             </div>
           );
         }
@@ -70,7 +94,7 @@ export const TransitionTooltipCard: React.FC<TransitionTooltipCardProps> = ({
                 </span>
               )}
               <span className="text-3xl font-light text-indigo-400 mr-1">√</span>
-              <span className="text-3xl font-light text-white/20">( )</span>
+              <span className="text-3xl font-light"><TermSlot /></span>
             </div>
           );
         }

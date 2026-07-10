@@ -431,6 +431,14 @@ export const THEME_GLASS = {
   TREE_NODE_BADGE_CONTRADICTION: 'bg-red-600 border-red-400 text-red-50',
   TREE_NODE_BADGE_IDENTITY: 'bg-emerald-600 border-emerald-400 text-emerald-50',
 
+  // --- Term slot (#491): the empty dashed chip standing for "any term/side" ---
+  // The generic placeholder in operation previews (( )^n, √( ), the reciprocal
+  // hops): an empty dashed rounded socket, echoing the app's drag-target look so
+  // it reads as "whichever term lands here". Sized in em so it scales with the
+  // surrounding math text.
+  TERM_SLOT: 'inline-block w-[1.15em] h-[1.05em] rounded border border-dashed border-white/30 align-middle',
+  TERM_SLOT_FRACTION_BAR: 'border-t border-white/60 pt-0.5 px-0.5',
+
   // --- Undefined (÷0) warning (#416): dead-end marker on division-by-zero subtrees ---
   // Two surfaces share one warning: an inline warning-triangle handle on the
   // offending subtree, and a state badge on the history-tree node. Red, warning-

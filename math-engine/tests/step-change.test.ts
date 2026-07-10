@@ -284,6 +284,50 @@ describe('domain restrictions when cancelling or dividing (#63)', () => {
     expect(change!.assumptions).toBeUndefined();
   });
 
+  it('numerator dragged across = is a reciprocal move, restricted by the result denominator (#491)', () => {
+    // a = b/x : dragging the numerator b (rhs/0) across yields b/a = x — the
+    // fraction b/x collapses to x and the move reattaches b reciprocally. No
+    // single ×/÷ on both sides produces that; the honest description is the
+    // compound "take the reciprocal of both sides, then multiply by b" (net
+    // effect: each side s ↦ b/s). The naive structural inverse ("b is a
+    // numerator → divide by b, b ≠ 0") misdescribed both halves: in the
+    // rendered result it is `a` that sits in the denominator, so the real
+    // restriction is a ≠ 0 and b ≠ 0 is not required.
+    const e = eq('a = b / x');
+    const moves = generateValidMoves(e, 'rhs/0');
+    expect(equationToString(moves['lhs'])).toBe('b / a = x');
+    const change = describeTransposition(e, 'rhs/0', 'lhs', moves['lhs']);
+    expect(change).toMatchObject({ kind: 'bothSides', op: 'reciprocal', operand: 'b' });
+    expect(change!.text).toBe('take the reciprocal of both sides, then multiply by b');
+    expect(change!.assumptions).toEqual(['a ≠ 0']);
+    expect(change!.assumptions).not.toContain('b ≠ 0');
+  });
+
+  it('reciprocal move against a constant far side carries no restriction (#491)', () => {
+    // 5 = b/x : same reciprocal shape, but the new denominator is the constant
+    // 5 — nothing to assume, so no restriction is recorded.
+    const e = eq('5 = b / x');
+    const moves = generateValidMoves(e, 'rhs/0');
+    expect(equationToString(moves['lhs'])).toBe('b / 5 = x');
+    const change = describeTransposition(e, 'rhs/0', 'lhs', moves['lhs']);
+    expect(change).toMatchObject({ kind: 'bothSides', op: 'reciprocal', operand: 'b' });
+    expect(change!.text).toBe('take the reciprocal of both sides, then multiply by b');
+    expect(change!.assumptions).toBeUndefined();
+  });
+
+  it('passing the result equation leaves a clean factor transposition unchanged (#491)', () => {
+    // a = b*c : dragging b out of the product gives a/b = c — a genuine
+    // "divide both sides by b" whose result orientation matches the naive
+    // inverse, so the label and b ≠ 0 restriction must survive untouched even
+    // when the resulting equation is supplied.
+    const e = eq('a = b * c');
+    const moves = generateValidMoves(e, 'rhs/0');
+    expect(equationToString(moves['lhs'])).toBe('a / b = c');
+    const change = describeTransposition(e, 'rhs/0', 'lhs', moves['lhs']);
+    expect(change).toMatchObject({ kind: 'bothSides', op: 'divide', operand: 'b', assumptions: ['b ≠ 0'] });
+    expect(change!.text).toBe('divide both sides by b');
+  });
+
   it('global-op divide by a variable assumes it ≠ 0; by a constant does not', () => {
     const byVar = describeGlobalOp({ type: 'div', term: 'x' });
     expect(byVar).toMatchObject({ op: 'divide', assumptions: ['x ≠ 0'] });

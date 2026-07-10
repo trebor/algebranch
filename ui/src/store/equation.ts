@@ -1293,6 +1293,12 @@ export const candidatePathsAtom = atom<Set<string>>(new Set<string>());
 export const targetPathsAtom = atom<Record<string, Equation>>({});
 export const reduciblePathsAtom = atom<Record<string, ReducibleActionInfo[]>>({});
 export const undefinedPathsAtom = atom<{ path: string; reason: 'division-by-zero' }[]>([]);
+/**
+ * The active equation's reached terminal conclusion (#487), or `null`. A
+ * variable-free contradiction (`3 = -3`) or identity (`0 = 0`) freezes the tree
+ * in the engine; this drives the standing conclusion caveat under the equation.
+ */
+export const terminalStatusAtom = atom<'contradiction' | 'identity' | null>(null);
 
 export interface UserSettings {
   allowEvaluateToDecimal: boolean;
@@ -2594,11 +2600,12 @@ export const swapSidesAtom = atom(
  */
 export const syncMathStateAtom = atom(
   null,
-  (_get, set, { activePaths, reduciblePaths, targetPaths, undefinedPaths }: {
+  (_get, set, { activePaths, reduciblePaths, targetPaths, undefinedPaths, terminalStatus }: {
     activePaths: string[];
     reduciblePaths: Record<string, { equation: SerializedEquation; type: 'reduce' | 'expand' | 'factor' | 'identity'; label?: string }[]>;
     targetPaths: Record<string, SerializedEquation>;
     undefinedPaths: { path: string; reason: 'division-by-zero' }[];
+    terminalStatus: 'contradiction' | 'identity' | null;
   }) => {
     set(candidatePathsAtom, new Set<string>(activePaths));
 
@@ -2619,6 +2626,7 @@ export const syncMathStateAtom = atom(
     set(targetPathsAtom, parsedTargets);
 
     set(undefinedPathsAtom, undefinedPaths);
+    set(terminalStatusAtom, terminalStatus);
   }
 );
 
@@ -2632,6 +2640,7 @@ export const clearMathStateAtom = atom(
     set(reduciblePathsAtom, {});
     set(targetPathsAtom, {});
     set(undefinedPathsAtom, []);
+    set(terminalStatusAtom, null);
   }
 );
 

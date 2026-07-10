@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
 import { ActiveRestrictionsCaveat } from '../components/ActiveRestrictionsCaveat';
+import { TerminalStateCaveat } from '../components/TerminalStateCaveat';
 import { Sidebar, SidebarContent, EquationLibraryContent } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import { GraphPanel } from '../components/GraphPanel';
@@ -2195,6 +2196,12 @@ export default function Home() {
                       ≠0 assumptions active on the current branch, shown under the
                       equation so the working answer never hides its conditions. */}
                   <ActiveRestrictionsCaveat />
+                  {/* Standing terminal-state caveat (#487): whenever the tree is
+                      frozen — ÷0 dead end, contradiction, or identity — this one
+                      banner states why, the "no moves because…" cue under the
+                      equation. At most one halt banner shows; it may stack under the
+                      restriction caveat above when both apply. */}
+                  <TerminalStateCaveat />
                 </div>
                 </RovingTabindexProvider>
               )}

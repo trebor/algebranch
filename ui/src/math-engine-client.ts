@@ -44,6 +44,7 @@ export {
   deserializeEquation,
   deserializeNode,
   getEquationStatus,
+  getTerminalStatus,
   getUndefinedDivisionPaths,
   compressString,
   decompressString,

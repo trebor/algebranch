@@ -430,6 +430,19 @@ export const THEME_GLASS = {
   ACTIVE_RESTRICTION_CAVEAT_ICON: 'shrink-0 text-amber-400',
   TREE_NODE_BADGE_CONTRADICTION: 'bg-red-600 border-red-400 text-red-50',
   TREE_NODE_BADGE_IDENTITY: 'bg-emerald-600 border-emerald-400 text-emerald-50',
+  // Standing terminal-state caveat under the main equation (#487): whenever the
+  // engine freezes the whole tree, this one banner states why — the single halt
+  // surface, so at most one ever shows (÷0, contradiction, and identity are
+  // mutually exclusive by construction). A sibling of ACTIVE_RESTRICTION_CAVEAT
+  // (they stack when both apply), keyed to the same red / emerald families as the
+  // matching tree state badges (UNDEFINED_TREE_BADGE, TREE_NODE_BADGE_*) so the
+  // surfaces read as one system. The red "dead-end" family covers both ÷0 and a
+  // contradiction (distinguished by icon, not colour); emerald marks the identity.
+  TERMINAL_STATE_CAVEAT: 'flex items-center gap-1.5 text-xs font-semibold leading-snug rounded-md px-2 py-1 border',
+  TERMINAL_STATE_CAVEAT_DEADEND: 'text-red-200 border-red-400/30 bg-red-500/10',
+  TERMINAL_STATE_CAVEAT_IDENTITY: 'text-emerald-200 border-emerald-400/30 bg-emerald-500/10',
+  TERMINAL_STATE_CAVEAT_ICON_DEADEND: 'shrink-0 text-red-400',
+  TERMINAL_STATE_CAVEAT_ICON_IDENTITY: 'shrink-0 text-emerald-400',
 
   // --- Term slot (#491): the empty dashed chip standing for "any term/side" ---
   // The generic placeholder in operation previews (( )^n, √( ), the reciprocal

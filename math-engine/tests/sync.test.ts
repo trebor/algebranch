@@ -4,6 +4,7 @@
 import {
   parseEquation,
   computeMathSync,
+  getTerminalStatus,
   generateValidMoves,
   getReducibleOptions,
   getAllPaths,
@@ -405,5 +406,112 @@ describe('computeMathSync — undefined (÷0) equations are a true dead end (#41
       expect(result.undefinedPaths).toEqual([]);
       expect(result.activePaths.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('computeMathSync — terminal conclusions freeze the tree (#487)', () => {
+  // A variable-free constant relation is a reached conclusion, not a place to
+  // keep working: a contradiction (3 = -3, no solution) or an identity (0 = 0,
+  // always true) has no solving-progress left. Both freeze every move channel —
+  // the same equation-global halt as ÷0 — and report a `terminalStatus` the UI
+  // surfaces as a standing conclusion. Unlike ÷0 there is no offending subtree,
+  // so `undefinedPaths` stays empty.
+
+  test('a contradiction (3 = -3) offers no moves and reports terminalStatus', () => {
+    for (const source of [null, ...getAllPaths(parseEquation('3 = -3'))]) {
+      const result = computeMathSync(parseEquation('3 = -3'), source);
+      expect(result.activePaths).toEqual([]);
+      expect(result.reduciblePaths).toEqual({});
+      expect(result.targetPaths).toEqual({});
+      expect(result.undefinedPaths).toEqual([]);
+      expect(result.terminalStatus).toBe('contradiction');
+    }
+  });
+
+  test('a false inequality (5 < 2) is a contradiction and freezes too', () => {
+    const result = computeMathSync(parseEquation('5 < 2'), null);
+    expect(result.activePaths).toEqual([]);
+    expect(result.terminalStatus).toBe('contradiction');
+  });
+
+  test('an identity (0 = 0) offers no moves and reports terminalStatus', () => {
+    for (const source of [null, ...getAllPaths(parseEquation('0 = 0'))]) {
+      const result = computeMathSync(parseEquation('0 = 0'), source);
+      expect(result.activePaths).toEqual([]);
+      expect(result.reduciblePaths).toEqual({});
+      expect(result.targetPaths).toEqual({});
+      expect(result.undefinedPaths).toEqual([]);
+      expect(result.terminalStatus).toBe('identity');
+    }
+  });
+
+  test('÷0 wins priority: an undefined equation reports no terminalStatus', () => {
+    // x/0 = 5 could not evaluate to a constant relation anyway, but the ordering
+    // is the guarantee under test — the undefined dead end is checked first.
+    const result = computeMathSync(parseEquation('x/0 = 5'), null);
+    expect(result.terminalStatus).toBeNull();
+    expect(result.undefinedPaths).toHaveLength(1);
+  });
+
+  test('conditional states never freeze (solved form x = 3 keeps moving)', () => {
+    for (const s of ['x = 3', 'x + 3 = 7']) {
+      const result = computeMathSync(parseEquation(s), null);
+      expect(result.terminalStatus).toBeNull();
+      expect(result.activePaths.length).toBeGreaterThan(0);
+    }
+  });
+
+  // The verdict must not be declared over the learner's head: an unsimplified
+  // constant relation (`2*3+4 = 10`, `5+5 = 10`, `6/2 = 3`, `2/4 = 1/2`) still has
+  // arithmetic to do, so it keeps offering that simplification rather than freezing.
+  test.each(['2*3+4 = 10', '5+5 = 10', '6/2 = 3', '2/4 = 1/2'])(
+    'an unsimplified constant relation (%s) does NOT freeze — the simplification is still offered',
+    (s) => {
+      const result = computeMathSync(parseEquation(s), null);
+      expect(result.terminalStatus).toBeNull();
+      const hasSimplify = Object.values(result.reduciblePaths).some((opts) =>
+        opts.some((o) => o.type === 'reduce' && o.label !== 'Evaluate to Decimal'),
+      );
+      expect(hasSimplify).toBe(true);
+    },
+  );
+
+  // Once reduced to its bare / simplest constant form the relation freezes — even
+  // for a reduced fraction or radical, whose only remaining offers are a lossy
+  // decimal eval or an alternate-form rewrite, neither of which is real progress.
+  test.each([
+    ['10 = 10', 'identity'],
+    ['1/2 = 1/2', 'identity'],
+    ['sqrt(2) = sqrt(2)', 'identity'],
+    ['6 = 5', 'contradiction'],
+  ] as const)('a fully-simplified constant relation (%s) freezes', (s, expected) => {
+    const result = computeMathSync(parseEquation(s), null);
+    expect(result.terminalStatus).toBe(expected);
+    expect(result.activePaths).toEqual([]);
+    expect(result.reduciblePaths).toEqual({});
+  });
+});
+
+// getTerminalStatus is the shared predicate behind both the freeze (above) and the
+// history-tree state badge (#487): the badge must appear exactly when the tree
+// freezes, and never one step early on an unsimplified `2*3+4 = 10`.
+describe('getTerminalStatus — the shared badge/freeze predicate (#487)', () => {
+  test.each(['10 = 10', '1/2 = 1/2', '0 = 0'])('fully-simplified identity %s → identity', (s) => {
+    expect(getTerminalStatus(parseEquation(s))).toBe('identity');
+  });
+
+  test.each(['3 = -3', '6 = 5'])('fully-simplified contradiction %s → contradiction', (s) => {
+    expect(getTerminalStatus(parseEquation(s))).toBe('contradiction');
+  });
+
+  test.each(['2*3+4 = 10', '5+5 = 10', '6/2 = 3', '2/4 = 1/2'])(
+    'unsimplified constant relation %s → null (no badge until the arithmetic is done)',
+    (s) => {
+      expect(getTerminalStatus(parseEquation(s))).toBeNull();
+    },
+  );
+
+  test.each(['x = 3', 'x/x = x/x', 'x/0 = 5'])('non-terminal / ÷0 state %s → null', (s) => {
+    expect(getTerminalStatus(parseEquation(s))).toBeNull();
   });
 });

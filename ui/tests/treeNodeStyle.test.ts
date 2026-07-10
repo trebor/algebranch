@@ -43,3 +43,47 @@ describe('history-tree node style priority (#305)', () => {
     });
   });
 });
+
+// #485: the active path was "blue on blue" — indigo-tinted node fills on the
+// navy tree ground barely read. The fix keeps every node fill BLACK (the neutral
+// family) and shows path membership through the node BORDER and the connecting
+// EDGE instead. These guard that decision: a future refactor must not smuggle an
+// indigo *fill* back onto path/current nodes to signal state.
+describe('active-path contrast is carried by border + edge, not a fill tint (#485)', () => {
+  const nodeCards = {
+    default: THEME_GLASS.TREE_NODE_DEFAULT,
+    onPath: THEME_GLASS.TREE_NODE_ON_PATH,
+    current: THEME_GLASS.TREE_NODE_ACTIVE,
+  };
+
+  it('keeps all three node fills in the black (neutral) family — none is indigo-tinted', () => {
+    for (const [name, card] of Object.entries(nodeCards)) {
+      expect(card, `${name} fill should be black/neutral`).toMatch(/bg-neutral-9\d\d/);
+      expect(card, `${name} must not carry an indigo fill`).not.toMatch(/bg-indigo/);
+    }
+  });
+
+  it('signals path membership on the border: on-path and current get an indigo border, default does not', () => {
+    expect(THEME_GLASS.TREE_NODE_ON_PATH).toMatch(/border-indigo/);
+    expect(THEME_GLASS.TREE_NODE_ACTIVE).toMatch(/border-indigo/);
+    expect(THEME_GLASS.TREE_NODE_DEFAULT).not.toMatch(/border-indigo/);
+  });
+
+  it('pushes off-path nodes back with reduced opacity, restoring them on hover', () => {
+    // Dimming the whole off-path node (not the on-path/current ones) is what makes
+    // the active path pop; hover brings a receded node back so it stays browsable.
+    expect(THEME_GLASS.TREE_NODE_DEFAULT).toMatch(/(?<!hover:)opacity-\[?0?\.?[1-5]/);
+    expect(THEME_GLASS.TREE_NODE_DEFAULT).toMatch(/hover:opacity-100/);
+    expect(THEME_GLASS.TREE_NODE_ON_PATH).not.toMatch(/opacity-/);
+    expect(THEME_GLASS.TREE_NODE_ACTIVE).not.toMatch(/opacity-/);
+  });
+
+  it('brightens the active connecting edge distinctly from an inactive one', () => {
+    expect(THEME_GLASS.TREE_LINE_STROKE_ACTIVE).not.toBe(THEME_GLASS.TREE_LINE_STROKE_INACTIVE);
+    // Active edge is a saturated, near-opaque indigo so the path's links read
+    // against the tree ground; the inactive edge is a faint white.
+    expect(THEME_GLASS.TREE_LINE_STROKE_ACTIVE).toMatch(/129,\s*140,\s*248/);
+    const activeAlpha = Number(THEME_GLASS.TREE_LINE_STROKE_ACTIVE.match(/,\s*([\d.]+)\)\s*$/)?.[1]);
+    expect(activeAlpha).toBeGreaterThanOrEqual(0.8);
+  });
+});

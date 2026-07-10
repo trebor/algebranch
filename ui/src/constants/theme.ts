@@ -127,12 +127,18 @@ export const THEME_GLASS = {
   CATEGORY_ITEM: 'rounded-xl border border-white/5 bg-neutral-950/80 hover:bg-neutral-900/90 text-white/55 hover:text-white/85 transition-all duration-200 cursor-pointer shadow-sm',
 
   // --- History & Tree Design Tokens (Issue #39) ---
-  TREE_NODE_DEFAULT: 'border-white/5 hover:border-white/12 bg-neutral-950/80 hover:bg-neutral-900/90 text-white/55 hover:text-white/85 shadow-md transition-all duration-300 cursor-pointer p-1.5',
-  TREE_NODE_ACTIVE: 'border-indigo-400/85 text-indigo-300 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.25)] scale-[1.02] transition-all duration-300 cursor-pointer p-1.5',
-  // On the active derivation path (root → cursor) but not the current node (#305):
-  // a subtle indigo tint that ties the working column together, deliberately
-  // weaker than TREE_NODE_ACTIVE (no glow, no scale) so the cursor still stands out.
-  TREE_NODE_ON_PATH: 'border-indigo-400/35 hover:border-indigo-400/60 text-indigo-200/75 hover:text-indigo-100 bg-indigo-500/5 hover:bg-indigo-500/10 shadow-md transition-all duration-300 cursor-pointer p-1.5',
+  TREE_NODE_DEFAULT: 'border-white/5 hover:border-white/12 bg-neutral-950/80 hover:bg-neutral-900/90 text-white/55 hover:text-white/85 opacity-40 hover:opacity-100 shadow-md transition-all duration-300 cursor-pointer p-1.5',
+  // Current (cursor) node — the focal point. Black fill like every other node
+  // (#485: no indigo fill tint); it stands out purely via the brightest border,
+  // an indigo glow, and a slight scale-up, so it reads even against on-path
+  // ancestors that share its black ground.
+  TREE_NODE_ACTIVE: 'border-indigo-400 text-indigo-100 bg-neutral-950/90 shadow-[0_0_16px_rgba(99,102,241,0.45)] scale-[1.02] transition-all duration-300 cursor-pointer p-1.5',
+  // On the active derivation path (root → cursor) but not the current node (#305,
+  // #485): a black fill matching the default node, with a clear indigo border
+  // (brightening on hover) that ties the working column together via the border
+  // and connecting edge — not a fill tint. Deliberately weaker than
+  // TREE_NODE_ACTIVE (no glow, no scale) so the cursor still stands out.
+  TREE_NODE_ON_PATH: 'border-indigo-400/55 hover:border-indigo-400/90 text-indigo-100/85 hover:text-white bg-neutral-950/80 hover:bg-neutral-900/90 shadow-md transition-all duration-300 cursor-pointer p-1.5',
   TREE_NODE_LOOP: 'border-fuchsia-500/80 text-fuchsia-300 bg-fuchsia-500/10 shadow-[0_0_15px_rgba(217,70,239,0.35)] scale-[1.02] transition-all duration-300 cursor-pointer p-1.5',
   
   LOOP_NODE_DEFAULT: 'border-fuchsia-500/40 hover:border-fuchsia-500/80 bg-fuchsia-950/60 hover:bg-fuchsia-950/80 text-fuchsia-400 hover:text-fuchsia-300 shadow-md shadow-fuchsia-950/20 transition-all duration-300 cursor-pointer',
@@ -143,6 +149,13 @@ export const THEME_GLASS = {
   TREE_NODE_BADGE_ON_PATH: 'bg-indigo-950 border-indigo-500/50 text-indigo-200',
   TREE_NODE_BADGE_LOOP: 'bg-fuchsia-600 border-fuchsia-400 text-fuchsia-100',
   LOOP_LINE_STROKE: 'rgba(217, 70, 239, 0.85)',
+  // Tree connecting edges (#485). The active-path edge is a saturated, near-opaque
+  // indigo (indigo-400) so the root→cursor links read clearly against the tree
+  // ground; inactive branches stay a faint white. TREE_LINE_STROKE_PREVIEW is the
+  // brighter indigo-300 used while previewing a full-derivation copy (#46).
+  TREE_LINE_STROKE_ACTIVE: 'rgba(129, 140, 248, 0.9)',
+  TREE_LINE_STROKE_INACTIVE: 'rgba(255, 255, 255, 0.12)',
+  TREE_LINE_STROKE_PREVIEW: 'rgba(165, 180, 252, 0.95)',
 
   TOOLTIP_DETAILS: 'bg-neutral-950/98 shadow-[0_0_30px_rgba(99,102,241,0.25)] border border-indigo-500/20',
 

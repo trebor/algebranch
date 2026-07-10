@@ -6,6 +6,7 @@ import { render, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, createStore } from 'jotai';
 import { SharedWorkspaceBanner } from '@/components/SharedWorkspaceBanner';
+import { ConsentBanner } from '@/components/ConsentBanner';
 import {
   sharedWorkspaceBannerAtom,
   isSharedWorkspaceBannerDismissed,
@@ -62,14 +63,50 @@ describe('SharedWorkspaceBanner', () => {
     expect(isSharedWorkspaceBannerDismissed()).toBe(true);
   });
 
+  it('Escape dismisses even after focus has left the banner (#484)', async () => {
+    // The recipient clicks onto the canvas, moving focus out of the banner. A
+    // global keydown listener means Escape still dismisses it from anywhere.
+    const { store } = renderWith(true);
+    (document.activeElement as HTMLElement | null)?.blur();
+    expect(document.activeElement).not.toBe(screen.queryByRole('button', { name: /got it/i }));
+    await userEvent.keyboard('{Escape}');
+    expect(store.get(sharedWorkspaceBannerAtom)).toBe(false);
+  });
+
   it('takes focus once consent is resolved', () => {
     renderWith(true, 'denied');
     expect(document.activeElement).toBe(screen.getByRole('button', { name: /got it/i }));
   });
 
-  it('yields focus to the cookie consent banner while consent is unresolved', () => {
-    // Opening a ?ws= link on first run shows both banners; consent must win focus.
+  it('stays hidden until the cookie consent choice is resolved', () => {
+    // Opening a ?ws= link on first run raises the consent banner too; the cookie
+    // choice takes precedence, so the share banner waits until it is dismissed.
     renderWith(true, 'unset');
-    expect(document.activeElement).not.toBe(screen.getByRole('button', { name: /got it/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('appears once consent resolves, without the declining Escape dismissing it', async () => {
+    // The Escape that declines cookies must not cascade into the share banner:
+    // while consent is unset the share banner is not mounted (no listener), so
+    // only a *second* Escape — after it appears — dismisses it.
+    const store = createStore();
+    store.set(sharedWorkspaceBannerAtom, true);
+    store.set(rawConsentAtom, 'unset');
+    render(
+      <Provider store={store}>
+        <ConsentBanner />
+        <SharedWorkspaceBanner />
+      </Provider>,
+    );
+
+    // First Escape declines cookies; the share banner now appears but is still open.
+    await userEvent.keyboard('{Escape}');
+    expect(store.get(rawConsentAtom)).toBe('denied');
+    expect(store.get(sharedWorkspaceBannerAtom)).toBe(true);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+
+    // Second Escape dismisses the now-visible share banner.
+    await userEvent.keyboard('{Escape}');
+    expect(store.get(sharedWorkspaceBannerAtom)).toBe(false);
   });
 });

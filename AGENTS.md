@@ -15,12 +15,13 @@ Shared instructions for all coding agents (Claude Code, Antigravity, etc.) worki
 - **Picking work**: Pick next work by priority, highest first, among `Planned` items. Read the board status with:
 
   ```sh
-  gh project item-list 6 --owner trebor --format json --limit 500 \
-    | jq -r '.items[] | [(.content.number//"-"), (.status//"-"), (.priority//"-"), (.content.title//.title)] | @tsv' \
+  gh project item-list 6 --owner trebor --format json --limit 2000 \
+    | jq -r 'if (.items|length) < .totalCount then error("TRUNCATED: got \(.items|length) of \(.totalCount) — raise --limit") else . end
+             | .items[] | [(.content.number//"-"), (.status//"-"), (.priority//"-"), (.content.title//.title)] | @tsv' \
     | sort -k3
   ```
 
-  `gh issue list` shows the same issues without the priority/status ordering. **Always pass a large `--limit` (e.g. `--limit 500`) to `gh issue list` / `gh project item-list` when searching or enumerating** — both default to only 30 results and will silently truncate the ~100-issue backlog, so a search can "succeed" while missing real items.
+  `gh issue list` shows the same issues without the priority/status ordering. **Always pass a large `--limit` (e.g. `--limit 2000`) to `gh issue list` / `gh project item-list` when searching or enumerating** — both default to only 30 results and will silently truncate the backlog, so a search can "succeed" while missing real items. `--limit` is a client-side *stop-after-N*, not a server cap: `gh` pages in 100s and stops at the last real page, so overshooting the true count is **free** (a limit of 2000 on a 500-item board still fetches only ~5 pages). Size it well above the total — the **board is the binding constraint**, since every PR (not just issues) gets auto-added, so it grows ~2× as fast as the issue count. The `.totalCount` field is returned regardless of `--limit`; the guard above compares it to the returned length and aborts loudly rather than dropping the tail.
 - **Epics vs milestones**: An **epic** is a convention, not a GitHub feature — an ordinary issue titled `epic: …` whose body holds a markdown checklist of member issues (`- [ ] #179 — …`), grouping work by *theme* with ordering rationale (e.g. [#185]). A **milestone** is a native GitHub field grouping work by *shipping boundary* (e.g. the Public-release launch); an issue has at most one. The two axes are orthogonal — an issue can sit in an epic and a milestone both. **Keep epics as annotated markdown checklists; do not migrate them to GitHub's native sub-issues** — the per-line rationale (why a tranche is ordered where it is) is the point, and sub-issues can't hold it. Only consider native sub-issues if you ever need epic membership grouped/filtered *on the board itself* (which today we don't — we navigate by priority/status).
 - **How, design rationale, where-I-left-off**: Linked/written in the active GitHub issue. 
   - On startup: Read the plan using `gh issue view <issue_number>`.

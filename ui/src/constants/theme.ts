@@ -311,6 +311,11 @@ export const THEME_GLASS = {
   // Offline heads-up under the header (#481): names why the short links are grayed
   // and points at the offline choices below, so the fallback is a conscious pick.
   SHARE_MENU_OFFLINE_NOTE: 'px-2.5 pb-1.5 text-[0.625rem] leading-snug text-amber-200/80',
+  // Footer trust line (#482): quietly reassures that shared work stays private and
+  // links out to the privacy policy for the full zero-knowledge explanation.
+  SHARE_MENU_PRIVACY_NOTE:
+    'flex items-center gap-1.5 px-2.5 pt-1 text-[0.625rem] leading-snug text-white/50',
+  SHARE_MENU_PRIVACY_LINK: 'text-indigo-300 hover:text-indigo-200 underline transition-colors',
 
   // Workspace switcher (#247): on short/landscape viewports the horizontal tab
   // strip collapses into this pill + popover anchored top-left of the expression

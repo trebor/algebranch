@@ -5,9 +5,9 @@
 ---
 
 ### Is my work uploaded to a server?
-**No — the math you work on stays on your device.** Your workspace tabs, equation steps, and settings are saved inside your own web browser. The equations and derivations you create are never uploaded, and there is no account or login.
+**No. The math you work on stays on your device.** Your workspace tabs, equation steps, and settings are saved inside your own web browser. The equations and derivations you create are never uploaded, and there is no account or login.
 
-If you explicitly opt in, we collect anonymous, aggregated usage data—for example, which features get used—to understand how Algebranch is used and to improve it. That data is disabled by default and never includes the content of your equations or steps. For more details on what we collect or to manage your preference, please read our [Privacy Policy](https://algebranch.org/privacy).
+If you explicitly opt in, we collect anonymous, aggregated usage data, such as which features get used, to understand how Algebranch is used and to improve it. That data is disabled by default and never includes the content of your equations or steps. For more detail on what we collect, or to change your preference, read our [Privacy Policy](https://algebranch.org/privacy).
 
 ---
 
@@ -24,18 +24,20 @@ For a detailed breakdown of what is supported and what is not, see the [Scope & 
 ---
 
 ### Why doesn't Algebranch use drag-and-drop?
-We intentionally designed Algebranch with a **two-click selection model** (Click to Select → Click to Place) instead of dragging for several reasons:
-1.  **Accessibility**: Dragging requires sustained motor precision, which can be difficult for users with motor difficulties or who use assistive input. A two-click model reduces that physical friction.
-2.  **Mobile Usability**: Drag-and-drop gestures frequently conflict with native browser scrolling on smartphones and tablets. Two-click interactions avoid that conflict and behave the same way on touchscreens as on desktop.
-3.  **Target Precision**: Math equations can be highly nested (e.g., exponents under fractions inside square roots). Click-selection allows the engine to accurately detect the boundaries of the term you want to move, showing you exactly where it can go *before* you place it.
+Algebranch uses a **two-click selection model**, click to select then click to place, instead of dragging. Dragging demands sustained motor precision, which is hard for people with motor difficulties or who use assistive input, and two clicks remove that friction. Drag gestures also fight native scrolling on phones and tablets, whereas two-click interactions behave the same on a touchscreen as on desktop. And because math is often deeply nested, such as an exponent under a fraction inside a square root, click-selection lets the engine detect the exact boundaries of the term and show you where it can go *before* you place it.
 
 ---
 
 ### How do I save or share my work?
 *   **Auto-Save**: Your work is saved automatically to your browser as you type or manipulate equations.
-*   **Sharing**: Click the **Share** button. It offers three links: **Share Equation** (just the starting equation), **Share Derivation** (only the steps in your active solution path, which generates a shorter URL), and **Share Workspace** (your entire workspace, including all tabs, steps, and alternative branches).
-*   **Exporting Derivations**: If you want to submit your homework or copy your steps into another document, click the export buttons (or use keyboard shortcuts under the `C` leader) to copy the full step-by-step history as clean Unicode text or as LaTeX code.
-*   **Clipboard Shortcuts**: You can also use standard copy/paste gestures (`Ctrl/Cmd + C` to copy the current equation as text, and `Ctrl/Cmd + V` on the workspace to paste and open a new equation).
+*   **Sharing**: Click the **Share** button. **Whole workspace** sends everything, including all tabs, steps, and alternative branches; **This derivation** sends only your active solution path and makes a shorter link; **Just the equation** sends only the starting equation.
+*   **Exporting Derivations**: To submit your homework or copy your steps into another document, click the export buttons to copy the full step-by-step history as clean Unicode text or as LaTeX code.
+*   **Clipboard Shortcuts**: You can also use standard copy and paste gestures. `Ctrl/Cmd + C` copies the current equation as text, and `Ctrl/Cmd + V` on the workspace pastes and opens a new equation.
+
+---
+
+### Can Algebranch read the workspaces I share?
+**No.** By default, Algebranch shares your work as a short link like `algebranch.org/s#…`. A short link stores something on a server, but it is built so we still can't read it: your browser encrypts the workspace before uploading, and only the encrypted bytes are stored. The key that unlocks them lives in the part of the link after the `#`, which browsers never send to a server, so we hold the ciphertext but never the key, and decryption happens only in the recipient's browser. You can also share a self-contained `?ws=` or `?eq=` link that carries your work inside the URL and uploads nothing at all. Either way, we can never read your mathematical work. See our [Privacy Policy](https://algebranch.org/privacy) for the full explanation.
 
 ---
 
@@ -45,6 +47,6 @@ We intentionally designed Algebranch with a **two-click selection model** (Click
 ---
 
 ### Why is a certain move not allowed?
-If you click a term but the destination you want does not highlight in green, it usually means the move would break the equality of the equation or violate an algebraic rule (such as dividing by zero). Algebranch checks the available actions in real time and only offers the ones it can guarantee are valid, which helps you avoid algebraic errors.
+If you click a term but the destination you want does not highlight in green, it usually means the move would break the equality of the equation or violate an algebraic rule such as dividing by zero. Algebranch checks the available actions in real time and only offers the ones it can guarantee are valid, which helps you avoid algebraic errors.
 
-That said, if you are confident a move *is* valid and Algebranch isn't offering it, that may be a gap on our end rather than a real restriction. We would genuinely like to know — use the in-app **Feedback** button (Report a Bug), which opens a pre-filled [GitHub issue](https://github.com/trebor/algebranch/issues) (including a link back to your exact workspace) so we can take a look.
+That said, if you are confident a move *is* valid and Algebranch isn't offering it, that may be a gap on our end rather than a real restriction. We would genuinely like to know. Use the in-app **Feedback** button and pick the bug report, and Algebranch opens a pre-filled [GitHub issue](https://github.com/trebor/algebranch/issues) with a link back to your exact workspace attached, so we can take a look.

@@ -43,7 +43,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className={`text-xs ${THEME_GLASS.TEXT_MUTED} font-mono`}>
-              Last updated: June 20, 2026
+              Last updated: July 9, 2026
             </p>
           </div>
 
@@ -53,7 +53,7 @@ export default function PrivacyPage() {
                 1. Overview
               </h2>
               <p>
-                Algebranch is committed to protecting your privacy. This policy outlines how we handle data and explains our use of anonymous analytics.
+                This policy describes how Algebranch handles your data. By default we collect no analytics; we gather anonymous usage data only if you explicitly opt in.
               </p>
             </section>
 
@@ -62,13 +62,13 @@ export default function PrivacyPage() {
                 2. Analytics & Cookies
               </h2>
               <p>
-                We use Google Analytics (GA4) to collect aggregate, anonymous usage data to understand how visitors interact with the app. This helps us optimize performance and prioritize features. Google Analytics uses cookies (e.g., <code className="bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300">_ga</code>) to distinguish unique users, but does not identify you personally.
+                Only when you opt in does Algebranch enable Google Analytics 4 to collect aggregate, anonymous usage data about how visitors interact with the app. This helps us optimize performance and prioritize features. Google Analytics then sets a cookie named <code className="bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300">_ga</code> to distinguish unique users, but it does not identify you personally. Until you opt in, no analytics run and no such cookie is set.
               </p>
             </section>
 
             <section className="flex flex-col gap-2">
               <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} tracking-wider`}>
-                3. What We Collect (and What We Don&apos;t)
+                3. What We Collect and What We Don&apos;t
               </h2>
               <p>
                 <strong>We collect:</strong> Anonymous interaction events such as starting a new workspace, importing preset equations, copying outputs, and undo/redo operations.
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
                 4. Consent Control
               </h2>
               <p>
-                We respect your choice. Analytics tracking is disabled by default (using Google Consent Mode v2) until you choose to opt in via our consent banner. You can change your choice at any time by clicking{' '}
+                Analytics tracking is disabled by default, backed by Google Consent Mode v2, until you opt in via the consent banner. You can change your choice at any time by clicking{' '}
                 <button
                   onClick={() => setConsent('unset')}
                   className={`${THEME_GLASS.LINK} bg-transparent border-none cursor-pointer p-0 inline`}
@@ -96,7 +96,29 @@ export default function PrivacyPage() {
 
             <section className="flex flex-col gap-2">
               <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} tracking-wider`}>
-                5. Contact
+                5. Shared Links
+              </h2>
+              <p>
+                When you share your work, Algebranch defaults to a <strong>short link</strong> such as{' '}
+                <code className="bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300">algebranch.org/s#…</code>. This stores data on a server, but the server never receives the means to read it. Your browser encrypts the workspace with AES-128-GCM before uploading, and the server stores only the encrypted bytes. The decryption key is generated in your browser and travels in the link&apos;s <strong>fragment</strong> &mdash; the part after the{' '}
+                <code className="bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300">#</code>{' '}
+                &mdash; which browsers never send to a server. We hold the ciphertext but never the key, so we cannot decrypt it. When someone opens the link, their browser decrypts it locally using the key from the fragment.
+              </p>
+              <p>
+                You can also share a <strong>self-contained link</strong>, a{' '}
+                <code className="bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300">?ws=</code>{' '}
+                or{' '}
+                <code className="bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300">?eq=</code>{' '}
+                URL that holds the entire workspace in the address itself. It uploads nothing and needs no server, so it also works offline.
+              </p>
+              <p>
+                The difference is only where the data lives: a short link stores encrypted bytes on a server, a self-contained link stores nothing. In neither case can we read your work.
+              </p>
+            </section>
+
+            <section className="flex flex-col gap-2">
+              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} tracking-wider`}>
+                6. Contact
               </h2>
               <p>
                 If you have questions about this policy or our data practices, please contact us via our{' '}

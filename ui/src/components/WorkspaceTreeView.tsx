@@ -75,6 +75,10 @@ const EDGE_OP_SYMBOLS: Record<string, string> = {
   divide: '/',
   power: '^',
   root: '√',
+  // The compound reciprocal move of a fraction-numerator drag (#491): flip
+  // both sides, then multiply. Reciprocal = the −1 power, so the badge wears
+  // the exponent glyph.
+  reciprocal: '⁻¹',
 };
 
 /**

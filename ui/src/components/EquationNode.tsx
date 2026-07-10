@@ -792,7 +792,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       pushEquation(
         targetPaths[activeTargetPath],
         undefined,
-        describeTransposition(currentEq, sourcePath, activeTargetPath) ?? undefined,
+        describeTransposition(currentEq, sourcePath, activeTargetPath, targetPaths[activeTargetPath]) ?? undefined,
       );
       trackEvent({
         action: 'apply_transposition',
@@ -2463,7 +2463,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     // the same caveat that lands on the resulting connector in the history tree
     // (#63, #103). sourcePath is guaranteed truthy here (isTarget requires it).
     const transpositionAssumptions = sourcePath
-      ? describeTransposition(currentEq, sourcePath, path)?.assumptions
+      ? describeTransposition(currentEq, sourcePath, path, targetEquation)?.assumptions
       : undefined;
     tooltipContent = (
       <div className="flex flex-col items-center gap-1 py-1 px-0.5 max-w-[280px] sm:max-w-[340px]">

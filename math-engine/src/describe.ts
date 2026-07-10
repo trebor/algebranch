@@ -36,10 +36,12 @@ export const handleFamilyForReductionType = (type: ReductionOption['type']): Han
 export type StepChange =
   | {
       readonly kind: 'bothSides';
-      readonly op: 'add' | 'subtract' | 'multiply' | 'divide' | 'power' | 'root';
+      readonly op: 'add' | 'subtract' | 'multiply' | 'divide' | 'power' | 'root' | 'reciprocal';
       // For add/subtract/multiply/divide: the term. For power/root: the
-      // exponent / root index (e.g. '2' = square / square-root). Always a
-      // strictly parsable symbolic string.
+      // exponent / root index (e.g. '2' = square / square-root). For
+      // reciprocal — the compound "take the reciprocal of both sides, then
+      // multiply by N" a fraction-numerator drag performs (#491), net effect
+      // s ↦ N/s — the numerator N. Always a strictly parsable symbolic string.
       readonly operand: string;
       readonly text: string;
       // Domain restrictions the step relies on, e.g. ['x ≠ 0'] when dividing
@@ -173,6 +175,13 @@ export const describeTransposition = (
   eq: Equation,
   sourcePath: string,
   targetPath: string,
+  // The equation the move search actually selected for this destination. When
+  // provided, the label + `≠ 0` restriction are reconciled against it: the move
+  // search can pick a different orientation than the naive structural inverse
+  // predicts (e.g. dragging a fraction numerator across `=` collapses the
+  // fraction and reattaches the term reciprocally), and the honest description
+  // must follow the equation the student will actually see (#491).
+  resultEq?: Equation,
 ): StepChange | null => {
   const srcSide = sourcePath.split('/')[0];
   const tgtSide = targetPath.split('/')[0];
@@ -216,7 +225,7 @@ export const describeTransposition = (
   const operand = nodeToString(moved);
 
   // Inverse of the operator that bound the moved term to its side.
-  let op: 'add' | 'subtract' | 'multiply' | 'divide' | null = null;
+  let op: 'add' | 'subtract' | 'multiply' | 'divide' | 'reciprocal' | null = null;
   switch (parentOp) {
     case '+':
       op = 'subtract';
@@ -239,6 +248,35 @@ export const describeTransposition = (
   }
   if (!op) return null;
 
+  // Reconcile a fraction-numerator drag against the result the move search
+  // actually chose (#491). Dragging the numerator `b` of a whole-side fraction
+  // `b/x` across `=` removes `b`, collapsing `b/x` down to its denominator `x`;
+  // the only equivalent reattachment is the reverse-division `b/a` (with `a` the
+  // opposite side), giving `b/a = x`. No single ×/÷ applied to both sides
+  // produces that line — the naive inverse above ("b is a numerator → divide by
+  // b, b ≠ 0") is simply false of it. The honest description is the compound
+  // reciprocal move, take the reciprocal of both sides then multiply by b (net
+  // effect: each side s ↦ b/s), whose restriction is the result's real
+  // denominator: the far side ≠ 0. Detect exactly that orientation — the
+  // result's target side is `moved / oppositeSide` — and record it as a
+  // 'reciprocal' step; every other move keeps the structural inverse untouched.
+  // `restrictedNode` is the expression the step's `≠ 0` assumption guards: the
+  // divisor for a plain divide, the new denominator for a reciprocal move.
+  let restrictedNode: math.MathNode | null = op === 'divide' ? moved : null;
+  if (resultEq && parentOp === '/' && childIndex === 0) {
+    try {
+      const oppositeSide = getNodeByPath(eq, tgtSide);
+      const resultTarget = getNodeByPath(resultEq, tgtSide);
+      const reciprocal = new mjs.OperatorNode('/', 'divide', [moved, oppositeSide]);
+      if (cleanStr(nodeToString(resultTarget)) === cleanStr(nodeToString(reciprocal))) {
+        op = 'reciprocal';
+        restrictedNode = oppositeSide;
+      }
+    } catch {
+      /* result shape doesn't match; keep the structural inverse */
+    }
+  }
+
   const baseText =
     op === 'subtract'
       ? `subtract ${operand} from both sides`
@@ -246,11 +284,17 @@ export const describeTransposition = (
         ? `add ${operand} to both sides`
         : op === 'multiply'
           ? `multiply both sides by ${operand}`
-          : `divide both sides by ${operand}`;
+          : op === 'reciprocal'
+            ? `take the reciprocal of both sides, then multiply by ${operand}`
+            : `divide both sides by ${operand}`;
 
-  // Dividing both sides by a variable expression assumes it is non-zero (#63).
+  // A step that lands a variable expression in a denominator assumes it is
+  // non-zero (#63): the divisor when dividing both sides, the far side when a
+  // reciprocal move flips it under the moved numerator (#491).
   const assumptions =
-    op === 'divide' && !isConstantSubtree(moved) ? [`${operand} ≠ 0`] : [];
+    restrictedNode && !isConstantSubtree(restrictedNode)
+      ? [`${nodeToString(restrictedNode)} ≠ 0`]
+      : [];
 
   return {
     kind: 'bothSides',

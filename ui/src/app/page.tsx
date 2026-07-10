@@ -7,6 +7,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
+import { ActiveRestrictionsCaveat } from '../components/ActiveRestrictionsCaveat';
 import { Sidebar, SidebarContent, EquationLibraryContent } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import { GraphPanel } from '../components/GraphPanel';
@@ -2190,6 +2191,10 @@ export default function Home() {
                       <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
                     </div>
                   </div>
+                  {/* Standing domain-restriction caveat (#486): the accumulated
+                      ≠0 assumptions active on the current branch, shown under the
+                      equation so the working answer never hides its conditions. */}
+                  <ActiveRestrictionsCaveat />
                 </div>
                 </RovingTabindexProvider>
               )}

@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Robert Harris
 
 import { Equation, SerializedEquation, getAllPaths, getNodeByPath, serializeEquation, ensureNodeIds } from './tree';
-import { generateValidMoves, hasValidMove } from './validator';
-import { getReducibleOptions, getUndefinedDivisionPaths } from './simplify';
+import { generateValidMoves, hasValidMove, getEquationStatus } from './validator';
+import { getReducibleOptions, getUndefinedDivisionPaths, ReductionOption } from './simplify';
 import { isCommutativeChainLink } from './explore';
 import { equationToString } from './index';
 
@@ -30,6 +30,17 @@ export interface MathSyncResult {
    * UI can badge exactly that subtree.
    */
   readonly undefinedPaths: { path: string; reason: 'division-by-zero' }[];
+  /**
+   * A reached terminal conclusion that freezes the tree (#487): a variable-free
+   * constant relation that is either a `contradiction` (e.g. `3 = -3`, no
+   * solution) or an `identity` (e.g. `0 = 0`, always true). Both are the *answer*,
+   * not a mistake — there is no solving progress left, so every move channel is
+   * emptied, exactly like the ÷0 freeze. Unlike ÷0 the halt is a whole-equation
+   * property with no offending subtree, so it carries a status rather than paths;
+   * the UI surfaces it as a standing conclusion. `null` on any non-terminal state,
+   * and on an undefined (÷0) state — that dead end takes priority (see below).
+   */
+  readonly terminalStatus: 'contradiction' | 'identity' | null;
 }
 
 /**
@@ -74,6 +85,41 @@ const isChainLinkPath = (eq: Equation, path: string): boolean => {
  */
 const stateSignature = (eq: Equation): string => equationToString(eq);
 
+/**
+ * The single "genuine simplification" rule (#487): a reduction that makes real
+ * progress toward the simplest form. Only a `reduce` counts, and never the lossy
+ * `Evaluate to Decimal` — an `identity`/`expand`/`factor` is a same-value re-shape,
+ * and a decimal eval is an alternate form, neither of which is progress. Shared by
+ * the terminal-freeze gate below and its history-tree badge so the two agree.
+ */
+const isGenuineSimplification = (o: { type: ReductionOption['type']; label?: string }): boolean =>
+  o.type === 'reduce' && o.label !== 'Evaluate to Decimal';
+
+/**
+ * The reached terminal conclusion that freezes the tree (#487), or `null`. The
+ * canonical predicate behind BOTH the `computeMathSync` freeze and the history-tree
+ * state badge, so the frozen canvas and the badge can never disagree.
+ *
+ * A variable-free constant relation is the answer — a `contradiction` (`3 = -3`,
+ * no solution) or an `identity` (`0 = 0`, always true) — but only once the
+ * arithmetic is actually done: while a genuine simplification is still pending
+ * (`2*3+4 = 10`) it is NOT yet terminal, so the learner reaches the bare `10 = 10`
+ * themselves rather than having the verdict declared over their head. A ÷0 dead end
+ * is unsound, not a valid answer, so it is never a conclusion here — it owns its own
+ * freeze and takes priority.
+ */
+export const getTerminalStatus = (eq: Equation): 'contradiction' | 'identity' | null => {
+  if (getUndefinedDivisionPaths(eq).length > 0) return null;
+  const status = getEquationStatus(eq);
+  if (status !== 'contradiction' && status !== 'identity') return null;
+  const currentSignature = stateSignature(eq);
+  const reductions = getReducibleOptions(eq);
+  const hasPendingSimplification = Object.values(reductions).some((list) =>
+    list.some((r) => isGenuineSimplification(r) && stateSignature(r.simplified) !== currentSignature),
+  );
+  return hasPendingSimplification ? null : status;
+};
+
 export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSyncResult => {
   // 0. Undefined check first: once any subtree is undefined (today: a division by
   //    zero, #413), the WHOLE equation is undefined. "Undefined" is not a value you
@@ -88,7 +134,7 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
     reason: 'division-by-zero' as const,
   }));
   if (undefinedPaths.length > 0) {
-    return { activePaths: [], reduciblePaths: {}, targetPaths: {}, undefinedPaths };
+    return { activePaths: [], reduciblePaths: {}, targetPaths: {}, undefinedPaths, terminalStatus: null };
   }
 
   // Signature of the current state, computed once. Any offered transform whose
@@ -97,28 +143,9 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
   // special-case for any one expression.
   const currentSignature = stateSignature(eq);
 
-  // 1. Active paths: nodes that can be moved/transformed.
-  const activePaths: string[] = [];
-  for (const path of getAllPaths(eq)) {
-    try {
-      // An arbitrary chain link is never selectable/boxable. Its terms stay
-      // addressable, and any legitimate reduction (e.g. `2+3`->`5`) is unaffected
-      // because reduciblePaths (step 2) is a separate channel.
-      if (isChainLinkPath(eq, path)) {
-        continue;
-      }
-      // Existence-only short-circuit: step 1 only needs "has ≥1 move", so this
-      // stops at the first valid move rather than building the full map (#188).
-      if (hasValidMove(eq, path)) {
-        activePaths.push(path);
-      }
-    } catch {
-      // A path that can't generate moves is simply not active.
-    }
-  }
-
-  // 2. Reducible paths: nodes that can be simplified, distributed, or rewritten
-  //    via algebraic identities.
+  // 1. Reducible paths: nodes that can be simplified, distributed, or rewritten
+  //    via algebraic identities. Computed first because the terminal-freeze check
+  //    (0b, below) needs to know whether any real simplification is still pending.
   const reductions = getReducibleOptions(eq);
   const reduciblePaths: MathSyncResult['reduciblePaths'] = {};
   for (const path of Object.keys(reductions)) {
@@ -144,6 +171,36 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
       type: red.type,
       label: red.label,
     }));
+  }
+
+  // 0b. Terminal-conclusion freeze (#487): a fully-simplified variable-free
+  //     constant relation is a reached answer, so freeze the whole tree exactly
+  //     like ÷0 (empty every move channel) and report the status for the standing
+  //     conclusion the UI shows. The rule (÷0 priority, and "not until the
+  //     arithmetic is done") lives in getTerminalStatus, shared with the tree badge.
+  const terminalStatus = getTerminalStatus(eq);
+  if (terminalStatus !== null) {
+    return { activePaths: [], reduciblePaths: {}, targetPaths: {}, undefinedPaths: [], terminalStatus };
+  }
+
+  // 2. Active paths: nodes that can be moved/transformed.
+  const activePaths: string[] = [];
+  for (const path of getAllPaths(eq)) {
+    try {
+      // An arbitrary chain link is never selectable/boxable. Its terms stay
+      // addressable, and any legitimate reduction (e.g. `2+3`->`5`) is unaffected
+      // because reduciblePaths (step 1) is a separate channel.
+      if (isChainLinkPath(eq, path)) {
+        continue;
+      }
+      // Existence-only short-circuit: step 2 only needs "has ≥1 move", so this
+      // stops at the first valid move rather than building the full map (#188).
+      if (hasValidMove(eq, path)) {
+        activePaths.push(path);
+      }
+    } catch {
+      // A path that can't generate moves is simply not active.
+    }
   }
 
   // 3. Target paths: valid drop targets for the selected source term.
@@ -174,5 +231,5 @@ export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSy
     }
   }
 
-  return { activePaths, reduciblePaths, targetPaths, undefinedPaths };
+  return { activePaths, reduciblePaths, targetPaths, undefinedPaths, terminalStatus: null };
 };

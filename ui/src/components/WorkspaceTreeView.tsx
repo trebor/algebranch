@@ -9,7 +9,7 @@ import { Tooltip } from './Tooltip';
 import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
 import { CopyFormatMenu } from './CopyFormatMenu';
-import { equationToSpeech, getEquationStatus, getUndefinedDivisionPaths } from 'math-engine-client';
+import { equationToSpeech, getTerminalStatus, getUndefinedDivisionPaths } from 'math-engine-client';
 import { UndefinedHistoryTooltipContent, UNDEFINED_HISTORY_LABEL } from './UndefinedWarning';
 import { trackEvent } from '../utils/analytics';
 import { sentenceCase } from '../utils/text';
@@ -360,14 +360,15 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
   // status is a pure function of this node's equation, so it pins to the
   // top-right corner. Transition badges (substitute #3, restriction #63) moved
   // onto the incoming connector — they describe the step, not the state.
-  const eqStatus = getEquationStatus(node.equation);
-  // A ÷0 subtree makes the whole state a dead end (#416) — a terminal status that
-  // sits alongside contradiction/identity. It's orthogonal (a ÷0 equation is
-  // `conditional`, not a constant relation), but gate the others on it so the
-  // single corner slot never double-stacks.
+  // getTerminalStatus is the SAME gate that freezes the tree (#487): the badge
+  // therefore appears exactly when the state is frozen, and only once the
+  // arithmetic is done — an unsimplified `2*3+4 = 10` shows no badge until the
+  // learner reduces it to the bare `10 = 10`. It also returns null on a ÷0 state,
+  // so the ÷0 badge below owns that corner alone (no double-stack).
+  const terminalStatus = getTerminalStatus(node.equation);
   const isUndefined = getUndefinedDivisionPaths(node.equation).length > 0;
-  const isContradiction = !isUndefined && eqStatus === 'contradiction';
-  const isIdentity = !isUndefined && eqStatus === 'identity';
+  const isContradiction = terminalStatus === 'contradiction';
+  const isIdentity = terminalStatus === 'identity';
 
   return (
     <Tooltip
@@ -416,8 +417,8 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
         {(isContradiction || isIdentity) && (
           <Tooltip
             content={isContradiction
-              ? 'Contradiction — this statement is false, so there is no solution'
-              : 'Identity — this statement is always true'}
+              ? 'No solution — this statement is false'
+              : 'Always true — every value works'}
             position="top"
             className="w-max max-w-[240px] text-center text-sm"
             wrapperClassName="z-20 absolute -top-1.5 -right-1.5"

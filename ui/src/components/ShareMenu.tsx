@@ -4,7 +4,16 @@
 'use client';
 
 import React from 'react';
-import { Check, Variable, Layers, Route, ChevronDown, WifiOff, Loader2 } from 'lucide-react';
+import {
+  Check,
+  Variable,
+  Layers,
+  Route,
+  ChevronDown,
+  WifiOff,
+  Loader2,
+  ShieldCheck,
+} from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { THEME_GLASS, THEME_TRANSITIONS } from '../constants/theme';
 import { useReducedMotion } from '../hooks/useReducedMotion';
@@ -569,6 +578,20 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
               </button>
             </>
           )}
+
+          {/* Footer trust line (#482): shared work is never readable by us — short
+              links store only browser-side ciphertext, self-contained links store
+              nothing. Links out to the privacy policy for the full story. */}
+          <span aria-hidden="true" className={THEME_GLASS.SHARE_MENU_DIVIDER} />
+          <span className={THEME_GLASS.SHARE_MENU_PRIVACY_NOTE}>
+            <ShieldCheck size={12} className="shrink-0 text-indigo-300/80" />
+            <span>
+              Your work stays private —{' '}
+              <a href="/privacy" className={THEME_GLASS.SHARE_MENU_PRIVACY_LINK}>
+                how sharing works
+              </a>
+            </span>
+          </span>
         </div>
       )}
     </div>

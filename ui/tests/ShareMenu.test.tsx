@@ -303,6 +303,15 @@ describe('ShareMenu', () => {
     });
   });
 
+  // --- footer trust line (#482) ------------------------------------------------
+
+  it('shows a privacy reassurance line linking to the privacy policy', async () => {
+    renderMenu();
+    await openMenu();
+    const link = screen.getByRole('link', { name: /how sharing works/i });
+    expect(link.getAttribute('href')).toBe('/privacy');
+  });
+
   // --- the right-moment hint pulse (unchanged) ---------------------------------
 
   it('pulses a one-time hint once the derivation has several real steps', () => {

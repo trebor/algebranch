@@ -423,6 +423,11 @@ export const THEME_GLASS = {
   TREE_NODE_BADGE_RESTRICTION: 'bg-amber-600 border-amber-400 text-amber-50',
   TOOLTIP_ASSUMPTION: 'flex items-center gap-1.5 text-xs font-semibold leading-snug text-amber-300 rounded-md border border-amber-400/30 bg-amber-500/10 px-1.5 py-1',
   TOOLTIP_ASSUMPTION_ICON: 'shrink-0 text-amber-400',
+  // Standing "given x ≠ 0" caveat under the main equation (#486): the accumulated
+  // restriction set active on the current branch, shown persistently (not just on
+  // the introducing step's edge) so a working answer never hides its conditions.
+  ACTIVE_RESTRICTION_CAVEAT: 'flex items-center gap-1.5 text-xs font-semibold leading-snug text-amber-300 rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1',
+  ACTIVE_RESTRICTION_CAVEAT_ICON: 'shrink-0 text-amber-400',
   TREE_NODE_BADGE_CONTRADICTION: 'bg-red-600 border-red-400 text-red-50',
   TREE_NODE_BADGE_IDENTITY: 'bg-emerald-600 border-emerald-400 text-emerald-50',
 

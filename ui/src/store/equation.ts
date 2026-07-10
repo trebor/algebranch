@@ -829,6 +829,44 @@ export const getActivePathIds = (
 };
 
 /**
+ * The domain restrictions (#63) active at a node: the accumulated, deduplicated
+ * union of every step's `change.assumptions` along the root → node `parentId`
+ * chain, in first-seen (path) order. A restriction is a property of the whole
+ * solution *branch*, not one transition — once a step divides by `x` assuming
+ * `x ≠ 0`, every descendant equation inherits that caveat and the answer is only
+ * valid under it (#486). The UI surfaces this as a standing "given x ≠ 0, y ≠ 0"
+ * caveat on the current node / final answer, while the introducing edge keeps its
+ * own badge. Off-chain loop bubbles aren't on the `parentId` chain, so they're
+ * naturally excluded; the seen-guard is belt-and-suspenders against a cycle.
+ */
+export const getActiveRestrictions = (
+  tree: Record<string, HistoryNode>,
+  nodeId: string,
+): string[] => {
+  const chain: HistoryNode[] = [];
+  const seen = new Set<string>();
+  let id: string | null = nodeId;
+  while (id && tree[id] && !seen.has(id)) {
+    seen.add(id);
+    chain.push(tree[id]);
+    id = tree[id].parentId;
+  }
+  chain.reverse(); // root → node, so restrictions list in the order introduced
+
+  const restrictions: string[] = [];
+  const added = new Set<string>();
+  for (const node of chain) {
+    for (const assumption of node.change?.assumptions ?? []) {
+      if (!added.has(assumption)) {
+        added.add(assumption);
+        restrictions.push(assumption);
+      }
+    }
+  }
+  return restrictions;
+};
+
+/**
  * Scope summary for a full-derivation export (#46, option B): how many steps it
  * spans and the endpoint equation that defines the path. The copy menu renders
  * the endpoint typeset (#243), so this returns the `Equation`, not a string.
@@ -1454,6 +1492,19 @@ export const currentEquationAtom = atom<Equation>((get) => {
   const tree = get(historyTreeAtom);
   const nodeId = get(currentNodeIdAtom);
   return tree[nodeId]?.equation;
+});
+
+/**
+ * Domain restrictions (#63) active at the current step — the accumulated,
+ * deduplicated union of every assumption along the root → current path (#486).
+ * Surfaced as a standing "given x ≠ 0, y ≠ 0" caveat by the main canvas, so a
+ * working answer never silently drops a condition it depends on. Empty when the
+ * path introduced no restriction.
+ */
+export const activeRestrictionsAtom = atom<string[]>((get) => {
+  const tree = get(historyTreeAtom);
+  const nodeId = get(currentNodeIdAtom);
+  return getActiveRestrictions(tree, nodeId);
 });
 
 // Graph layout size state: 'hidden' | 'split' (1/3 height) | 'expand' (2/3 height)

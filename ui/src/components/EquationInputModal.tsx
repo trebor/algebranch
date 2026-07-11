@@ -445,13 +445,13 @@ export const EquationInputModal: React.FC = () => {
 
               <div className="flex items-center justify-between text-xs text-white/40 border-t border-white/5 pt-3 select-none shrink-0">
                 <a
-                  href="https://mathjs.org/docs/expressions/syntax.html"
+                  href="/input-format"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 hover:text-indigo-400 transition-colors cursor-pointer group"
                 >
                   <BookOpen size={12} className="group-hover:rotate-3 transition-transform" />
-                  <span>Math.js Syntax Documentation</span>
+                  <span>Equation input format</span>
                 </a>
               </div>
 

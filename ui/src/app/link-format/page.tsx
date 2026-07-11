@@ -53,34 +53,6 @@ const ENCODING: { char: string; code: string; why: string }[] = [
   { char: '*', code: '%2A', why: 'Kept raw by encodeURIComponent' },
 ];
 
-// The exhaustive operator/relation set the parser accepts. Kept in sync with the
-// engine's mathjs instance (math-engine/src/mathjs.ts) and the input normalizer.
-const OPERATORS: { sym: string; name: string; example: string }[] = [
-  { sym: '+', name: 'Addition', example: 'a+b' },
-  { sym: '-', name: 'Subtraction and negation', example: 'a-b, -x' },
-  { sym: '*', name: 'Multiplication (implicit 2x also works)', example: '2*x' },
-  { sym: '/', name: 'Division', example: 'a/b' },
-  { sym: '^', name: 'Exponent', example: 'x^2' },
-  { sym: '= < > <= >=', name: 'Relations (equation or inequality)', example: 'x<=3' },
-];
-
-// The exhaustive function/constant set. `nthRoot` is the counterintuitive one:
-// camelCase, and the radicand comes BEFORE the index.
-const FUNCTIONS: { call: string; name: string }[] = [
-  { call: 'sqrt(x)', name: 'Square root' },
-  { call: 'nthRoot(x, n)', name: 'nth root — radicand first, index second; nthRoot(x, 3) is a cube root' },
-  { call: 'abs(x)', name: 'Absolute value, shown as |x|' },
-  { call: 'log(x), log(x, b)', name: 'Natural logarithm, or logarithm to base b' },
-  { call: 'sin(x) cos(x) tan(x)', name: 'Trigonometric functions' },
-  { call: 'csc(x) sec(x) cot(x)', name: 'Reciprocal trigonometric functions' },
-];
-
-const CONSTANTS: { sym: string; name: string }[] = [
-  { sym: 'pi', name: 'π' },
-  { sym: 'e', name: "Euler's number" },
-  { sym: 'ⅈ', name: 'Imaginary unit — the dedicated glyph ⅈ, not the letter i; complex mode only' },
-];
-
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} tracking-wider`}>{children}</h2>
@@ -125,73 +97,16 @@ export default function LinkFormatPage() {
                 inequality, and function calls such as{' '}
                 <code className={THEME_GLASS.CODE_CHIP}>sqrt(...)</code> and{' '}
                 <code className={THEME_GLASS.CODE_CHIP}>abs(...)</code>. Implicit multiplication like{' '}
-                <code className={THEME_GLASS.CODE_CHIP}>2x</code> is understood. The full set of
-                operators and functions is listed below. The equation must be URL-encoded before it
-                goes in the address.
+                <code className={THEME_GLASS.CODE_CHIP}>2x</code> is understood. The equation must be
+                URL-encoded before it goes in the address.
               </p>
-            </section>
-
-            <section className="flex flex-col gap-3">
-              <SectionHeading>Operators and functions</SectionHeading>
               <p>
-                The complete set the parser accepts. Function names are case-sensitive — note{' '}
-                <code className={THEME_GLASS.CODE_CHIP}>nthRoot</code> is camelCase and takes the
-                radicand before the index.
-              </p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <tbody>
-                    {OPERATORS.map(({ sym, name, example }) => (
-                      <tr key={sym} className="border-b border-white/5 align-top">
-                        <td className="py-2 pr-4 whitespace-nowrap">
-                          <code className={THEME_GLASS.CODE_CHIP}>{sym}</code>
-                        </td>
-                        <td className="py-2 pr-4">{name}</td>
-                        <td className={`py-2 ${THEME_GLASS.TEXT_MUTED} whitespace-nowrap`}>
-                          <code className={THEME_GLASS.CODE_CHIP}>{example}</code>
-                        </td>
-                      </tr>
-                    ))}
-                    {FUNCTIONS.map(({ call, name }) => (
-                      <tr key={call} className="border-b border-white/5 align-top">
-                        <td className="py-2 pr-4 whitespace-nowrap">
-                          <code className={THEME_GLASS.CODE_CHIP}>{call}</code>
-                        </td>
-                        <td className="py-2" colSpan={2}>
-                          {name}
-                        </td>
-                      </tr>
-                    ))}
-                    {CONSTANTS.map(({ sym, name }) => (
-                      <tr key={sym} className="border-b border-white/5 align-top">
-                        <td className="py-2 pr-4 whitespace-nowrap">
-                          <code className={THEME_GLASS.CODE_CHIP}>{sym}</code>
-                        </td>
-                        <td className="py-2" colSpan={2}>
-                          {name}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className={`text-xs ${THEME_GLASS.TEXT_MUTED}`}>
-                For the full catalog of what Algebranch can do with these — every transform,
-                identity, and what is out of scope — see the{' '}
-                <a
-                  href="https://github.com/trebor/algebranch/blob/main/docs/features.md"
-                  className={THEME_GLASS.LINK}
-                >
-                  features reference
-                </a>{' '}
-                and{' '}
-                <a
-                  href="https://github.com/trebor/algebranch/blob/main/docs/scope.md"
-                  className={THEME_GLASS.LINK}
-                >
-                  scope
-                </a>{' '}
-                docs.
+                The complete operator, function, and constant catalog — including the LaTeX and
+                Unicode forms Algebranch auto-converts — is on the{' '}
+                <Link href="/input-format" className={THEME_GLASS.LINK}>
+                  equation input format
+                </Link>{' '}
+                page. This page covers only how to carry that equation in a URL.
               </p>
             </section>
 

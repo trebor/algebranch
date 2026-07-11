@@ -9,13 +9,15 @@ import Script from "next/script";
 import { Provider as JotaiProvider } from "jotai";
 import { ReducedMotionProvider } from "../components/ReducedMotionProvider";
 import { APP_NAME, APP_TITLE } from "../constants/brand";
+import { softwareApplicationJsonLd } from "../constants/structuredData";
 // Note: the bare brand is the base <title> on purpose — the tagline is kept out
 // of the browser tab (#449); it lives in the on-page subtitle and social cards.
 import { ChromeScaleProvider } from "../components/ChromeScaleProvider";
 import { ConsentManager } from "../components/ConsentManager";
 import { shouldRenderDebugOverlay, buildDebugOverlayScript } from "../utils/debugOverlay";
 import { AppUnavailableNotice } from "../components/AppUnavailableNotice";
-import { STALL_OVERLAY_ID } from "../utils/hydrationSentinel";
+import { HydrationSentinel } from "../components/HydrationSentinel";
+import { STALL_OVERLAY_ID, shouldRenderStallOverlay } from "../utils/hydrationSentinel";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -88,6 +90,14 @@ export default function RootLayout({
     process.env.NODE_ENV,
     process.env.NEXT_PUBLIC_DEBUG_OVERLAY,
   );
+  // The CSS stall overlay guards a production-only failure (a blocked deployed
+  // bundle). In dev, on-demand route compilation makes hydration slow enough to
+  // trip its 6s reveal as a false positive, so it is rendered only in production
+  // (or behind an explicit opt-in). See shouldRenderStallOverlay.
+  const stallOverlay = shouldRenderStallOverlay(
+    process.env.NODE_ENV,
+    process.env.NEXT_PUBLIC_STALL_OVERLAY,
+  );
 
   return (
     <html
@@ -96,6 +106,16 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        {/* schema.org JSON-LD (#501): machine-readable "what is this" for search
+            and AI answer engines. Static string, so it ships in the initial HTML
+            where crawlers read it. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+        />
+        {/* Stand down the CSS stall overlay on every route once JS hydrates
+            (#501): secondary pages have no app-init effect to do it. */}
+        <HydrationSentinel />
         {debugOverlay && (
           <script dangerouslySetInnerHTML={{ __html: buildDebugOverlayScript() }} />
         )}
@@ -155,10 +175,14 @@ export default function RootLayout({
             nothing runs and <noscript> never shows). Revealed by a pure-CSS
             delayed animation (.app-stall-overlay) since no JS — not even an
             inline watchdog — can run; React hides it via markAppHydrated() the
-            moment it successfully hydrates, so a healthy load never shows it. */}
-        <div id={STALL_OVERLAY_ID} className="app-stall-overlay">
-          <AppUnavailableNotice />
-        </div>
+            moment it successfully hydrates, so a healthy load never shows it.
+            Production-only: dev's on-demand route compilation trips the 6s reveal
+            as a false positive (see shouldRenderStallOverlay). */}
+        {stallOverlay && (
+          <div id={STALL_OVERLAY_ID} className="app-stall-overlay">
+            <AppUnavailableNotice />
+          </div>
+        )}
       </body>
     </html>
   );

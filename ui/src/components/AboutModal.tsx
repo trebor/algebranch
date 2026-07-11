@@ -156,6 +156,13 @@ export const AboutModal: React.FC = () => {
                 >
                   Privacy Policy
                 </Link>
+                <Link
+                  href="/link-format"
+                  onClick={() => setIsOpen(false)}
+                  className={THEME_GLASS.LINK}
+                >
+                  Link Format
+                </Link>
                 <button
                   onClick={() => {
                     setConsent('unset');

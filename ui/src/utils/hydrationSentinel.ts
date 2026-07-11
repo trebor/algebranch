@@ -20,6 +20,23 @@
 export const STALL_OVERLAY_ID = 'app-stall-overlay';
 
 /**
+ * Gate for rendering the stall overlay. It guards a production-only failure —
+ * an extension/CSP blocking the *deployed* bundle so nothing hydrates — so it
+ * renders in production. In development Next compiles each route on first visit,
+ * which makes hydration slow enough to trip the 6s CSS reveal as a false positive
+ * (worst on heavier client routes like /privacy), so it is suppressed there. An
+ * explicit `NEXT_PUBLIC_STALL_OVERLAY=1` opt-in still lets a dev preview it — the
+ * inverse of `shouldRenderDebugOverlay`.
+ */
+export function shouldRenderStallOverlay(
+  nodeEnv: string | undefined,
+  optIn: string | undefined,
+): boolean {
+  if (nodeEnv === 'production') return true;
+  return optIn === '1';
+}
+
+/**
  * Cancel the CSS stall reveal now that the app is up. Sets the `hidden`
  * attribute, which the UA renders as `display: none` — and since
  * `.app-stall-overlay` deliberately never sets `display`, that UA rule wins.

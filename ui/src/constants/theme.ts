@@ -110,6 +110,8 @@ export const THEME_GLASS = {
   TEXT_HEADING: 'text-white',
   TEXT_BODY: 'text-zinc-300',
   TEXT_ACCENT: 'text-indigo-400 hover:text-indigo-300 transition-colors',
+  // Inline monospace code chip (e.g. `?eq=` on the link-format spec, #501).
+  CODE_CHIP: 'bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300 break-words',
   
   // List items & groups
   LIST_ITEM_ACTIVE: 'text-indigo-300 bg-indigo-600/5 font-semibold',

@@ -185,19 +185,13 @@ export default function InputFormatPage() {
                 <code className={THEME_GLASS.CODE_CHIP}>?eq=</code> address. For the full catalog of
                 what Algebranch can then <em>do</em> with an equation — every transform, identity, and
                 what is out of scope — see the{' '}
-                <a
-                  href="https://github.com/trebor/algebranch/blob/main/docs/features.md"
-                  className={THEME_GLASS.LINK}
-                >
+                <Link href="/features" className={THEME_GLASS.LINK}>
                   features reference
-                </a>{' '}
+                </Link>{' '}
                 and{' '}
-                <a
-                  href="https://github.com/trebor/algebranch/blob/main/docs/scope.md"
-                  className={THEME_GLASS.LINK}
-                >
+                <Link href="/scope" className={THEME_GLASS.LINK}>
                   scope
-                </a>{' '}
+                </Link>{' '}
                 docs.
               </p>
             </section>

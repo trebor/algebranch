@@ -3,11 +3,16 @@
 
 export const COPYRIGHT_NOTICE = '© 2026 Robert Harris';
 export const GITHUB_REPO_URL = 'https://github.com/trebor/algebranch';
-export const DOCS_URL = `${GITHUB_REPO_URL}/blob/main/docs/index.md`;
-export const USER_GUIDE_URL = `${GITHUB_REPO_URL}/blob/main/docs/user-guide.md`;
-export const FAQ_URL = `${GITHUB_REPO_URL}/blob/main/docs/faq.md`;
-export const SCOPE_URL = `${GITHUB_REPO_URL}/blob/main/docs/scope.md`;
-export const FEATURES_URL = `${GITHUB_REPO_URL}/blob/main/docs/features.md`;
+// The docs now live on the domain (#509), rendered from docs/*.md; the Help modal
+// links to the on-domain pages rather than the GitHub markdown. These are
+// same-origin relative paths on purpose so they resolve on localhost, Vercel
+// previews, and production alike — an absolute algebranch.org URL would send a
+// local/preview session to a production route that may not exist yet.
+export const DOCS_URL = '/docs';
+export const USER_GUIDE_URL = '/user-guide';
+export const FAQ_URL = '/faq';
+export const SCOPE_URL = '/scope';
+export const FEATURES_URL = '/features';
 
 
 export interface Attribution {

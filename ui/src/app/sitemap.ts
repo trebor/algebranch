@@ -8,6 +8,7 @@
 // list as they land.
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '../constants/site';
+import { DOCS_PAGES } from '../constants/docsPages';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
@@ -30,6 +31,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.8,
     },
+    // The on-domain documentation mirror (#509), rendered from docs/*.md.
+    ...DOCS_PAGES.map((page) => ({
+      url: `${SITE_URL}/${page.slug}`,
+      lastModified,
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
     {
       url: `${SITE_URL}/privacy`,
       lastModified,

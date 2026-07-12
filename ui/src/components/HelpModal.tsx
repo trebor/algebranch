@@ -81,9 +81,9 @@ export const HelpModal: React.FC = () => {
               <div className="flex gap-3 text-xs leading-relaxed border-l-2 border-indigo-500/30 pl-3.5 py-0.5 select-none shrink-0">
                 <Info size={16} className="text-indigo-400 shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-0.5">
-                  <span className="font-bold text-zinc-200">Documentation is hosted on GitHub</span>
+                  <span className="font-bold text-zinc-200">Documentation</span>
                   <span className="text-zinc-400">
-                    Our detailed guides currently live in the Git repository, version-controlled alongside the application. Select a guide below to open it in a new tab:
+                    Our detailed guides live on algebranch.org, rendered from the version-controlled source. Select a guide below to open it in a new tab:
                   </span>
                 </div>
               </div>

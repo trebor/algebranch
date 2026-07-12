@@ -11,8 +11,8 @@
 // drift from a link that actually works.
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { THEME_GLASS } from '../../constants/theme';
+import { BackToWorkspaceLink } from '../../components/BackToWorkspaceLink';
 import { SITE_URL } from '../../constants/site';
 import { buildEqUrl } from '../../utils/linkFormat';
 
@@ -63,13 +63,7 @@ export default function LinkFormatPage() {
   return (
     <main className="min-h-screen bg-[#0a0a0a] py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
       <div className="max-w-3xl w-full flex flex-col gap-6">
-        <Link
-          href="/"
-          className={`inline-flex items-center gap-2 ${THEME_GLASS.TEXT_ACCENT} text-sm font-semibold w-fit no-underline`}
-        >
-          <ArrowLeft size={16} />
-          Back to Workspace
-        </Link>
+        <BackToWorkspaceLink />
         <div className={`${THEME_GLASS.PANEL} p-6 sm:p-10 flex flex-col gap-8`}>
           <div className="flex flex-col gap-2 border-b border-white/10 pb-4">
             <h1

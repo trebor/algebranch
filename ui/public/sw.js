@@ -77,14 +77,20 @@ self.addEventListener('fetch', (event) => {
   // 0. Network-first for the app shell (navigations / `/`). Serving HTML
   //    cache-first pinned returning visitors to a stale build until sw.js itself
   //    changed; go to the network first so online users always get the current
-  //    HTML, and fall back to the precached `/` only when offline.
+  //    HTML, and fall back to the precached page — its own URL first, then the
+  //    `/` app shell — only when offline.
   if (isNavigation || url.pathname === '/') {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
           if (response && response.status === 200) {
             const responseToCache = response.clone();
-            caches.open(PRECACHE_NAME).then((cache) => cache.put('/', responseToCache));
+            // Cache each page under its OWN URL; only `/` is the app shell.
+            // Caching every navigation under `/` poisoned the shell — a hard
+            // load of a distinct route (e.g. /user-guide, #514) would overwrite
+            // it, so an offline `/` launch showed that other page.
+            const cacheKey = url.pathname === '/' ? '/' : event.request;
+            caches.open(PRECACHE_NAME).then((cache) => cache.put(cacheKey, responseToCache));
           }
           return response;
         })

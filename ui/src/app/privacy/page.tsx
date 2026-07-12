@@ -3,40 +3,18 @@
 
 'use client';
 
-import React from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useSetAtom } from 'jotai';
-import { ArrowLeft } from 'lucide-react';
 import { THEME_GLASS } from '../../constants/theme';
 import { consentAtom } from '../../store/consent';
+import { BackToWorkspaceLink } from '../../components/BackToWorkspaceLink';
 
 export default function PrivacyPage() {
-  const router = useRouter();
   const setConsent = useSetAtom(consentAtom);
-
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        router.push('/');
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [router]);
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
       <div className="max-w-3xl w-full flex flex-col gap-6">
-        <Link
-          href="/"
-          className={`inline-flex items-center gap-2 ${THEME_GLASS.TEXT_ACCENT} text-sm font-semibold w-fit no-underline`}
-        >
-          <ArrowLeft size={16} />
-          Back to Workspace
-        </Link>
+        <BackToWorkspaceLink />
         <div className={`${THEME_GLASS.PANEL} p-6 sm:p-10 flex flex-col gap-8`}>
           <div className="flex flex-col gap-2 border-b border-white/10 pb-4">
             <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${THEME_GLASS.TEXT_HEADING}`}>

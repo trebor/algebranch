@@ -49,6 +49,7 @@ import { useIsShortScreen, useIsVeryShortScreen } from '../hooks/useIsShortScree
 import { useImmersiveChrome } from '../hooks/useImmersiveChrome';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useKeyboardShortcuts, ShortcutConfig } from '../hooks/useKeyboardShortcuts';
+import { SHORTCUT_CATALOG, ShortcutId } from '../constants/shortcutCatalog';
 import { useClipboardBridge } from '../hooks/useClipboardBridge';
 import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
 import { HelpModal } from '../components/HelpModal';
@@ -1106,485 +1107,184 @@ export default function Home() {
     }
   };
 
-  // Keyboard Shortcuts (Issue #17, expanded in #126). Defined as a single
-  // source-of-truth array so the live handler and the `?` cheat-sheet overlay
-  // render from the same bindings and can't drift.
-  const shortcutBindings: ShortcutConfig[] = [
-    {
-      key: 'z',
-      action: () => {
-        setZoomMode((current) => {
-          if (current === 'normal') return 'overview';
-          if (current === 'overview') return 'full-tree';
-          return 'normal';
-        });
-        trackEvent({
-          action: 'shortcut_cycle_zoom',
-          category: 'keyboard',
-        });
-      },
-      description: 'Cycle history tree zoom level',
-      category: 'History',
+  // Keyboard Shortcuts (Issue #17, expanded in #126; unified in #514). The
+  // display + matching metadata for every binding lives once in SHORTCUT_CATALOG
+  // (constants/shortcutCatalog.ts), shared with the `/shortcuts` reference page
+  // and the `K` cheat-sheet. Here we attach the live action to each catalog entry
+  // by id — the Record type forces exactly one action per catalog id, so a
+  // documented binding can never lack a handler (and vice versa).
+  const shortcutActions: Record<ShortcutId, () => void> = {
+    'cycle-zoom': () => {
+      setZoomMode((current) => {
+        if (current === 'normal') return 'overview';
+        if (current === 'overview') return 'full-tree';
+        return 'normal';
+      });
+      trackEvent({ action: 'shortcut_cycle_zoom', category: 'keyboard' });
     },
-    {
-      key: 'z',
-      meta: true,
-      action: () => {
-        const activeNode = tree[currentNodeId];
-        if (activeNode && activeNode.parentId) {
-          setCurrentNodeId(activeNode.parentId);
-          setSourcePath(null);
-          setHoverPath(null);
-          trackEvent({
-            action: 'shortcut_undo',
-            category: 'keyboard',
-          });
-        }
-      },
-      description: 'Undo step',
-      category: 'History',
+    undo: () => {
+      const activeNode = tree[currentNodeId];
+      if (activeNode && activeNode.parentId) {
+        setCurrentNodeId(activeNode.parentId);
+        setSourcePath(null);
+        setHoverPath(null);
+        trackEvent({ action: 'shortcut_undo', category: 'keyboard' });
+      }
     },
-    {
-      key: 'z',
-      meta: true,
-      shift: true,
-      action: () => {
-        const activeNode = tree[currentNodeId];
-        if (activeNode && activeNode.childrenIds && activeNode.childrenIds.length > 0) {
-          const nextId = activeNode.childrenIds[activeNode.childrenIds.length - 1];
-          setCurrentNodeId(nextId);
-          setSourcePath(null);
-          setHoverPath(null);
-          trackEvent({
-            action: 'shortcut_redo',
-            category: 'keyboard',
-          });
-        }
-      },
-      description: 'Redo step',
-      category: 'History',
+    redo: () => {
+      const activeNode = tree[currentNodeId];
+      if (activeNode && activeNode.childrenIds && activeNode.childrenIds.length > 0) {
+        const nextId = activeNode.childrenIds[activeNode.childrenIds.length - 1];
+        setCurrentNodeId(nextId);
+        setSourcePath(null);
+        setHoverPath(null);
+        trackEvent({ action: 'shortcut_redo', category: 'keyboard' });
+      }
     },
-    {
-      key: 'y',
-      meta: true,
-      action: () => {
-        const activeNode = tree[currentNodeId];
-        if (activeNode && activeNode.childrenIds && activeNode.childrenIds.length > 0) {
-          const nextId = activeNode.childrenIds[activeNode.childrenIds.length - 1];
-          setCurrentNodeId(nextId);
-          setSourcePath(null);
-          setHoverPath(null);
-          trackEvent({
-            action: 'shortcut_redo_y',
-            category: 'keyboard',
-          });
-        }
-      },
-      description: 'Redo step (Ctrl+Y)',
-      category: 'History',
-      hidden: true,
+    'redo-ctrl-y': () => {
+      const activeNode = tree[currentNodeId];
+      if (activeNode && activeNode.childrenIds && activeNode.childrenIds.length > 0) {
+        const nextId = activeNode.childrenIds[activeNode.childrenIds.length - 1];
+        setCurrentNodeId(nextId);
+        setSourcePath(null);
+        setHoverPath(null);
+        trackEvent({ action: 'shortcut_redo_y', category: 'keyboard' });
+      }
     },
-    {
-      key: 'w',
-      action: () => {
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-        if (isMobile) {
-          setActiveBottomSheet((prev) => (prev === 'workspace' ? null : 'workspace'));
-        } else {
-          setLeftSidebarOpen((prev) => !prev);
-        }
-        trackEvent({
-          action: 'shortcut_toggle_workspace',
-          category: 'keyboard',
-        });
-      },
-      description: 'Toggle Workspace panel',
-      category: 'Panels',
+    'toggle-workspace': () => {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+      if (isMobile) {
+        setActiveBottomSheet((prev) => (prev === 'workspace' ? null : 'workspace'));
+      } else {
+        setLeftSidebarOpen((prev) => !prev);
+      }
+      trackEvent({ action: 'shortcut_toggle_workspace', category: 'keyboard' });
     },
-    {
-      key: 'l',
-      action: () => {
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-        if (isMobile) {
-          setActiveBottomSheet((prev) => (prev === 'library' ? null : 'library'));
-        } else {
-          setLeftSidebarOpen((prev) => !prev);
-        }
-        trackEvent({
-          action: 'shortcut_toggle_library',
-          category: 'keyboard',
-        });
-      },
-      description: 'Toggle Equation Library',
-      category: 'Panels',
+    'toggle-library': () => {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+      if (isMobile) {
+        setActiveBottomSheet((prev) => (prev === 'library' ? null : 'library'));
+      } else {
+        setLeftSidebarOpen((prev) => !prev);
+      }
+      trackEvent({ action: 'shortcut_toggle_library', category: 'keyboard' });
     },
-    {
-      key: 'h',
-      action: () => {
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-        if (isMobile) {
-          setActiveBottomSheet((prev) => (prev === 'history' ? null : 'history'));
-        } else {
-          if (rightSidebarSize === 'hidden') {
-            setRightSidebarSize('normal');
-          } else if (rightSidebarSize === 'wider') {
-            setRightSidebarSize('normal');
-          } else { // normal
-            if (previousRightSidebarSize === 'wider') {
-              setRightSidebarSize('hidden');
-            } else {
-              setRightSidebarSize('wider');
-            }
-          }
-        }
-        trackEvent({
-          action: 'shortcut_toggle_right_sidebar',
-          category: 'keyboard',
-        });
-      },
-      description: 'Toggle History Sidebar',
-      category: 'Panels',
-    },
-    {
-      key: 'escape',
-      action: () => {
-        if (sourcePath !== null) {
-          setSourcePath(null);
-          trackEvent({
-            action: 'shortcut_deselect_node',
-            category: 'keyboard',
-          });
-        }
-      },
-      description: 'Clear selection',
-      category: 'Equation',
-    },
-    {
-      // Bare `s` swaps the two sides of the equation — reclaimed from the old
-      // ⌘⇧S now that copy/share live under the `C` leader.
-      key: 's',
-      action: () => {
-        swapSides();
-        trackEvent({
-          action: 'shortcut_swap_sides',
-          category: 'keyboard',
-        });
-      },
-      description: 'Swap equation sides',
-      category: 'Equation',
-    },
-    {
-      key: 'g',
-      action: () => {
-        // Don't open a graph that isn't viable; only allow closing an open one.
-        if (graphSize === 'hidden' && !isGraphViable) return;
-        if (graphSize === 'hidden') {
-          setGraphSize('split');
-        } else if (graphSize === 'expand') {
-          setGraphSize('split');
-        } else { // split
-          if (previousGraphSize === 'expand') {
-            setGraphSize('hidden');
+    'toggle-history': () => {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+      if (isMobile) {
+        setActiveBottomSheet((prev) => (prev === 'history' ? null : 'history'));
+      } else {
+        if (rightSidebarSize === 'hidden') {
+          setRightSidebarSize('normal');
+        } else if (rightSidebarSize === 'wider') {
+          setRightSidebarSize('normal');
+        } else { // normal
+          if (previousRightSidebarSize === 'wider') {
+            setRightSidebarSize('hidden');
           } else {
-            setGraphSize('expand');
+            setRightSidebarSize('wider');
           }
         }
-        trackEvent({
-          action: 'shortcut_toggle_graph',
-          category: 'keyboard',
-        });
-      },
-      description: 'Toggle variable relationship graph size',
-      category: 'Equation',
+      }
+      trackEvent({ action: 'shortcut_toggle_right_sidebar', category: 'keyboard' });
     },
-    {
-      // Bare `x` toggles the Read view (#270) — a clean view you step through part
-      // by part, vs. the interactive transform tree.
-      key: 'x',
-      action: () => {
-        toggleExploration();
-        trackEvent({ action: 'shortcut_toggle_exploration', category: 'keyboard' });
-      },
-      description: 'Toggle Read view',
-      category: 'Accessibility',
+    'clear-selection': () => {
+      if (sourcePath !== null) {
+        setSourcePath(null);
+        trackEvent({ action: 'shortcut_deselect_node', category: 'keyboard' });
+      }
     },
-    {
-      // Bare `t` grows the interface text-size knob (#239) one step and wraps
-      // from the largest back to the smallest; Shift+T goes the other way. The
-      // wrap lets a user who overshoots keep tapping the same key to come back
-      // around. A toast confirms the change, since the steps are subtle.
-      key: 't',
-      action: () => {
-        const nextScale = cycleChromeScale(settings.chromeScale, 1);
-        const label = TEXT_SIZE_OPTIONS.find((o) => o.scale === nextScale)?.label ?? '';
-        setSettings((prev) => ({ ...prev, chromeScale: nextScale }));
-        setToast({ message: `Interface text size: ${label}`, key: Date.now() });
-        trackEvent({ action: 'shortcut_text_size_larger', category: 'keyboard', label });
-      },
-      description: 'Larger interface text',
-      category: 'Accessibility',
+    'swap-sides': () => {
+      swapSides();
+      trackEvent({ action: 'shortcut_swap_sides', category: 'keyboard' });
     },
-    {
-      key: 't',
-      shift: true,
-      action: () => {
-        const nextScale = cycleChromeScale(settings.chromeScale, -1);
-        const label = TEXT_SIZE_OPTIONS.find((o) => o.scale === nextScale)?.label ?? '';
-        setSettings((prev) => ({ ...prev, chromeScale: nextScale }));
-        setToast({ message: `Interface text size: ${label}`, key: Date.now() });
-        trackEvent({ action: 'shortcut_text_size_smaller', category: 'keyboard', label });
-      },
-      description: 'Smaller interface text',
-      category: 'Accessibility',
+    'toggle-graph': () => {
+      // Don't open a graph that isn't viable; only allow closing an open one.
+      if (graphSize === 'hidden' && !isGraphViable) return;
+      if (graphSize === 'hidden') {
+        setGraphSize('split');
+      } else if (graphSize === 'expand') {
+        setGraphSize('split');
+      } else { // split
+        if (previousGraphSize === 'expand') {
+          setGraphSize('hidden');
+        } else {
+          setGraphSize('expand');
+        }
+      }
+      trackEvent({ action: 'shortcut_toggle_graph', category: 'keyboard' });
     },
-    {
-      // ⌘C / ⌘V are handled by useClipboardBridge (native copy/paste events), not
-      // this keydown handler — but they're the *frequent* copy path, so we surface
-      // them in the cheat-sheet as display-only rows. `displayOnly` bindings are
-      // filtered out before reaching the handler so they never hijack native copy.
-      key: 'c',
-      meta: true,
-      action: () => {},
-      description: 'Copy equation as text',
-      category: 'Copy & Share',
-      displayOnly: true,
+    'toggle-read-view': () => {
+      toggleExploration();
+      trackEvent({ action: 'shortcut_toggle_exploration', category: 'keyboard' });
     },
-    {
-      key: 'v',
-      meta: true,
-      action: () => {},
-      description: 'New equation from clipboard',
-      category: 'Copy & Share',
-      displayOnly: true,
+    'text-size-larger': () => {
+      const nextScale = cycleChromeScale(settings.chromeScale, 1);
+      const label = TEXT_SIZE_OPTIONS.find((o) => o.scale === nextScale)?.label ?? '';
+      setSettings((prev) => ({ ...prev, chromeScale: nextScale }));
+      setToast({ message: `Interface text size: ${label}`, key: Date.now() });
+      trackEvent({ action: 'shortcut_text_size_larger', category: 'keyboard', label });
     },
-    {
-      // Copy/share family under the `C` leader (#239, reshaped in #481). Since ⌘C
-      // owns equation-as-text, the leader chords are now all *share links*, one per
-      // Share-menu scope: C E / C D / C W → equation / derivation / workspace. Each
-      // copies a short link or, when it can't (offline / mint failed), fires a red
-      // error toast and copies nothing — never a silent giant fallback URL. Leader
-      // keys are bare, so native ⌘C text-copy is untouched.
-      leader: 'c',
-      key: 'e',
-      action: () => copyShortLinkChord('equation', 'shortcut_share_equation_link'),
-      description: 'Copy equation link',
-      category: 'Copy & Share',
+    'text-size-smaller': () => {
+      const nextScale = cycleChromeScale(settings.chromeScale, -1);
+      const label = TEXT_SIZE_OPTIONS.find((o) => o.scale === nextScale)?.label ?? '';
+      setSettings((prev) => ({ ...prev, chromeScale: nextScale }));
+      setToast({ message: `Interface text size: ${label}`, key: Date.now() });
+      trackEvent({ action: 'shortcut_text_size_smaller', category: 'keyboard', label });
     },
-    {
-      leader: 'c',
-      key: 'd',
-      action: () => copyShortLinkChord('path', 'shortcut_share_derivation_link'),
-      description: 'Copy derivation link',
-      category: 'Copy & Share',
+    // ⌘C / ⌘V are handled by useClipboardBridge (native copy/paste events); these
+    // displayOnly rows document them and are filtered out before the live handler.
+    'copy-equation-text': () => {},
+    'paste-new-equation': () => {},
+    'share-equation-link': () => copyShortLinkChord('equation', 'shortcut_share_equation_link'),
+    'share-derivation-link': () => copyShortLinkChord('path', 'shortcut_share_derivation_link'),
+    'share-workspace-link': () => copyShortLinkChord('full', 'shortcut_share_workspace'),
+    'new-workspace': () => {
+      setEquationInputModalOpen(true);
+      trackEvent({ action: 'shortcut_new_workspace', category: 'keyboard' });
     },
-    {
-      leader: 'c',
-      key: 'w',
-      action: () => copyShortLinkChord('full', 'shortcut_share_workspace'),
-      description: 'Copy workspace link',
-      category: 'Copy & Share',
+    'close-workspace': () => {
+      closeTab(activeTabId);
+      trackEvent({ action: 'shortcut_close_workspace', category: 'keyboard' });
     },
-    {
-      key: 'n',
-      action: () => {
-        setEquationInputModalOpen(true);
-        trackEvent({
-          action: 'shortcut_new_workspace',
-          category: 'keyboard',
-        });
-      },
-      description: 'New workspace',
-      category: 'Workspaces',
+    'close-workspace-delete': () => {
+      closeTab(activeTabId);
+      trackEvent({ action: 'shortcut_close_workspace', category: 'keyboard' });
     },
-    {
-      // Cmd/Ctrl+Backspace (Delete is an alias below). We stay off the W key
-      // (every Cmd/Ctrl+W variant is browser-reserved and fires above the page),
-      // and require the modifier so an idle Backspace mash can't close workspaces
-      // by accident. The editable-target guard also keeps it from ever stealing a
-      // Backspace while typing. closeTabAtom resets the last tab rather than
-      // deleting it, so this is safe with a single workspace open.
-      key: 'backspace',
-      meta: true,
-      action: () => {
-        closeTab(activeTabId);
-        trackEvent({
-          action: 'shortcut_close_workspace',
-          category: 'keyboard',
-        });
-      },
-      description: 'Close workspace',
-      category: 'Workspaces',
+    'next-workspace': () => {
+      cycleActiveTab(1);
+      trackEvent({ action: 'shortcut_next_workspace', category: 'keyboard' });
     },
-    {
-      // Delete alias for the close-workspace binding; hidden from the cheat-sheet
-      // so the list shows a single canonical row.
-      key: 'delete',
-      meta: true,
-      action: () => {
-        closeTab(activeTabId);
-        trackEvent({
-          action: 'shortcut_close_workspace',
-          category: 'keyboard',
-        });
-      },
-      description: 'Close workspace',
-      category: 'Workspaces',
-      hidden: true,
+    'prev-workspace': () => {
+      cycleActiveTab(-1);
+      trackEvent({ action: 'shortcut_prev_workspace', category: 'keyboard' });
     },
-    {
-      // Bare `]` / `[` (editor convention) — avoids the browser/OS tab-switch
-      // hijacks that plague Cmd/Ctrl+Alt+Arrow and Ctrl+Tab cross-platform.
-      key: ']',
-      action: () => {
-        cycleActiveTab(1);
-        trackEvent({
-          action: 'shortcut_next_workspace',
-          category: 'keyboard',
-        });
-      },
-      description: 'Next workspace',
-      category: 'Workspaces',
+    help: toggleHelp,
+    'shortcuts-overlay': toggleShortcuts,
+    about: toggleAbout,
+    feedback: toggleFeedback,
+    'equals-menu': () => {
+      if (!currentEq || equalsLocked) return;
+      dismissEqualsHint();
+      setRadialMenuOpen(!radialMenuOpen);
+      trackEvent({ action: 'shortcut_toggle_equals_menu', category: 'keyboard' });
     },
-    {
-      key: '[',
-      action: () => {
-        cycleActiveTab(-1);
-        trackEvent({
-          action: 'shortcut_prev_workspace',
-          category: 'keyboard',
-        });
-      },
-      description: 'Previous workspace',
-      category: 'Workspaces',
-    },
-    {
-      // `?` is produced with Shift on the keyboards we target, so match Shift
-      // here; the overlay shows the plain `?` glyph via keyLabel.
-      key: '?',
-      shift: true,
-      action: toggleHelp,
-      description: 'Help',
-      category: 'Help',
-      keyLabel: '?',
-    },
-    {
-      // `id` lets the overlay's footer look up its own reopen key; no keyLabel
-      // needed — bare `k` formats to the `K` keycap like every other letter.
-      key: 'k',
-      id: 'shortcuts-overlay',
-      action: toggleShortcuts,
-      description: 'Show keyboard shortcuts',
-      category: 'Help',
-    },
-    {
-      key: 'a',
-      action: toggleAbout,
-      description: 'About Algebranch',
-      category: 'Help',
-    },
-    {
-      key: 'f',
-      action: toggleFeedback,
-      description: 'Send feedback',
-      category: 'Help',
-    },
-    {
-      // Open the global equals menu (apply an operation to both sides) — the same
-      // action as clicking the = sign. Skip when there's no equation or the sign
-      // is locked.
-      key: '=',
-      action: () => {
-        if (!currentEq || equalsLocked) return;
-        dismissEqualsHint();
-        setRadialMenuOpen(!radialMenuOpen);
-        trackEvent({ action: 'shortcut_toggle_equals_menu', category: 'keyboard' });
-      },
-      description: 'Apply an operation to both sides',
-      category: 'Equation',
-      keyLabel: '=',
-    },
-    // Direct hotkeys into each equals operation's input panel (#322). `+` and
-    // `*` sit behind Shift on US main rows but are bare on numpads, so each gets
-    // a hidden bare alias; international layouts that move these are out of scope.
-    {
-      key: '+',
-      shift: true,
-      action: () => openEqualsOp('add'),
-      description: 'Add to both sides',
-      category: 'Both sides',
-      keyLabel: '+',
-    },
-    {
-      key: '+',
-      action: () => openEqualsOp('add'),
-      description: 'Add to both sides',
-      category: 'Both sides',
-      hidden: true,
-    },
-    {
-      key: '-',
-      action: () => openEqualsOp('sub'),
-      description: 'Subtract from both sides',
-      category: 'Both sides',
-      // Literal key you press (hyphen-minus), not the `−` operation glyph.
-      keyLabel: '-',
-    },
-    {
-      key: '*',
-      shift: true,
-      action: () => openEqualsOp('mul'),
-      description: 'Multiply both sides',
-      category: 'Both sides',
-      // Keycap shows the literal key you press (`*`), not the `×` operation
-      // glyph; keyLabel also suppresses the misleading Shift on US main rows.
-      keyLabel: '*',
-    },
-    {
-      key: '*',
-      action: () => openEqualsOp('mul'),
-      description: 'Multiply both sides',
-      category: 'Both sides',
-      hidden: true,
-    },
-    {
-      key: '/',
-      action: () => openEqualsOp('div'),
-      description: 'Divide both sides',
-      category: 'Both sides',
-      // Literal key you press (`/`), not the `÷` operation glyph.
-      keyLabel: '/',
-    },
-    {
-      key: 'p',
-      action: () => openEqualsOp('power'),
-      description: 'Raise both sides to a power',
-      category: 'Both sides',
-    },
-    {
-      key: 'r',
-      action: () => openEqualsOp('root'),
-      description: 'Take a root of both sides',
-      category: 'Both sides',
-    },
-    {
-      // Settings on bare `,`, echoing the universal ⌘, convention in the app's
-      // naked-key scheme.
-      key: ',',
-      action: toggleSettings,
-      description: 'Settings',
-      category: 'Help',
-      keyLabel: ',',
-    },
-    {
-      // ⌘, alias for muscle memory; hidden so the cheat-sheet shows the bare key.
-      key: ',',
-      meta: true,
-      action: toggleSettings,
-      description: 'Settings',
-      category: 'Help',
-      hidden: true,
-    },
-  ];
+    'add-both-sides': () => openEqualsOp('add'),
+    'add-both-sides-bare': () => openEqualsOp('add'),
+    'sub-both-sides': () => openEqualsOp('sub'),
+    'mul-both-sides': () => openEqualsOp('mul'),
+    'mul-both-sides-bare': () => openEqualsOp('mul'),
+    'div-both-sides': () => openEqualsOp('div'),
+    'power-both-sides': () => openEqualsOp('power'),
+    'root-both-sides': () => openEqualsOp('root'),
+    settings: toggleSettings,
+    'settings-meta': toggleSettings,
+  };
+
+  const shortcutBindings: ShortcutConfig[] = SHORTCUT_CATALOG.map((entry) => ({
+    ...entry,
+    action: shortcutActions[entry.id],
+  }));
   /* eslint-enable react-hooks/purity */
 
   const modalNavigationKeys = new Set(['?', 'k', 'a', 'f', ',']);

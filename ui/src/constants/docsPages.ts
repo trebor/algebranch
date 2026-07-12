@@ -56,7 +56,7 @@ export const DOCS_PAGES: DocPageMeta[] = [
     file: 'features.md',
     title: 'Features Reference',
     description:
-      'Every transposition, transform, identity, global operation, preset, and setting in Algebranch, plus the full keyboard-shortcut reference.',
+      'Every transposition, transform, identity, global operation, preset, and setting in Algebranch, and a pointer to the full keyboard-shortcut reference.',
     kind: 'article',
   },
   {
@@ -72,3 +72,14 @@ export const DOCS_PAGES: DocPageMeta[] = [
 export const DOC_BY_SLUG: Record<string, DocPageMeta> = Object.fromEntries(
   DOCS_PAGES.map((page) => [page.slug, page]),
 );
+
+/**
+ * The docs surfaced as in-app modals from the Help launcher (#514): every
+ * content doc except the `index` hub (the hub is a directory, not a readable
+ * article). Each still has its own crawlable `/<slug>` route — the modal is an
+ * in-app convenience, the route is the canonical deep-link target. Deriving this
+ * from DOCS_PAGES keeps the modal set in lockstep with the routes.
+ */
+export const HELP_DOC_SLUGS: string[] = DOCS_PAGES.filter(
+  (page) => page.kind !== 'index',
+).map((page) => page.slug);

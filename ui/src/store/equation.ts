@@ -1423,6 +1423,11 @@ export const aboutModalOpenAtom = atom(false);
 export const shortcutsOverlayOpenAtom = atom(false);
 // Help modal (#48), opened with `?`.
 export const helpModalOpenAtom = atom(false);
+// The doc shown in the in-app documentation modal (#514), or null when closed.
+// Holds a help-doc slug (`user-guide` | `scope` | `features` | `faq`). The Help
+// cards set it to open a guide in place; DocModal mirrors it into the History API
+// so the URL becomes the crawlable `/<slug>` and the Back button closes the modal.
+export const activeHelpDocAtom = atom<string | null>(null);
 // Workspace export / import modals (#203), opened from Settings.
 export const exportWorkspacesModalOpenAtom = atom(false);
 export const importWorkspacesModalOpenAtom = atom(false);
@@ -1441,6 +1446,7 @@ export const anyModalOpenAtom = atom<boolean>((get) =>
   get(aboutModalOpenAtom) ||
   get(shortcutsOverlayOpenAtom) ||
   get(helpModalOpenAtom) ||
+  get(activeHelpDocAtom) !== null ||
   get(exportWorkspacesModalOpenAtom) ||
   get(importWorkspacesModalOpenAtom)
 );

@@ -117,44 +117,6 @@ The **Share** button sends your work at a chosen scope, as either a short link o
 
 ### Keyboard Shortcuts
 
-Single-key shortcuts work whenever you are *not* typing in a text field. Press `?` at any time to open the Help menu.
-
-| Key | Action |
-| --- | --- |
-| `W` | Toggle the workspace panel |
-| `L` | Toggle the equation library |
-| `H` | Toggle the history sidebar |
-| `Z` | Cycle history tree zoom level |
-| `G` | Toggle the variable-relationship graph |
-| `S` | Swap the two sides of the equation |
-| `X` | Toggle Read view |
-| `=` | Open the global equals menu to apply an operation to both sides |
-| `Esc` | Clear the current selection |
-| `N` | New workspace |
-| `[` / `]` | Previous / next workspace |
-| `T` / `Shift + T` | Larger / smaller interface text |
-| `A` | About Algebranch |
-| `F` | Send feedback |
-| `,` | Open settings |
-| `K` | Show the keyboard-shortcuts overlay |
-| `?` | Open Help with documentation links and a shortcuts prompt |
-
-Copy and share live under the `C` leader. Press `C`, then a second key. Each chord copies a short link for that scope:
-
-| Sequence | Action |
-| --- | --- |
-| `C` then `W` | Copy workspace link |
-| `C` then `D` | Copy derivation link |
-| `C` then `E` | Copy equation link |
-
-With a modifier:
-
-| Shortcut | Action |
-| --- | --- |
-| `Ctrl/Cmd + C` | Copy equation as text |
-| `Ctrl/Cmd + V` | New equation from clipboard |
-| `Ctrl/Cmd + Z` | Undo a step |
-| `Ctrl/Cmd + Shift + Z` or `Ctrl/Cmd + Y` | Redo a step |
-| `Ctrl/Cmd + Backspace` | Close the current workspace |
+Single-key shortcuts work whenever you are *not* typing in a text field, and copy/share lives under a `C` leader chord (press `C`, then a second key). The complete, always-current list — every key, chord, and modifier combination — is the [keyboard-shortcuts reference](https://algebranch.org/shortcuts). It renders from the same catalog the in-app cheat-sheet uses, so it can never drift from the actual bindings; press `K` in the app to see the same list as an overlay, or `?` for the Help menu.
 
 When entering an equation, typing `=`, `<`, or `>` in either side sets the relation and jumps focus to the other side.

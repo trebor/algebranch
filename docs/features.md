@@ -58,7 +58,7 @@ These are the specific in-place moves Algebranch offers. Factoring runs under th
 ### Radicals & Irrational Numbers
 *   **Radical Simplification**: Factor out perfect powers from inside roots, so `sqrt(8)` simplifies to `2 * sqrt(2)`.
 *   **Rationalization**: Multiply numerators and denominators to eliminate roots in denominators.
-*   **Exact Irrationals**: Native, exact mathematical support for constants like $e$ and $\pi$.
+*   **Exact Irrationals**: Native, exact mathematical support for constants like *e* and *π*.
 *   **Complex Numbers**: Extend negative square roots to the imaginary domain, so `sqrt(-4)` becomes `2 * ⅈ`, using the dedicated Unicode symbol `ⅈ` to avoid variable conflicts. Supports complex denominator rationalization by multiplying by the conjugate, and simplifies powers of `ⅈ` such as `ⅈ^2` to `-1`. The `allowComplex` setting controls this and is enabled by default.
 
 ### Substitution & Reverse Substitution

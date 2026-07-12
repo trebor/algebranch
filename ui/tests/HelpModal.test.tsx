@@ -8,7 +8,7 @@ import { HelpModal } from '@/components/HelpModal';
 import { ShortcutsOverlay } from '@/components/ShortcutsOverlay';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { helpModalOpenAtom, shortcutsOverlayOpenAtom } from '@/store/equation';
-import { GITHUB_REPO_URL } from '@/constants/about';
+import { USER_GUIDE_URL, FAQ_URL, SCOPE_URL, FEATURES_URL } from '@/constants/about';
 
 const HelpModalTestWrapper: React.FC = () => {
   const [helpOpen, setHelpOpen] = useAtom(helpModalOpenAtom);
@@ -61,24 +61,26 @@ describe('HelpModal', () => {
       </Provider>
     );
 
+    // Assert the raw attribute, not `.href`: these are same-origin relative paths
+    // (#509) and `.href` would resolve them to an absolute URL under jsdom.
     const userGuideLink = screen.getByRole('link', { name: /user guide/i }) as HTMLAnchorElement;
     expect(userGuideLink).toBeTruthy();
-    expect(userGuideLink.href).toBe(`${GITHUB_REPO_URL}/blob/main/docs/user-guide.md`);
+    expect(userGuideLink.getAttribute('href')).toBe(USER_GUIDE_URL);
     expect(userGuideLink.target).toBe('_blank');
 
     const faqLink = screen.getByRole('link', { name: /faq reference/i }) as HTMLAnchorElement;
     expect(faqLink).toBeTruthy();
-    expect(faqLink.href).toBe(`${GITHUB_REPO_URL}/blob/main/docs/faq.md`);
+    expect(faqLink.getAttribute('href')).toBe(FAQ_URL);
     expect(faqLink.target).toBe('_blank');
 
     const scopeLink = screen.getByRole('link', { name: /mathematical scope/i }) as HTMLAnchorElement;
     expect(scopeLink).toBeTruthy();
-    expect(scopeLink.href).toBe(`${GITHUB_REPO_URL}/blob/main/docs/scope.md`);
+    expect(scopeLink.getAttribute('href')).toBe(SCOPE_URL);
     expect(scopeLink.target).toBe('_blank');
 
     const featuresLink = screen.getByRole('link', { name: /features reference/i }) as HTMLAnchorElement;
     expect(featuresLink).toBeTruthy();
-    expect(featuresLink.href).toBe(`${GITHUB_REPO_URL}/blob/main/docs/features.md`);
+    expect(featuresLink.getAttribute('href')).toBe(FEATURES_URL);
     expect(featuresLink.target).toBe('_blank');
   });
 

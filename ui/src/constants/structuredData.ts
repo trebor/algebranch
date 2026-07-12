@@ -10,6 +10,7 @@
  */
 import { SITE_URL } from './site';
 import { APP_NAME, APP_TAGLINE } from './brand';
+import type { FaqEntry } from '../utils/docsMarkdown';
 
 export const softwareApplicationJsonLd = {
   '@context': 'https://schema.org',
@@ -30,3 +31,44 @@ export const softwareApplicationJsonLd = {
     priceCurrency: 'USD',
   },
 } as const;
+
+// Per-page markup for the on-domain docs (#509). These layer on top of the base
+// SoftwareApplication node above: the FAQ ships FAQPage (answer-shaped, ideal AEO
+// material) and each prose guide ships TechArticle, so answer engines can cite the
+// specific page rather than only the app shell.
+
+export function faqPageJsonLd(entries: FaqEntry[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: entries.map((entry) => ({
+      '@type': 'Question',
+      name: entry.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: entry.answer,
+      },
+    })),
+  };
+}
+
+export function docArticleJsonLd({
+  title,
+  description,
+  url,
+}: {
+  title: string;
+  description: string;
+  url: string;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    headline: title,
+    description,
+    url,
+    inLanguage: 'en',
+    isPartOf: { '@type': 'WebSite', name: APP_NAME, url: SITE_URL },
+    publisher: { '@type': 'Organization', name: APP_NAME, url: SITE_URL },
+  };
+}

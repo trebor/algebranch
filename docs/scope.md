@@ -15,14 +15,14 @@ Algebranch is designed to support **Algebra 1 and Algebra 2** level mathematics.
 Supported capabilities include:
 *   **Linear & Quadratic Equations**: Solving single-variable and systems of equations.
 *   **Polynomials & Factoring**: Simplifying, expanding, and factoring algebraic expressions.
-*   **Rationals & Radicals**: Combining fractions over a common denominator, simplifying radicals, such as rewriting $\sqrt{8}$ as $2\sqrt{2}$, and rationalizing denominators.
-*   **Exact Irrationals**: Performing operations with exact representations of mathematical constants like $e$ and $\pi$.
+*   **Rationals & Radicals**: Combining fractions over a common denominator, simplifying radicals, such as rewriting √8 as 2√2, and rationalizing denominators.
+*   **Exact Irrationals**: Performing operations with exact representations of mathematical constants like *e* and *π*.
 *   **Inequalities**: Fully supporting transpositions with direction-flipping logic when multiplying or dividing by negative numbers.
 *   **Completing the Square**: Transforming quadratic expressions to complete the square.
 *   **Substitution**: Replacing variables with equivalent expressions across multiple workspace tabs.
 *   **Visual Graphing**: Graphing equations to see variable relationships and intersection points.
-*   **Complex Numbers**: Full arithmetic, powers, and roots using the imaginary unit $\mathbb{i}$ (using the unique Unicode codepoint `ⅈ` to distinguish it from a variable $i$), including conjugate rationalization of denominators and power simplification (e.g. $\mathbb{i}^2 = -1$). Gated on the `allowComplex` setting.
-*   **Absolute Value**: Full algebraic operations and transpositions involving the absolute value function (`abs(x)` or rendered as $|x|$), including product, quotient, square identities, and principal root of squares (e.g. $\sqrt{x^2} = |x|$).
+*   **Complex Numbers**: Full arithmetic, powers, and roots using the imaginary unit `ⅈ` (using the unique Unicode codepoint `ⅈ` to distinguish it from a variable *i*), including conjugate rationalization of denominators and power simplification (e.g. ⅈ² = -1). Gated on the `allowComplex` setting.
+*   **Absolute Value**: Full algebraic operations and transpositions involving the absolute value function (`abs(x)` or rendered as |x|), including product, quotient, square identities, and principal root of squares (e.g. √(x²) = |x|).
 
 For the exhaustive list of every supported transformation, global operation, and interface setting, please see the [Features Reference](features.md).
 
@@ -33,8 +33,8 @@ For the exhaustive list of every supported transformation, global operation, and
 Algebranch focuses specifically on core algebraic manipulations. The following areas are outside its current scope, though many are planned for future updates. You can track progress or contribute to these features via their respective issues:
 
 *   **Calculus**: Operations like limits, derivatives, and integrals are not supported. See [#183](https://github.com/trebor/algebranch/issues/183).
-*   **Summation & Product Notation**: Summation ($\sum$) and product ($\prod$) operators are not available. See [#182](https://github.com/trebor/algebranch/issues/182).
-*   **Factorial**: The factorial operator ($!$) is not supported. See [#181](https://github.com/trebor/algebranch/issues/181).
+*   **Summation & Product Notation**: Summation (∑) and product (∏) operators are not available. See [#182](https://github.com/trebor/algebranch/issues/182).
+*   **Factorial**: The factorial operator (!) is not supported. See [#181](https://github.com/trebor/algebranch/issues/181).
 *   **Floor, Ceiling, & Modulo**: These discrete functions are not supported. See [#180](https://github.com/trebor/algebranch/issues/180).
 *   **Sets, Logic, & Linear Algebra**: Matrix math, vectors, logical operators, and set notation are not supported. See [#184](https://github.com/trebor/algebranch/issues/184).
 *   **Unit Conversions**: Converting units, such as meters to feet, is not supported. See [#36](https://github.com/trebor/algebranch/issues/36).

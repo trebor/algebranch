@@ -114,3 +114,23 @@ export const formatShortcut = (parts: ShortcutKeyParts, isMac: boolean): string 
 
   return tokens.join(isMac ? '' : '+');
 };
+
+/**
+ * Platform-neutral keycap for static/server rendering — e.g. the crawlable
+ * `/shortcuts` page, which has no `navigator` to detect the platform. Renders the
+ * meta modifier as `Ctrl/Cmd` (covering both) and joins with ` + `, matching the
+ * convention the docs used before they pointed at the page. The key portion
+ * (letters upper-cased, special keys mapped) matches {@link formatShortcut}.
+ */
+export const formatShortcutStatic = (parts: ShortcutKeyParts): string => {
+  const tokens: string[] = [];
+  if (parts.meta) tokens.push('Ctrl/Cmd');
+  if (parts.shift) tokens.push('Shift');
+  if (parts.alt) tokens.push('Alt');
+
+  const lowered = parts.key.toLowerCase();
+  const display = KEY_DISPLAY[lowered] ?? (lowered.length === 1 ? lowered.toUpperCase() : parts.key);
+  tokens.push(display);
+
+  return tokens.join(' + ');
+};

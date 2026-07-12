@@ -13,8 +13,8 @@
 // engine rejects.
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { THEME_GLASS } from '../../constants/theme';
+import { BackToWorkspaceLink } from '../../components/BackToWorkspaceLink';
 import { SITE_URL } from '../../constants/site';
 import {
   INPUT_OPERATORS,
@@ -47,13 +47,7 @@ export default function InputFormatPage() {
   return (
     <main className="min-h-screen bg-[#0a0a0a] py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
       <div className="max-w-3xl w-full flex flex-col gap-6">
-        <Link
-          href="/"
-          className={`inline-flex items-center gap-2 ${THEME_GLASS.TEXT_ACCENT} text-sm font-semibold w-fit no-underline`}
-        >
-          <ArrowLeft size={16} />
-          Back to Workspace
-        </Link>
+        <BackToWorkspaceLink />
         <div className={`${THEME_GLASS.PANEL} p-6 sm:p-10 flex flex-col gap-8`}>
           <div className="flex flex-col gap-2 border-b border-white/10 pb-4">
             <h1
@@ -192,7 +186,11 @@ export default function InputFormatPage() {
                 <Link href="/scope" className={THEME_GLASS.LINK}>
                   scope
                 </Link>{' '}
-                docs.
+                docs. To drive it from the keyboard, see the{' '}
+                <Link href="/shortcuts" className={THEME_GLASS.LINK}>
+                  keyboard shortcuts
+                </Link>
+                .
               </p>
             </section>
           </div>

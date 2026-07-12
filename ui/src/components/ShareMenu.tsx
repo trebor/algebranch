@@ -4,6 +4,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import {
   Check,
   Variable,
@@ -587,9 +588,9 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
             <ShieldCheck size={12} className="shrink-0 text-indigo-300/80" />
             <span>
               Your work stays private —{' '}
-              <a href="/privacy" className={THEME_GLASS.SHARE_MENU_PRIVACY_LINK}>
+              <Link href="/privacy" className={THEME_GLASS.SHARE_MENU_PRIVACY_LINK}>
                 how sharing works
-              </a>
+              </Link>
             </span>
           </span>
         </div>

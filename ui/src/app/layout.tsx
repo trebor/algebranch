@@ -16,6 +16,7 @@ import { ChromeScaleProvider } from "../components/ChromeScaleProvider";
 import { ConsentManager } from "../components/ConsentManager";
 import { shouldRenderDebugOverlay, buildDebugOverlayScript } from "../utils/debugOverlay";
 import { AppUnavailableNotice } from "../components/AppUnavailableNotice";
+import { DocModalHost } from "../components/DocModalHost";
 import { HydrationSentinel } from "../components/HydrationSentinel";
 import { STALL_OVERLAY_ID, shouldRenderStallOverlay } from "../utils/hydrationSentinel";
 
@@ -129,6 +130,10 @@ export default function RootLayout({
                 canvas. */}
             <ChromeScaleProvider>
               {children}
+              {/* In-app documentation modal (#514): server-rendered doc bodies
+                  fed to a client modal, opened from the Help launcher and synced
+                  to the crawlable `/<slug>` URL via the History API. */}
+              <DocModalHost />
               <ConsentManager />
             </ChromeScaleProvider>
           </ReducedMotionProvider>

@@ -31,6 +31,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.8,
     },
+    // The keyboard-shortcuts reference (#514), rendered from the shared catalog.
+    // `/help` is intentionally absent — it is a redirect to `/docs`, not indexable
+    // content of its own.
+    {
+      url: `${SITE_URL}/shortcuts`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
     // The on-domain documentation mirror (#509), rendered from docs/*.md.
     ...DOCS_PAGES.map((page) => ({
       url: `${SITE_URL}/${page.slug}`,

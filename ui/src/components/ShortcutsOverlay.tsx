@@ -10,10 +10,9 @@ import { X, Keyboard } from 'lucide-react';
 import { shortcutsOverlayOpenAtom } from '../store/equation';
 import { ShortcutConfig } from '../hooks/useKeyboardShortcuts';
 import { formatShortcut } from '../utils/keyboardShortcuts';
+import { groupShortcutsByCategory } from '../constants/shortcutCatalog';
 import { THEME_GLASS } from '../constants/theme';
 import { useFocusTrap } from '../hooks/useFocusTrap';
-
-const UNCATEGORIZED = 'Other';
 
 interface ShortcutsOverlayProps {
   /** The single source-of-truth bindings, shared with the live handler. */
@@ -39,30 +38,6 @@ const keycapLabel = (shortcut: ShortcutConfig, isMac: boolean): string =>
 /** Stable id of the binding that toggles this overlay (its reopen key). */
 const REOPEN_SHORTCUT_ID = 'shortcuts-overlay';
 
-interface CategoryGroup {
-  category: string;
-  items: ShortcutConfig[];
-}
-
-/**
- * Groups the (non-hidden) bindings by category, preserving first-seen order so
- * the overlay reads in the same order the bindings are declared.
- */
-const groupByCategory = (shortcuts: ShortcutConfig[]): CategoryGroup[] => {
-  const groups: CategoryGroup[] = [];
-  shortcuts.forEach((shortcut) => {
-    if (shortcut.hidden) return;
-    const category = shortcut.category ?? UNCATEGORIZED;
-    const existing = groups.find((g) => g.category === category);
-    if (existing) {
-      existing.items.push(shortcut);
-    } else {
-      groups.push({ category, items: [shortcut] });
-    }
-  });
-  return groups;
-};
-
 /**
  * The `?` keyboard-shortcuts cheat-sheet (#126). Renders every visible binding
  * from the same array the live handler uses, so the two can't drift. Closes on
@@ -72,7 +47,7 @@ const groupByCategory = (shortcuts: ShortcutConfig[]): CategoryGroup[] => {
 export const ShortcutsOverlay: React.FC<ShortcutsOverlayProps> = ({ shortcuts }) => {
   const [isOpen, setIsOpen] = useAtom(shortcutsOverlayOpenAtom);
   const isMac = React.useMemo(() => detectIsMac(), []);
-  const groups = React.useMemo(() => groupByCategory(shortcuts), [shortcuts]);
+  const groups = React.useMemo(() => groupShortcutsByCategory(shortcuts), [shortcuts]);
 
   // The reopen-key hint reads its keycap from the overlay's own binding, so it
   // stays in sync with the source-of-truth array instead of a hardcoded letter.

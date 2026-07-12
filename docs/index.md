@@ -9,4 +9,5 @@ Algebranch is a tool for solving equations by hand. You move terms and apply alg
 - **[User Guide](user-guide.md)** — the interaction model, the two-click design, the branching history tree, and deep links.
 - **[Scope & Capabilities](scope.md)** — what math Algebranch supports, what is currently out of scope, and where the project is headed.
 - **[Features Reference](features.md)** — every transform, global operation, identity, preset, and setting.
+- **[Keyboard Shortcuts](https://algebranch.org/shortcuts)** — every key, chord, and modifier, rendered from the same catalog the in-app cheat-sheet uses.
 - **[FAQ](faq.md)** — privacy, mobile support, layout choices, and why a move might be blocked.

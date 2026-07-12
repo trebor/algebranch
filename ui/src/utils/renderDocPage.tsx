@@ -10,8 +10,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { THEME_GLASS } from '../constants/theme';
+import { BackToWorkspaceLink } from '../components/BackToWorkspaceLink';
 import { SITE_URL } from '../constants/site';
 import { DOC_BY_SLUG, DOCS_PAGES } from '../constants/docsPages';
 import { faqPageJsonLd, docArticleJsonLd } from '../constants/structuredData';
@@ -20,6 +20,15 @@ import { DocMarkdown } from '../components/DocMarkdown';
 
 function readDocMarkdown(file: string): string {
   return readFileSync(path.join(process.cwd(), '..', 'docs', file), 'utf8');
+}
+
+/**
+ * The chrome-stripped body of a doc, keyed by route slug. Shared by the on-domain
+ * route (below) and the in-app documentation modal (#514) so both render from the
+ * one `docs/*.md` source and cannot drift. Server-only: reads the file at build.
+ */
+export function getDocBody(slug: string): string {
+  return stripDocChrome(readDocMarkdown(DOC_BY_SLUG[slug].file));
 }
 
 export function buildDocMetadata(slug: string): Metadata {
@@ -59,7 +68,7 @@ function DocsCrossNav({ currentSlug }: { currentSlug: string }) {
 export function DocPageBody({ slug }: { slug: string }) {
   const meta = DOC_BY_SLUG[slug];
   const raw = readDocMarkdown(meta.file);
-  const body = stripDocChrome(raw);
+  const body = getDocBody(slug);
   const url = `${SITE_URL}/${slug}`;
   const jsonLd =
     meta.kind === 'faq'
@@ -74,13 +83,7 @@ export function DocPageBody({ slug }: { slug: string }) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <Link
-          href="/"
-          className={`inline-flex items-center gap-2 ${THEME_GLASS.TEXT_ACCENT} text-sm font-semibold w-fit no-underline`}
-        >
-          <ArrowLeft size={16} />
-          Back to Workspace
-        </Link>
+        <BackToWorkspaceLink />
         <div className={`${THEME_GLASS.PANEL} p-6 sm:p-10 flex flex-col gap-8`}>
           <header className={`flex flex-col gap-2 border-b ${THEME_GLASS.PANEL_BORDER} pb-4`}>
             <h1

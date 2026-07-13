@@ -86,26 +86,46 @@ export async function loadSharePayload(
 
 /**
  * The minimal slice of the Fetch API the create round-trip needs — a POST with a
- * JSON body, of which we only read `ok`/`status` (the id is derived locally, so the
- * response body is irrelevant). Injectable for testing; the global `fetch` fits it.
+ * JSON body. The id is derived locally, so on success we only read `ok`/`status`;
+ * `json` is optional and only consulted on a 429, whose body names the daily
+ * limit (#505). Injectable for testing; the global `fetch` fits it.
  */
 type PostFetchLike = (
   url: string,
   init: { method: string; headers: Record<string, string>; body: string },
-) => Promise<{ ok: boolean; status: number }>;
+) => Promise<{ ok: boolean; status: number; json?: () => Promise<unknown> }>;
 
 /**
  * Outcome of minting a short link.
  * - `ok`        → `url` is the shareable `<origin>/s#<key>` link.
  * - `too-large` → the ciphertext exceeded the server's size cap (413). The caller
  *                 should fall back to a self-contained `?ws=` link.
+ * - `busy`      → the server's daily write budget is exhausted (429, #505). Not
+ *                 retryable now; fall back to a self-contained `?ws=` link.
+ *                 `dailyLimit` is the cap the server named in the body, when it
+ *                 did — it's a per-deploy dial, so it's learned, never assumed.
  * - `error`     → network failure, an unexpected status, or collisions that never
  *                 cleared. Retryable, or fall back to `?ws=`.
  */
 export type CreateShareLinkResult =
   | { status: 'ok'; url: string }
   | { status: 'too-large' }
+  | { status: 'busy'; dailyLimit?: number }
   | { status: 'error' };
+
+/** Pull the `dailyLimit` a 429 body names, or undefined on any malformed shape. */
+async function readDailyLimit(res: { json?: () => Promise<unknown> }): Promise<number | undefined> {
+  try {
+    const body = await res.json?.();
+    if (typeof body === 'object' && body !== null && 'dailyLimit' in body) {
+      const limit = (body as { dailyLimit: unknown }).dailyLimit;
+      if (typeof limit === 'number' && Number.isFinite(limit) && limit > 0) return limit;
+    }
+  } catch {
+    // An unreadable body just means no number to show — busy stands on its own.
+  }
+  return undefined;
+}
 
 /**
  * Upper bound on 409-collision retries. A collision needs two random 128-bit keys
@@ -132,7 +152,7 @@ export async function createShareLink(
     const ciphertext = await encryptWorkspace(payload, key);
     const id = await deriveShareId(key);
 
-    let res: { ok: boolean; status: number };
+    let res: Awaited<ReturnType<PostFetchLike>>;
     try {
       res = await fetchImpl('/api/share', {
         method: 'POST',
@@ -148,6 +168,11 @@ export async function createShareLink(
     }
     if (res.status === 409) continue; // id collision — mint a new key and retry
     if (res.status === 413) return { status: 'too-large' };
+    if (res.status === 429) {
+      // Budget drained — don't retry. Carry the limit the server named, if any.
+      const dailyLimit = await readDailyLimit(res);
+      return dailyLimit === undefined ? { status: 'busy' } : { status: 'busy', dailyLimit };
+    }
     return { status: 'error' };
   }
   return { status: 'error' }; // collisions never cleared — treat as a failure

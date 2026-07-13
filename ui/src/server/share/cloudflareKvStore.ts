@@ -28,19 +28,30 @@ export interface CloudflareKvConfig {
   fetchImpl?: typeof fetch;
 }
 
+/**
+ * The URL + auth plumbing every KV REST call needs, built once from a config.
+ * Shared by the share store and the write-budget adapter (#505) so the API
+ * root, namespace path shape, and header format live in exactly one place.
+ */
+export function kvValuesApi({ accountId, namespaceId, apiToken }: CloudflareKvConfig): {
+  authHeader: string;
+  valueUrl: (key: string) => string;
+} {
+  const baseUrl = `${KV_API_ROOT}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}`;
+  return {
+    authHeader: `Bearer ${apiToken}`,
+    valueUrl: (key) => `${baseUrl}/values/${encodeURIComponent(key)}`,
+  };
+}
+
 export class CloudflareKvStore implements ShareStore {
-  private readonly baseUrl: string;
   private readonly authHeader: string;
+  private readonly valueUrl: (key: string) => string;
   private readonly fetchImpl: typeof fetch;
 
-  constructor({ accountId, namespaceId, apiToken, fetchImpl }: CloudflareKvConfig) {
-    this.baseUrl = `${KV_API_ROOT}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}`;
-    this.authHeader = `Bearer ${apiToken}`;
-    this.fetchImpl = fetchImpl ?? fetch;
-  }
-
-  private valueUrl(id: string): string {
-    return `${this.baseUrl}/values/${encodeURIComponent(id)}`;
+  constructor(config: CloudflareKvConfig) {
+    ({ authHeader: this.authHeader, valueUrl: this.valueUrl } = kvValuesApi(config));
+    this.fetchImpl = config.fetchImpl ?? fetch;
   }
 
   async get(id: string): Promise<string | null> {
@@ -82,22 +93,30 @@ const REQUIRED_ENV = [
 ] as const;
 
 /**
- * Build a {@link CloudflareKvStore} from environment variables, throwing a
- * precise error naming any missing var so a misconfigured deploy fails loudly
- * rather than silently 500-ing every share. `env` is injectable for tests.
+ * Read the Cloudflare KV credentials out of `env`, throwing a precise error
+ * naming any missing var so a misconfigured deploy fails loudly rather than
+ * silently 500-ing every share. Shared by the store and the write-budget
+ * adapter (#505), which live in the same namespace behind the same token.
  */
-export function cloudflareKvStoreFromEnv(
-  env: Record<string, string | undefined> = process.env,
-): CloudflareKvStore {
+export function cloudflareKvConfigFromEnv(
+  env: Record<string, string | undefined>,
+): CloudflareKvConfig {
   const missing = REQUIRED_ENV.filter((name) => !env[name]);
   if (missing.length > 0) {
     throw new Error(
       `Cloudflare KV not configured — missing env: ${missing.join(', ')}`,
     );
   }
-  return new CloudflareKvStore({
+  return {
     accountId: env.CLOUDFLARE_ACCOUNT_ID!,
     namespaceId: env.CLOUDFLARE_KV_NAMESPACE_ID!,
     apiToken: env.CLOUDFLARE_KV_API_TOKEN!,
-  });
+  };
+}
+
+/** Build a {@link CloudflareKvStore} from environment variables (see above). */
+export function cloudflareKvStoreFromEnv(
+  env: Record<string, string | undefined> = process.env,
+): CloudflareKvStore {
+  return new CloudflareKvStore(cloudflareKvConfigFromEnv(env));
 }

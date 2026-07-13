@@ -30,7 +30,7 @@ import { SkipLinks } from '../components/SkipLinks';
 import { RovingTabindexProvider } from '../hooks/useRovingTabindex';
 import { useAncestorFocusBridge } from '../hooks/useAncestorFocusBridge';
 import { ExploreEquationTree } from '../components/ExploreEquationTree';
-import { ShareMenu } from '../components/ShareMenu';
+import { ShareMenu, busyShareSummary, LINK_NOT_COPIED_TOAST } from '../components/ShareMenu';
 import { HeaderOverflowMenu } from '../components/HeaderOverflowMenu';
 import { SharedWorkspaceBanner } from '../components/SharedWorkspaceBanner';
 import { StorageDegradedBanner } from '../components/StorageDegradedBanner';
@@ -1097,16 +1097,26 @@ export default function Home() {
       }
       const result = await createShareLink(compressed, window.location.origin);
       if (result.status !== 'ok') {
-        setToast({ message: "Couldn't create a short link — open Share for a link that works offline.", key: Date.now(), type: 'error' });
+        // A drained daily budget (#505) gets the real numbers — the limit the
+        // server named and roughly when it resets — not a generic "couldn't".
+        const message = result.status === 'busy'
+          ? `${busyShareSummary(result.dailyLimit, new Date())} Open Share for a link that works offline.`
+          : "Couldn't create a short link — open Share for a link that works offline.";
+        setToast({ message, key: Date.now(), type: 'error' });
         return;
       }
       const success = await safeCopyText(result.url);
       if (success) {
         setToast({ message: `${noun} link copied`, key: Date.now() });
         trackEvent({ action: trackAction, category: 'keyboard' });
+      } else {
+        // The link minted but never reached the clipboard — the chord promised
+        // a copy, so a silent miss here would be a lie by omission.
+        setToast({ message: LINK_NOT_COPIED_TOAST, key: Date.now(), type: 'error' });
       }
     } catch (err) {
       console.error('Failed to copy share link:', err);
+      setToast({ message: LINK_NOT_COPIED_TOAST, key: Date.now(), type: 'error' });
     }
   };
 

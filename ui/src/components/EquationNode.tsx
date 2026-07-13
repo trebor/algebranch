@@ -34,7 +34,7 @@ import {
 } from '../store/equation';
 import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, symbolHintFor, isImaginaryUnit } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
-import { useOptionalRovingTabindex } from '../hooks/useRovingTabindex';
+import { useOptionalRovingTabindex, nearestAncestorKey, nearestDescendantKey } from '../hooks/useRovingTabindex';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech, flattenAssociativeChain } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
 import { describeTransposition, describeReduction, describeSubstitution, describeCollapse, precedenceOf, PREC } from 'math-engine';
@@ -1059,6 +1059,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     }
 
     e.stopPropagation();
+    // Move the roving cursor onto the clicked term (#373) so the cursor tracks
+    // mouse interaction, not just the keyboard — it then carries into Read view
+    // and Tab/arrows resume from here. Gated on canClick (the same condition that
+    // registers this node as a roving item), so we never point the cursor at an
+    // unregistered path. No focus move: a click already sets focus as the browser
+    // sees fit, and setActive keeps the DOM-focus decision out of it.
+    if (roving && canClick) roving.setActive(path);
     activateNode();
   };
 
@@ -1078,9 +1085,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         roving.setActive(origin, { focus: true });
         return;
       }
-      const ancestor = keys
-        .filter((k) => origin.startsWith(k + '/'))
-        .sort((a, b) => b.length - a.length)[0];
+      const ancestor = nearestAncestorKey(keys, origin);
       if (ancestor) roving.setActive(ancestor, { focus: true });
       else roving.focusContainer();
     },
@@ -1151,22 +1156,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         // order breaking ties.
         e.preventDefault();
         e.stopPropagation();
-        const descendant = roving
-          .orderedKeys()
-          .filter((k) => k.startsWith(path + '/'))
-          .map((k) => ({ k, depth: k.split('/').length }))
-          .sort((a, b) => a.depth - b.depth)[0];
-        if (descendant) roving.setActive(descendant.k, { focus: true });
+        const descendant = nearestDescendantKey(roving.orderedKeys(), path);
+        if (descendant) roving.setActive(descendant, { focus: true });
         break;
       }
       case 'ArrowUp': {
         // Closest ancestor candidate (longest matching path prefix).
         e.preventDefault();
         e.stopPropagation();
-        const ancestor = roving
-          .orderedKeys()
-          .filter((k) => path.startsWith(k + '/'))
-          .sort((a, b) => b.length - a.length)[0];
+        const ancestor = nearestAncestorKey(roving.orderedKeys(), path);
         if (ancestor) roving.setActive(ancestor, { focus: true });
         break;
       }

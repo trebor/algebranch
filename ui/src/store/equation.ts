@@ -1824,6 +1824,15 @@ export const announceNavAtom = atom(null, (get, set, text: string) => {
 //    not acting — so it gets its own navigation model and visuals.
 export const explorationModeAtom = atom<boolean>(false);
 
+// The roving keyboard cursor's last path, mirrored out of whichever mode's tree
+// is mounted so it survives the unmount/remount when the user toggles between
+// Exploration and Interaction (#373). Each mode's RovingTabindexProvider is a
+// separate instance whose internal activeKey resets on mount; this atom bridges
+// the gap so the incoming tree can restore the cursor to the same node (or the
+// nearest usable stop) instead of dumping the user back at the top. Transient by
+// design: a per-session cursor position, not a persisted preference.
+export const rovingCursorPathAtom = atom<string | null>(null);
+
 // Nonce that requests keyboard focus be moved to the first actionable term in
 // the equation tree (#231). Bumped by explicit user edits (the equation-input
 // modal submit) where focus sits outside the tree, so useEquationTreeFocus

@@ -4,8 +4,8 @@
 'use client';
 
 import React from 'react';
-import { useAtomValue } from 'jotai';
-import { currentEquationAtom } from '../store/equation';
+import { useAtom, useAtomValue } from 'jotai';
+import { currentEquationAtom, rovingCursorPathAtom } from '../store/equation';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
 import { RovingTabindexProvider, useRovingTabindex } from '../hooks/useRovingTabindex';
@@ -148,6 +148,12 @@ const ExploreTreeInner: React.FC<{
 
 export const ExploreEquationTree: React.FC<{ onExit?: () => void }> = ({ onExit }) => {
   const currentEq = useAtomValue(currentEquationAtom);
+  // Cross-mode cursor carry-over (#373): seed the reader's cursor from the path
+  // the user left Interaction on, and mirror the reader's cursor back out as they
+  // walk, so returning to Interaction restores their place. No seedFocus — the
+  // reader narrates the cursor via its live region while DOM focus stays on the
+  // application container, so nothing per-stop needs focusing.
+  const [rovingCursorPath, setRovingCursorPath] = useAtom(rovingCursorPathAtom);
   // containerRef measures the available space; contentRef (the application) is the
   // element the hook scales, and doubles as the focus target. A higher max than
   // Interaction mode's 2.8 (#270): the clean, box-free render is compact, so a short
@@ -161,7 +167,7 @@ export const ExploreEquationTree: React.FC<{ onExit?: () => void }> = ({ onExit 
       ref={containerRef}
       className="absolute inset-0 flex items-center justify-center overflow-auto px-8 sm:px-12 lg:px-20 py-8"
     >
-      <RovingTabindexProvider>
+      <RovingTabindexProvider seedKey={rovingCursorPath} onActiveKeyChange={setRovingCursorPath}>
         <ExploreContext.Provider value={exploreValue}>
           <ExploreTreeInner contentRef={contentRef} scale={scale} isScaled={isScaled} onExit={onExit} />
         </ExploreContext.Provider>

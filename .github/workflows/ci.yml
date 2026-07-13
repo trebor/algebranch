@@ -68,8 +68,35 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Key the browser cache on the Playwright version so it invalidates
+      # exactly when the pinned Chromium build changes.
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/playwright'].version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      # No --with-deps: ubuntu-latest (24.04) already ships the system libraries
+      # Chromium needs, and the apt-get update it triggers flakes on the runner's
+      # pre-configured packages.microsoft.com repos (#453). Retry the download to
+      # absorb transient CDN failures on the once-per-version cache miss.
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: |
+          for attempt in 1 2 3; do
+            if npx playwright install chromium; then
+              exit 0
+            fi
+            echo "Playwright install attempt ${attempt} failed; retrying in 10s..." >&2
+            sleep 10
+          done
+          echo "Playwright Chromium install failed after 3 attempts." >&2
+          exit 1
 
       - name: Build
         run: npm run build

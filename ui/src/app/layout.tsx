@@ -18,6 +18,7 @@ import { ConsentManager } from "../components/ConsentManager";
 import { shouldRenderDebugOverlay, buildDebugOverlayScript } from "../utils/debugOverlay";
 import { AppUnavailableNotice } from "../components/AppUnavailableNotice";
 import { DocModalHost } from "../components/DocModalHost";
+import { ErrorBeacon } from "../components/ErrorBeacon";
 import { HydrationSentinel } from "../components/HydrationSentinel";
 import { STALL_OVERLAY_ID, shouldRenderStallOverlay } from "../utils/hydrationSentinel";
 
@@ -118,6 +119,10 @@ export default function RootLayout({
         {/* Stand down the CSS stall overlay on every route once JS hydrates
             (#501): secondary pages have no app-init effect to do it. */}
         <HydrationSentinel />
+        {/* First-party error beacon (#505): posts a privacy-scrubbed signature
+            of uncaught errors/rejections to /api/errbeacon so launch-day
+            breakage is visible in server logs, not just user feedback. */}
+        <ErrorBeacon />
         {debugOverlay && (
           <script dangerouslySetInnerHTML={{ __html: buildDebugOverlayScript() }} />
         )}

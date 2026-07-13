@@ -21,7 +21,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className={`text-xs ${THEME_GLASS.TEXT_MUTED} font-mono`}>
-              Last updated: July 12, 2026
+              Last updated: July 13, 2026
             </p>
           </div>
 
@@ -99,7 +99,27 @@ export default function PrivacyPage() {
 
             <section className="flex flex-col gap-2">
               <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} tracking-wider`}>
-                6. Contact
+                6. Error Reports
+              </h2>
+              <p>
+                If the app itself crashes in your browser, it sends a small error report to our own server so we can fix the problem. We chose a first-party report over a third-party crash-analytics service on purpose: nothing goes to anyone else&apos;s infrastructure, nothing is stored in a database, and the report becomes a single line in our short-lived server logs.
+              </p>
+              <p>
+                <strong>A report contains only:</strong> the error message, the single top line of its stack trace, the app version, and a coarse browser family such as &ldquo;Firefox&rdquo; or &ldquo;Safari Mobile&rdquo;.
+              </p>
+              <p>
+                <strong>A report never contains:</strong> your equations or any workspace content, the page address you were on, cookies, or anything that identifies you. Before the report leaves your browser, every web address inside the error text is stripped of its query and fragment &mdash; the parts where{' '}
+                <code className="bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300">?eq=</code>,{' '}
+                <code className="bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300">?ws=</code>{' '}
+                workspace data and the{' '}
+                <code className="bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300">#</code>{' '}
+                share key would live &mdash; and the server strips them again before writing its log line, so this holds even if a report is malformed.
+              </p>
+            </section>
+
+            <section className="flex flex-col gap-2">
+              <h2 className={`text-base font-bold ${THEME_GLASS.TEXT_HEADING} tracking-wider`}>
+                7. Contact
               </h2>
               <p>
                 If you have questions about this policy or our data practices, please contact us via our{' '}

@@ -37,7 +37,7 @@ import { THEME_GLASS } from '../constants/theme';
 import { useOptionalRovingTabindex, nearestAncestorKey, nearestDescendantKey } from '../hooks/useRovingTabindex';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech, flattenAssociativeChain } from 'math-engine-client';
 import type { SubstitutionOption } from 'math-engine';
-import { describeTransposition, describeReduction, describeSubstitution, describeCollapse, precedenceOf, PREC } from 'math-engine';
+import { describeTransposition, describeMove, describeReduction, describeSubstitution, describeCollapse, precedenceOf, PREC } from 'math-engine';
 import type { ReductionOption } from 'math-engine';
 import { ArrowLeftRight, Zap, UnfoldHorizontal, FoldHorizontal, RefreshCw, Replace, TriangleAlert, ArrowRight } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
@@ -792,7 +792,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       pushEquation(
         targetPaths[activeTargetPath],
         undefined,
-        describeTransposition(currentEq, sourcePath, activeTargetPath, targetPaths[activeTargetPath]) ?? undefined,
+        describeMove(currentEq, sourcePath, activeTargetPath, targetPaths[activeTargetPath]) ?? undefined,
       );
       trackEvent({
         action: 'apply_transposition',

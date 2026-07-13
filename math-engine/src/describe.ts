@@ -26,6 +26,17 @@ import { GlobalOpParams } from './globalOps';
  */
 export type HandleFamily = 'simplify' | 'expand' | 'factor' | 'identity' | 'substitute';
 
+/**
+ * The family stamped on a rewrite `StepChange` for the connector badge (#103).
+ * Either one of the five clicked handles, or `'rearrange'` — a within-a-side
+ * drag (#512), which is *not* handle-initiated: like a cross-equals drag it
+ * wears a neutral connector glyph, never a themed handle icon (the badge must
+ * never claim Simplify/Factor for a drag). Kept distinct from `HandleFamily` so
+ * the five-handle taxonomy that `handleFamilyForReductionType` speaks to stays
+ * pure.
+ */
+export type RewriteFamily = HandleFamily | 'rearrange';
+
 /** Map a reduction's engine `type` to the handle family it is offered under. */
 export const handleFamilyForReductionType = (type: ReductionOption['type']): HandleFamily =>
   type === 'expand' ? 'expand'
@@ -52,14 +63,15 @@ export type StepChange =
       readonly kind: 'rewrite';
       // The handle this rewrite was offered under — what the connector badge
       // renders (#103). Required, so every rewrite must declare its family and
-      // the badge can never diverge from the handle.
-      readonly family: HandleFamily;
+      // the badge can never diverge from the handle. `'rearrange'` marks a
+      // within-a-side drag (#512), which draws a neutral glyph, not a handle.
+      readonly family: RewriteFamily;
       // The finer prose classification, used for the step's wording (not the
       // badge). #427 split the product↔sum inverse pair out of the old buckets —
       // 'expand' (distribute) and 'factor'. Power-unfolding briefly rode 'expand'
       // too but rejoined 'identity' in #466. 'distribute' lingers only so history
       // nodes serialized before #427 still parse.
-      readonly op: 'evaluate' | 'simplify' | 'expand' | 'factor' | 'distribute' | 'identity' | 'quadratic' | 'quadratic_standard_form' | 'substitute';
+      readonly op: 'evaluate' | 'simplify' | 'expand' | 'factor' | 'distribute' | 'identity' | 'quadratic' | 'quadratic_standard_form' | 'substitute' | 'rearrange';
       // The parseable before → after of the affected sub-expression (`a → b`),
       // rendered as pretty math by the transition tooltip. Uniform across every
       // in-place rewrite so the tooltip body never has to special-case a family.
@@ -303,6 +315,73 @@ export const describeTransposition = (
     text: baseText,
     ...(assumptions.length ? { assumptions } : {}),
   };
+};
+
+/**
+ * Describe a within-a-side move (#512) — a term dragged to another spot on the
+ * *same* side of `=`. `describeTransposition` deliberately returns null for
+ * these (they are not a clean both-sides op), which used to leave them with the
+ * coarse "Move" fallback that tells the learner nothing. Here we describe the
+ * rearrangement the same way a reduction is: as a rewrite of the minimal changed
+ * sub-expression, `before → after`. `resultEq` is the equation the move search
+ * actually produced. Returns null for a no-op (identical result) or a malformed
+ * source path — the caller can fall back to the coarse label.
+ */
+export const describeSameSideMove = (
+  eq: Equation,
+  resultEq: Equation,
+  sourcePath: string,
+): StepChange | null => {
+  const side = sourcePath.split('/')[0];
+  if (side !== 'lhs' && side !== 'rhs') return null;
+  // A move that changes nothing describes nothing.
+  if (`${eq.lhs.toString()} = ${eq.rhs.toString()}` === `${resultEq.lhs.toString()} = ${resultEq.rhs.toString()}`) {
+    return null;
+  }
+  // Recover the smallest sub-expression that fully contains the change (a
+  // regroup often reshapes more than the dragged leaf), then show its before →
+  // after — exactly the machinery the decomposed simplify steps use (#59).
+  const path = findMinimalChangedPath(eq, resultEq, sourcePath);
+  let beforeNode: math.MathNode;
+  let afterNode: math.MathNode;
+  try {
+    beforeNode = getNodeByPath(eq, path);
+    afterNode = getNodeByPath(resultEq, path);
+  } catch {
+    return null;
+  }
+  const before = nodeToString(beforeNode);
+  const after = nodeToString(afterNode);
+  if (!before || !after || before === after) return null;
+  return {
+    kind: 'rewrite',
+    // A drag, not a clicked handle: the badge stays a neutral connector glyph.
+    family: 'rearrange',
+    op: 'rearrange',
+    detail: `${before} → ${after}`,
+    label: 'Rearrange',
+    text: `rearrange ${before} into ${after}`,
+  };
+};
+
+/**
+ * The single entry point for describing a drag-move (#512): a cross-equals move
+ * is a clean both-sides operation (`describeTransposition`), a within-a-side
+ * move is a rearrangement (`describeSameSideMove`). The caller passes both paths
+ * plus the equation the move search selected, and gets one honest description
+ * back — or null for shapes we don't describe precisely.
+ */
+export const describeMove = (
+  eq: Equation,
+  sourcePath: string,
+  targetPath: string,
+  resultEq: Equation,
+): StepChange | null => {
+  const srcSide = sourcePath.split('/')[0];
+  const tgtSide = targetPath.split('/')[0];
+  return srcSide === tgtSide
+    ? describeSameSideMove(eq, resultEq, sourcePath)
+    : describeTransposition(eq, sourcePath, targetPath, resultEq);
 };
 
 /**

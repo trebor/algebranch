@@ -1925,7 +1925,15 @@ export const pushEquationAtom = atom(
           label = action.label || (actionType === 'expand' ? 'Expand' : actionType === 'factor' ? 'Factor' : actionType === 'identity' ? 'Apply Identity' : 'Simplify');
         }
       } else if (get(sourcePathAtom)) {
-        label = change?.kind === 'bothSides' ? "Transpose" : "Move";
+        // A cross-equals drag reads "Transpose"; a within-a-side drag now
+        // carries a rewrite with its own label ("Rearrange", #512). "Move" is
+        // only the last-resort coarse label for a change we couldn't describe.
+        label =
+          change?.kind === 'bothSides'
+            ? 'Transpose'
+            : change?.kind === 'rewrite' && change.label
+              ? change.label
+              : 'Move';
       }
     }
 

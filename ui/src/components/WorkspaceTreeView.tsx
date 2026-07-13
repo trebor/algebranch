@@ -95,6 +95,11 @@ const getEdgeBadgeDetails = (
   if (change?.kind === 'bothSides') {
     return { shortLabel: EDGE_OP_SYMBOLS[change.op] || '', isMath: true };
   }
+  // A within-a-side rearrangement (#512) is a drag, so it wears a neutral glyph
+  // like the both-sides drags — 'R' for Rearrange, alongside T (transpose) etc.
+  if (change?.kind === 'rewrite' && change.op === 'rearrange') {
+    return { shortLabel: 'R', isMath: false };
+  }
 
   // Fallback: parse the human-readable label when no structured change exists.
   const lowerLabel = label.toLowerCase();
@@ -122,8 +127,13 @@ const getEdgeBadgeDetails = (
  */
 const getBadgeOpType = (
   change: StepChange | undefined,
-): 'simplify' | 'expand' | 'factor' | 'identity' | 'substitute' | 'neutral' =>
-  change?.kind === 'rewrite' ? change.family : 'neutral';
+): 'simplify' | 'expand' | 'factor' | 'identity' | 'substitute' | 'neutral' => {
+  if (change?.kind !== 'rewrite') return 'neutral';
+  // A within-a-side rearrangement (#512) is a drag, not a clicked handle — it
+  // wears a neutral connector glyph like the cross-equals drags, never a themed
+  // handle icon. Every other rewrite badge follows its family directly.
+  return change.family === 'rearrange' ? 'neutral' : change.family;
+};
 
 interface WorkspaceTreeViewProps {
   /** When false, the tree is a read-only preview: node clicks don't navigate

@@ -9,7 +9,7 @@
 ### Your Work Stays on Your Computer
 Everything you create, including your active workspaces, equation history trees, and settings, is saved in **this browser's storage** under keys prefixed with `algebranch_`.
 *   **No account, no login.** The equations and derivations you build are never uploaded to a server.
-*   **Optional anonymous analytics.** If you explicitly opt in, Algebranch collects anonymous, aggregated usage data such as which features get used, to help us improve the app. This never includes the content of your equations or steps, and tracking is disabled by default. For more detail on what we collect, or to change your preference, read our [Privacy Policy](https://algebranch.org/privacy).
+*   **Optional anonymous analytics.** Our hosting platform records cookieless, aggregate traffic counts (page views, referrer, country, device type) that set no cookies and cannot identify you. If you explicitly opt in, Algebranch additionally collects anonymous, aggregated usage data such as which features get used, to help us improve the app. This never includes the content of your equations or steps, and tracking is disabled by default. For more detail on what we collect, or to change your preference, read our [Privacy Policy](https://algebranch.org/privacy).
 *   **The implication.** If you clear your browser's data, use a private browsing session, or switch to a different browser or device, your workspaces and history will not be there. To carry your work across devices, use **share links** or export your derivations.
 
 ### Single-Device, Single-Browser by Design

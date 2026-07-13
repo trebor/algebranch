@@ -5,6 +5,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 
 import { Provider as JotaiProvider } from "jotai";
 import { ReducedMotionProvider } from "../components/ReducedMotionProvider";
@@ -162,6 +163,11 @@ export default function RootLayout({
             </Script>
           </>
         )}
+        {/* Cookieless aggregate traffic counts (#521). Unlike GA above, this is
+            deliberately NOT consent-gated: it sets no cookies and stores no
+            personal identifiers, and gating it would blind the baseline to
+            everyone who never opts in. No-op outside Vercel deployments. */}
+        <Analytics />
 
         {/* Layer 1 — scripting genuinely disabled (browser setting, or a
             NoScript mode that turns scripting off rather than CSP-blocking it).

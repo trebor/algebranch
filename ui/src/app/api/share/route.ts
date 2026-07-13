@@ -10,6 +10,7 @@
 
 import type { NextRequest } from 'next/server';
 import { cloudflareKvStoreFromEnv } from '@/server/share/cloudflareKvStore';
+import { cloudflareKvWriteBudgetFromEnv } from '@/server/share/cloudflareKvWriteBudget';
 import { createShare } from '@/server/share/shareApi';
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -22,7 +23,8 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   try {
     const store = cloudflareKvStoreFromEnv();
-    const result = await createShare(body, store);
+    const budget = cloudflareKvWriteBudgetFromEnv();
+    const result = await createShare(body, store, budget);
     return Response.json(result.body, { status: result.status });
   } catch (err) {
     // Misconfigured env or a KV transport failure — log server-side, stay opaque

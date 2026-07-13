@@ -141,6 +141,47 @@ describe('createShareLink', () => {
     });
   });
 
+  it('reports busy — without retrying — when the write budget is exhausted (429)', async () => {
+    let calls = 0;
+    const post: PostFetch = async () => {
+      calls += 1;
+      return { ok: false, status: 429 };
+    };
+    expect(await createShareLink('payload', 'https://algebranch.org', post)).toEqual({
+      status: 'busy',
+    });
+    // A drained budget is not a collision: retrying would only hammer the server.
+    expect(calls).toBe(1);
+  });
+
+  it('surfaces the daily limit the 429 body names, so the UI can show a real number', async () => {
+    const post: PostFetch = async () => ({
+      ok: false,
+      status: 429,
+      json: async () => ({ error: 'Daily share limit reached.', dailyLimit: 5000 }),
+    });
+    expect(await createShareLink('payload', 'https://algebranch.org', post)).toEqual({
+      status: 'busy',
+      dailyLimit: 5000,
+    });
+  });
+
+  it('stays busy without a number when the 429 body is missing or malformed', async () => {
+    for (const json of [
+      undefined, // no body reader at all
+      async () => ({ error: 'nope' }), // no dailyLimit field
+      async () => ({ dailyLimit: 'lots' }), // wrong type
+      async () => {
+        throw new Error('not json');
+      },
+    ]) {
+      const post: PostFetch = async () => ({ ok: false, status: 429, json });
+      expect(await createShareLink('payload', 'https://algebranch.org', post)).toEqual({
+        status: 'busy',
+      });
+    }
+  });
+
   it('reports an error when the network throws', async () => {
     const post: PostFetch = async () => {
       throw new Error('network down');

@@ -4,9 +4,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ShareMenu, SHARE_HINT_STEP_THRESHOLD, SHARE_HINT_FLAG, classifyLinkSize, bandAdvice } from '@/components/ShareMenu';
+import { getDefaultStore } from 'jotai';
+import { ShareMenu, SHARE_HINT_STEP_THRESHOLD, SHARE_HINT_FLAG, classifyLinkSize, bandAdvice, formatUtcDayReset, busyShareNote, busyShareSummary, liveBusyFailure } from '@/components/ShareMenu';
 import { encodeEqParam } from '@/utils/eqParam';
 import { createShareLink } from '@/utils/shareLink';
+import { toastAtom } from '@/store/equation';
 
 // Short-link delivery is unit-tested in shareLink.test.ts with real crypto; here we
 // mock `createShareLink` so we pin only the ShareMenu wiring — every primary row
@@ -54,6 +56,7 @@ describe('ShareMenu', () => {
     delete (window as unknown as { matchMedia?: unknown }).matchMedia;
     // Default to online; the offline suite opts in per-test.
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    getDefaultStore().set(toastAtom, null);
   });
   afterEach(cleanup);
 
@@ -100,6 +103,183 @@ describe('ShareMenu', () => {
     expect(screen.getByRole('note').textContent).toMatch(/couldn't create a short link/i);
     expect(screen.getByRole('menuitem', { name: /offline workspace/i })).toBeTruthy();
     expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it('a drained write budget (busy) names the limit and reset, steering to offline links (#505)', async () => {
+    mockCreateShareLink.mockResolvedValue({ status: 'busy', dailyLimit: 5000 });
+    renderMenu({ getCompressedWorkspace: () => 'COMPRESSED' });
+
+    await userEvent.click(screen.getByRole('button', { name: /share workspace/i }));
+
+    // Same conscious-pick shape as other failures — nothing silently copied, the
+    // offline links revealed — but the note gives real numbers, not "broken":
+    // the daily limit the server named and roughly when it resets.
+    await waitFor(() => expect(screen.getByRole('note')).toBeTruthy());
+    const note = screen.getByRole('note').textContent ?? '';
+    expect(note).toMatch(/today's limit of 5,000/i);
+    expect(note).toMatch(/more in about/i);
+    expect(note).not.toMatch(/couldn't create/i);
+    expect(screen.getByRole('menuitem', { name: /offline workspace/i })).toBeTruthy();
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  // --- failure toasts (#505): the in-menu note explains, the red toast alerts ---
+
+  it('a failed mint also fires a red toast, since the in-menu note alone is easy to miss', async () => {
+    mockCreateShareLink.mockResolvedValue({ status: 'error' });
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /share workspace/i }));
+
+    await waitFor(() => expect(getDefaultStore().get(toastAtom)).not.toBeNull());
+    const toast = getDefaultStore().get(toastAtom);
+    expect(toast?.type).toBe('error');
+    expect(toast?.message).toMatch(/short link not copied/i);
+  });
+
+  it('a busy mint fires the same short toast — the note carries the numbers', async () => {
+    mockCreateShareLink.mockResolvedValue({ status: 'busy', dailyLimit: 5000 });
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /share workspace/i }));
+
+    await waitFor(() => expect(getDefaultStore().get(toastAtom)).not.toBeNull());
+    const toast = getDefaultStore().get(toastAtom);
+    expect(toast?.type).toBe('error');
+    expect(toast?.message).toMatch(/short link not copied/i);
+    expect(toast?.message).not.toMatch(/5,000/); // detail lives in the menu note
+  });
+
+  it('a clipboard failure after a successful mint is no longer silent (red toast)', async () => {
+    // writeText rejects and jsdom has no execCommand fallback → safeCopyText false.
+    writeText.mockRejectedValue(new Error('denied'));
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /share workspace/i }));
+
+    await waitFor(() => expect(getDefaultStore().get(toastAtom)).not.toBeNull());
+    const toast = getDefaultStore().get(toastAtom);
+    expect(toast?.type).toBe('error');
+    expect(toast?.message).toMatch(/wasn't copied/i);
+  });
+
+  it('a clipboard failure on an offline self-contained link gets the same toast', async () => {
+    writeText.mockRejectedValue(new Error('denied'));
+    renderMenu();
+    await openOffline();
+    await userEvent.click(screen.getByRole('menuitem', { name: /offline workspace link/i }));
+
+    await waitFor(() => expect(getDefaultStore().get(toastAtom)).not.toBeNull());
+    const toast = getDefaultStore().get(toastAtom);
+    expect(toast?.type).toBe('error');
+    expect(toast?.message).toMatch(/wasn't copied/i);
+  });
+
+  it('a successful share fires no error toast', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /share workspace/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    expect(getDefaultStore().get(toastAtom)).toBeNull();
+  });
+
+  // --- budget-exhausted mode mirrors offline (#505): same cause, same shape ----
+
+  describe('budget-exhausted mode', () => {
+    // Discover the drained budget the only way the client can: a busy mint.
+    const discoverBusy = async () => {
+      mockCreateShareLink.mockResolvedValue({ status: 'busy', dailyLimit: 5000 });
+      renderMenu();
+      await userEvent.click(screen.getByRole('button', { name: /share workspace/i }));
+      await waitFor(() => expect(screen.getByRole('note')).toBeTruthy());
+    };
+
+    it('grays out (disables) the three primary short-link rows, like offline', async () => {
+      await discoverBusy();
+      expect(screen.getByRole('menuitem', { name: /whole workspace/i })).toBeDisabled();
+      expect(screen.getByRole('menuitem', { name: /this derivation/i })).toBeDisabled();
+      expect(screen.getByRole('menuitem', { name: /just the equation/i })).toBeDisabled();
+      // The offline rows stay available — they're the whole point of the steer.
+      expect(screen.getByRole('menuitem', { name: /offline workspace link/i })).toBeEnabled();
+    });
+
+    it('persists across menu close/reopen — the budget stays drained until UTC midnight', async () => {
+      await discoverBusy();
+      await userEvent.keyboard('{Escape}');
+      await openMenu();
+      expect(screen.getByRole('note').textContent).toMatch(/today's limit/i);
+      expect(screen.getByRole('menuitem', { name: /whole workspace/i })).toBeDisabled();
+    });
+
+    it('the pill stops re-attempting: it opens the menu instead of minting again', async () => {
+      await discoverBusy();
+      await userEvent.keyboard('{Escape}');
+      expect(mockCreateShareLink).toHaveBeenCalledTimes(1);
+
+      await userEvent.click(screen.getByRole('button', { name: /share workspace/i }));
+      expect(mockCreateShareLink).toHaveBeenCalledTimes(1); // no second POST
+      expect(screen.getByRole('note').textContent).toMatch(/today's limit/i);
+    });
+
+    it('the pill swaps to an hourglass, the sibling of the offline wifi-off glyph', async () => {
+      const { container } = renderMenu();
+      mockCreateShareLink.mockResolvedValue({ status: 'busy', dailyLimit: 5000 });
+      expect(container.querySelector('.lucide-hourglass')).toBeNull();
+      await userEvent.click(screen.getByRole('button', { name: /share workspace/i }));
+      await waitFor(() => expect(container.querySelector('.lucide-hourglass')).not.toBeNull());
+    });
+
+    it('a plain error does NOT gray the rows — a blip is retryable, a drained day is not', async () => {
+      mockCreateShareLink.mockResolvedValue({ status: 'error' });
+      renderMenu();
+      await userEvent.click(screen.getByRole('button', { name: /share workspace/i }));
+      await waitFor(() => expect(screen.getByRole('note')).toBeTruthy());
+      expect(screen.getByRole('menuitem', { name: /whole workspace/i })).toBeEnabled();
+    });
+
+    it('liveBusyFailure expires a stale busy at its reset instant', () => {
+      const busy = { kind: 'busy', dailyLimit: 5000, resetsAt: 1000 } as const;
+      expect(liveBusyFailure(busy, 999)).toBe(busy);
+      expect(liveBusyFailure(busy, 1000)).toBeNull();
+      expect(liveBusyFailure({ kind: 'error' }, 0)).toBeNull();
+      expect(liveBusyFailure(null, 0)).toBeNull();
+    });
+  });
+
+  // The countdown + note copy are pure and clock-injected — pin them directly.
+
+  describe('formatUtcDayReset', () => {
+    it.each([
+      ['2026-07-13T21:30:00Z', '2 hours 30 minutes'],
+      ['2026-07-13T22:00:00Z', '2 hours'],
+      ['2026-07-13T23:15:00Z', '45 minutes'],
+      ['2026-07-13T23:59:30Z', '1 minute'],
+      ['2026-07-13T23:00:30Z', '1 hour'], // 59m30s rounds up, never promises early
+      ['2026-07-13T00:00:00Z', '24 hours'], // day just rolled over
+    ])('%s → "%s"', (now, expected) => {
+      expect(formatUtcDayReset(new Date(now))).toBe(expected);
+    });
+  });
+
+  describe('busyShareNote', () => {
+    const now = new Date('2026-07-13T21:30:00Z');
+
+    it('names the limit with thousands separators and the time to reset', () => {
+      const note = busyShareNote(5000, now);
+      expect(note).toMatch(/today's limit of 5,000/i);
+      expect(note).toMatch(/2 hours 30 minutes/);
+      expect(note).toMatch(/use a link that works offline below/i);
+    });
+
+    it('still gives the reset time when the server named no limit', () => {
+      const note = busyShareNote(undefined, now);
+      expect(note).not.toMatch(/limit of/i);
+      expect(note).toMatch(/2 hours 30 minutes/);
+      expect(note).toMatch(/use a link that works offline below/i);
+    });
+
+    it('exposes the summary without the menu-specific steering, for the chord toast', () => {
+      const summary = busyShareSummary(5000, now);
+      expect(summary).toMatch(/today's limit of 5,000/i);
+      expect(summary).toMatch(/2 hours 30 minutes/);
+      expect(summary).not.toMatch(/below/i);
+    });
   });
 
   it('the menu leads with three short-link scope rows: workspace, derivation, equation', async () => {

@@ -5,6 +5,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useSetAtom } from 'jotai';
 import {
   Check,
   Variable,
@@ -12,6 +13,7 @@ import {
   Route,
   ChevronDown,
   WifiOff,
+  Hourglass,
   Loader2,
   ShieldCheck,
 } from 'lucide-react';
@@ -24,6 +26,7 @@ import { safeCopyText } from '../utils/clipboard';
 import { safeStorage } from '../utils/safeStorage';
 import { encodeEqParam } from '../utils/eqParam';
 import { createShareLink } from '../utils/shareLink';
+import { toastAtom } from '../store/equation';
 import type { ShareScope } from '../store/equation';
 
 const COPIED_TIMEOUT = 2000;
@@ -121,6 +124,78 @@ const SequenceChips: React.FC<{ keys: string[]; className?: string }> = ({ keys,
   </span>
 );
 
+/** The instant the share write budget refills (#505): the next UTC midnight, in epoch ms. */
+export const nextUtcMidnight = (now: Date): number =>
+  Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+
+/**
+ * How long until the share write budget resets, in plain words — "2 hours
+ * 30 minutes". The budget is keyed by UTC day (#505), so it resets at UTC
+ * midnight; minutes round *up* so the note never promises availability early.
+ */
+export const formatUtcDayReset = (now: Date): string => {
+  const totalMinutes = Math.max(1, Math.ceil((nextUtcMidnight(now) - now.getTime()) / 60_000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const unit = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  if (hours === 0) return unit(minutes, 'minute');
+  if (minutes === 0) return unit(hours, 'hour');
+  return `${unit(hours, 'hour')} ${unit(minutes, 'minute')}`;
+};
+
+/**
+ * The busy summary (#505): the daily budget is spent, which deserves real
+ * numbers, not a vague "busy" — the limit the server named (a per-deploy dial,
+ * so it is learned from the 429 body, never assumed here) and roughly when it
+ * resets. "About" keeps both honest: the budget is approximate and clocks skew.
+ * Steering-free so the menu note and the chord toast can each add their own
+ * "where to go instead" tail.
+ */
+export const busyShareSummary = (dailyLimit: number | undefined, now: Date): string => {
+  const limit = dailyLimit === undefined ? '' : ` of ${dailyLimit.toLocaleString('en-US')}`;
+  return `Short links hit today's limit${limit} — more in about ${formatUtcDayReset(now)}.`;
+};
+
+/** The in-menu busy note: the summary plus a pointer at the offline rows below it. */
+export const busyShareNote = (dailyLimit: number | undefined, now: Date): string =>
+  `${busyShareSummary(dailyLimit, now)} Use a link that works offline below.`;
+
+/**
+ * The red toast for a clipboard write that failed after the link itself was
+ * ready (#505). Shared by every copy path — without it the failure is silent
+ * and the user walks away believing a link is on their clipboard.
+ */
+export const LINK_NOT_COPIED_TOAST = "Link wasn't copied — try again.";
+
+/**
+ * Why the last short-link mint failed: a real fault, or just a spent budget.
+ * A busy carries `resetsAt` (the next UTC midnight, when the budget refills) so
+ * the exhausted mode can outlive menu opens yet expire on its own — mirroring
+ * how offline mode lasts exactly as long as the network is down.
+ */
+export type ShortLinkFailure =
+  | { kind: 'error' }
+  | { kind: 'busy'; dailyLimit?: number; resetsAt: number };
+
+/**
+ * The busy failure, if it is still current at `nowMs` — a drained budget is a
+ * fact about the day, not about one attempt, so it holds until its reset
+ * instant and then clears itself (no reload needed, the next render re-asks).
+ */
+export const liveBusyFailure = (
+  failure: ShortLinkFailure | null,
+  nowMs: number,
+): Extract<ShortLinkFailure, { kind: 'busy' }> | null =>
+  failure?.kind === 'busy' && nowMs < failure.resetsAt ? failure : null;
+
+/**
+ * {@link liveBusyFailure} against the wall clock. Event handlers only — render
+ * must stay pure, so during render the busy mode is read straight from state
+ * and re-validated here at the next interaction.
+ */
+const currentBusyFailure = (failure: ShortLinkFailure | null) =>
+  liveBusyFailure(failure, Date.now());
+
 interface ShareMenuProps {
   /** The current equation string (to build the eq share link). */
   equationString: string;
@@ -153,10 +228,18 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
   // Is the "works offline" section expanded? Collapsed by default so the recommended
   // short links lead and the self-contained links stay out of the way (#481).
   const [offlineOpen, setOfflineOpen] = React.useState(false);
-  // Did the last short-link attempt fail while online (server unreachable / over the
-  // size cap)? When so we do *not* silently copy a long URL — we surface it and steer
-  // the user to the offline links, so the long link is only ever a conscious pick.
-  const [shortLinkError, setShortLinkError] = React.useState(false);
+  // Did the last short-link attempt fail while online? `busy` is the server's 429
+  // (daily write budget drained, #505) — the service is fine, just full for now —
+  // while `error` covers everything else (unreachable / over the size cap). Either
+  // way we do *not* silently copy a long URL — we surface it and steer the user to
+  // the offline links, so the long link is only ever a conscious pick.
+  const [shortLinkFailure, setShortLinkFailure] = React.useState<ShortLinkFailure | null>(null);
+  // Failures also fire a red toast (#505): the in-menu note is small and easy to
+  // miss, and the toast is the app's established "your copy didn't happen" signal
+  // (the share chords already use it). Toast alerts; the note explains.
+  const setToast = useSetAtom(toastAtom);
+  const flashErrorToast = (message: string) =>
+    setToast({ message, key: Date.now(), type: 'error' });
   // Computed URL character counts for the offline rows — populated async when that
   // section is expanded, so each self-contained item can show its size band without
   // blocking. Only the offline links have variable size worth characterizing.
@@ -175,6 +258,14 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
   // silently hand back a long fallback URL. Instead we disable the short-link rows
   // and steer the user to the self-contained "works offline" links (#481).
   const online = useOnlineStatus();
+  // The busy failure, if any (#505). While set, the menu mirrors offline mode —
+  // short rows disabled, pill opens the menu instead of minting — because from
+  // the user's seat they are the same situation: short links can't happen right
+  // now, offline links can. Render reads it straight from state (no clock —
+  // render must stay pure); expiry is checked at the event boundaries below,
+  // which are exactly the moments the answer can matter.
+  const busy = shortLinkFailure?.kind === 'busy' ? shortLinkFailure : null;
+  const shortLinksAvailable = online && !busy;
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // Stable ref so the size-computation effect always calls the latest prop
@@ -191,22 +282,26 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
   };
   React.useEffect(() => clearCloseTimer, []);
 
-  // Toggle the dropdown. On a fresh open, collapse the offline disclosure when online
-  // (lead with the recommended short links) but auto-expand it when offline — where
-  // the short links are disabled and the offline choices are the only path (#481).
+  // Toggle the dropdown. On a fresh open, collapse the offline disclosure when the
+  // short links work (lead with them) but auto-expand it when they can't — offline
+  // or budget-exhausted — where the offline choices are the only path (#481, #505).
+  // A stale error clears on open (retryable blip); a live busy persists (a fact
+  // about the day, not the attempt).
   const toggleMenu = () => {
     if (!open) {
-      setOfflineOpen(!online);
-      setShortLinkError(false);
+      const liveBusy = currentBusyFailure(shortLinkFailure);
+      setOfflineOpen(!online || liveBusy !== null);
+      setShortLinkFailure(liveBusy);
     }
     setOpen((v) => !v);
   };
 
-  // The pill's headline action mints a full-workspace short link — but offline that
-  // would just fall back to a long URL behind the user's back. So offline the pill
-  // opens the menu (offline section expanded) and lets them choose consciously.
+  // The pill's headline action mints a full-workspace short link — but when short
+  // links can't happen (offline, or the daily budget is drained) that would just
+  // fail again. So the pill opens the menu (offline section expanded) and lets the
+  // user choose consciously (#481, #505).
   const handlePrimaryPill = () => {
-    if (!online) {
+    if (!online || currentBusyFailure(shortLinkFailure)) {
       clearCloseTimer();
       setOfflineOpen(true);
       setOpen(true);
@@ -295,7 +390,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
   const handleShareShort = async (scope: ShareScope) => {
     clearCloseTimer();
     setHintConsumed(true);
-    setShortLinkError(false);
+    setShortLinkFailure(null);
     setCreating(true);
     try {
       const compressed = await Promise.resolve(getCompressedWorkspace(scope));
@@ -307,19 +402,33 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
           setOpen(false);
           flashCopied();
           trackEvent({ action: 'share_short_link', category: 'interaction', label: scope });
+        } else {
+          // The link minted but never reached the clipboard — say so loudly,
+          // or the user walks away believing it's there.
+          flashErrorToast(LINK_NOT_COPIED_TOAST);
         }
         return;
       }
       // Couldn't mint a short link — surface it and steer to the offline links.
-      setShortLinkError(true);
+      // A 429 `busy` (#505) gets its own gentler note, so a drained daily budget
+      // reads as "full right now, back at a stated time", not "broken".
+      setShortLinkFailure(
+        result.status === 'busy'
+          ? { kind: 'busy', dailyLimit: result.dailyLimit, resetsAt: nextUtcMidnight(new Date()) }
+          : { kind: 'error' },
+      );
       setOfflineOpen(true);
       setOpen(true);
+      // Deliberately short and detail-free: the note in the now-open menu
+      // carries the specifics (including the busy numbers).
+      flashErrorToast('Short link not copied');
       trackEvent({ action: 'share_short_link_failed', category: 'interaction', label: scope });
     } catch (err) {
       console.error('Failed to create short link:', err);
-      setShortLinkError(true);
+      setShortLinkFailure({ kind: 'error' });
       setOfflineOpen(true);
       setOpen(true);
+      flashErrorToast('Short link not copied');
     } finally {
       setCreating(false);
     }
@@ -337,9 +446,12 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
       if (success) {
         flashCopied();
         trackEvent({ action: 'share_workspace_link', category: 'interaction', label: scope });
+      } else {
+        flashErrorToast(LINK_NOT_COPIED_TOAST);
       }
     } catch (err) {
       console.error('Failed to copy share link:', err);
+      flashErrorToast(LINK_NOT_COPIED_TOAST);
     }
   };
 
@@ -355,10 +467,13 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
         if (success) {
           flashCopied();
           trackEvent({ action: 'share_equation_link', category: 'interaction' });
+        } else {
+          flashErrorToast(LINK_NOT_COPIED_TOAST);
         }
       });
     } catch (err) {
       console.error('Failed to copy share link:', err);
+      flashErrorToast(LINK_NOT_COPIED_TOAST);
     }
   };
 
@@ -387,6 +502,11 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
           <WifiOff size={iconSize} className="text-amber-300/90" />
           <span className="hidden sm:inline">Share workspace</span>
         </>
+      ) : busy ? (
+        <>
+          <Hourglass size={iconSize} className="text-amber-300/90" />
+          <span className="hidden sm:inline">Share workspace</span>
+        </>
       ) : (
         <>
           <Layers size={iconSize} className="text-indigo-300 group-hover:scale-110 transition-transform" />
@@ -411,6 +531,10 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
           content={
             !online ? (
               <span className="whitespace-nowrap">Offline — pick a link that works offline</span>
+            ) : busy ? (
+              <span className="whitespace-nowrap">
+                Short links hit today&apos;s limit — pick a link that works offline
+              </span>
             ) : (
               <span className="flex flex-col items-center gap-1 whitespace-nowrap">
                 <span>{tooltip ?? 'Share workspace'}</span>
@@ -442,14 +566,16 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
             <span className={THEME_GLASS.COPY_MENU_HEADER_LABEL}>Share</span>
           </div>
 
-          {/* Heads-up note (#481): either the network is down (short links disabled)
-              or a mint just failed. Either way, name why and point at the offline
-              choices below — so a long link is only ever a conscious pick. */}
-          {(!online || shortLinkError) && (
+          {/* Heads-up note (#481): the network is down, the daily budget is drained
+              (#505), or a mint just failed. Either way, name why and point at the
+              offline choices below — so a long link is only ever a conscious pick. */}
+          {(!online || busy || shortLinkFailure?.kind === 'error') && (
             <span role="note" className={THEME_GLASS.SHARE_MENU_OFFLINE_NOTE}>
               {!online
                 ? "You're offline. Short links need a connection — use a link that works offline below."
-                : "Couldn't create a short link. Use a link that works offline below."}
+                : busy
+                  ? busyShareNote(busy.dailyLimit, new Date())
+                  : "Couldn't create a short link. Use a link that works offline below."}
             </span>
           )}
 
@@ -459,7 +585,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
           <button
             type="button"
             role="menuitem"
-            disabled={!online}
+            disabled={!shortLinksAvailable}
             onClick={() => handleShareShort('full')}
             className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
           >
@@ -475,7 +601,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
           <button
             type="button"
             role="menuitem"
-            disabled={!online}
+            disabled={!shortLinksAvailable}
             onClick={() => handleShareShort('path')}
             className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
           >
@@ -491,7 +617,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
           <button
             type="button"
             role="menuitem"
-            disabled={!online}
+            disabled={!shortLinksAvailable}
             onClick={() => handleShareShort('equation')}
             className={`${THEME_GLASS.SHARE_MENU_ITEM} ${THEME_TRANSITIONS.FAST}`}
           >
@@ -516,7 +642,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
             aria-expanded={offlineOpen}
             onClick={() => setOfflineOpen((v) => !v)}
             className={
-              online && !shortLinkError
+              shortLinksAvailable && shortLinkFailure?.kind !== 'error'
                 ? THEME_GLASS.SHARE_MENU_SECTION_TOGGLE
                 : THEME_GLASS.SHARE_MENU_SECTION_TOGGLE_ACTIVE
             }

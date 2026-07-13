@@ -14,6 +14,7 @@
 
 import { SHARE_ID_PATTERN } from '@/utils/shareCrypto';
 import type { ShareStore } from './shareStore';
+import type { WriteBudget } from './writeBudget';
 
 /**
  * Hard cap on stored ciphertext, in bytes. Guards the bill (no TTL — links are
@@ -26,6 +27,7 @@ export const MAX_CIPHERTEXT_BYTES = 64 * 1024;
 /** Result of a create request — the route wrapper maps it onto `Response.json`. */
 export type CreateShareResult =
   | { status: 200; body: { id: string } }
+  | { status: 429; body: { error: string; dailyLimit: number } }
   | { status: 400 | 409 | 413 | 500; body: { error: string } };
 
 /** Result of a read request — 200 carries the opaque ciphertext, errors an `error`. */
@@ -40,13 +42,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /**
  * Validate and persist a create request. The client derives `id` from its key and
  * encrypts locally, so the server only ever sees `{ id, ciphertext }` — never the
- * key. Flow: shape-check id → size-cap ciphertext → store-if-absent.
+ * key. Flow: shape-check id → size-cap ciphertext → write budget → store-if-absent.
+ *
+ * The budget check runs *after* validation — malformed junk must not drain the
+ * day's budget — and before the store, so an exhausted budget (429) costs no KV
+ * write. A `429` tells the client to fall back to a self-contained `?ws=` link.
  *
  * A `409` is the collision signal: the id is already taken by a *different* key,
  * and overwriting would break that live link. The caller (client) must regenerate
  * its key — which yields a fresh id — and retry; the server never overwrites.
  */
-export async function createShare(input: unknown, store: ShareStore): Promise<CreateShareResult> {
+export async function createShare(
+  input: unknown,
+  store: ShareStore,
+  budget: WriteBudget,
+): Promise<CreateShareResult> {
   if (!isRecord(input)) {
     return { status: 400, body: { error: 'Expected a JSON object body.' } };
   }
@@ -61,6 +71,15 @@ export async function createShare(input: unknown, store: ShareStore): Promise<Cr
   }
   if (new TextEncoder().encode(ciphertext).length > MAX_CIPHERTEXT_BYTES) {
     return { status: 413, body: { error: 'Payload too large.' } };
+  }
+
+  if (!(await budget.consume())) {
+    // Name the limit so the client can show a real number and a real reset time
+    // (the day rolls over at UTC midnight) instead of a vague "busy".
+    return {
+      status: 429,
+      body: { error: 'Daily share limit reached.', dailyLimit: budget.dailyCap },
+    };
   }
 
   const stored = await store.put(id, ciphertext);

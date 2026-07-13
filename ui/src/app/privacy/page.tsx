@@ -21,7 +21,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className={`text-xs ${THEME_GLASS.TEXT_MUTED} font-mono`}>
-              Last updated: July 9, 2026
+              Last updated: July 12, 2026
             </p>
           </div>
 
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
                 1. Overview
               </h2>
               <p>
-                This policy describes how Algebranch handles your data. By default we collect no analytics; we gather anonymous usage data only if you explicitly opt in.
+                This policy describes how Algebranch handles your data. By default we see only cookieless, aggregate traffic counts that cannot identify you; anonymous usage analytics run only if you explicitly opt in.
               </p>
             </section>
 
@@ -40,7 +40,10 @@ export default function PrivacyPage() {
                 2. Analytics & Cookies
               </h2>
               <p>
-                Only when you opt in does Algebranch enable Google Analytics 4 to collect aggregate, anonymous usage data about how visitors interact with the app. This helps us optimize performance and prioritize features. Google Analytics then sets a cookie named <code className="bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300">_ga</code> to distinguish unique users, but it does not identify you personally. Until you opt in, no analytics run and no such cookie is set.
+                Our hosting platform, Vercel, records aggregate traffic statistics for all visits: page views, referrer, country, and device type. This measurement is cookieless — it sets no cookies, stores no personal identifiers, and cannot recognize you across sites or visits. Vercel discards its anonymous visitor hash within 24 hours, so not even Vercel can reconstruct a browsing history.
+              </p>
+              <p>
+                Only when you opt in does Algebranch additionally enable Google Analytics 4 to collect aggregate, anonymous usage data about how visitors interact with the app. This helps us optimize performance and prioritize features. Google Analytics then sets a cookie named <code className="bg-white/5 px-1 py-0.5 rounded font-mono text-xs text-indigo-300">_ga</code> to distinguish unique users, but it does not identify you personally. Until you opt in, Google Analytics does not run and no such cookie is set.
               </p>
             </section>
 
@@ -49,7 +52,7 @@ export default function PrivacyPage() {
                 3. What We Collect and What We Don&apos;t
               </h2>
               <p>
-                <strong>We collect:</strong> Anonymous interaction events such as starting a new workspace, importing preset equations, copying outputs, and undo/redo operations.
+                <strong>We collect:</strong> Cookieless aggregate traffic statistics for all visits (page views, referrer, country, device type), plus — only if you opt in — anonymous interaction events such as starting a new workspace, importing preset equations, copying outputs, and undo/redo operations.
               </p>
               <p>
                 <strong>We NEVER collect:</strong> The mathematical content of your equations, variable names, or intermediate derivation steps. All equation parsing and solving occurs entirely locally in your browser.
@@ -61,7 +64,7 @@ export default function PrivacyPage() {
                 4. Consent Control
               </h2>
               <p>
-                Analytics tracking is disabled by default, backed by Google Consent Mode v2, until you opt in via the consent banner. You can change your choice at any time by clicking{' '}
+                Google Analytics tracking is disabled by default, backed by Google Consent Mode v2, until you opt in via the consent banner. You can change your choice at any time by clicking{' '}
                 <button
                   onClick={() => setConsent('unset')}
                   className={`${THEME_GLASS.LINK} bg-transparent border-none cursor-pointer p-0 inline`}

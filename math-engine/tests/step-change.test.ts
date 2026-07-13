@@ -5,6 +5,8 @@ import {
   generateValidMoves,
   getReducibleOptions,
   describeTransposition,
+  describeSameSideMove,
+  describeMove,
   describeReduction,
   describeGlobalOp,
   describeSubstitution,
@@ -336,6 +338,70 @@ describe('domain restrictions when cancelling or dividing (#63)', () => {
     const byConst = describeGlobalOp({ type: 'div', term: '2' });
     expect(byConst.text).toBe('divide both sides by 2');
     expect(byConst.assumptions).toBeUndefined();
+  });
+});
+
+describe('describeSameSideMove — within-a-side rearrangements (#512)', () => {
+  it('the repro case describes the combined sub-expression, not a bare "Move"', () => {
+    // 3/4 + 1/2 = x : dragging the denominator 2 (lhs/1/1) onto the numerator 3
+    // (lhs/0/0) is a valid within-a-side rearrangement — both sides equal 5/4.
+    // The real move search emits `(3 - 2)/4 + 1 = x`; the change spans both
+    // fractions, so the minimal affected sub-expression is the whole LHS.
+    const e = eq('3/4 + 1/2 = x');
+    const resultEq = generateValidMoves(e, 'lhs/1/1')['lhs/0/0'];
+    expect(equationToString(resultEq)).toBe('(3 - 2) / 4 + 1 = x');
+    const change = describeSameSideMove(e, resultEq, 'lhs/1/1');
+    expect(change).toMatchObject({
+      kind: 'rewrite',
+      op: 'rearrange',
+      family: 'rearrange',
+      label: 'Rearrange',
+      detail: '3 / 4 + 1 / 2 → (3 - 2) / 4 + 1',
+      text: 'rearrange 3 / 4 + 1 / 2 into (3 - 2) / 4 + 1',
+    });
+    // Not handle-initiated, so it carries no ≠0 assumption.
+    expect(change!.assumptions).toBeUndefined();
+  });
+
+  it('a simple commute of a sum reads as a rearrange of the affected subtree', () => {
+    // x + 4 = 11 : swapping the two addends within the LHS.
+    const before = eq('x + 4 = 11');
+    const after = eq('4 + x = 11');
+    const change = describeSameSideMove(before, after, 'lhs/0');
+    expect(change).toMatchObject({
+      kind: 'rewrite',
+      op: 'rearrange',
+      family: 'rearrange',
+      label: 'Rearrange',
+      detail: 'x + 4 → 4 + x',
+      text: 'rearrange x + 4 into 4 + x',
+    });
+  });
+
+  it('returns null when the move changes nothing (no-op)', () => {
+    const e = eq('x + 4 = 11');
+    expect(describeSameSideMove(e, eq('x + 4 = 11'), 'lhs/0')).toBeNull();
+  });
+
+  it('returns null for a malformed source path', () => {
+    const e = eq('x + 4 = 11');
+    expect(describeSameSideMove(e, eq('4 + x = 11'), 'bogus/9')).toBeNull();
+  });
+});
+
+describe('describeMove — one entry point for both move kinds (#512)', () => {
+  it('routes a cross-equals drag to the both-sides description', () => {
+    const e = eq('x + 4 = 11');
+    const change = describeMove(e, 'lhs/1', 'rhs', eq('x = 11 - 4'));
+    expect(change).toMatchObject({ kind: 'bothSides', op: 'subtract', operand: '4' });
+    expect(change!.text).toBe('subtract 4 from both sides');
+  });
+
+  it('routes a same-side drag to the rearrange description', () => {
+    const e = eq('3/4 + 1/2 = x');
+    const resultEq = generateValidMoves(e, 'lhs/1/1')['lhs/0/0'];
+    const change = describeMove(e, 'lhs/1/1', 'lhs/0/0', resultEq);
+    expect(change).toMatchObject({ kind: 'rewrite', op: 'rearrange', family: 'rearrange', label: 'Rearrange' });
   });
 });
 

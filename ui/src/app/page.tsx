@@ -61,6 +61,7 @@ import {
   liveAnnouncementAtom,
   navReadoutAtom,
   explorationModeAtom,
+  rovingCursorPathAtom,
   treeRefocusNonceAtom,
   candidatePathsAtom,
   hoverPathAtom,
@@ -236,7 +237,11 @@ export default function Home() {
   // stranded outside the equation.
   const [explorationMode, setExplorationMode] = useAtom(explorationModeAtom);
   const [modeAnnouncement, setModeAnnouncement] = React.useState('');
-  const exploreToggleRef = React.useRef<HTMLButtonElement>(null);
+  // Cross-mode cursor carry-over (#373): the last roving path, mirrored out of
+  // whichever mode's tree is mounted, so the incoming mode restores it — landing
+  // focus on that same node regardless of whether the switch came from the button
+  // or the keyboard shortcut, so the user's place is never lost on a toggle.
+  const [rovingCursorPath, setRovingCursorPath] = useAtom(rovingCursorPathAtom);
   // Speak the enclosing term when focus moves up/out to a containing item, where
   // VoiceOver otherwise goes silent on the label (#270/#271).
   const handleTreeFocusBridge = useAncestorFocusBridge();
@@ -255,11 +260,9 @@ export default function Home() {
   // On leaving the read view, return focus to its toggle so a keyboard/SR user isn't
   // stranded once the interactive tree remounts. In an effect (not the toggle
   // callback) so reading the ref stays out of render — react-hooks/refs.
-  const prevExplorationRef = React.useRef(explorationMode);
-  React.useEffect(() => {
-    if (prevExplorationRef.current && !explorationMode) exploreToggleRef.current?.focus();
-    prevExplorationRef.current = explorationMode;
-  }, [explorationMode]);
+  // Leaving the reader no longer bounces focus to the toggle button: the cursor
+  // carry-over (#373) lands focus on the restored node in the Interaction tree
+  // instead, which is where the user was and strictly better than the control.
   const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
   const [rightSidebarOpen, setRightSidebarOpen] = useAtom(rightSidebarOpenAtom);
   
@@ -1646,7 +1649,6 @@ export default function Home() {
                     position="left"
                   >
                     <button
-                      ref={exploreToggleRef}
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleExploration();
@@ -1739,7 +1741,21 @@ export default function Home() {
                 // replaces the interactive one, self-scaling to fill the workspace.
                 <ExploreEquationTree onExit={toggleExploration} />
               ) : (
-                <RovingTabindexProvider containerRef={activeContentRef}>
+                <RovingTabindexProvider
+                  containerRef={activeContentRef}
+                  // Land the default cursor on a specific term, never the whole
+                  // side (#373) — so cold entry and the cross-mode carry-over both
+                  // avoid boxing an entire equation side.
+                  preferSpecificDefault
+                  seedKey={rovingCursorPath}
+                  // Always land focus on the carried node when returning to
+                  // Interaction (#373) — seedKey is only non-null after the user has
+                  // been navigating, so this never steals focus on a cold load.
+                  seedFocus
+                  // Carry the cursor across mode switches (#373); strip a folded-in
+                  // handle's `#type` suffix so the term, not the handle, is restored.
+                  onActiveKeyChange={(k) => setRovingCursorPath(k ? k.split('#')[0] : null)}
+                >
                 <div
                   className="flex flex-col items-center justify-center gap-2 origin-center"
                   ref={equationTreeFocusRef}

@@ -12,6 +12,7 @@ import {
   rawActiveTabIdAtom,
   candidatePathsAtom,
   reduciblePathsAtom,
+  targetPathsAtom,
   type WorkspaceTab,
 } from '@/store/equation';
 import { parseEquation } from 'math-engine-client';
@@ -53,10 +54,12 @@ const tabbableCount = (container: HTMLElement) =>
     return ti === '0' || (ti === null && el.tagName === 'BUTTON');
   }).length;
 
+// preferSpecificDefault mirrors the production Interaction tree (page.tsx): the
+// default cursor lands on a specific term, never a whole equation side (#373).
 function renderTree(store: ReturnType<typeof createStore>) {
   return render(
     <Provider store={store}>
-      <RovingTabindexProvider>
+      <RovingTabindexProvider preferSpecificDefault>
         <div role="tree" aria-label="Equation">
           <EquationNode path="lhs" />
           <EquationNode path="rhs" />
@@ -73,7 +76,7 @@ function ContainerTree({ store }: { store: ReturnType<typeof createStore> }) {
   const ref = React.useRef<HTMLDivElement>(null);
   return (
     <Provider store={store}>
-      <RovingTabindexProvider containerRef={ref}>
+      <RovingTabindexProvider containerRef={ref} preferSpecificDefault>
         <div role="tree" aria-label="Equation" tabIndex={-1} ref={ref}>
           <EquationNode path="lhs" />
           <EquationNode path="rhs" />
@@ -139,6 +142,32 @@ describe('EquationNode roving navigation (#257, PR B)', () => {
 
     fireEvent.keyDown(inner, { key: 'ArrowUp' });
     expect(screen.getAllByRole('treeitem')[0]).toHaveAttribute('tabindex', '0');
+  });
+
+  it('moves the roving cursor to a term when it is clicked (#373)', () => {
+    // So the cursor tracks mouse interaction, not just the keyboard — a click in
+    // Interaction mode must leave the cursor on the clicked term so it carries
+    // into Read view (and Tab/arrows resume from there), matching a keyboard user.
+    const store = makeStore('x^2-9=0', ['lhs/0', 'lhs/1', 'rhs']);
+    // A surviving target (lhs/0) once a source is selected, so the clicked node is
+    // NOT the only treeitem left — otherwise it would become the cursor by default
+    // rather than because the click moved it, and the test wouldn't isolate #373.
+    store.set(targetPathsAtom, { 'lhs/0': parseEquation('x^2-9=0') });
+    renderTree(store);
+    const items = screen.getAllByRole('treeitem');
+    // Default cursor is the first term (lhs/0), not the third (rhs).
+    expect(items[0]).toHaveAttribute('tabindex', '0');
+    expect(items[2]).toHaveAttribute('tabindex', '-1');
+
+    // Clicking the third term selects it as the source; lhs/0 stays a treeitem
+    // (a valid target, document-first). Without the click moving the cursor, the
+    // default would land on lhs/0 — instead the clicked node holds the cursor.
+    fireEvent.click(items[2]);
+    const selected = screen.getByRole('treeitem', { selected: true });
+    expect(selected).toHaveAttribute('tabindex', '0');
+    // The document-first surviving target did NOT steal the cursor.
+    const target = screen.getByRole('treeitem', { selected: false });
+    expect(target).toHaveAttribute('tabindex', '-1');
   });
 
   it('folds a term handle into the single Tab stop (handle is not its own stop)', () => {
@@ -210,10 +239,11 @@ describe('EquationNode roving navigation (#257, PR B)', () => {
     renderTree(store);
 
     const handle = screen.getByRole('button', { name: 'Substitute' });
-    // The term aria-label now reads as spoken math (#256): "x plus 5", not "x + 5".
-    const lhsTerm = screen.getByRole('treeitem', { name: /^x plus 5, Enter to select/i });
+    // Enters on the most specific term (the x, lhs/0), not the whole side and not
+    // the folded-in handle (#373). The term aria-label reads as spoken math (#256).
+    const xTerm = screen.getByRole('treeitem', { name: /^x, Enter to select/i });
     expect(handle).toHaveAttribute('tabindex', '-1');
-    expect(lhsTerm).toHaveAttribute('tabindex', '0');
+    expect(xTerm).toHaveAttribute('tabindex', '0');
   });
 
   it('enters on the term, not a substitute handle, when the candidate scan lands after the handle (async load)', () => {
@@ -246,8 +276,9 @@ describe('EquationNode roving navigation (#257, PR B)', () => {
     // The transposition scan lands (real activePaths for 2*x+1=5).
     act(() => store.set(candidatePathsAtom, new Set(['lhs', 'lhs/0', 'lhs/1', 'rhs'])));
 
-    // Re-query after the re-render (the prior nodes are replaced).
-    expect(screen.getByRole('treeitem', { name: /^2 times x plus 1, Enter to select/i })).toHaveAttribute('tabindex', '0');
+    // Re-query after the re-render (the prior nodes are replaced). The default
+    // upgrades to the most specific term (2·x, lhs/0), not the whole side (#373).
+    expect(screen.getByRole('treeitem', { name: /^2 times x, Enter to select/i })).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('button', { name: 'Substitute' })).toHaveAttribute('tabindex', '-1');
   });
 

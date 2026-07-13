@@ -5,6 +5,7 @@
 
 import { useEffect } from 'react';
 import { ErrorFallback } from '../components/ErrorFallback';
+import { reportBoundaryError } from '../utils/errorBeacon';
 
 /**
  * Root-level error boundary. Replaces the root layout when an error escapes it
@@ -21,6 +22,9 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error(error);
+    // Boundary-caught errors never reach the window 'error' listener, so the
+    // beacon (#505) must be fed from here too.
+    reportBoundaryError(error);
   }, [error]);
 
   return (

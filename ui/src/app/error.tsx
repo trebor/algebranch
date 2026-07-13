@@ -5,6 +5,7 @@
 
 import { useEffect } from 'react';
 import { ErrorFallback } from '../components/ErrorFallback';
+import { reportBoundaryError } from '../utils/errorBeacon';
 
 /**
  * Segment-level error boundary for the app route. Catches render/hydration
@@ -20,6 +21,9 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error(error);
+    // Boundary-caught errors never reach the window 'error' listener, so the
+    // beacon (#505) must be fed from here too.
+    reportBoundaryError(error);
   }, [error]);
 
   return <ErrorFallback onRetry={() => unstable_retry()} />;

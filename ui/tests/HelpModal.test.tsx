@@ -92,6 +92,27 @@ describe('HelpModal', () => {
     }
   });
 
+  it('renders the privacy pages as navigating links, not in-app doc buttons', () => {
+    const store = createStore();
+    store.set(helpModalOpenAtom, true);
+    render(
+      <Provider store={store}>
+        <HelpModal />
+      </Provider>
+    );
+
+    // The two privacy documents (#520) open as full routes, so they are links —
+    // one of them, /privacy, is interactive and cannot render in the read-only
+    // doc modal — never in-app doc buttons like the guides.
+    const privacyPolicy = screen.getByRole('link', { name: /privacy policy/i });
+    expect(privacyPolicy).toHaveAttribute('href', '/privacy');
+    const schoolPrivacy = screen.getByRole('link', { name: /privacy for schools/i });
+    expect(schoolPrivacy).toHaveAttribute('href', '/school-privacy');
+    // Grouped under a "Privacy & Trust" heading, and a link to the full hub.
+    expect(screen.getByText(/privacy & trust/i)).toBeTruthy();
+    expect(screen.getByRole('link', { name: /all documentation/i })).toHaveAttribute('href', '/docs');
+  });
+
   it('opens the picked guide in the doc modal and dismisses the launcher', () => {
     const store = createStore();
     store.set(helpModalOpenAtom, true);

@@ -9,14 +9,14 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { THEME_GLASS } from '../constants/theme';
 import { BackToWorkspaceLink } from '../components/BackToWorkspaceLink';
 import { SITE_URL } from '../constants/site';
-import { DOC_BY_SLUG, DOCS_PAGES } from '../constants/docsPages';
+import { DOC_BY_SLUG } from '../constants/docsPages';
 import { faqPageJsonLd, docArticleJsonLd } from '../constants/structuredData';
 import { stripDocChrome, extractFaqEntries } from './docsMarkdown';
 import { DocMarkdown } from '../components/DocMarkdown';
+import { DocsCrossNav, DocsIndex } from '../components/DocsNav';
 
 function readDocMarkdown(file: string): string {
   return readFileSync(path.join(process.cwd(), '..', 'docs', file), 'utf8');
@@ -47,29 +47,12 @@ export function buildDocMetadata(slug: string): Metadata {
   };
 }
 
-// Sibling-page nav so each doc cross-links the rest of the set on-domain — the
-// role the stripped GitHub nav row played in the source markdown.
-function DocsCrossNav({ currentSlug }: { currentSlug: string }) {
-  const others = DOCS_PAGES.filter((page) => page.slug !== currentSlug);
-  return (
-    <nav
-      aria-label="Documentation"
-      className={`flex flex-wrap gap-x-4 gap-y-2 border-t ${THEME_GLASS.PANEL_BORDER} pt-4 text-sm`}
-    >
-      {others.map((page) => (
-        <Link key={page.slug} href={`/${page.slug}`} className={THEME_GLASS.LINK}>
-          {page.title}
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
 export function DocPageBody({ slug }: { slug: string }) {
   const meta = DOC_BY_SLUG[slug];
   const raw = readDocMarkdown(meta.file);
   const body = getDocBody(slug);
   const url = `${SITE_URL}/${slug}`;
+  const isHub = meta.kind === 'index';
   const jsonLd =
     meta.kind === 'faq'
       ? faqPageJsonLd(extractFaqEntries(raw))
@@ -98,7 +81,9 @@ export function DocPageBody({ slug }: { slug: string }) {
             <DocMarkdown markdown={body} />
           </div>
 
-          <DocsCrossNav currentSlug={slug} />
+          {/* The hub lists every documented page itself (DocsIndex), so it needs
+              no sibling cross-nav; every other page carries the grouped footer. */}
+          {isHub ? <DocsIndex /> : <DocsCrossNav currentPath={`/${slug}`} />}
         </div>
       </div>
     </main>

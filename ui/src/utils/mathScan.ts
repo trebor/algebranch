@@ -5,8 +5,10 @@ import { Equation, equationToString, serializeEquation, deserializeEquation, Ser
 // computeMathSync wraps the heavy solving surface (generateValidMoves /
 // getReducibleOptions), so — like those — it is imported directly from the
 // engine rather than through the lightweight math-engine-client shim.
-import { computeMathSync, MathSyncResult } from 'math-engine';
+import type { MathSyncResult } from 'math-engine';
 import type { OnboardingChapter } from '../store/equation';
+
+import { runWorkerScan } from './workerScan';
 
 export type MathScanResult = MathSyncResult;
 
@@ -18,9 +20,9 @@ const scanCache = new Map<string, MathScanResult>();
  * Compute the math scan (candidate/target/reducible analysis) for an equation
  * state, with caching so repeated requests for the same state reuse one result.
  *
- * The analysis runs fully client-side via the engine's `computeMathSync` (#136);
- * the async signature is retained so callers stay unchanged from when this was a
- * `POST /api/math` round-trip.
+ * The analysis runs fully client-side via the engine's `computeMathSync` (#136)
+ * offloaded to a Web Worker; the async signature is retained so callers stay
+ * unchanged from when this was a `POST /api/math` round-trip.
  */
 export const fetchMathScan = async (
   eq: Equation,
@@ -45,7 +47,7 @@ export const fetchMathScan = async (
     throw err;
   }
 
-  const data = computeMathSync(eq, sourcePath);
+  const data = await runWorkerScan(eq, sourcePath, options?.isActive);
   scanCache.set(cacheKey, data);
   return data;
 };

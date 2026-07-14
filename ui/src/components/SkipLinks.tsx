@@ -34,9 +34,18 @@ export const SkipLinks: React.FC = () => {
     const target = document.getElementById(id);
     if (!target) return;
     e.preventDefault();
-    if (id === 'history-region') setRightSidebarOpen(true);
-    target.focus();
-    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (id === 'history-region') {
+      setRightSidebarOpen(true);
+    }
+    const activeItem = (target.querySelector('[role="tree"] [tabindex="0"], [role="treeitem"][tabindex="0"]') ||
+      target.querySelector('[tabindex="0"]')) as HTMLElement | null;
+    if (activeItem) {
+      activeItem.focus();
+      activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      target.focus();
+      target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   };
 
   return (

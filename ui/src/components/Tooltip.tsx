@@ -89,6 +89,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const tooltipRef = React.useRef<HTMLDivElement>(null);
   const showCancelRef = React.useRef<(() => void) | null>(null);
+  const hideTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [adjustedLeft, setAdjustedLeft] = useState<number | null>(null);
 
   useIsomorphicLayoutEffect(() => {
@@ -180,12 +181,15 @@ export const Tooltip: React.FC<TooltipProps> = ({
   }, []);
 
   // On unmount, drop any still-pending show canceller so it can't linger in the
-  // module-level registry after this tooltip is gone.
+  // module-level registry after this tooltip is gone, and cancel active timers.
   useEffect(() => {
     return () => {
       if (showCancelRef.current) {
-        pendingTooltipShows.delete(showCancelRef.current);
-        showCancelRef.current = null;
+        showCancelRef.current();
+      }
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
       }
     };
   }, []);
@@ -323,14 +327,20 @@ export const Tooltip: React.FC<TooltipProps> = ({
         activeTooltipClose = null;
       }
       setHideTimeoutId(null);
+      hideTimeoutRef.current = null;
     }, hideDelay);
     setHideTimeoutId(id);
+    hideTimeoutRef.current = id;
   };
 
   const cancelHide = () => {
     if (hideTimeoutId) {
       clearTimeout(hideTimeoutId);
       setHideTimeoutId(null);
+    }
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
     }
   };
 

@@ -34,6 +34,7 @@ function renderWith(activeId = 'a') {
   const utils = render(
     <Provider store={store}>
       <WorkspaceTabs />
+      <div id="equation-region" />
     </Provider>,
   );
   return { store, ...utils };

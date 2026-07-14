@@ -30,6 +30,8 @@ import type { ShortcutConfig } from '../hooks/useKeyboardShortcuts';
  * half of the no-drift guarantee.
  */
 export type ShortcutId =
+  | 'cycle-pane'
+  | 'cycle-pane-prev'
   | 'cycle-zoom'
   | 'undo'
   | 'redo'
@@ -96,6 +98,8 @@ export const SHORTCUT_CATALOG: ShortcutCatalogEntry[] = [
   { id: 'clear-selection', key: 'escape', description: 'Clear selection', category: 'Equation' },
   { id: 'swap-sides', key: 's', description: 'Swap equation sides', category: 'Equation' },
   { id: 'toggle-graph', key: 'g', description: 'Toggle variable relationship graph size', category: 'Equation' },
+  { id: 'cycle-pane', key: 'f6', description: 'Cycle focus between panes', category: 'Accessibility', keyLabel: 'F6' },
+  { id: 'cycle-pane-prev', key: 'f6', shift: true, description: 'Cycle focus backward between panes', category: 'Accessibility', keyLabel: 'Shift+F6', hidden: true },
   { id: 'toggle-read-view', key: 'x', description: 'Toggle Read view', category: 'Accessibility' },
   { id: 'text-size-larger', key: 't', description: 'Larger interface text', category: 'Accessibility' },
   { id: 'text-size-smaller', key: 't', shift: true, description: 'Smaller interface text', category: 'Accessibility' },

@@ -126,6 +126,10 @@ interface CopyFormatMenuProps {
    * The menu stays fully mouse-operable. Defaults to true.
    */
   focusable?: boolean;
+  /** Custom tabIndex for the primary button when used in a roving toolbar */
+  tabIndex?: number;
+  /** Ref to the primary button trigger */
+  triggerRef?: React.Ref<HTMLButtonElement>;
 }
 
 export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
@@ -147,6 +151,8 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   onPreviewChange,
   onOpenChange,
   focusable = true,
+  tabIndex,
+  triggerRef,
 }) => {
   const triggerTabIndex = focusable ? undefined : -1;
   const setToast = useSetAtom(toastAtom);
@@ -300,11 +306,18 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
   const primaryButton = (
     <button
       type="button"
+      ref={triggerRef}
       onClick={handlePrimaryClick}
       disabled={disabled}
-      tabIndex={triggerTabIndex}
+      tabIndex={tabIndex ?? triggerTabIndex}
       className={v.primary}
       aria-label={copied ? 'Copied' : 'Copy equation'}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          setOpen(true);
+        }
+      }}
     >
       {copied ? <Check size={iconSize} /> : <Copy size={iconSize} />}
     </button>
@@ -332,7 +345,7 @@ export const CopyFormatMenu: React.FC<CopyFormatMenuProps> = ({
           type="button"
           onClick={handleCaretClick}
           disabled={disabled}
-          tabIndex={triggerTabIndex}
+          tabIndex={tabIndex !== undefined ? -1 : triggerTabIndex}
           aria-haspopup="menu"
           aria-expanded={open}
           aria-label="Copy format options"

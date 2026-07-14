@@ -36,6 +36,7 @@ import { Check, CircleSlash, Infinity, ZoomIn, Search, ZoomOut, TriangleAlert } 
 import {
   RovingTabindexProvider,
   useOptionalRovingTabindex,
+  useRovingItem,
 } from '../hooks/useRovingTabindex';
 import { HandleBadge } from './HandleBadge';
 import { TransitionTooltipCard } from './TransitionTooltipCard';
@@ -344,6 +345,15 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
           {...interactiveProps}
           onMouseEnter={() => onHoverLoop(loopAncestor.id)}
           onMouseLeave={() => onHoverLoop(null)}
+          onFocus={(e) => {
+            if (e.target === e.currentTarget) {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'center',
+              });
+            }
+          }}
           className={`w-11 h-11 rounded-full flex items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${
             isLoopHighlight
               ? THEME_GLASS.LOOP_NODE_ACTIVE
@@ -411,6 +421,15 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
         {...interactiveProps}
         onMouseEnter={() => onHoverLoop(node.id)}
         onMouseLeave={() => onHoverLoop(null)}
+        onFocus={(e) => {
+          if (e.target === e.currentTarget) {
+            e.currentTarget.scrollIntoView({
+              behavior: 'smooth',
+              block: 'nearest',
+              inline: 'center',
+            });
+          }
+        }}
         className={`w-full h-full rounded-xl flex flex-col items-center justify-center border select-none transition-all duration-300 relative group/node ${THEME_GLASS.NODE_FOCUS_RING} ${nodeStyle.card} ${exportPreviewActive && !isActive ? THEME_GLASS.COPY_PREVIEW_DIMMED : ''} ${interactive ? '' : 'cursor-default'}`}
       >
         {/* Step index badge on top-left */}
@@ -547,6 +566,10 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   // hydration stays stable.
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
   const [zoomMode, setZoomMode] = useAtom(activeZoomModeAtom);
+
+  const { ref: zoomNormalRef, tabIndex: zoomNormalTabIndex, onKeyDown: zoomNormalKeyDown } = useRovingItem('zoom-normal');
+  const { ref: zoomOverviewRef, tabIndex: zoomOverviewTabIndex, onKeyDown: zoomOverviewKeyDown } = useRovingItem('zoom-overview');
+  const { ref: zoomFullTreeRef, tabIndex: zoomFullTreeTabIndex, onKeyDown: zoomFullTreeKeyDown } = useRovingItem('zoom-full-tree');
 
   const handleZoomChange = (mode: ZoomMode) => {
     setZoomMode(mode);
@@ -1173,9 +1196,12 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
 
   return (
     <div className={`relative flex-1 flex flex-col min-h-0 group ${className ?? THEME_GLASS.TREE_BG}`}>
-      <div className="absolute top-3 right-4 z-30 contextual-actions flex items-center gap-1.5">
+      <div role="toolbar" aria-label="History actions" className="absolute top-3 right-4 z-30 contextual-actions flex items-center gap-1.5">
         <Tooltip content={<HotkeyHint label="Zoom: Normal" keys="Z" />} position="bottom">
           <button
+            ref={zoomNormalRef as React.RefCallback<HTMLButtonElement>}
+            tabIndex={zoomNormalTabIndex}
+            onKeyDown={zoomNormalKeyDown}
             onClick={() => handleZoomChange('normal')}
             className={zoomMode === 'normal' ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
             aria-label="Zoom: Normal"
@@ -1185,6 +1211,9 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
         </Tooltip>
         <Tooltip content={<HotkeyHint label="Zoom: Overview" keys="Z" />} position="bottom">
           <button
+            ref={zoomOverviewRef as React.RefCallback<HTMLButtonElement>}
+            tabIndex={zoomOverviewTabIndex}
+            onKeyDown={zoomOverviewKeyDown}
             onClick={() => handleZoomChange('overview')}
             className={zoomMode === 'overview' ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
             aria-label="Zoom: Overview"
@@ -1194,6 +1223,9 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
         </Tooltip>
         <Tooltip content={<HotkeyHint label="Zoom: Full Tree" keys="Z" />} position="bottom">
           <button
+            ref={zoomFullTreeRef as React.RefCallback<HTMLButtonElement>}
+            tabIndex={zoomFullTreeTabIndex}
+            onKeyDown={zoomFullTreeKeyDown}
             onClick={() => handleZoomChange('full-tree')}
             className={zoomMode === 'full-tree' ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
             aria-label="Zoom: Full Tree"

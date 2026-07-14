@@ -27,7 +27,7 @@ import { HotkeyHint } from '../components/HotkeyHint';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { WorkspaceSwitcher } from '../components/WorkspaceSwitcher';
 import { SkipLinks } from '../components/SkipLinks';
-import { RovingTabindexProvider } from '../hooks/useRovingTabindex';
+import { RovingTabindexProvider, useRovingItem } from '../hooks/useRovingTabindex';
 import { useAncestorFocusBridge } from '../hooks/useAncestorFocusBridge';
 import { ExploreEquationTree } from '../components/ExploreEquationTree';
 import { ShareMenu, busyShareSummary, LINK_NOT_COPIED_TOAST } from '../components/ShareMenu';
@@ -221,6 +221,27 @@ const readWsParam = (search: string): string | null => {
   return match[1];
 };
 
+
+const RovingToolbarButton = ({
+  itemKey,
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { itemKey: string }) => {
+  const { ref, tabIndex, onKeyDown } = useRovingItem(itemKey);
+  return (
+    <button
+      {...props}
+      ref={ref as React.RefCallback<HTMLButtonElement>}
+      tabIndex={tabIndex}
+      onKeyDown={(e) => {
+        onKeyDown(e);
+        props.onKeyDown?.(e);
+      }}
+    >
+      {children}
+    </button>
+  );
+};
 
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
@@ -1120,6 +1141,51 @@ export default function Home() {
     }
   };
 
+  const cyclePane = (dir: 1 | -1) => {
+    const panes = [
+      { id: 'tabs', getEl: () => document.querySelector('[role="tablist"]') as HTMLElement | null, getFocusEl: (parent: HTMLElement) => parent.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement | null || parent.querySelector('[role="tab"]') as HTMLElement | null },
+      { id: 'equation', getEl: () => document.getElementById('equation-region'), getFocusEl: (parent: HTMLElement) => parent.querySelector('[role="tree"] [tabindex="0"], [role="treeitem"][tabindex="0"]') as HTMLElement | null || parent.querySelector('[tabindex="0"]') as HTMLElement | null },
+      { id: 'history', getEl: () => document.getElementById('history-region'), getFocusEl: (parent: HTMLElement) => parent.querySelector('[role="tree"] [tabindex="0"], [role="treeitem"][tabindex="0"]') as HTMLElement | null || parent.querySelector('[tabindex="0"]') as HTMLElement | null },
+      { id: 'library', getEl: () => document.getElementById('library-region'), getFocusEl: (parent: HTMLElement) => parent.querySelector('[role="tree"] [tabindex="0"], [role="treeitem"][tabindex="0"]') as HTMLElement | null || parent.querySelector('[tabindex="0"]') as HTMLElement | null }
+    ];
+
+    const activeEl = document.activeElement;
+    let currentIdx = -1;
+    if (activeEl) {
+      currentIdx = panes.findIndex(p => {
+        const el = p.getEl();
+        return el && (el === activeEl || el.contains(activeEl));
+      });
+    }
+
+    const visiblePanes = panes.filter(p => {
+      const el = p.getEl();
+      return el && (el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0);
+    });
+
+    if (visiblePanes.length === 0) return;
+
+    let targetIdx = 0;
+    if (currentIdx !== -1) {
+      const currentPaneId = panes[currentIdx].id;
+      const visibleIdx = visiblePanes.findIndex(p => p.id === currentPaneId);
+      if (visibleIdx !== -1) {
+        targetIdx = (visibleIdx + dir + visiblePanes.length) % visiblePanes.length;
+      }
+    } else {
+      const eqIdx = visiblePanes.findIndex(p => p.id === 'equation');
+      targetIdx = eqIdx !== -1 ? eqIdx : 0;
+    }
+
+    const targetPane = visiblePanes[targetIdx];
+    const parentEl = targetPane.getEl();
+    if (parentEl) {
+      const focusEl = targetPane.getFocusEl(parentEl) || parentEl;
+      focusEl.focus();
+      focusEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
   // Keyboard Shortcuts (Issue #17, expanded in #126; unified in #514). The
   // display + matching metadata for every binding lives once in SHORTCUT_CATALOG
   // (constants/shortcutCatalog.ts), shared with the `/shortcuts` reference page
@@ -1127,6 +1193,14 @@ export default function Home() {
   // by id — the Record type forces exactly one action per catalog id, so a
   // documented binding can never lack a handler (and vice versa).
   const shortcutActions: Record<ShortcutId, () => void> = {
+    'cycle-pane': () => {
+      cyclePane(1);
+      trackEvent({ action: 'shortcut_cycle_pane', category: 'keyboard' });
+    },
+    'cycle-pane-prev': () => {
+      cyclePane(-1);
+      trackEvent({ action: 'shortcut_cycle_pane_prev', category: 'keyboard' });
+    },
     'cycle-zoom': () => {
       setZoomMode((current) => {
         if (current === 'normal') return 'overview';
@@ -1577,8 +1651,8 @@ export default function Home() {
             <div
               ref={activeContainerRef}
               id="equation-region"
-              role="region"
-              aria-label="Equation"
+              role="tabpanel"
+              aria-labelledby={`tab-${activeTabId}`}
               // tabIndex=-1 lets the "Skip to equation" link land focus here
               // without adding a Tab stop (#257).
               tabIndex={-1}
@@ -1642,94 +1716,105 @@ export default function Home() {
               ) : null}
               {/* Contextual Action Buttons for Active Workspace */}
               {currentEq && (
-                <div className="absolute top-4 right-4 z-30 contextual-actions flex items-center gap-2">
-                  {/* Read-view toggle (#270): switch between the Interactive view
-                      (move handles, transform) and a clean Read view that strips the
-                      chrome so the equation can be stepped through part by part. User-
-                      facing name is "Read view"; the code concept is "exploration". A
-                      real toggle button so a screen reader announces its pressed state,
-                      with parallel tooltips that each name the view they switch to. */}
-                  <Tooltip
-                    content={
-                      <HotkeyHint
-                        label={explorationMode ? 'Interactive view' : 'Read view'}
-                        keys="X"
-                      />
-                    }
-                    position="left"
+                <RovingTabindexProvider>
+                  <div
+                    role="toolbar"
+                    aria-label="Workspace actions"
+                    className="absolute top-4 right-4 z-30 contextual-actions flex items-center gap-2"
                   >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleExploration();
-                      }}
-                      className={explorationMode ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
-                      aria-pressed={explorationMode}
-                      aria-label="Read view"
+                    {/* Read-view toggle (#270): switch between the Interactive view
+                        (move handles, transform) and a clean Read view that strips the
+                        chrome so the equation can be stepped through part by part. User-
+                        facing name is "Read view"; the code concept is "exploration". A
+                        real toggle button so a screen reader announces its pressed state,
+                        with parallel tooltips that each name the view they switch to. */}
+                    <Tooltip
+                      content={
+                        <HotkeyHint
+                          label={explorationMode ? 'Interactive view' : 'Read view'}
+                          keys="X"
+                        />
+                      }
+                      position="left"
                     >
-                      <ScanText size={14} />
-                    </button>
-                  </Tooltip>
-
-                  {/* Graph toggle — only offered when the equation is legitimately
-                      graphable (single variable), or while the graph is already
-                      open so it can always be closed. Replaces the old oversized
-                      floating "Graph" pill. */}
-                  {(isGraphViable || graphSize !== 'hidden') && (
-                    <Tooltip content={<HotkeyHint label={graphSize === 'hidden' ? 'Show graph' : 'Hide graph'} keys="G" />} position="left">
-                      <button
+                      <RovingToolbarButton
+                        itemKey="read-view"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setGraphSize(graphSize === 'hidden' ? 'split' : 'hidden');
+                          toggleExploration();
                         }}
-                        className={graphSize === 'hidden' ? THEME_GLASS.ICON_BUTTON : THEME_GLASS.ICON_BUTTON_ACTIVE}
-                        aria-label={graphSize === 'hidden' ? 'Show graph' : 'Hide graph'}
+                        className={explorationMode ? THEME_GLASS.ICON_BUTTON_ACTIVE : THEME_GLASS.ICON_BUTTON}
+                        aria-pressed={explorationMode}
+                        aria-label="Read view"
                       >
-                        <TrendingUp size={14} />
-                      </button>
+                        <ScanText size={14} />
+                      </RovingToolbarButton>
                     </Tooltip>
-                  )}
 
-                  <Tooltip content={isWorkspacePristine ? 'Edit equation' : 'Edit as new workspace'} position="left">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEquationEditor();
-                      }}
-                      className={THEME_GLASS.ICON_BUTTON}
-                      aria-label={isWorkspacePristine ? 'Edit equation' : 'Edit as new workspace'}
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  </Tooltip>
+                    {/* Graph toggle — only offered when the equation is legitimately
+                        graphable (single variable), or while the graph is already
+                        open so it can always be closed. Replaces the old oversized
+                        floating "Graph" pill. */}
+                    {(isGraphViable || graphSize !== 'hidden') && (
+                      <Tooltip content={<HotkeyHint label={graphSize === 'hidden' ? 'Show graph' : 'Hide graph'} keys="G" />} position="left">
+                        <RovingToolbarButton
+                          itemKey="graph"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setGraphSize(graphSize === 'hidden' ? 'split' : 'hidden');
+                          }}
+                          className={graphSize === 'hidden' ? THEME_GLASS.ICON_BUTTON : THEME_GLASS.ICON_BUTTON_ACTIVE}
+                          aria-label={graphSize === 'hidden' ? 'Show graph' : 'Hide graph'}
+                        >
+                          <TrendingUp size={14} />
+                        </RovingToolbarButton>
+                      </Tooltip>
+                    )}
 
-                  <Tooltip content="Clone workspace" position="left">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addTab();
-                      }}
-                      className={THEME_GLASS.ICON_BUTTON}
-                      aria-label="Clone workspace"
-                    >
-                      <GitBranch size={14} />
-                    </button>
-                  </Tooltip>
+                    <Tooltip content={isWorkspacePristine ? 'Edit equation' : 'Edit as new workspace'} position="left">
+                      <RovingToolbarButton
+                        itemKey="edit"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEquationEditor();
+                        }}
+                        className={THEME_GLASS.ICON_BUTTON}
+                        aria-label={isWorkspacePristine ? 'Edit equation' : 'Edit as new workspace'}
+                      >
+                        <Pencil size={14} />
+                      </RovingToolbarButton>
+                    </Tooltip>
 
-                  <Tooltip content="Delete workspace permanently" position="left">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirmationModalOpen(true);
-                      }}
-                      disabled={isHydrated ? savedSessions.length <= 1 : undefined}
-                      className={THEME_GLASS.ICON_BUTTON_DANGER}
-                      aria-label="Delete workspace permanently"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </Tooltip>
-                </div>
+                    <Tooltip content="Clone workspace" position="left">
+                      <RovingToolbarButton
+                        itemKey="clone"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addTab();
+                        }}
+                        className={THEME_GLASS.ICON_BUTTON}
+                        aria-label="Clone workspace"
+                      >
+                        <GitBranch size={14} />
+                      </RovingToolbarButton>
+                    </Tooltip>
+
+                    <Tooltip content="Delete workspace permanently" position="left">
+                      <RovingToolbarButton
+                        itemKey="delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirmationModalOpen(true);
+                        }}
+                        disabled={isHydrated ? savedSessions.length <= 1 : undefined}
+                        className={THEME_GLASS.ICON_BUTTON_DANGER}
+                        aria-label="Delete workspace permanently"
+                      >
+                        <Trash2 size={14} />
+                      </RovingToolbarButton>
+                    </Tooltip>
+                  </div>
+                </RovingTabindexProvider>
               )}
               {/* Persistent mode-switch narration (#270): lives OUTSIDE the swap
                   below so the announcement survives the tree being replaced. */}
@@ -1753,10 +1838,6 @@ export default function Home() {
               ) : (
                 <RovingTabindexProvider
                   containerRef={activeContentRef}
-                  // Land the default cursor on a specific term, never the whole
-                  // side (#373) — so cold entry and the cross-mode carry-over both
-                  // avoid boxing an entire equation side.
-                  preferSpecificDefault
                   seedKey={rovingCursorPath}
                   // Always land focus on the carried node when returning to
                   // Interaction (#373) — seedKey is only non-null after the user has

@@ -28,6 +28,11 @@ import {
 import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
 import { ShieldAlert, X, Percent, Play, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Triangle, Activity, BookOpen, Library, LayoutGrid, PenTool, Search } from 'lucide-react';
+import {
+  RovingTabindexProvider,
+  useRovingItem,
+  useOptionalRovingTabindex,
+} from '../hooks/useRovingTabindex';
 
 const getCategoryIcon = (category: string) => {
   switch (category) {
@@ -374,6 +379,52 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   );
 };
 
+const RovingLibraryButton = ({
+  itemKey,
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { itemKey: string }) => {
+  const { ref, tabIndex } = useRovingItem(itemKey);
+  const ctx = useOptionalRovingTabindex();
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (!ctx) return;
+    switch (e.key) {
+      case 'ArrowDown':
+      case 'ArrowRight':
+        e.preventDefault();
+        ctx.moveFocus('next');
+        break;
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        e.preventDefault();
+        ctx.moveFocus('prev');
+        break;
+      case 'Home':
+        e.preventDefault();
+        ctx.moveFocus('first');
+        break;
+      case 'End':
+        e.preventDefault();
+        ctx.moveFocus('last');
+        break;
+      default:
+        props.onKeyDown?.(e);
+    }
+  };
+
+  return (
+    <button
+      {...props}
+      ref={ref as React.RefCallback<HTMLButtonElement>}
+      tabIndex={tabIndex}
+      onKeyDown={handleKeyDown}
+    >
+      {children}
+    </button>
+  );
+};
+
 interface EquationLibraryContentProps {
   onCloseMobile?: () => void;
   showHeader?: boolean;
@@ -492,22 +543,24 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
       </div>
 
       {/* Recessed Content Box */}
-      <div className={`flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 ${THEME_GLASS.TREE_BG}`}>
-        {presetCategories.length === 0 && (
-          <div className={`flex flex-col items-center justify-center gap-1 py-10 text-center select-none ${THEME_GLASS.TEXT_MUTED}`}>
-            <Search size={20} className="opacity-50" />
-            <span className="text-xs">No equations match “{searchQuery.trim()}”.</span>
-          </div>
-        )}
-        {presetCategories.map((group) => {
-          // While searching, every matching category is open so results are
-          // visible without manual expansion.
-          const isExpanded = isSearching || !!expandedCategories[group.category];
-          const example = CATEGORY_EXAMPLES[group.category];
-          // Category header — hovering previews a typical equation from the
-          // section (raw syntax, so it doubles as an input-syntax hint, #245).
-          const categoryHeader = (
-              <button
+      <RovingTabindexProvider>
+        <div id="library-region" className={`flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 ${THEME_GLASS.TREE_BG}`}>
+          {presetCategories.length === 0 && (
+            <div className={`flex flex-col items-center justify-center gap-1 py-10 text-center select-none ${THEME_GLASS.TEXT_MUTED}`}>
+              <Search size={20} className="opacity-50" />
+              <span className="text-xs">No equations match “{searchQuery.trim()}”.</span>
+            </div>
+          )}
+          {presetCategories.map((group) => {
+            // While searching, every matching category is open so results are
+            // visible without manual expansion.
+            const isExpanded = isSearching || !!expandedCategories[group.category];
+            const example = CATEGORY_EXAMPLES[group.category];
+            // Category header — hovering previews a typical equation from the
+            // section (raw syntax, so it doubles as an input-syntax hint, #245).
+            const categoryHeader = (
+              <RovingLibraryButton
+                itemKey={`cat-${group.category}`}
                 onClick={() => toggleCategory(group.category)}
                 className={`w-full flex items-center justify-between py-2 px-3 text-xs font-bold tracking-wider ${THEME_GLASS.CATEGORY_HEADER}`}
               >
@@ -523,63 +576,65 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
                 <span className={`text-[0.5625rem] font-sans font-semibold px-2 py-0.5 group-hover:text-white ${THEME_GLASS.BADGE_MUTED}`}>
                   {group.presets.length}
                 </span>
-              </button>
-          );
-          return (
-            <div key={group.category} className="flex flex-col gap-1.5 mb-1.5 shrink-0">
-              {/* Category Header */}
-              {example ? (
-                <Tooltip
-                  content={<span>e.g. <span className="font-mono">{example}</span></span>}
-                  position="right"
-                  autoAlign={false}
-                  wrapperClassName="w-full"
-                >
-                  {categoryHeader}
-                </Tooltip>
-              ) : categoryHeader}
+              </RovingLibraryButton>
+            );
+            return (
+              <div key={group.category} className="flex flex-col gap-1.5 mb-1.5 shrink-0">
+                {/* Category Header */}
+                {example ? (
+                  <Tooltip
+                    content={<span>e.g. <span className="font-mono">{example}</span></span>}
+                    position="right"
+                    autoAlign={false}
+                    wrapperClassName="w-full"
+                  >
+                    {categoryHeader}
+                  </Tooltip>
+                ) : categoryHeader}
 
-              {/* Category Items (Collapsible) */}
-              {isExpanded && (
-                <div className={`flex flex-col gap-2 pl-2 border-l ${THEME_GLASS.PANEL_BORDER_SUBTLE} ml-3 mt-1.5 animate-[fadeIn_0.2s_ease-out]`}>
-                  {group.presets.map((preset) => (
-                    <Tooltip
-                      key={preset.id}
-                      className="max-w-[min(92vw,40rem)]"
-                      content={(
-                        <TooltipCard
-                          eyebrow={group.category}
-                          title={preset.label}
-                          description={preset.description}
-                          equation={parsedPresets[preset.id]}
-                          rawEquation={preset.equation}
-                        />
-                      )}
-                    >
-                      <button
-                        onClick={() => handlePresetSelect(preset.equation, preset.label)}
-                        className={`w-full flex items-center justify-between text-left p-2.5 pl-3 shrink-0 ${THEME_GLASS.CATEGORY_ITEM}`}
+                {/* Category Items (Collapsible) */}
+                {isExpanded && (
+                  <div className={`flex flex-col gap-2 pl-2 border-l ${THEME_GLASS.PANEL_BORDER_SUBTLE} ml-3 mt-1.5 animate-[fadeIn_0.2s_ease-out]`}>
+                    {group.presets.map((preset) => (
+                      <Tooltip
+                        key={preset.id}
+                        className="max-w-[min(92vw,40rem)]"
+                        content={(
+                          <TooltipCard
+                            eyebrow={group.category}
+                            title={preset.label}
+                            description={preset.description}
+                            equation={parsedPresets[preset.id]}
+                            rawEquation={preset.equation}
+                          />
+                        )}
                       >
-                        <div className="flex-1 min-w-0 pr-2">
-                          <div className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">
-                            {preset.label}
+                        <RovingLibraryButton
+                          itemKey={`preset-${preset.id}`}
+                          onClick={() => handlePresetSelect(preset.equation, preset.label)}
+                          className={`w-full flex items-center justify-between text-left p-2.5 pl-3 shrink-0 ${THEME_GLASS.CATEGORY_ITEM}`}
+                        >
+                          <div className="flex-1 min-w-0 pr-2">
+                            <div className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">
+                              {preset.label}
+                            </div>
+                            <div className="text-xs font-mono text-zinc-500 group-hover:text-indigo-200/80 transition-colors mt-0.5 truncate">
+                              {preset.equation}
+                            </div>
                           </div>
-                          <div className="text-xs font-mono text-zinc-500 group-hover:text-indigo-200/80 transition-colors mt-0.5 truncate">
-                            {preset.equation}
+                          <div className={THEME_GLASS.ACCENT_PLAY}>
+                            <Play size={10} />
                           </div>
-                        </div>
-                        <div className={THEME_GLASS.ACCENT_PLAY}>
-                          <Play size={10} />
-                        </div>
-                      </button>
-                    </Tooltip>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                        </RovingLibraryButton>
+                      </Tooltip>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </RovingTabindexProvider>
     </div>
   );
 };

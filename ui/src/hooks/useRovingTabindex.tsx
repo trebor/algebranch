@@ -343,11 +343,12 @@ interface RovingItem {
 }
 
 export function useRovingItem(key: string, opts?: { primary?: boolean }): RovingItem {
-  const ctx = useRovingContext();
+  const ctx = React.useContext(RovingContext);
   const primary = opts?.primary;
 
   const ref = React.useCallback(
     (el: HTMLElement | null) => {
+      if (!ctx) return;
       if (el) ctx.registerItem(key, el, { primary });
       else ctx.unregisterItem(key);
     },
@@ -356,6 +357,7 @@ export function useRovingItem(key: string, opts?: { primary?: boolean }): Roving
 
   const onKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
+      if (!ctx) return;
       switch (e.key) {
         case 'ArrowRight':
           e.preventDefault();
@@ -373,11 +375,19 @@ export function useRovingItem(key: string, opts?: { primary?: boolean }): Roving
           e.preventDefault();
           ctx.moveFocus('last');
           break;
-        // Tab / Shift+Tab deliberately fall through — the widget is not a trap.
       }
     },
     [ctx],
   );
+
+  if (!ctx) {
+    return {
+      ref: () => {},
+      tabIndex: 0,
+      isActive: false,
+      onKeyDown: () => {},
+    };
+  }
 
   return {
     ref,

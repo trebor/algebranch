@@ -42,6 +42,22 @@ describe('SkipLinks', () => {
     expect(document.getElementById('history-region')).toHaveFocus();
   });
 
+  it('focuses the active roving item inside the target region rather than the region wrapper itself', () => {
+    const store = createStore();
+    render(
+      <Provider store={store}>
+        <SkipLinks />
+        <div id="equation-region" tabIndex={-1}>
+          <button>not active</button>
+          <div id="active-math-term" tabIndex={0}>active term</div>
+        </div>
+      </Provider>
+    );
+
+    fireEvent.click(screen.getByRole('link', { name: /skip to equation/i }));
+    expect(document.getElementById('active-math-term')).toHaveFocus();
+  });
+
   it('groups both links in a single labeled nav so a focused link reveals the whole set (#272)', () => {
     renderWithTargets();
     const nav = screen.getByRole('navigation', { name: /skip links/i });

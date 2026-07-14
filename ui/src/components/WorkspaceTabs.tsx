@@ -143,6 +143,8 @@ const TabChip: React.FC<TabChipProps> = ({
         ? {}
         : {
             role: 'tab',
+            id: `tab-${tab.id}`,
+            'aria-controls': 'equation-region',
             tabIndex,
             'aria-label': `Workspace: ${tab.name}`,
             // Workspaces are mutually exclusive tabs, so the active one is the

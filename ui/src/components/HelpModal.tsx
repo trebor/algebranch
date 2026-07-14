@@ -195,7 +195,9 @@ export const HelpModal: React.FC = () => {
                   crawlable `/<slug>`; the privacy pages navigate to their route. */}
               {NAV_SECTIONS.map((section) => (
                 <div key={section.label} className="flex flex-col gap-2">
-                  <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-zinc-500 select-none">
+                  <span
+                    className={`text-xs font-semibold uppercase tracking-wider ${THEME_GLASS.TEXT_MUTED} select-none`}
+                  >
                     {section.label}
                   </span>
                   <div className="flex flex-col gap-3">

@@ -36,6 +36,14 @@ const BUDGET_TTL_SECONDS = 2 * 24 * 60 * 60;
 export interface CloudflareKvWriteBudgetConfig extends CloudflareKvConfig {
   /** Max creates per UTC day; defaults to {@link DEFAULT_DAILY_WRITE_BUDGET}. */
   dailyCap?: number;
+  /**
+   * Prefix for the day-counter key; defaults to `budget:` (the share budget). A
+   * second, independent budget (e.g. feedback, #519) sharing the same namespace
+   * passes its own prefix so the two counters never conflate — a feedback storm
+   * must not report the share limit as reached, and vice versa. The prefix must
+   * not collide with a 14-char base62 share id, so it contains a colon.
+   */
+  keyPrefix?: string;
   /** Injectable clock for tests; defaults to `() => new Date()`. */
   now?: () => Date;
 }
@@ -45,18 +53,20 @@ export class CloudflareKvWriteBudget implements WriteBudget {
   private readonly authHeader: string;
   private readonly valueUrl: (key: string) => string;
   private readonly fetchImpl: typeof fetch;
+  private readonly keyPrefix: string;
   private readonly now: () => Date;
 
   constructor(config: CloudflareKvWriteBudgetConfig) {
     ({ authHeader: this.authHeader, valueUrl: this.valueUrl } = kvValuesApi(config));
     this.fetchImpl = config.fetchImpl ?? fetch;
     this.dailyCap = config.dailyCap ?? DEFAULT_DAILY_WRITE_BUDGET;
+    this.keyPrefix = config.keyPrefix ?? 'budget:';
     this.now = config.now ?? (() => new Date());
   }
 
   /** The counter key for the current UTC day, e.g. `budget:2026-07-13`. */
   private counterKey(): string {
-    return `budget:${this.now().toISOString().slice(0, 10)}`;
+    return `${this.keyPrefix}${this.now().toISOString().slice(0, 10)}`;
   }
 
   async consume(): Promise<boolean> {
@@ -91,23 +101,50 @@ export class CloudflareKvWriteBudget implements WriteBudget {
 }
 
 /**
- * Build a {@link CloudflareKvWriteBudget} from environment variables: the same
- * three Cloudflare credentials as the store, plus the optional
- * `SHARE_DAILY_WRITE_BUDGET` dial (a positive integer). A malformed dial throws
- * rather than silently falling back — a mistyped cap on launch day must fail
- * loudly, not quietly run with the default.
+ * Default daily cap on feedback writes (#519). Feedback shares the KV namespace —
+ * and thus the same daily KV write quota — with short links, so this default is
+ * deliberately lower than the share cap: honest feedback volume is a small
+ * fraction of share volume, and a runaway here must not eat the share budget's
+ * headroom. Overridable per deploy via `FEEDBACK_DAILY_WRITE_BUDGET`.
+ */
+export const DEFAULT_FEEDBACK_DAILY_WRITE_BUDGET = 1000;
+
+/** Parse a positive-integer dial from `env`, throwing loudly if malformed. */
+function parseDial(env: Record<string, string | undefined>, name: string): number | undefined {
+  const dial = env[name];
+  if (dial === undefined) return undefined;
+  if (!/^[1-9][0-9]*$/.test(dial)) {
+    throw new Error(`${name} must be a positive integer, got: ${dial}`);
+  }
+  return Number.parseInt(dial, 10);
+}
+
+/**
+ * Build the share create budget from environment variables: the same three
+ * Cloudflare credentials as the store, plus the optional `SHARE_DAILY_WRITE_BUDGET`
+ * dial (a positive integer). A malformed dial throws rather than silently falling
+ * back — a mistyped cap on launch day must fail loudly, not quietly run with the
+ * default. Uses the default `budget:` counter prefix.
  */
 export function cloudflareKvWriteBudgetFromEnv(
   env: Record<string, string | undefined> = process.env,
 ): CloudflareKvWriteBudget {
   const config = cloudflareKvConfigFromEnv(env);
-  const dial = env.SHARE_DAILY_WRITE_BUDGET;
-  let dailyCap: number | undefined;
-  if (dial !== undefined) {
-    if (!/^[1-9][0-9]*$/.test(dial)) {
-      throw new Error(`SHARE_DAILY_WRITE_BUDGET must be a positive integer, got: ${dial}`);
-    }
-    dailyCap = Number.parseInt(dial, 10);
-  }
-  return new CloudflareKvWriteBudget({ ...config, dailyCap });
+  return new CloudflareKvWriteBudget({ ...config, dailyCap: parseDial(env, 'SHARE_DAILY_WRITE_BUDGET') });
+}
+
+/**
+ * Build the feedback write budget (#519): same credentials/namespace, its own
+ * `feedback-budget:` counter prefix so it is independent of the share budget, and
+ * the optional `FEEDBACK_DAILY_WRITE_BUDGET` dial.
+ */
+export function cloudflareKvFeedbackBudgetFromEnv(
+  env: Record<string, string | undefined> = process.env,
+): CloudflareKvWriteBudget {
+  const config = cloudflareKvConfigFromEnv(env);
+  return new CloudflareKvWriteBudget({
+    ...config,
+    keyPrefix: 'feedback-budget:',
+    dailyCap: parseDial(env, 'FEEDBACK_DAILY_WRITE_BUDGET') ?? DEFAULT_FEEDBACK_DAILY_WRITE_BUDGET,
+  });
 }

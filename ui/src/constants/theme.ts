@@ -161,6 +161,12 @@ export const THEME_GLASS = {
 
   TOOLTIP_DETAILS: 'bg-neutral-950/98 shadow-[0_0_30px_rgba(99,102,241,0.25)] border border-indigo-500/20',
 
+  // Standard indigo glow for a modal panel — layered over PANEL so the dialog
+  // keeps its lighter `#110f22` background (and its dark input wells stay
+  // legible) rather than the near-black of TOOLTIP_DETAILS. Matches the inline
+  // shadow the other modals (About, Export, Docs) already use.
+  MODAL_GLOW: 'shadow-[0_0_50px_rgba(99,102,241,0.15)]',
+
   // --- Unified tooltip card (workspaces, tabs, library, history) ---
   TOOLTIP_EYEBROW: 'text-xs text-indigo-400 font-bold tracking-wider select-none',
   TOOLTIP_TITLE: 'text-xs font-bold text-white break-words',

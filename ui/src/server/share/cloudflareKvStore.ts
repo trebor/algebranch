@@ -36,11 +36,15 @@ export interface CloudflareKvConfig {
 export function kvValuesApi({ accountId, namespaceId, apiToken }: CloudflareKvConfig): {
   authHeader: string;
   valueUrl: (key: string) => string;
+  keysUrl: (query?: string) => string;
 } {
   const baseUrl = `${KV_API_ROOT}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}`;
   return {
     authHeader: `Bearer ${apiToken}`,
     valueUrl: (key) => `${baseUrl}/values/${encodeURIComponent(key)}`,
+    // The metadata endpoint that lists key *names* (not values) under a prefix —
+    // used by the feedback admin read (#519); shares/budget never call it.
+    keysUrl: (query = '') => `${baseUrl}/keys${query ? `?${query}` : ''}`,
   };
 }
 

@@ -15,6 +15,9 @@ describe('help doc bodies (#514)', () => {
   it('exposes exactly the content docs, excluding the index hub', () => {
     expect(HELP_DOC_SLUGS).toEqual(['user-guide', 'scope', 'features', 'faq']);
     expect(HELP_DOC_SLUGS).not.toContain('docs');
+    // Policy docs (Privacy for Schools) open as full routes, not in the read-only
+    // modal, so they are excluded from the modal set (#520).
+    expect(HELP_DOC_SLUGS).not.toContain('school-privacy');
   });
 
   it('loads non-empty, chrome-stripped markdown for every help doc', () => {

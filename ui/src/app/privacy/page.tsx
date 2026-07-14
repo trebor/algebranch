@@ -4,9 +4,11 @@
 'use client';
 
 import { useSetAtom } from 'jotai';
+import Link from 'next/link';
 import { THEME_GLASS } from '../../constants/theme';
 import { consentAtom } from '../../store/consent';
 import { BackToWorkspaceLink } from '../../components/BackToWorkspaceLink';
+import { DocsCrossNav } from '../../components/DocsNav';
 
 export default function PrivacyPage() {
   const setConsent = useSetAtom(consentAtom);
@@ -32,6 +34,13 @@ export default function PrivacyPage() {
               </h2>
               <p>
                 This policy describes how Algebranch handles your data. By default we see only cookieless, aggregate traffic counts that cannot identify you; anonymous usage analytics run only if you explicitly opt in.
+              </p>
+              <p>
+                Using Algebranch with a class? See{' '}
+                <Link href="/school-privacy" className={THEME_GLASS.LINK}>
+                  Privacy for Schools
+                </Link>{' '}
+                for the COPPA and FERPA posture a district review will ask about.
               </p>
             </section>
 
@@ -134,6 +143,8 @@ export default function PrivacyPage() {
                 .
               </p>
             </section>
+
+            <DocsCrossNav currentPath="/privacy" />
           </div>
         </div>
       </div>

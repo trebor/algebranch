@@ -4,60 +4,97 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, HelpCircle, ArrowRight, BookOpen, Keyboard, Info, Github } from 'lucide-react';
+import {
+  X,
+  HelpCircle,
+  ArrowRight,
+  BookOpen,
+  BookText,
+  Keyboard,
+  Info,
+  Github,
+  ShieldCheck,
+  GraduationCap,
+} from 'lucide-react';
 import { helpModalOpenAtom, shortcutsOverlayOpenAtom, activeHelpDocAtom } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { GITHUB_REPO_URL } from '../constants/about';
 import { trackEvent } from '../utils/analytics';
-import { HELP_DOC_SLUGS, DOC_BY_SLUG } from '../constants/docsPages';
+import { NAV_SECTIONS, type NavEntry } from '../constants/docsPages';
 
-// Menu-local presentation for each doc card: the icon, a short launcher blurb,
-// and the analytics action. Everything a reader compares against /docs — the set
-// of docs, their order, and their titles — is derived from DOCS_PAGES below, so
-// the launcher can't drift from the routes (it used to invent "Mathematical
-// Scope" / "FAQ Reference" in its own order). A doc without an entry here still
-// appears, falling back to its route icon and description.
+// Menu-local presentation for each nav entry: the icon, a short launcher blurb,
+// and the analytics action, keyed by route href. Everything a reader compares
+// against /docs — the set of pages, their grouping, order, and titles — comes
+// from NAV_SECTIONS, so the launcher can't drift from the routes (it used to
+// invent "Mathematical Scope" / "FAQ Reference" in its own order). An entry
+// without a blurb here still appears, falling back to its route description.
 const CARD_META: Record<string, { icon: typeof BookOpen; description: string; action: string }> = {
-  'user-guide': {
+  '/user-guide': {
     icon: BookOpen,
     description: 'Interaction model, transposing, simplify handles, and global operations.',
     action: 'help_read_user_guide',
   },
-  scope: {
+  '/scope': {
     icon: Info,
     description: 'What algebraic operations, presets, and functions Algebranch supports.',
     action: 'help_read_scope',
   },
-  features: {
+  '/features': {
     icon: BookOpen,
     description: 'Full index of every algebraic transform, setting, and global operation.',
     action: 'help_read_features',
   },
-  faq: {
+  '/faq': {
     icon: HelpCircle,
     description: 'Common questions about blocked moves, root branching, and privacy.',
     action: 'help_read_faq',
   },
+  '/privacy': {
+    icon: ShieldCheck,
+    description: 'What we collect, cookieless analytics, consent, and unreadable share links.',
+    action: 'help_open_privacy',
+  },
+  '/school-privacy': {
+    icon: GraduationCap,
+    description: 'For teachers and districts: the COPPA and FERPA posture, no accounts, no records.',
+    action: 'help_open_school_privacy',
+  },
 };
 
-// The doc launcher cards, in the same set/order/titles as /docs and the routes.
-// Each opens its guide in the in-app DocModal (#514); the slug is the crawlable
-// `/<slug>` route the modal syncs the URL to.
-const DOC_CARDS: { slug: string; icon: typeof BookOpen; title: string; description: string; action: string }[] =
-  HELP_DOC_SLUGS.map((slug) => {
-    const meta = DOC_BY_SLUG[slug];
-    const card = CARD_META[slug];
-    return {
-      slug,
-      title: meta.title,
-      icon: card?.icon ?? BookOpen,
-      description: card?.description ?? meta.description,
-      action: card?.action ?? `help_read_${slug.replace(/-/g, '_')}`,
-    };
-  });
+const actionFor = (entry: NavEntry): string =>
+  CARD_META[entry.href]?.action ??
+  `help_open_${entry.href.replace(/^\//, '').replace(/-/g, '_')}`;
+
+const CARD_CLASS =
+  'flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 text-zinc-300 hover:text-white transition-all group cursor-pointer text-left';
+
+// The icon + title + blurb shared by both card shapes (a modal-opening button and
+// a route-navigating link), so the two render identically.
+const CardInner: React.FC<{ entry: NavEntry }> = ({ entry }) => {
+  const Icon = CARD_META[entry.href]?.icon ?? BookOpen;
+  const description = CARD_META[entry.href]?.description ?? entry.description;
+  return (
+    <>
+      <div className="flex items-center gap-3.5">
+        <Icon size={18} className="text-indigo-400 shrink-0" />
+        <div className="flex flex-col text-left">
+          <span className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">
+            {entry.title}
+          </span>
+          <span className="text-xs text-zinc-400 mt-0.5">{description}</span>
+        </div>
+      </div>
+      <ArrowRight
+        size={14}
+        className="text-zinc-500 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-3"
+      />
+    </>
+  );
+};
 
 export const HelpModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(helpModalOpenAtom);
@@ -83,6 +120,14 @@ export const HelpModal: React.FC = () => {
   const handleOpenDoc = (slug: string, action: string) => {
     setIsOpen(false);
     setActiveHelpDoc(slug);
+    trackEvent({ action, category: 'help' });
+  };
+
+  // Route entries (the privacy pages, one of them interactive) are full pages, so
+  // they navigate rather than opening the read-only doc modal. Close the launcher
+  // and let the Link perform the navigation.
+  const handleNavigate = (action: string) => {
+    setIsOpen(false);
     trackEvent({ action, category: 'help' });
   };
 
@@ -139,32 +184,47 @@ export const HelpModal: React.FC = () => {
                 <div className="flex flex-col gap-0.5">
                   <span className="font-bold text-zinc-200">Documentation</span>
                   <span className="text-zinc-400">
-                    Our detailed guides live on algebranch.org, rendered from the version-controlled source. Select a guide below to open it here:
+                    Our guides and privacy documents live on algebranch.org, rendered from the version-controlled source. Guides open here; the privacy pages open in full:
                   </span>
                 </div>
               </div>
 
-              {/* Resource Cards — open the guide in the in-app DocModal (#514),
-                  which syncs the URL to the crawlable `/<slug>` in place. */}
-              <div className="flex flex-col gap-3">
-                {DOC_CARDS.map(({ slug, icon: Icon, title, description, action }) => (
-                  <button
-                    key={slug}
-                    type="button"
-                    onClick={() => handleOpenDoc(slug, action)}
-                    className="flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 text-zinc-300 hover:text-white transition-all group cursor-pointer text-left"
+              {/* Resource cards, grouped exactly as /docs and the page footers are
+                  (Guides / Privacy & Trust) from the one NAV_SECTIONS registry.
+                  Guides open in the in-app DocModal (#514), syncing the URL to the
+                  crawlable `/<slug>`; the privacy pages navigate to their route. */}
+              {NAV_SECTIONS.map((section) => (
+                <div key={section.label} className="flex flex-col gap-2">
+                  <span
+                    className={`text-xs font-semibold uppercase tracking-wider ${THEME_GLASS.TEXT_MUTED} select-none`}
                   >
-                    <div className="flex items-center gap-3.5">
-                      <Icon size={18} className="text-indigo-400 shrink-0" />
-                      <div className="flex flex-col text-left">
-                        <span className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">{title}</span>
-                        <span className="text-xs text-zinc-400 mt-0.5">{description}</span>
-                      </div>
-                    </div>
-                    <ArrowRight size={14} className="text-zinc-500 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-3" />
-                  </button>
-                ))}
-              </div>
+                    {section.label}
+                  </span>
+                  <div className="flex flex-col gap-3">
+                    {section.entries.map((entry) =>
+                      entry.open === 'modal' && entry.slug ? (
+                        <button
+                          key={entry.href}
+                          type="button"
+                          onClick={() => handleOpenDoc(entry.slug as string, actionFor(entry))}
+                          className={CARD_CLASS}
+                        >
+                          <CardInner entry={entry} />
+                        </button>
+                      ) : (
+                        <Link
+                          key={entry.href}
+                          href={entry.href}
+                          onClick={() => handleNavigate(actionFor(entry))}
+                          className={CARD_CLASS}
+                        >
+                          <CardInner entry={entry} />
+                        </Link>
+                      ),
+                    )}
+                  </div>
+                </div>
+              ))}
 
               {/* Keyboard Shortcuts Prompt */}
               <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/5 border border-white/5 text-xs select-none">
@@ -183,19 +243,29 @@ export const HelpModal: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className={`flex justify-between items-center mt-5 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} pt-4 select-none shrink-0`}>
-              <a
-                href={GITHUB_REPO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${THEME_GLASS.LINK} flex items-center gap-1.5`}
-              >
-                <Github size={14} className="shrink-0" />
-                GitHub Repository
-              </a>
+            <div className={`flex justify-between items-center gap-3 mt-5 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} pt-4 select-none shrink-0`}>
+              <div className="flex items-center gap-4 min-w-0">
+                <Link
+                  href="/docs"
+                  onClick={() => handleNavigate('help_open_docs_index')}
+                  className={`${THEME_GLASS.LINK} flex items-center gap-1.5`}
+                >
+                  <BookText size={14} className="shrink-0" />
+                  All documentation
+                </Link>
+                <a
+                  href={GITHUB_REPO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${THEME_GLASS.LINK} flex items-center gap-1.5`}
+                >
+                  <Github size={14} className="shrink-0" />
+                  GitHub
+                </a>
+              </div>
               <button
                 onClick={handleClose}
-                className={`px-4 py-2 text-xs font-semibold ${THEME_GLASS.BUTTON_SECONDARY}`}
+                className={`px-4 py-2 text-xs font-semibold ${THEME_GLASS.BUTTON_SECONDARY} shrink-0`}
               >
                 Close
               </button>

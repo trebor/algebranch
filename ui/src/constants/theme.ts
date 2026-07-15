@@ -509,6 +509,10 @@ export const THEME_GLASS = {
     'rounded-md bg-white/[0.06] border border-white/10 hover:bg-indigo-600/25 hover:border-indigo-400/50 focus-visible:bg-indigo-600/25 focus-visible:border-indigo-400/60 transition-colors',
   // Trailing "apply" arrow: muted at rest, brightens with its row.
   CHOOSER_OPTION_ARROW: 'text-white/35 group-hover:text-indigo-200 group-focus-visible:text-indigo-200 transition-colors',
+  // Info bubble button for learning more about an operation (#119).
+  CHOOSER_OPTION_INFO_BTN:
+    'p-1.5 rounded-md text-white/35 hover:text-white/80 hover:bg-white/5 focus-visible:text-white/80 focus-visible:bg-white/10 outline-none focus-visible:ring-1 focus-visible:ring-indigo-400 transition-all cursor-pointer shrink-0',
+  CHOOSER_OPTION_INFO_ICON: 'shrink-0',
 
   // --- RadialMenu specific ---
   RADIAL_CENTER: 'w-14 h-14 rounded-full bg-indigo-600/30 border-2 border-indigo-400/50 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)] pointer-events-auto cursor-pointer select-none z-10',

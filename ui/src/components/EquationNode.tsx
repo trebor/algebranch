@@ -34,12 +34,13 @@ import {
 } from '../store/equation';
 import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, symbolHintFor, isImaginaryUnit } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
+import { getReferenceUrl } from '../constants/referenceLinks';
 import { useOptionalRovingTabindex, nearestAncestorKey, nearestDescendantKey } from '../hooks/useRovingTabindex';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech, flattenAssociativeChain } from 'math-engine-client';
-import type { SubstitutionOption } from 'math-engine';
+import type { SubstitutionOption, StepChange } from 'math-engine';
 import { describeTransposition, describeMove, describeReduction, describeSubstitution, describeCollapse, precedenceOf, PREC } from 'math-engine';
 import type { ReductionOption } from 'math-engine';
-import { ArrowLeftRight, Zap, UnfoldHorizontal, FoldHorizontal, RefreshCw, Replace, TriangleAlert, ArrowRight } from 'lucide-react';
+import { ArrowLeftRight, Zap, UnfoldHorizontal, FoldHorizontal, RefreshCw, Replace, TriangleAlert, ArrowRight, Info } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { PreviewEquationNode } from './PreviewEquationNode';
 import { PreviewDiffProvider } from './EquationPreviewDiffContext';
@@ -67,6 +68,7 @@ interface UnifiedStackOption {
    *  ⚠ caveat on the handle/menu so the student sees it before applying (#59). */
   assumptions?: readonly string[];
   onApply: () => void;
+  change?: StepChange;
 }
 
 // Floor below which an equation preview stops shrinking and scrolls instead, so a
@@ -425,10 +427,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // yanked in. menuOpenedViaKeyboardRef records which path opened it; menuTriggerElRef is
   // the handle to restore focus to; menuOptionRefs is the ordered option registry.
   const [menuActiveIndex, setMenuActiveIndex] = React.useState(0);
+  const [menuActivePart, setMenuActivePart] = React.useState<'row' | 'info'>('row');
   const menuOpenedViaKeyboardRef = React.useRef(false);
   const menuTriggerElRef = React.useRef<HTMLElement | null>(null);
   const menuContainerRef = React.useRef<HTMLDivElement | null>(null);
   const menuOptionRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
+  const menuInfoRefs = React.useRef<(HTMLAnchorElement | null)[]>([]);
 
   const closeMenu = React.useCallback(() => {
     setOpenMenuType(null);
@@ -455,49 +459,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     trigger?.focus();
   }, [closeMenu]);
 
-  // Roving within the open menu. Reads the live focus position from the option
-  // registry (so it's immune to stale state) and wraps at both ends.
-  const moveMenuFocus = React.useCallback((dir: 'next' | 'prev' | 'first' | 'last') => {
-    const els = menuOptionRefs.current.filter((el): el is HTMLButtonElement => !!el);
-    if (els.length === 0) return;
-    const cur = els.indexOf(document.activeElement as HTMLButtonElement);
-    let next: number;
-    if (dir === 'first') next = 0;
-    else if (dir === 'last') next = els.length - 1;
-    else if (dir === 'next') next = cur < 0 ? 0 : (cur + 1) % els.length;
-    else next = cur < 0 ? els.length - 1 : (cur - 1 + els.length) % els.length;
-    els[next]?.focus();
-    setMenuActiveIndex(next);
-  }, []);
 
-  const handleMenuKeyDown = React.useCallback(
-    (e: React.KeyboardEvent) => {
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault(); e.stopPropagation(); moveMenuFocus('next');
-          break;
-        case 'ArrowUp':
-          e.preventDefault(); e.stopPropagation(); moveMenuFocus('prev');
-          break;
-        case 'Home':
-          e.preventDefault(); e.stopPropagation(); moveMenuFocus('first');
-          break;
-        case 'End':
-          e.preventDefault(); e.stopPropagation(); moveMenuFocus('last');
-          break;
-        case 'Tab':
-          // Focus wraps within the open popover (modal-style transient menu, as
-          // scoped in #257) — Escape / outside-click remain the clean exits.
-          e.preventDefault(); e.stopPropagation();
-          moveMenuFocus(e.shiftKey ? 'prev' : 'next');
-          break;
-        case 'Escape':
-          e.preventDefault(); e.stopPropagation(); closeMenuAndRestoreFocus();
-          break;
-      }
-    },
-    [moveMenuFocus, closeMenuAndRestoreFocus],
-  );
 
   // Keyboard-opened menus move focus to the first option once the portal commits;
   // pointer-opened (click/tap) menus leave focus on the page (no yank for a pointer user).
@@ -534,6 +496,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       menuTriggerElRef.current = el;
       menuOpenedViaKeyboardRef.current = viaKeyboard;
       setMenuActiveIndex(0);
+      setMenuActivePart('row');
+      menuOptionRefs.current = [];
+      menuInfoRefs.current = [];
       const rect = el.getBoundingClientRect();
       const left = Math.max(
         MENU_HALF_WIDTH_PX + 8,
@@ -925,7 +890,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     // bubbles into the node's drag-nudge/peek arming, and a finger drifting on a
     // small handle crosses the drag threshold and selects the node underneath —
     // leaving it stuck-selected after the menu closes (#388).
-    if ((e.target as HTMLElement).closest?.('button')) {
+    if ((e.target as HTMLElement).closest?.('button, a')) {
       dragStartRef.current = null;
       clearPeekTimer();
       return;
@@ -1733,6 +1698,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         equation: action.equation,
         originalOption: action,
         assumptions: change.assumptions,
+        change,
         onApply: () => {
           const reductionLabel = action.label || defaultLabelFor(action.type);
           pushEquation(action.equation, reductionLabel, change);
@@ -1755,31 +1721,35 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
       }
     });
 
-    const substituteOptions: UnifiedStackOption[] = substitutions.map((sub, idx) => ({
-      id: `substitute-${idx}`,
-      label: sub.type === 'reverse'
-        ? `Collapse ${sub.replacement} → ${sub.variable}`
-        : `Substitute ${sub.variable} = ${sub.replacement}`,
-      subLabel: sub.fact.sourceName ? `from “${sub.fact.sourceName}”` : undefined,
-      equation: sub.substituted,
-      originalOption: sub,
-      onApply: () => {
-        pushEquation(
-          sub.substituted,
-          sub.type === 'reverse' ? 'Collapse' : 'Substitute',
-          sub.type === 'reverse'
-            ? describeCollapse(sub.replacement, sub.variable)
-            : describeSubstitution(sub.variable, sub.replacement),
-        );
-        trackEvent({
-          action: sub.type === 'reverse' ? 'apply_collapse' : 'apply_substitution',
-          category: 'math_interaction',
-          label: sub.type === 'reverse'
-            ? `${sub.replacement} -> ${sub.variable}`
-            : `${sub.variable} -> ${sub.replacement}`,
-        });
-      }
-    }));
+    const substituteOptions: UnifiedStackOption[] = substitutions.map((sub, idx) => {
+      const change = sub.type === 'reverse'
+        ? describeCollapse(sub.replacement, sub.variable)
+        : describeSubstitution(sub.variable, sub.replacement);
+      return {
+        id: `substitute-${idx}`,
+        label: sub.type === 'reverse'
+          ? `Collapse ${sub.replacement} → ${sub.variable}`
+          : `Substitute ${sub.variable} = ${sub.replacement}`,
+        subLabel: sub.fact.sourceName ? `from “${sub.fact.sourceName}”` : undefined,
+        equation: sub.substituted,
+        originalOption: sub,
+        change,
+        onApply: () => {
+          pushEquation(
+            sub.substituted,
+            sub.type === 'reverse' ? 'Collapse' : 'Substitute',
+            change,
+          );
+          trackEvent({
+            action: sub.type === 'reverse' ? 'apply_collapse' : 'apply_substitution',
+            category: 'math_interaction',
+            label: sub.type === 'reverse'
+              ? `${sub.replacement} -> ${sub.variable}`
+              : `${sub.variable} -> ${sub.replacement}`,
+          });
+        }
+      };
+    });
 
     // De-emphasize "Evaluate to Decimal" (#66): when the reduce stack is *only*
     // decimal evaluation, it competes with an exact-form move that lives in a
@@ -1815,6 +1785,103 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
 
     return stacks;
   }, [actions, substitutions, currentEq, path, pushEquation]);
+
+  // Roving within the open menu. Reads the live focus position from the option
+  // registry (so it's immune to stale state) and wraps at both ends.
+  const moveMenuFocus = React.useCallback((dir: 'next' | 'prev' | 'first' | 'last') => {
+    const els = menuOptionRefs.current.filter((el): el is HTMLButtonElement => !!el);
+    if (els.length === 0) return;
+    const cur = menuActiveIndex;
+    let next: number;
+    if (dir === 'first') next = 0;
+    else if (dir === 'last') next = els.length - 1;
+    else if (dir === 'next') next = (cur + 1) % els.length;
+    else next = (cur - 1 + els.length) % els.length;
+    
+    setMenuActivePart('row');
+    els[next]?.focus();
+    setMenuActiveIndex(next);
+  }, [menuActiveIndex]);
+
+  const handleMenuKeyDown = React.useCallback(
+    (e: React.KeyboardEvent) => {
+      const stack = interactionStacks.find((s) => s.type === openMenuType);
+      const opt = stack?.options[menuActiveIndex];
+      const refUrl = opt?.change ? getReferenceUrl(opt.change) : null;
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault(); e.stopPropagation(); moveMenuFocus('next');
+          break;
+        case 'ArrowUp':
+          e.preventDefault(); e.stopPropagation(); moveMenuFocus('prev');
+          break;
+        case 'Home':
+          e.preventDefault(); e.stopPropagation(); moveMenuFocus('first');
+          break;
+        case 'End':
+          e.preventDefault(); e.stopPropagation(); moveMenuFocus('last');
+          break;
+        case 'ArrowRight':
+          if (menuActivePart === 'row' && refUrl) {
+            e.preventDefault(); e.stopPropagation();
+            setMenuActivePart('info');
+            menuInfoRefs.current[menuActiveIndex]?.focus();
+          }
+          break;
+        case 'ArrowLeft':
+          if (menuActivePart === 'info') {
+            e.preventDefault(); e.stopPropagation();
+            setMenuActivePart('row');
+            menuOptionRefs.current[menuActiveIndex]?.focus();
+          }
+          break;
+        case 'Tab':
+          e.preventDefault(); e.stopPropagation();
+          if (e.shiftKey) {
+            if (menuActivePart === 'info') {
+              setMenuActivePart('row');
+              menuOptionRefs.current[menuActiveIndex]?.focus();
+            } else {
+              const els = menuOptionRefs.current.filter((el): el is HTMLButtonElement => !!el);
+              if (els.length > 0) {
+                const curIndex = menuActiveIndex;
+                const prevIndex = (curIndex - 1 + els.length) % els.length;
+                const prevOpt = stack?.options[prevIndex];
+                const prevRefUrl = prevOpt?.change ? getReferenceUrl(prevOpt.change) : null;
+                setMenuActiveIndex(prevIndex);
+                if (prevRefUrl) {
+                  setMenuActivePart('info');
+                  menuInfoRefs.current[prevIndex]?.focus();
+                } else {
+                  setMenuActivePart('row');
+                  menuOptionRefs.current[prevIndex]?.focus();
+                }
+              }
+            }
+          } else {
+            if (menuActivePart === 'row' && refUrl) {
+              setMenuActivePart('info');
+              menuInfoRefs.current[menuActiveIndex]?.focus();
+            } else {
+              const els = menuOptionRefs.current.filter((el): el is HTMLButtonElement => !!el);
+              if (els.length > 0) {
+                const curIndex = menuActiveIndex;
+                const nextIndex = (curIndex + 1) % els.length;
+                setMenuActiveIndex(nextIndex);
+                setMenuActivePart('row');
+                menuOptionRefs.current[nextIndex]?.focus();
+              }
+            }
+          }
+          break;
+        case 'Escape':
+          e.preventDefault(); e.stopPropagation(); closeMenuAndRestoreFocus();
+          break;
+      }
+    },
+    [moveMenuFocus, closeMenuAndRestoreFocus, openMenuType, interactionStacks, menuActiveIndex, menuActivePart],
+  );
 
   // All hooks above run unconditionally; only now is it safe to bail out if this
   // path no longer resolves to a node (the equation may have changed under us).
@@ -2282,63 +2349,86 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                 className="flex flex-col w-full gap-1"
                 onMouseLeave={() => setHoveredOption(null)}
               >
-                {stack.options.map((opt, i) => (
-                  <button
-                    key={i}
-                    role="menuitem"
-                    // The reveal (hover or hold) reads the row from these — see
-                    // revealOptionFrom, kept dataset-driven so its pointer handlers
-                    // stay stable/bare and out of react-hooks/refs' render scope.
-                    data-option-type={stack.type}
-                    data-option-index={i}
-                    data-reduce-index={stack.type !== 'substitute' ? actions.indexOf(opt.originalOption as ReducibleActionInfo) : -1}
-                    // Roving cursor within the menu (#257, PR D): exactly one option
-                    // is in the tab order; arrows move the active one. Focus is
-                    // managed imperatively, so the rest sit at tabIndex -1.
-                    ref={(el) => { menuOptionRefs.current[i] = el; }}
-                    tabIndex={i === menuActiveIndex ? 0 : -1}
-                    onKeyDown={handleMenuKeyDown}
-                    // `group` drives the trailing arrow's hover/focus brightening.
-                    className={`group w-full min-w-0 text-left px-2 py-1.5 flex items-center gap-2 cursor-pointer select-none ${THEME_GLASS.CHOOSER_OPTION_ROW}`}
-                    onMouseEnter={(e) => revealOptionFrom(e.currentTarget)}
-                    // Hold a row to read it (#457): reveals this row's preview in
-                    // the pane without applying. Same reveal a hover sets, so it
-                    // persists until another row is read or the menu closes.
-                    onPointerDown={handleOptionPointerDown}
-                    onPointerMove={handleOptionPointerMove}
-                    onPointerUp={clearOptionHoldTimer}
-                    onPointerCancel={clearOptionHoldTimer}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Swallow the trailing click a long-press read emits so the
-                      // read never doubles as an apply (#457); the preview stays up.
-                      if (swallowOptionClick) {
-                        setSwallowOptionClick(false);
-                        return;
-                      }
-                      opt.onApply();
-                      closeMenu();
-                    }}
-                  >
-                    <span className="flex flex-col gap-0.5 min-w-0 flex-1">
-                      <span className={`block truncate leading-snug ${optionLabelClass}`}>{opt.label}</span>
-                      {opt.subLabel && <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED}`}>{opt.subLabel}</span>}
-                      {opt.assumptions && opt.assumptions.length > 0 && (
-                        <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} mt-0.5`}>
-                          <TriangleAlert size={11} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
-                          <span>assuming {opt.assumptions.join(', ')}</span>
+                {stack.options.map((opt, i) => {
+                  const refUrl = opt.change ? getReferenceUrl(opt.change) : null;
+                  return (
+                    <div key={i} className="group/row relative w-full flex items-center">
+                      <button
+                        role="menuitem"
+                        // The reveal (hover or hold) reads the row from these — see
+                        // revealOptionFrom, kept dataset-driven so its pointer handlers
+                        // stay stable/bare and out of react-hooks/refs' render scope.
+                        data-option-type={stack.type}
+                        data-option-index={i}
+                        data-reduce-index={stack.type !== 'substitute' ? actions.indexOf(opt.originalOption as ReducibleActionInfo) : -1}
+                        // Roving cursor within the menu (#257, PR D): exactly one option
+                        // is in the tab order; arrows move the active one. Focus is
+                        // managed imperatively, so the rest sit at tabIndex -1.
+                        ref={(el) => { menuOptionRefs.current[i] = el; }}
+                        tabIndex={i === menuActiveIndex && menuActivePart === 'row' ? 0 : -1}
+                        onKeyDown={handleMenuKeyDown}
+                        // `group` drives the trailing arrow's hover/focus brightening.
+                        className={`group w-full min-w-0 text-left ${refUrl ? 'pl-2 pr-10' : 'px-2'} py-1.5 flex items-center gap-2 cursor-pointer select-none ${THEME_GLASS.CHOOSER_OPTION_ROW} group-hover/row:bg-indigo-600/25 group-hover/row:border-indigo-400/50`}
+                        onMouseEnter={(e) => revealOptionFrom(e.currentTarget)}
+                        // Hold a row to read it (#457): reveals this row's preview in
+                        // the pane without applying. Same reveal a hover sets, so it
+                        // persists until another row is read or the menu closes.
+                        onPointerDown={handleOptionPointerDown}
+                        onPointerMove={handleOptionPointerMove}
+                        onPointerUp={clearOptionHoldTimer}
+                        onPointerCancel={clearOptionHoldTimer}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Swallow the trailing click a long-press read emits so the
+                          // read never doubles as an apply (#457); the preview stays up.
+                          if (swallowOptionClick) {
+                            setSwallowOptionClick(false);
+                            return;
+                          }
+                          opt.onApply();
+                          closeMenu();
+                        }}
+                      >
+                        <span className="flex flex-col gap-0.5 min-w-0 flex-1">
+                          <span className={`block truncate leading-snug ${optionLabelClass}`}>{opt.label}</span>
+                          {opt.subLabel && <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED}`}>{opt.subLabel}</span>}
+                          {opt.assumptions && opt.assumptions.length > 0 && (
+                            <span className={`${THEME_GLASS.TOOLTIP_ASSUMPTION} mt-0.5`}>
+                              <TriangleAlert size={11} className={THEME_GLASS.TOOLTIP_ASSUMPTION_ICON} />
+                              <span>assuming {opt.assumptions.join(', ')}</span>
+                            </span>
+                          )}
                         </span>
+                        {/* Trailing "apply" cue — signals the row is a pressable action. */}
+                        <ArrowRight
+                          size={14}
+                          aria-hidden="true"
+                          data-testid="option-apply-cue"
+                          className={`shrink-0 ${THEME_GLASS.CHOOSER_OPTION_ARROW} group-hover/row:text-indigo-200`}
+                        />
+                      </button>
+                      {refUrl && (
+                        <Tooltip content="Learn more on Wikipedia" position="top">
+                          <a
+                            href={refUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Learn about ${opt.label}`}
+                            ref={(el) => { menuInfoRefs.current[i] = el; }}
+                            tabIndex={i === menuActiveIndex && menuActivePart === 'info' ? 0 : -1}
+                            onKeyDown={handleMenuKeyDown}
+                            className={`absolute right-1.5 top-1/2 -translate-y-1/2 z-10 ${THEME_GLASS.CHOOSER_OPTION_INFO_BTN}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            <Info size={14} className={THEME_GLASS.CHOOSER_OPTION_INFO_ICON} />
+                          </a>
+                        </Tooltip>
                       )}
-                    </span>
-                    {/* Trailing "apply" cue — signals the row is a pressable action. */}
-                    <ArrowRight
-                      size={14}
-                      aria-hidden="true"
-                      data-testid="option-apply-cue"
-                      className={`shrink-0 ${THEME_GLASS.CHOOSER_OPTION_ARROW}`}
-                    />
-                  </button>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
             );
             const previewEl = (
@@ -2409,6 +2499,8 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                   zIndex: 9999,
                 }}
                 className="relative flex flex-col items-stretch gap-1 py-1.5 px-1 min-w-[210px] max-w-[300px] sm:max-w-[360px] text-left rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md shadow-2xl shadow-[0_0_30px_rgba(129,140,248,0.45)] pointer-events-auto font-sans normal-case select-none"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
               >
                 {sections.map((section, idx) => (
                   <React.Fragment key={idx}>

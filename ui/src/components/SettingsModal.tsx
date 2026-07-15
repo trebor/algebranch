@@ -115,6 +115,19 @@ export const SettingsModal: React.FC = () => {
     });
   };
 
+  const handleToggleProgressiveMode = () => {
+    const newVal = !settings.progressiveMode;
+    setSettings((prev) => ({
+      ...prev,
+      progressiveMode: newVal,
+    }));
+    trackEvent({
+      action: 'toggle_progressive_mode',
+      category: 'settings',
+      label: newVal ? 'on' : 'off',
+    });
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -287,6 +300,35 @@ export const SettingsModal: React.FC = () => {
                   <span
                     className={`${THEME_GLASS.TOGGLE_KNOB} ${
                       settings.allowComplex ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className={THEME_GLASS.SETTING_ROW}>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold text-white">
+                    Progressive mode
+                  </span>
+                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                    Offer one small step at a time. Prevent collapsing large expressions until their inner parts are simplified.
+                  </span>
+                </div>
+
+                <button
+                  onClick={handleToggleProgressiveMode}
+                  className={`${THEME_GLASS.TOGGLE_TRACK} ${
+                    settings.progressiveMode
+                      ? THEME_GLASS.TOGGLE_TRACK_ON
+                      : THEME_GLASS.TOGGLE_TRACK_OFF
+                  }`}
+                  role="switch"
+                  aria-checked={settings.progressiveMode}
+                  aria-label="Toggle progressive simplification mode"
+                >
+                  <span
+                    className={`${THEME_GLASS.TOGGLE_KNOB} ${
+                      settings.progressiveMode ? 'translate-x-5' : 'translate-x-0'
                     }`}
                   />
                 </button>

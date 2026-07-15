@@ -1312,6 +1312,12 @@ export interface UserSettings {
    * tracked in #362.
    */
   allowComplex: boolean;
+  /**
+   * Progressive simplification mode (#368). If true, restricts reduction moves
+   * to be innermost-first. A reduce move is suppressed if there are any surviving
+   * reduce moves on descendant paths.
+   */
+  progressiveMode: boolean;
   seenEqualsHint: boolean;
   /**
    * Accessibility text-size knob (#239). Multiplies the root rem so all
@@ -1412,6 +1418,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   // explicit value via the `{ ...DEFAULT_SETTINGS, ...parsed }` load merge.
   allowEvaluateToDecimal: false,
   allowComplex: true,
+  progressiveMode: false,
   seenEqualsHint: false,
   chromeScale: CHROME_SCALE_DEFAULT,
   animationSpeed: ANIMATION_SPEED_DEFAULT,
@@ -1481,7 +1488,6 @@ export const filteredReduciblePathsAtom = atom<Record<string, ReducibleActionInf
   const suppressed = new Set<string>();
   if (!settings.allowEvaluateToDecimal) suppressed.add('Evaluate to Decimal');
   if (!settings.allowComplex) suppressed.add('Extend to ℂ');
-  if (suppressed.size === 0) return reduciblePaths;
 
   const filtered: Record<string, ReducibleActionInfo[]> = {};
   Object.keys(reduciblePaths).forEach((path) => {
@@ -1492,7 +1498,32 @@ export const filteredReduciblePathsAtom = atom<Record<string, ReducibleActionInf
       filtered[path] = filteredActions;
     }
   });
-  return filtered;
+
+  if (!settings.progressiveMode) {
+    return filtered;
+  }
+
+  const progressiveFiltered: Record<string, ReducibleActionInfo[]> = {};
+  const paths = Object.keys(filtered);
+
+  paths.forEach((path) => {
+    const hasReduceDescendant = paths.some((q) =>
+      q.startsWith(path + '/') && filtered[q].some((action) => action.type === 'reduce')
+    );
+
+    const progressiveActions = filtered[path].filter((action) => {
+      if (action.type === 'reduce') {
+        return !hasReduceDescendant;
+      }
+      return true;
+    });
+
+    if (progressiveActions.length > 0) {
+      progressiveFiltered[path] = progressiveActions;
+    }
+  });
+
+  return progressiveFiltered;
 });
 
 // Derived Atoms

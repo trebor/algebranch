@@ -113,6 +113,7 @@ The **Share** button sends your work at a chosen scope, as either a short link o
 
 ### Settings & Preferences
 *   **Disable "Evaluate to Decimal"**: Toggle off decimal approximations to keep fractions, roots, and irrationals in their exact symbolic forms.
+*   **Progressive mode**: Toggle on progressive simplification to restrict algebraic reductions to innermost sub-expressions first. When active, coarse root simplifications are suppressed until their nested components have been worked through step-by-step.
 *   **Interface text size**: Scale the app's interface text, including menus, labels, and buttons, across four steps from Default to Largest. The setting is independent of the equation canvas, which keeps fitting itself to the available space, and it persists in this browser. You can also cycle it from the keyboard with `T` and `Shift + T`.
 
 ### Keyboard Shortcuts

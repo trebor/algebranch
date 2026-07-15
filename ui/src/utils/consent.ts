@@ -8,6 +8,7 @@ export type ConsentState = 'unset' | 'granted' | 'denied';
 const STORAGE_KEY = 'algebranch_consent';
 
 interface WindowWithGtag {
+  dataLayer?: unknown[];
   gtag?: (command: string, action: string, params: Record<string, unknown>) => void;
 }
 
@@ -35,7 +36,14 @@ export const saveConsentToStorage = (state: ConsentState): void => {
 
 export const updateGtagConsent = (state: 'granted' | 'denied'): void => {
   const win = getWindow();
-  if (win && win.gtag) {
+  if (win) {
+    win.dataLayer = win.dataLayer || [];
+    if (!win.gtag) {
+      win.gtag = function () {
+        // eslint-disable-next-line prefer-rest-params
+        win.dataLayer?.push(arguments);
+      };
+    }
     win.gtag('consent', 'update', {
       analytics_storage: state,
       ad_storage: state,

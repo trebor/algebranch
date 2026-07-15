@@ -154,11 +154,18 @@ export default function RootLayout({
               {`
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
+                let consentState = 'denied';
+                try {
+                  const saved = localStorage.getItem('algebranch_consent');
+                  if (saved === 'granted') {
+                    consentState = 'granted';
+                  }
+                } catch (e) {}
                 gtag('consent', 'default', {
-                  'analytics_storage': 'denied',
-                  'ad_storage': 'denied',
-                  'ad_user_data': 'denied',
-                  'ad_personalization': 'denied'
+                  'analytics_storage': consentState,
+                  'ad_storage': consentState,
+                  'ad_user_data': consentState,
+                  'ad_personalization': consentState
                 });
                 gtag('js', new Date());
                 gtag('config', '${gaId}', {

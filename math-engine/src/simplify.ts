@@ -101,6 +101,13 @@ export const isConstantSubtree = (node: math.MathNode): boolean => {
 
 const mathFraction = fractionMath;
 
+// Snap a float to the nearest integer when it is within tolerance — folded
+// complex arithmetic on exact inputs lands on integers up to float noise.
+const snapReal = (x: number): number => {
+  const r = Math.round(x);
+  return Math.abs(x - r) < 1e-9 ? r : x;
+};
+
 /**
  * Checks if a mathematical node contains any constant node with a decimal point.
  */
@@ -121,7 +128,10 @@ const hasDecimalConstant = (node: math.MathNode): boolean => {
  * Evaluates a constant subtree to its simplified form, preserving fractions (e.g. 2/12 -> 1/6)
  * instead of converting to decimal float.
  */
-export const evaluateConstantSubtree = (node: math.MathNode): math.MathNode | null => {
+export const evaluateConstantSubtree = (
+  node: math.MathNode,
+  allowDecimal = true
+): math.MathNode | null => {
   if (node.type === 'ConstantNode') return null;
   if (!isConstantSubtree(node)) return null;
 
@@ -163,6 +173,10 @@ export const evaluateConstantSubtree = (node: math.MathNode): math.MathNode | nu
       }
     }
     if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
+      numVal = snapReal(numVal);
+      if (!allowDecimal && !Number.isInteger(numVal)) {
+        return null;
+      }
       return new mjs.ConstantNode(numVal);
     }
   } catch {
@@ -416,13 +430,6 @@ const countImaginaryUnits = (node: math.MathNode): number => {
   return n;
 };
 
-
-// Snap a float to the nearest integer when it is within tolerance — folded
-// complex arithmetic on exact inputs lands on integers up to float noise.
-const snapReal = (x: number): number => {
-  const r = Math.round(x);
-  return Math.abs(x - r) < 1e-9 ? r : x;
-};
 
 // Build the `b · ⅈ` factor for a positive coefficient, eliding the unit
 // coefficient (b === 1 → bare ⅈ).
@@ -1334,7 +1341,7 @@ const subtreeHasFinerSimplification = (eq: Equation, p: string): boolean => {
 
     // A constant subtree that folds to a different form (e.g. 2 * 3 -> 6).
     if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
-      const folded = evaluateConstantSubtree(node);
+      const folded = evaluateConstantSubtree(node, false);
       if (folded) {
         const clean = (s: string) => s.replace(/[\s()]/g, '');
         if (clean(folded.toString()) !== clean(node.toString())) return true;
@@ -1499,7 +1506,7 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
 
     // 1. Try constant folding first (non-constant subtrees composed entirely of constants)
     if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
-      const folded = evaluateConstantSubtree(node);
+      const folded = evaluateConstantSubtree(node, false);
       if (folded) {
         const clean = (str: string) => str.replace(/[\s()]/g, '');
         if (clean(folded.toString()) !== clean(node.toString())) {
@@ -1647,7 +1654,7 @@ export const autoSimplify = (eq: Equation): Equation => {
 
       // Try constant folding first
       if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
-        const folded = evaluateConstantSubtree(node);
+        const folded = evaluateConstantSubtree(node, false);
         if (folded) {
           const clean = (str: string) => str.replace(/[\s()]/g, '');
           if (clean(folded.toString()) !== clean(node.toString())) {
@@ -1749,6 +1756,27 @@ export const autoSimplify = (eq: Equation): Equation => {
         }
       }
       if (simplified) break;
+    }
+
+    if (simplified) continue;
+
+    // 3. Try decimal constant folding as a fallback ONLY when no exact simplification is possible
+    for (let i = 0; i < paths.length; i++) {
+      const node = getNodeByPath(currentEq, paths[i]);
+      if (node.type !== 'ConstantNode' && isConstantSubtree(node)) {
+        const folded = evaluateConstantSubtree(node, true);
+        if (folded) {
+          const clean = (str: string) => str.replace(/[\s()]/g, '');
+          if (clean(folded.toString()) !== clean(node.toString())) {
+            const candidate = replaceNodeAtPath(currentEq, paths[i], folded);
+            if (areEquationsEquivalent(currentEq, candidate)) {
+              currentEq = candidate;
+              simplified = true;
+              break; // Restart scan on the simplified tree
+            }
+          }
+        }
+      }
     }
   }
 
@@ -1867,6 +1895,7 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
         }
 
         if (numVal !== null && !isNaN(numVal) && isFinite(numVal)) {
+          numVal = snapReal(numVal);
           if (!Number.isInteger(numVal)) {
             const decNode = new mjs.ConstantNode(numVal);
             const newEq = replaceNodeAtPath(eq, path, decNode);

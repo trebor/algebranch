@@ -85,4 +85,76 @@ describe('ExportDialog', () => {
     expect(captureNodeToPng.mock.calls[0][1]).toBe('black');
     expect(clickSpy).toHaveBeenCalled();
   });
+
+  it('renders document variant selector in derivation scope and disables annotations in worksheet mode', async () => {
+    const { rerender } = render(
+      <ExportDialog scope="derivation" equation={equation} steps={steps} isOpen onClose={() => {}} />
+    );
+
+    // Should show variant selector (Answer key / Worksheet)
+    expect(screen.getByRole('radio', { name: /answer key/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /worksheet/i })).toBeInTheDocument();
+
+    // Answer key has active annotations checkbox
+    const explanationsCheckbox = screen.getByRole('checkbox', { name: /show step explanations/i });
+    expect(explanationsCheckbox).not.toBeDisabled();
+
+    // Click Worksheet
+    await userEvent.click(screen.getByRole('radio', { name: /worksheet/i }));
+
+    // Explanations checkbox should be disabled
+    expect(explanationsCheckbox).toBeDisabled();
+
+    // Worksheet notice should be visible
+    expect(screen.getByText(/worksheet is a visual\/print artifact/i)).toBeInTheDocument();
+
+    // Re-render in equation scope — variant selector should not be present
+    rerender(<ExportDialog scope="equation" equation={equation} isOpen onClose={() => {}} />);
+    expect(screen.queryByRole('radio', { name: /worksheet/i })).toBeNull();
+  });
+
+  it('handles reveal mode controls (prev, next, and keyboard shortcuts)', async () => {
+    render(<ExportDialog scope="derivation" equation={equation} steps={steps} isOpen onClose={() => {}} />);
+
+    // Reveal steps control checkbox
+    const revealCheckbox = screen.getByRole('checkbox', { name: /reveal steps one at a time/i });
+    expect(revealCheckbox).toBeInTheDocument();
+    expect(revealCheckbox).not.toBeChecked();
+
+    // Click to enable reveal mode
+    await userEvent.click(revealCheckbox);
+    expect(revealCheckbox).toBeChecked();
+
+    // Should show counter "Step 1 of 2"
+    expect(screen.getByText(/step 1 of 2/i)).toBeInTheDocument();
+
+    // Next/Prev buttons should be visible
+    const prevButton = screen.getByRole('button', { name: /previous step/i });
+    const nextButton = screen.getByRole('button', { name: /next step/i });
+    expect(prevButton).toBeInTheDocument();
+    expect(nextButton).toBeInTheDocument();
+
+    // Prev should be disabled at step 1
+    expect(prevButton).toBeDisabled();
+    expect(nextButton).not.toBeDisabled();
+
+    // Click Next
+    await userEvent.click(nextButton);
+    expect(screen.getByText(/step 2 of 2/i)).toBeInTheDocument();
+    expect(prevButton).not.toBeDisabled();
+    expect(nextButton).toBeDisabled();
+
+    // Click Prev
+    await userEvent.click(prevButton);
+    expect(screen.getByText(/step 1 of 2/i)).toBeInTheDocument();
+
+    // Test ArrowRight key press to advance
+    await userEvent.keyboard('{ArrowRight}');
+    expect(screen.getByText(/step 2 of 2/i)).toBeInTheDocument();
+
+    // Test ArrowLeft key press to retreat
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(screen.getByText(/step 1 of 2/i)).toBeInTheDocument();
+  });
 });
+

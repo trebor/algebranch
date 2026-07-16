@@ -14,6 +14,7 @@ import { EquationExportCanvas } from './EquationExportCanvas';
 import { WorkedSolutionDocument } from './WorkedSolutionDocument';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { trackEvent } from '../utils/analytics';
+import { revealReducer, initialRevealState } from '../utils/revealState';
 import { safeCopyImage, canCopyImage } from '../utils/clipboard';
 import {
   IMAGE_BACKGROUNDS,
@@ -75,6 +76,42 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ scope, equation, ste
   const [annotated, setAnnotated] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [copyState, setCopyState] = React.useState<CopyState>('idle');
+  const [variant, setVariant] = React.useState<'solution' | 'worksheet'>('solution');
+  const [revealMode, setRevealMode] = React.useState(false);
+  const [revealState, dispatchReveal] = React.useReducer(revealReducer, initialRevealState());
+
+  const [prevStepsLength, setPrevStepsLength] = React.useState(steps.length);
+  const [prevScope, setPrevScope] = React.useState(scope);
+
+  if (steps.length !== prevStepsLength || scope !== prevScope) {
+    setPrevStepsLength(steps.length);
+    setPrevScope(scope);
+    setVariant('solution');
+    setRevealMode(false);
+    dispatchReveal({ type: 'RESET', count: 1 });
+  }
+
+  // Keyboard navigation for step reveal
+  React.useEffect(() => {
+    if (!revealMode || !isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        dispatchReveal({ type: 'ADVANCE', max: steps.length });
+        setCopyState('idle');
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        dispatchReveal({ type: 'RETREAT' });
+        setCopyState('idle');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [revealMode, steps.length, isOpen]);
 
   const captureRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -87,6 +124,9 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ scope, equation, ste
   const copySupported = React.useMemo(() => canCopyImage(), []);
   const isDerivation = scope === 'derivation';
   const problem = steps[0]?.equation ?? equation;
+
+  const actualVariant = revealMode ? 'solution' : variant;
+  const actualRevealedCount = revealMode ? revealState.revealedCount : undefined;
 
   // Anything that alters the rendered artifact invalidates a prior copy.
   const chooseBg = (next: ImageBackground) => {
@@ -207,16 +247,67 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ scope, equation, ste
               <div className="flex-1 overflow-auto flex flex-col gap-5">
                 {/* Live preview = the exact capture target. */}
                 {isDerivation ? (
-                  <div
-                    className={`rounded-xl overflow-auto border border-white/10 flex justify-center p-4 ${bg === 'transparent' ? BG_SWATCH.transparent : 'bg-neutral-200'}`}
-                  >
-                    {/* self-start: without it this flex child stretches to the scroll
-                        container's visible height, so its clientHeight — what
-                        html-to-image measures — clips the capture to the top of a
-                        tall document. self-start sizes it to the real content height. */}
-                    <div ref={captureRef} className="shadow-lg self-start">
-                      <WorkedSolutionDocument steps={steps} annotated={annotated} branding={branding} bg={bg} />
+                  <div className="flex flex-col gap-3">
+                    <div
+                      className={`rounded-xl overflow-auto border border-white/10 flex justify-center p-4 ${bg === 'transparent' ? BG_SWATCH.transparent : 'bg-neutral-200'}`}
+                    >
+                      {/* self-start: without it this flex child stretches to the scroll
+                          container's visible height, so its clientHeight — what
+                          html-to-image measures — clips the capture to the top of a
+                          tall document. self-start sizes it to the real content height. */}
+                      <div ref={captureRef} className="shadow-lg self-start">
+                        <WorkedSolutionDocument
+                          steps={steps}
+                          annotated={annotated && actualVariant !== 'worksheet'}
+                          branding={branding}
+                          bg={bg}
+                          variant={actualVariant}
+                          revealedCount={actualRevealedCount}
+                        />
+                      </div>
                     </div>
+
+                    {revealMode && (
+                      <div className="flex items-center justify-between px-1 select-none shrink-0">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={revealState.revealedCount <= 1}
+                            onClick={() => {
+                              dispatchReveal({ type: 'RETREAT' });
+                              setCopyState('idle');
+                            }}
+                            className={`px-2.5 py-1 rounded border text-xs font-semibold transition-all cursor-pointer ${
+                              revealState.revealedCount <= 1
+                                ? 'border-white/5 bg-white/5 text-white/20 cursor-not-allowed'
+                                : 'border-white/10 bg-white/10 text-white/80 hover:bg-white/15 hover:text-white'
+                            }`}
+                            aria-label="Previous step"
+                          >
+                            Previous
+                          </button>
+                          <button
+                            type="button"
+                            disabled={revealState.revealedCount >= steps.length}
+                            onClick={() => {
+                              dispatchReveal({ type: 'ADVANCE', max: steps.length });
+                              setCopyState('idle');
+                            }}
+                            className={`px-2.5 py-1 rounded border text-xs font-semibold transition-all cursor-pointer ${
+                              revealState.revealedCount >= steps.length
+                                ? 'border-white/5 bg-white/5 text-white/20 cursor-not-allowed'
+                                : 'border-white/10 bg-white/10 text-white/80 hover:bg-white/15 hover:text-white'
+                            }`}
+                            aria-label="Next step"
+                          >
+                            Next
+                          </button>
+                        </div>
+                        <span className="text-xs font-semibold text-white/60" role="status" aria-live="polite">
+                          Step {revealState.revealedCount} of {steps.length}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div
@@ -250,15 +341,74 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ scope, equation, ste
                   </div>
                 </div>
 
+                {/* Document variant selector (Answer key / Worksheet) */}
                 {isDerivation && (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-semibold text-white/60">Document variant</span>
+                    <div className="flex items-center gap-2" role="radiogroup" aria-label="Document variant">
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={variant === 'solution'}
+                        onClick={() => {
+                          setVariant('solution');
+                          setCopyState('idle');
+                        }}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                          variant === 'solution'
+                            ? 'border-indigo-400/50 bg-indigo-600/20 text-white'
+                            : 'border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        Answer key
+                      </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={variant === 'worksheet'}
+                        onClick={() => {
+                          setVariant('worksheet');
+                          setRevealMode(false);
+                          setCopyState('idle');
+                        }}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                          variant === 'worksheet'
+                            ? 'border-indigo-400/50 bg-indigo-600/20 text-white'
+                            : 'border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        Worksheet
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {isDerivation && (
+                  <label className={`flex items-center gap-2.5 select-none ${variant === 'worksheet' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+                    <input
+                      type="checkbox"
+                      checked={variant !== 'worksheet' && annotated}
+                      disabled={variant === 'worksheet'}
+                      onChange={(e) => toggle(setAnnotated)(e.target.checked)}
+                      className="w-4 h-4 accent-indigo-500 cursor-pointer disabled:cursor-not-allowed"
+                    />
+                    <span className="text-xs font-semibold text-white/70">Show step explanations</span>
+                  </label>
+                )}
+
+                {isDerivation && variant === 'solution' && (
                   <label className="flex items-center gap-2.5 cursor-pointer select-none">
                     <input
                       type="checkbox"
-                      checked={annotated}
-                      onChange={(e) => toggle(setAnnotated)(e.target.checked)}
+                      checked={revealMode}
+                      onChange={(e) => {
+                        setRevealMode(e.target.checked);
+                        dispatchReveal({ type: 'RESET', count: 1 });
+                        setCopyState('idle');
+                      }}
                       className="w-4 h-4 accent-indigo-500 cursor-pointer"
                     />
-                    <span className="text-xs font-semibold text-white/70">Show step explanations</span>
+                    <span className="text-xs font-semibold text-white/70">Reveal steps one at a time</span>
                   </label>
                 )}
 
@@ -272,6 +422,12 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ scope, equation, ste
                   />
                   <span className="text-xs font-semibold text-white/70">Show algebranch.org logo</span>
                 </label>
+
+                {isDerivation && variant === 'worksheet' && (
+                  <p className="text-xs text-white/40 italic">
+                    Note: The copied transcript remains the full solution; the worksheet is a visual/print artifact.
+                  </p>
+                )}
 
                 {!copySupported && (
                   <p className="text-xs text-white/40">
@@ -318,7 +474,14 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ scope, equation, ste
               app and pulls this onto paper. */}
           <div className="export-print-portal" aria-hidden="true">
             {isDerivation ? (
-              <WorkedSolutionDocument steps={steps} annotated={annotated} branding={branding} bg="white" />
+              <WorkedSolutionDocument
+                steps={steps}
+                annotated={annotated && actualVariant !== 'worksheet'}
+                branding={branding}
+                bg="white"
+                variant={actualVariant}
+                revealedCount={actualRevealedCount}
+              />
             ) : (
               <EquationExportCanvas equation={equation} bg="white" branding={branding} />
             )}

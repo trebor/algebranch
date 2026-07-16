@@ -346,6 +346,31 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
     expect(multOption).toBeDefined();
     expect(equationToString(multOption!.simplified)).toBe('2 * -y = -8');
   });
+
+  describe('issue #534 - decimal folding blocking exact simplification', () => {
+    test('simplifies sqrt(2)^2 exactly to 2 and prefers exact form over decimal fold', () => {
+      const eq = parseEquation('(x * 2)^2 = sqrt(2)^2');
+      const reductions = getReducibleOptions(eq);
+      const flatOpts = Object.values(reductions).flat();
+      
+      // Exact algebraic simplification should be offered as a Simplify step
+      const simplifyOpt = flatOpts.find(r => r.label === 'Simplify');
+      expect(simplifyOpt).toBeDefined();
+      expect(equationToString(simplifyOpt!.simplified)).toBe('(x * 2) ^ 2 = 2');
+    });
+
+    test('does NOT offer Evaluate to Decimal when a decimal expression simplifies to an integer', () => {
+      const eq = parseEquation('(x * 2)^2 = 1.4142135623730951^2');
+      const reductions = getReducibleOptions(eq);
+      const flatOpts = Object.values(reductions).flat();
+
+      // Since 1.4142...^2 snaps to exactly 2 (integer), it should be offered as a Simplify step, not Evaluate to Decimal
+      const simplifyOpt = flatOpts.find(r => r.label === 'Simplify');
+      expect(simplifyOpt).toBeDefined();
+      expect(equationToString(simplifyOpt!.simplified)).toBe('(x * 2) ^ 2 = 2');
+
+      const decimalOpt = flatOpts.find(r => r.label === 'Evaluate to Decimal');
+      expect(decimalOpt).toBeUndefined();
+    });
+  });
 });
-
-

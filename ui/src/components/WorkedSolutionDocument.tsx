@@ -36,12 +36,6 @@ import { type ImageBackground, backgroundColorFor } from '../utils/equationImage
  * light ink, white/transparent as a light page with dark ink.
  */
 
-// Ink/muted/rule/accent per theme. Light = dark-on-white page; dark = light-on-black.
-const DOC_THEME = {
-  light: { ink: '#0f172a', muted: '#64748b', rule: '#e2e8f0', accent: '#4f46e5', palette: EQUATION_PREVIEW_PALETTE_LIGHT },
-  dark: { ink: '#f1f5f9', muted: '#94a3b8', rule: '#334155', accent: '#818cf8', palette: EQUATION_PREVIEW_PALETTE_DARK },
-} as const;
-
 interface WorkedSolutionDocumentProps {
   readonly steps: readonly DerivationStep[];
   /** When true, each step shows its justification + assumptions; off = clean chain. */
@@ -50,7 +44,17 @@ interface WorkedSolutionDocumentProps {
   readonly branding: boolean;
   /** Export background; drives the page theme. Defaults to white (light page). */
   readonly bg?: ImageBackground;
+  /** The presentation mode variant. Solution (default) or worksheet with blanks. */
+  readonly variant?: 'solution' | 'worksheet';
+  /** The prefix step count to reveal (presentation mode). */
+  readonly revealedCount?: number;
 }
+
+// Ink/muted/rule/accent per theme. Light = dark-on-white page; dark = light-on-black.
+const DOC_THEME = {
+  light: { ink: '#0f172a', muted: '#64748b', rule: '#e2e8f0', accent: '#4f46e5', palette: EQUATION_PREVIEW_PALETTE_LIGHT },
+  dark: { ink: '#f1f5f9', muted: '#94a3b8', rule: '#334155', accent: '#818cf8', palette: EQUATION_PREVIEW_PALETTE_DARK },
+} as const;
 
 /** One typeset equation line: lhs <relation> rhs, using the app's preview renderer. */
 const EquationLine: React.FC<{ equation: Equation; fontSize: string; ink: string }> = ({ equation, fontSize, ink }) => {
@@ -70,10 +74,15 @@ const EquationLine: React.FC<{ equation: Equation; fontSize: string; ink: string
 };
 
 export const WorkedSolutionDocument = React.forwardRef<HTMLDivElement, WorkedSolutionDocumentProps>(
-  function WorkedSolutionDocument({ steps, annotated, branding, bg = 'white' }, ref) {
+  function WorkedSolutionDocument({ steps, annotated, branding, bg = 'white', variant = 'solution', revealedCount }, ref) {
     const problem = steps[0]?.equation;
     const t: { ink: string; muted: string; rule: string; accent: string; palette: EquationPreviewPalette } =
       bg === 'black' ? DOC_THEME.dark : DOC_THEME.light;
+
+    const isWorksheet = variant === 'worksheet';
+    const visibleSteps = isWorksheet
+      ? steps
+      : (revealedCount !== undefined ? steps.slice(0, revealedCount) : steps);
 
     return (
       <EquationPreviewPaletteContext.Provider value={t.palette}>
@@ -113,44 +122,63 @@ export const WorkedSolutionDocument = React.forwardRef<HTMLDivElement, WorkedSol
           {/* Numbered working. Step 1 is the given equation (no justification); each
               later row carries its reason + any domain assumptions when annotated. */}
           <ol style={{ display: 'flex', flexDirection: 'column', gap: 0, listStyle: 'none', margin: 0, padding: 0 }}>
-            {steps.map((step, i) => (
-              <li
-                key={step.index}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '1rem',
-                  padding: '0.85rem 0',
-                  borderTop: i === 0 ? 'none' : `1px solid ${t.rule}`,
-                }}
-              >
-                <span
-                  aria-hidden="true"
+            {visibleSteps.map((step, i) => {
+              const isFirstStep = i === 0;
+              const showBlank = isWorksheet && !isFirstStep;
+
+              return (
+                <li
+                  key={step.index}
                   style={{
-                    color: t.accent,
-                    fontWeight: 700,
-                    fontSize: '0.95rem',
-                    minWidth: '1.5rem',
-                    textAlign: 'right',
-                    paddingTop: '0.35rem',
-                    fontVariantNumeric: 'tabular-nums',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '1rem',
+                    padding: '0.85rem 0',
+                    borderTop: i === 0 ? 'none' : `1px solid ${t.rule}`,
                   }}
                 >
-                  {step.index}
-                </span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', minWidth: 0 }}>
-                  <EquationLine equation={step.equation} fontSize="1.55rem" ink={t.ink} />
-                  {annotated && step.justification && (
-                    <div style={{ color: t.muted, fontSize: '0.9rem', lineHeight: 1.4 }}>
-                      {step.justification}
-                      {step.assumptions?.length ? (
-                        <span style={{ fontStyle: 'italic' }}> — assuming {step.assumptions.join(', ')}</span>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      color: t.accent,
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      minWidth: '1.5rem',
+                      textAlign: 'right',
+                      paddingTop: '0.35rem',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {step.index}
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', minWidth: 0 }}>
+                    {showBlank ? (
+                      <div
+                        data-testid="ruled-blank"
+                        style={{
+                          height: '2.2rem',
+                          width: '18rem',
+                          borderBottom: `1px solid ${t.rule}`,
+                          marginTop: '0.2rem',
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <EquationLine equation={step.equation} fontSize="1.55rem" ink={t.ink} />
+                        {!isWorksheet && annotated && step.justification && (
+                          <div style={{ color: t.muted, fontSize: '0.9rem', lineHeight: 1.4 }}>
+                            {step.justification}
+                            {step.assumptions?.length ? (
+                              <span style={{ fontStyle: 'italic' }}> — assuming {step.assumptions.join(', ')}</span>
+                            ) : null}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ol>
 
           {branding && (

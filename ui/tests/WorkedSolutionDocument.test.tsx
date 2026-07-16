@@ -56,4 +56,36 @@ describe('WorkedSolutionDocument', () => {
     rerender(<WorkedSolutionDocument steps={steps} annotated branding />);
     expect(screen.getByText('algebranch.org')).toBeInTheDocument();
   });
+
+  it('renders worksheet mode with blanked lines for remaining steps', () => {
+    render(<WorkedSolutionDocument steps={steps} variant="worksheet" annotated branding={false} />);
+    
+    // Header should still have the problem statement
+    const header = screen.getByRole('banner');
+    expect(within(header).getByText('Solve')).toBeInTheDocument();
+
+    const items = screen.getAllByRole('listitem');
+    expect(items).toHaveLength(3);
+
+    // Step 1 is normal
+    expect(within(items[0]).getByText('1')).toBeInTheDocument();
+    // It should render equation glyphs
+    expect(within(items[0]).getAllByText('a').length).toBeGreaterThan(0);
+
+    // Step 2 & 3 should be blanks
+    expect(screen.getAllByTestId('ruled-blank')).toHaveLength(2);
+    // They should not show justifications
+    expect(screen.queryByText('Divide both sides by a')).not.toBeInTheDocument();
+  });
+
+  it('renders only the revealed prefix steps when revealedCount is specified', () => {
+    render(<WorkedSolutionDocument steps={steps} revealedCount={2} annotated branding={false} />);
+    // Only 2 steps should render
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    const items = screen.getAllByRole('listitem');
+    expect(within(items[0]).getByText('1')).toBeInTheDocument();
+    expect(within(items[1]).getByText('2')).toBeInTheDocument();
+    expect(screen.queryByText('3')).not.toBeInTheDocument();
+  });
 });
+

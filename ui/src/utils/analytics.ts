@@ -3,6 +3,17 @@
 
 'use client';
 
+/**
+ * Analytics event action names and taxonomy.
+ */
+export const ANALYTICS_EVENTS = {
+  STALL_DETECTED: 'stall_detected',
+  // Reserved for #497 (hint ladder): fires when a user requests a hint.
+  // Value should be the rung level (1: Strategy, 2: Orientation, 3: Specific move).
+  HINT_REQUESTED: 'hint_requested',
+} as const;
+
+
 declare global {
   interface Window {
     gtag?: (...args: unknown[]) => void;

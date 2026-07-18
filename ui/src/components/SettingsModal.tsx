@@ -6,7 +6,7 @@
 import React from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sliders, Info, Download, Keyboard, HelpCircle, Upload } from 'lucide-react';
+import { X, Sliders, Info, Download, Keyboard, HelpCircle, Upload, GraduationCap } from 'lucide-react';
 import {
   settingsModalOpenAtom,
   settingsAtom,
@@ -225,39 +225,49 @@ export const SettingsModal: React.FC = () => {
                 </div>
               </div>
 
-              {CAPABILITY_GATES.map((gate) => {
-                const isChecked = settings[gate.key];
-                return (
-                  <div key={gate.key} className={THEME_GLASS.SETTING_ROW}>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-sm font-semibold text-white">
-                        {gate.label}
-                      </span>
-                      <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                        {gate.description}
-                      </span>
-                    </div>
-                    
-                    <button
-                      onClick={() => handleToggleGate(gate.key)}
-                      className={`${THEME_GLASS.TOGGLE_TRACK} ${
-                        isChecked
-                          ? THEME_GLASS.TOGGLE_TRACK_ON
-                          : THEME_GLASS.TOGGLE_TRACK_OFF
-                      }`}
-                      role="switch"
-                      aria-checked={isChecked}
-                      aria-label={`Toggle ${gate.label.toLowerCase()} option`}
-                    >
-                      <span
-                        className={`${THEME_GLASS.TOGGLE_KNOB} ${
-                          isChecked ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                );
-              })}
+              {/* Classroom Settings Group */}
+              <div className="border border-white/5 bg-white/[0.01] rounded-xl p-4 flex flex-col gap-4">
+                <div className="flex items-center gap-2 border-b border-white/5 pb-2 select-none">
+                  <GraduationCap size={16} className="text-indigo-400" />
+                  <span className="text-xs font-semibold text-indigo-300 tracking-wide uppercase">Classroom Settings</span>
+                </div>
+                <div className="flex flex-col gap-4">
+                  {CAPABILITY_GATES.map((gate) => {
+                    const isChecked = settings[gate.key];
+                    return (
+                      <div key={gate.key} className="flex items-center justify-between gap-4">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-semibold text-white">
+                            {gate.label}
+                          </span>
+                          <span className="text-[10px] text-white/50 leading-snug">
+                            {gate.description}
+                          </span>
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => handleToggleGate(gate.key)}
+                          className={`${THEME_GLASS.TOGGLE_TRACK} ${
+                            isChecked
+                              ? THEME_GLASS.TOGGLE_TRACK_ON
+                              : THEME_GLASS.TOGGLE_TRACK_OFF
+                          }`}
+                          role="switch"
+                          aria-checked={isChecked}
+                          aria-label={`Toggle ${gate.label.toLowerCase()} option`}
+                        >
+                          <span
+                            className={`${THEME_GLASS.TOGGLE_KNOB} ${
+                              isChecked ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
               <div className={THEME_GLASS.SETTING_ROW}>
                 <div className="flex flex-col gap-1">

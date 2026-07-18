@@ -89,6 +89,20 @@ Self-contained links grow with your workspace, so Algebranch measures each one a
 
 You only need to encode characters like `+`, `=`, `/`, `(`, and `)` yourself if you write an `?eq=` link by hand instead of using the Share button.
 
+### Classroom Settings
+
+When sharing your workspace (either the whole workspace or the active derivation), the Share dialog includes a **Classroom Settings** toggle. Turning this toggle switch on embeds your active capability rules into the link and expands the panel to let you customize which rules to enforce:
+*   **Allow decimals**: Disable this to prevent students from simplifying fractions to decimal approximations (forcing exact forms like `3/4` instead of `0.75`).
+*   **Allow complex numbers**: Disable this to lock out complex/imaginary number pathways (e.g., hiding imaginary number rewrites like `sqrt(-4)` → `2ⅈ`).
+*   **Progressive simplification**: Enable this to require students to simplify expressions step-by-step from the inside out.
+
+These options are embedded directly inside the generated URL. When a student opens the link, Algebranch applies the settings automatically and displays a banner outlining the rules (e.g., *"This link set: Real numbers only"*).
+
+**Note on the "No-Lock" Stance:**
+Because Algebranch runs client-side and requires no user log-ins or accounts, a teacher lock cannot be securely enforced. Students can still open the in-app **Settings** menu and re-enable any restricted capability manually. Algebranch acts as a cooperative guide for the classroom: the link defaults the settings to the teacher's specifications, but does not implement a hard lock that would offer a false sense of security.
+
+*(Note: Classroom settings are not supported when sharing **Just the equation**, as those links do not carry workspace settings.)*
+
 ---
 
 ## Clipboard & Copy-Paste Integration

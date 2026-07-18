@@ -148,6 +148,7 @@ import {
   anyModalOpenAtom,
   activeZoomModeAtom,
   equationToFormat,
+  getDerivationSteps,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
@@ -160,7 +161,13 @@ import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useEquationTreeFocus } from '../hooks/useEquationTreeFocus';
-import { trackEvent } from '../utils/analytics';
+import { trackEvent, ANALYTICS_EVENTS } from '../utils/analytics';
+import {
+  initialStallState,
+  updateStallDetector,
+  DEFAULT_STALL_TIMEOUT_MS,
+  type StallDetectorState,
+} from '../utils/stallDetector';
 import { fetchMathScan } from '../utils/mathScan';
 import { safeStorage } from '../utils/safeStorage';
 import { markAppHydrated } from '../utils/hydrationSentinel';
@@ -370,6 +377,96 @@ export default function Home() {
   const [shortcutsOverlayOpen, setShortcutsOverlayOpen] = useAtom(shortcutsOverlayOpenAtom);
   const [helpOpen, setHelpOpen] = useAtom(helpModalOpenAtom);
   const anyModalOpen = useAtomValue(anyModalOpenAtom);
+
+  // Stall detector state and tracking refs
+  const stallStateRef = React.useRef<StallDetectorState | null>(null);
+  const prevSourcePathRef = React.useRef<string | null>(null);
+  const prevRadialMenuOpenRef = React.useRef<boolean>(false);
+  const prevStateKeyRef = React.useRef<string>('');
+
+  // 1. Sync interaction changes (select, deselect, open-handle, state-change) to the stall state ref
+  React.useEffect(() => {
+    if (!isHydrated) return;
+
+    const timestamp = Date.now();
+    const stateKey = `${activeTabId}-${currentNodeId}`;
+    const steps = getDerivationSteps(tree, currentNodeId);
+    const moveCount = Math.max(0, steps.length - 1);
+
+    const timeoutMs = process.env.NEXT_PUBLIC_STALL_TIMEOUT_MS
+      ? parseInt(process.env.NEXT_PUBLIC_STALL_TIMEOUT_MS, 10)
+      : DEFAULT_STALL_TIMEOUT_MS;
+
+    // Initialize if not exists
+    if (!stallStateRef.current) {
+      stallStateRef.current = initialStallState(timestamp, moveCount);
+      prevSourcePathRef.current = sourcePath;
+      prevRadialMenuOpenRef.current = radialMenuOpen;
+      prevStateKeyRef.current = stateKey;
+      return;
+    }
+
+    let nextState = stallStateRef.current;
+
+    // Detect state change vs internal page interaction
+    if (stateKey !== prevStateKeyRef.current) {
+      const res = updateStallDetector(nextState, { kind: 'state-change', timestamp, moveCount }, timeoutMs);
+      nextState = res.nextState;
+      prevStateKeyRef.current = stateKey;
+      prevSourcePathRef.current = null;
+      prevRadialMenuOpenRef.current = false;
+    } else {
+      // Check selection state change
+      if (sourcePath !== prevSourcePathRef.current) {
+        const isSelected = sourcePath !== null;
+        const kind = isSelected ? 'select' : 'deselect';
+        const res = updateStallDetector(nextState, { kind, timestamp }, timeoutMs);
+        nextState = res.nextState;
+        prevSourcePathRef.current = sourcePath;
+      }
+
+      // Check handle opened state change
+      if (radialMenuOpen && !prevRadialMenuOpenRef.current) {
+        const res = updateStallDetector(nextState, { kind: 'open-handle', timestamp }, timeoutMs);
+        nextState = res.nextState;
+      }
+      prevRadialMenuOpenRef.current = radialMenuOpen;
+    }
+
+    stallStateRef.current = nextState;
+  }, [activeTabId, currentNodeId, sourcePath, radialMenuOpen, tree, isHydrated]);
+
+  // 2. Poll/tick every second to check for elapsed timeouts and trigger stall analytics events
+  React.useEffect(() => {
+    if (!isHydrated) return;
+
+    const timeoutMs = process.env.NEXT_PUBLIC_STALL_TIMEOUT_MS
+      ? parseInt(process.env.NEXT_PUBLIC_STALL_TIMEOUT_MS, 10)
+      : DEFAULT_STALL_TIMEOUT_MS;
+
+    const steps = getDerivationSteps(tree, currentNodeId);
+    const moveCount = Math.max(0, steps.length - 1);
+
+    const checkInterval = setInterval(() => {
+      if (!stallStateRef.current) return;
+
+      const timestamp = Date.now();
+      const result = updateStallDetector(stallStateRef.current, { kind: 'tick', timestamp }, timeoutMs);
+
+      stallStateRef.current = result.nextState;
+
+      if (result.fireStall) {
+        trackEvent({
+          action: ANALYTICS_EVENTS.STALL_DETECTED,
+          category: 'engagement',
+          label: result.fireStall,
+          value: moveCount,
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(checkInterval);
+  }, [tree, currentNodeId, isHydrated]);
 
   // Keep the browser-tab title in sync with the active workspace name (#449).
   useDocumentTitle();

@@ -334,6 +334,11 @@ export interface MinifiedReplayWorkspace {
   r: ReplayRecord[]; // records in topological order (parent index < child index)
   n: number; // currentNode index
   a: string; // name
+  g?: {
+    allowEvaluateToDecimal?: boolean;
+    allowComplex?: boolean;
+    progressiveMode?: boolean;
+  };
 }
 
 export interface DeminifiedReplayWorkspace {
@@ -466,11 +471,14 @@ const liveNodeEquation = (eq: SerializedEquation | string): Equation =>
  * precedes its children (childrenIds reconstruct for free from parent pointers),
  * then emits one verified operation record per node.
  */
-export const minifyReplayWorkspace = (ws: {
-  tree: Record<string, SerializedHistoryNode>;
-  currentNodeId: string;
-  name: string;
-}): MinifiedReplayWorkspace => {
+export const minifyReplayWorkspace = (
+  ws: {
+    tree: Record<string, SerializedHistoryNode>;
+    currentNodeId: string;
+    name: string;
+  },
+  settings?: UserSettings,
+): MinifiedReplayWorkspace => {
   const { tree, currentNodeId, name } = ws;
 
   // BFS from the root along stored childrenIds: parents first, sibling order kept.
@@ -508,7 +516,34 @@ export const minifyReplayWorkspace = (ws: {
     return deriveReplayRecord(idToIndex.get(parentId)!, liveEq.get(parentId)!, live, node);
   });
 
-  return { v: WS_REPLAY_VERSION, r: records, n: idToIndex.get(currentNodeId) ?? 0, a: name };
+  const result: MinifiedReplayWorkspace = {
+    v: WS_REPLAY_VERSION,
+    r: records,
+    n: idToIndex.get(currentNodeId) ?? 0,
+    a: name,
+  };
+
+  if (settings) {
+    const g: Record<string, boolean> = {};
+    let hasDiff = false;
+    if (settings.allowComplex !== DEFAULT_SETTINGS.allowComplex) {
+      g.allowComplex = settings.allowComplex;
+      hasDiff = true;
+    }
+    if (settings.allowEvaluateToDecimal !== DEFAULT_SETTINGS.allowEvaluateToDecimal) {
+      g.allowEvaluateToDecimal = settings.allowEvaluateToDecimal;
+      hasDiff = true;
+    }
+    if (settings.progressiveMode !== DEFAULT_SETTINGS.progressiveMode) {
+      g.progressiveMode = settings.progressiveMode;
+      hasDiff = true;
+    }
+    if (hasDiff) {
+      result.g = g;
+    }
+  }
+
+  return result;
 };
 
 /**
@@ -672,12 +707,13 @@ export const serializeWorkspaceState = async (
   currentNodeId: string | null,
   name: string,
   scope: ShareScope = 'full',
+  settings?: UserSettings,
 ): Promise<string> => {
   if (!tree || !currentNodeId) return '';
   let serialized = serializeTree(tree);
   if (scope === 'path') serialized = filterTreeToPath(serialized, currentNodeId);
   if (scope === 'equation') serialized = filterTreeToEquation(serialized, currentNodeId);
-  const minified = minifyReplayWorkspace({ tree: serialized, currentNodeId, name });
+  const minified = minifyReplayWorkspace({ tree: serialized, currentNodeId, name }, settings);
   const stateStr = JSON.stringify(minified);
   return await compressString(stateStr);
 };
@@ -1438,6 +1474,7 @@ export const activeHelpDocAtom = atom<string | null>(null);
 // Workspace export / import modals (#203), opened from Settings.
 export const exportWorkspacesModalOpenAtom = atom(false);
 export const importWorkspacesModalOpenAtom = atom(false);
+export const shareModalOpenAtom = atom(false);
 
 /**
  * True when any blocking modal/overlay is open. Global keyboard shortcuts read
@@ -1455,7 +1492,8 @@ export const anyModalOpenAtom = atom<boolean>((get) =>
   get(helpModalOpenAtom) ||
   get(activeHelpDocAtom) !== null ||
   get(exportWorkspacesModalOpenAtom) ||
-  get(importWorkspacesModalOpenAtom)
+  get(importWorkspacesModalOpenAtom) ||
+  get(shareModalOpenAtom)
 );
 
 export const pwaInstallPromptAtom = atom<unknown>(null);
@@ -1705,21 +1743,18 @@ export const applicableFactsAtom = atom<SubstitutionFact[]>((get) => {
   );
 });
 
-/**
- * Computes the absolute layout coordinates of the tree using DFS.
- */
-export const treeLayoutAtom = atom<Record<string, VisualTreeNode>>((get) => {
-  const tree = get(historyTreeAtom);
-  // Lane-based columns: the first child continues its parent's column straight
-  // down, later children branch right, and a dead branch's lane is reclaimed by
-  // a later branch instead of sprawling rightward (#304). The renderer positions
-  // cards from `column`; the px x/y here are a coarse fallback for any consumer
-  // that reads them directly.
-  const lanes = assignLanes(tree, "0");
+export const computeTreeLayout = (
+  tree: Record<string, HistoryNode> | Record<string, SerializedHistoryNode>
+): Record<string, VisualTreeNode> => {
+  const rootId = '0' in tree
+    ? '0'
+    : (Object.keys(tree).find(id => tree[id].parentId === null) ?? Object.keys(tree)[0]);
+  if (!rootId) return {};
+  const lanes = assignLanes(tree as Record<string, HistoryNode>, rootId);
   const result: Record<string, VisualTreeNode> = {};
   for (const [id, { depth, column }] of Object.entries(lanes)) {
     result[id] = {
-      ...tree[id],
+      ...(tree[id] as unknown as VisualTreeNode),
       depth,
       column,
       x: PADDING_LEFT + column * COL_WIDTH,
@@ -1727,6 +1762,13 @@ export const treeLayoutAtom = atom<Record<string, VisualTreeNode>>((get) => {
     };
   }
   return result;
+};
+
+/**
+ * Computes the absolute layout coordinates of the tree using DFS.
+ */
+export const treeLayoutAtom = atom<Record<string, VisualTreeNode>>((get) => {
+  return computeTreeLayout(get(historyTreeAtom));
 });
 
 

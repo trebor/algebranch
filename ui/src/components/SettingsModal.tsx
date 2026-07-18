@@ -26,6 +26,7 @@ import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import Link from 'next/link';
+import { CAPABILITY_GATES } from '../constants/capabilityGates';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -35,6 +36,8 @@ interface BeforeInstallPromptEvent extends Event {
 export const SettingsModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(settingsModalOpenAtom);
   const [settings, setSettings] = useAtom(settingsAtom);
+
+
   const setAboutOpen = useSetAtom(aboutModalOpenAtom);
   const setShortcutsOverlayOpen = useSetAtom(shortcutsOverlayOpenAtom);
   const setHelpOpen = useSetAtom(helpModalOpenAtom);
@@ -89,40 +92,15 @@ export const SettingsModal: React.FC = () => {
     });
   };
 
-  const handleToggleEvaluateToDecimal = () => {
-    const newVal = !settings.allowEvaluateToDecimal;
-    setSettings((prev) => ({
-      ...prev,
-      allowEvaluateToDecimal: newVal,
-    }));
-    trackEvent({
-      action: 'toggle_evaluate_to_decimal',
-      category: 'settings',
-      label: newVal ? 'on' : 'off',
-    });
-  };
 
-  const handleToggleAllowComplex = () => {
-    const newVal = !settings.allowComplex;
+  const handleToggleGate = (key: 'allowComplex' | 'allowEvaluateToDecimal' | 'progressiveMode') => {
+    const newVal = !settings[key];
     setSettings((prev) => ({
       ...prev,
-      allowComplex: newVal,
+      [key]: newVal,
     }));
     trackEvent({
-      action: 'toggle_allow_complex',
-      category: 'settings',
-      label: newVal ? 'on' : 'off',
-    });
-  };
-
-  const handleToggleProgressiveMode = () => {
-    const newVal = !settings.progressiveMode;
-    setSettings((prev) => ({
-      ...prev,
-      progressiveMode: newVal,
-    }));
-    trackEvent({
-      action: 'toggle_progressive_mode',
+      action: `toggle_${key}`,
       category: 'settings',
       label: newVal ? 'on' : 'off',
     });
@@ -172,7 +150,7 @@ export const SettingsModal: React.FC = () => {
             </div>
 
             {/* Settings Content */}
-            <div className="flex flex-col gap-5 overflow-y-auto pr-1">
+            <div className="flex-1 min-h-0 flex flex-col gap-5 overflow-y-auto pr-1">
               <div className={THEME_GLASS.SETTING_ROW_STACKED}>
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-white">
@@ -247,92 +225,39 @@ export const SettingsModal: React.FC = () => {
                 </div>
               </div>
 
-              <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-white">
-                    Evaluate to Decimal
-                  </span>
-                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                    Allow simplifying constant subtrees to decimal floats (e.g. 3/4 → 0.75). Turn off to keep responses in exact fractional forms.
-                  </span>
-                </div>
-                
-                <button
-                  onClick={handleToggleEvaluateToDecimal}
-                  className={`${THEME_GLASS.TOGGLE_TRACK} ${
-                    settings.allowEvaluateToDecimal
-                      ? THEME_GLASS.TOGGLE_TRACK_ON
-                      : THEME_GLASS.TOGGLE_TRACK_OFF
-                  }`}
-                  role="switch"
-                  aria-checked={settings.allowEvaluateToDecimal}
-                  aria-label="Toggle evaluate to decimal option"
-                >
-                  <span
-                    className={`${THEME_GLASS.TOGGLE_KNOB} ${
-                      settings.allowEvaluateToDecimal ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-white">
-                    Allow Complex Numbers
-                  </span>
-                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                    Offer an “extend to ℂ” step when a square root of a negative appears (e.g. √−4 → 2ⅈ). Turn off to keep the complex door closed for a real-numbers-only class.
-                  </span>
-                </div>
-
-                <button
-                  onClick={handleToggleAllowComplex}
-                  className={`${THEME_GLASS.TOGGLE_TRACK} ${
-                    settings.allowComplex
-                      ? THEME_GLASS.TOGGLE_TRACK_ON
-                      : THEME_GLASS.TOGGLE_TRACK_OFF
-                  }`}
-                  role="switch"
-                  aria-checked={settings.allowComplex}
-                  aria-label="Toggle allow complex numbers option"
-                >
-                  <span
-                    className={`${THEME_GLASS.TOGGLE_KNOB} ${
-                      settings.allowComplex ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-white">
-                    Progressive mode
-                  </span>
-                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                    Offer one small step at a time. Prevent collapsing large expressions until their inner parts are simplified.
-                  </span>
-                </div>
-
-                <button
-                  onClick={handleToggleProgressiveMode}
-                  className={`${THEME_GLASS.TOGGLE_TRACK} ${
-                    settings.progressiveMode
-                      ? THEME_GLASS.TOGGLE_TRACK_ON
-                      : THEME_GLASS.TOGGLE_TRACK_OFF
-                  }`}
-                  role="switch"
-                  aria-checked={settings.progressiveMode}
-                  aria-label="Toggle progressive simplification mode"
-                >
-                  <span
-                    className={`${THEME_GLASS.TOGGLE_KNOB} ${
-                      settings.progressiveMode ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
+              {CAPABILITY_GATES.map((gate) => {
+                const isChecked = settings[gate.key];
+                return (
+                  <div key={gate.key} className={THEME_GLASS.SETTING_ROW}>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-semibold text-white">
+                        {gate.label}
+                      </span>
+                      <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                        {gate.description}
+                      </span>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleToggleGate(gate.key)}
+                      className={`${THEME_GLASS.TOGGLE_TRACK} ${
+                        isChecked
+                          ? THEME_GLASS.TOGGLE_TRACK_ON
+                          : THEME_GLASS.TOGGLE_TRACK_OFF
+                      }`}
+                      role="switch"
+                      aria-checked={isChecked}
+                      aria-label={`Toggle ${gate.label.toLowerCase()} option`}
+                    >
+                      <span
+                        className={`${THEME_GLASS.TOGGLE_KNOB} ${
+                          isChecked ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                );
+              })}
 
               <div className={THEME_GLASS.SETTING_ROW}>
                 <div className="flex flex-col gap-1">

@@ -225,3 +225,63 @@ export function resolveInitialWsSource(
 ): string | null {
   return wsParam ?? pendingShare;
 }
+
+// --- Helper functions moved from ShareMenu ---
+
+const LINK_SIZE_TINY = 280;
+const LINK_SIZE_SAFE = 2000;
+
+interface LinkBand {
+  label: string;
+  tone: 'ok' | 'warn';
+}
+
+export const classifyLinkSize = (n: number): LinkBand =>
+  n <= LINK_SIZE_TINY
+    ? { label: 'Tiny', tone: 'ok' }
+    : n <= LINK_SIZE_SAFE
+      ? { label: 'Compact', tone: 'ok' }
+      : { label: 'Large', tone: 'warn' };
+
+export const bandAdvice = (
+  n: number,
+  { hasSmallerScope = true }: { hasSmallerScope?: boolean } = {},
+): string | null => {
+  if (classifyLinkSize(n).tone !== 'warn') return null;
+  const risk = 'This link may be trimmed by some chat apps and QR encoders.';
+  return hasSmallerScope ? `${risk} A smaller link is below.` : risk;
+};
+
+export const nextUtcMidnight = (now: Date): number =>
+  Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+
+export const formatUtcDayReset = (now: Date): string => {
+  const totalMinutes = Math.max(1, Math.ceil((nextUtcMidnight(now) - now.getTime()) / 60_000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const unit = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  if (hours === 0) return unit(minutes, 'minute');
+  if (minutes === 0) return unit(hours, 'hour');
+  return `${unit(hours, 'hour')} ${unit(minutes, 'minute')}`;
+};
+
+export const busyShareSummary = (dailyLimit: number | undefined, now: Date): string => {
+  const limit = dailyLimit === undefined ? '' : ` of ${dailyLimit.toLocaleString('en-US')}`;
+  return `Short links hit today's limit${limit} — more in about ${formatUtcDayReset(now)}.`;
+};
+
+export const busyShareNote = (dailyLimit: number | undefined, now: Date): string =>
+  `${busyShareSummary(dailyLimit, now)} Use a link that works offline below.`;
+
+export const LINK_NOT_COPIED_TOAST = "Link wasn't copied — try again.";
+
+export type ShortLinkFailure =
+  | { kind: 'error' }
+  | { kind: 'busy'; dailyLimit?: number; resetsAt: number };
+
+export const liveBusyFailure = (
+  failure: ShortLinkFailure | null,
+  nowMs: number,
+): Extract<ShortLinkFailure, { kind: 'busy' }> | null =>
+  failure?.kind === 'busy' && nowMs < failure.resetsAt ? failure : null;
+

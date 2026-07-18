@@ -14,7 +14,9 @@ import {
   minifyReplayWorkspace,
   deminifyReplayWorkspace,
   WS_REPLAY_VERSION,
+  DEFAULT_SETTINGS,
   type HistoryNode,
+  type UserSettings,
 } from '@/store/equation';
 import {
   parseEquation,
@@ -193,5 +195,36 @@ describe('replay workspace codec (#403)', () => {
     const { rebuilt, de } = roundTrip(tree, cur, 'swap');
     expect(de.drift).toBe(false);
     expect(equationToString(rebuilt[de.currentNodeId].equation)).toBe(equationToString(swapped));
+  });
+
+  describe('settings carriage in minified workspace', () => {
+    it('does not stamp g when settings match defaults', () => {
+      const tree = rootTree('x = 2');
+      const min = minifyReplayWorkspace(
+        { tree: serializeTree(tree), currentNodeId: '0', name: 'Work' },
+        DEFAULT_SETTINGS
+      );
+      expect(min.g).toBeUndefined();
+    });
+
+    it('stamps only differing settings in g', () => {
+      const tree = rootTree('x = 2');
+      const customSettings: UserSettings = {
+        ...DEFAULT_SETTINGS,
+        allowComplex: false, // Default is true
+        allowEvaluateToDecimal: true, // Default is false
+        // progressiveMode is false (matches default)
+      };
+
+      const min = minifyReplayWorkspace(
+        { tree: serializeTree(tree), currentNodeId: '0', name: 'Work' },
+        customSettings
+      );
+
+      expect(min.g).toBeDefined();
+      expect(min.g?.allowComplex).toBe(false);
+      expect(min.g?.allowEvaluateToDecimal).toBe(true);
+      expect(min.g?.progressiveMode).toBeUndefined();
+    });
   });
 });

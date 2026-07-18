@@ -8,6 +8,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import { Layers } from 'lucide-react';
 import {
   sharedWorkspaceBannerAtom,
+  sharedWorkspacePresetAtom,
   markSharedWorkspaceBannerDismissed,
 } from '../store/sharedWorkspaceBanner';
 import { consentAtom } from '../store/consent';
@@ -23,6 +24,7 @@ import { THEME_GLASS } from '../constants/theme';
  */
 export const SharedWorkspaceBanner = () => {
   const [open, setOpen] = useAtom(sharedWorkspaceBannerAtom);
+  const presetLabel = useAtomValue(sharedWorkspacePresetAtom);
   const consent = useAtomValue(consentAtom);
   const dismissButtonRef = React.useRef<HTMLButtonElement>(null);
 
@@ -101,6 +103,11 @@ export const SharedWorkspaceBanner = () => {
               A shared workspace was opened for you
             </h3>
             <p className={THEME_GLASS.BANNER_TEXT}>
+              {presetLabel && (
+                <span className="block mb-1.5 text-indigo-300 font-semibold">
+                  This link set: {presetLabel}
+                </span>
+              )}
               This link restored someone&apos;s full derivation and history tree — keep working on
               it right here. Built a worked solution of your own? Hit <strong>Share</strong> to
               hand the whole workspace to someone in one gesture.

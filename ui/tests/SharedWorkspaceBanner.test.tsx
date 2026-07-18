@@ -9,14 +9,16 @@ import { SharedWorkspaceBanner } from '@/components/SharedWorkspaceBanner';
 import { ConsentBanner } from '@/components/ConsentBanner';
 import {
   sharedWorkspaceBannerAtom,
+  sharedWorkspacePresetAtom,
   isSharedWorkspaceBannerDismissed,
 } from '@/store/sharedWorkspaceBanner';
 import { rawConsentAtom } from '@/store/consent';
 import type { ConsentState } from '@/utils/consent';
 
-function renderWith(open: boolean, consent: ConsentState = 'denied') {
+function renderWith(open: boolean, consent: ConsentState = 'denied', presetLabel: string | null = null) {
   const store = createStore();
   store.set(sharedWorkspaceBannerAtom, open);
+  store.set(sharedWorkspacePresetAtom, presetLabel);
   store.set(rawConsentAtom, consent);
   const utils = render(
     <Provider store={store}>
@@ -108,5 +110,11 @@ describe('SharedWorkspaceBanner', () => {
     // Second Escape dismisses the now-visible share banner.
     await userEvent.keyboard('{Escape}');
     expect(store.get(sharedWorkspaceBannerAtom)).toBe(false);
+  });
+
+  it('displays the preset label if presetLabel is set', () => {
+    renderWith(true, 'denied', 'Real numbers only');
+    const banner = screen.getByRole('dialog');
+    expect(banner.textContent).toContain('This link set: Real numbers only');
   });
 });

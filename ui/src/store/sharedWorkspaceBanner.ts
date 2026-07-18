@@ -11,6 +11,7 @@ import { safeStorage } from '../utils/safeStorage';
  * "get it" — closing the viral loop. Lowered when the banner is dismissed.
  */
 export const sharedWorkspaceBannerAtom = atom<boolean>(false);
+export const sharedWorkspacePresetAtom = atom<string | null>(null);
 
 /**
  * localStorage key recording that the recipient has seen and dismissed the

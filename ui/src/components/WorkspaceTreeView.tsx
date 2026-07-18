@@ -27,6 +27,7 @@ import {
   equationToFormat,
   activeZoomModeAtom,
   appHydratedAtom,
+  computeTreeLayout,
   type VisualTreeNode,
   type HistoryNode,
   type ZoomMode,
@@ -146,6 +147,10 @@ interface WorkspaceTreeViewProps {
   onAfterSelect?: () => void;
   /** Override the scroll-container classes (e.g. a capped height in a modal). */
   className?: string;
+  /** Optional custom ZoomMode override. */
+  zoomMode?: ZoomMode;
+  /** Optional custom history tree override. */
+  tree?: Record<string, HistoryNode>;
 }
 
 type PositionedNode = VisualTreeNode & { x: number; y: number; width: number };
@@ -346,6 +351,7 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
           onMouseEnter={() => onHoverLoop(loopAncestor.id)}
           onMouseLeave={() => onHoverLoop(null)}
           onFocus={(e) => {
+            if (!interactive) return;
             if (e.target === e.currentTarget) {
               e.currentTarget.scrollIntoView({
                 behavior: 'smooth',
@@ -422,6 +428,7 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
         onMouseEnter={() => onHoverLoop(node.id)}
         onMouseLeave={() => onHoverLoop(null)}
         onFocus={(e) => {
+          if (!interactive) return;
           if (e.target === e.currentTarget) {
             e.currentTarget.scrollIntoView({
               behavior: 'smooth',
@@ -540,13 +547,24 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   scrollActiveIntoView = true,
   onAfterSelect,
   className,
+  zoomMode: propZoomMode,
+  tree: propTree,
 }) => {
-  const [tree] = useAtom(historyTreeAtom);
+  const [globalTree] = useAtom(historyTreeAtom);
+  const tree = propTree ?? globalTree;
   const [currentNodeId, setCurrentNodeId] = useAtom(currentNodeIdAtom);
   const setSourcePath = useSetAtom(sourcePathAtom);
   const setHoverPath = useSetAtom(hoverPathAtom);
   const setRightSidebarOpen = useSetAtom(rightSidebarOpenAtom);
-  const layout = useAtomValue(treeLayoutAtom);
+
+  const globalLayout = useAtomValue(treeLayoutAtom);
+  const layout = React.useMemo(() => {
+    if (propTree) {
+      return computeTreeLayout(propTree);
+    }
+    return globalLayout;
+  }, [propTree, globalLayout]);
+
   const [hoveredLoopTargetId, setHoveredLoopTargetId] = useAtom(hoveredLoopTargetIdAtom);
   const exportPreviewActive = useAtomValue(exportPreviewActiveAtom);
   const [activeCopyMenuNodeId, setActiveCopyMenuNodeId] = React.useState<string | null>(null);
@@ -565,7 +583,8 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   // 240 until the first measurement, matching the SSR + initial client render so
   // hydration stays stable.
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
-  const [zoomMode, setZoomMode] = useAtom(activeZoomModeAtom);
+  const [storedZoomMode, setZoomMode] = useAtom(activeZoomModeAtom);
+  const zoomMode = propZoomMode ?? storedZoomMode;
 
   const { ref: zoomNormalRef, tabIndex: zoomNormalTabIndex, onKeyDown: zoomNormalKeyDown } = useRovingItem('zoom-normal');
   const { ref: zoomOverviewRef, tabIndex: zoomOverviewTabIndex, onKeyDown: zoomOverviewKeyDown } = useRovingItem('zoom-overview');
@@ -617,7 +636,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
   }, []);
 
   React.useEffect(() => {
-    if (!scrollActiveIntoView) return;
+    if (!interactive || !scrollActiveIntoView) return;
     const timer = setTimeout(() => {
       if (activeCardRef.current) {
         activeCardRef.current.scrollIntoView({
@@ -628,7 +647,7 @@ export const WorkspaceTreeView: React.FC<WorkspaceTreeViewProps> = ({
       }
     }, 100);
     return () => clearTimeout(timer);
-  }, [currentNodeId, scrollActiveIntoView, zoomMode, containerWidth, containerHeight]);
+  }, [currentNodeId, interactive, scrollActiveIntoView, zoomMode, containerWidth, containerHeight]);
 
   const handleStepClick = (id: string) => {
     if (!interactive) return;

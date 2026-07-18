@@ -30,14 +30,16 @@ import { SkipLinks } from '../components/SkipLinks';
 import { RovingTabindexProvider, useRovingItem } from '../hooks/useRovingTabindex';
 import { useAncestorFocusBridge } from '../hooks/useAncestorFocusBridge';
 import { ExploreEquationTree } from '../components/ExploreEquationTree';
-import { ShareMenu, busyShareSummary, LINK_NOT_COPIED_TOAST } from '../components/ShareMenu';
+import { ShareModal } from '../components/ShareModal';
 import { HeaderOverflowMenu } from '../components/HeaderOverflowMenu';
 import { SharedWorkspaceBanner } from '../components/SharedWorkspaceBanner';
 import { StorageDegradedBanner } from '../components/StorageDegradedBanner';
 import {
   sharedWorkspaceBannerAtom,
+  sharedWorkspacePresetAtom,
   isSharedWorkspaceBannerDismissed,
 } from '../store/sharedWorkspaceBanner';
+
 import { FactsStrip } from '../components/FactsStrip';
 import { BottomNav } from '../components/BottomNav';
 import { BottomSheet } from '../components/BottomSheet';
@@ -54,7 +56,13 @@ import { useClipboardBridge } from '../hooks/useClipboardBridge';
 import { ShortcutsOverlay } from '../components/ShortcutsOverlay';
 import { HelpModal } from '../components/HelpModal';
 import { decodeEqParam } from '../utils/eqParam';
-import { consumePendingShare, resolveInitialWsSource, createShareLink } from '../utils/shareLink';
+import {
+  consumePendingShare,
+  resolveInitialWsSource,
+  createShareLink,
+  busyShareSummary,
+  LINK_NOT_COPIED_TOAST,
+} from '../utils/shareLink';
 import { safeCopyText } from '../utils/clipboard';
 import {
   currentEquationAtom,
@@ -87,13 +95,13 @@ import {
   SUPPORTED_SCHEMA_VERSIONS,
   wrapVersioned,
   unwrapVersioned,
-  getActivePathIds,
   INITIAL_EQUATION_STRING,
   leftSidebarOpenAtom,
   rightSidebarOpenAtom,
   feedbackModalOpenAtom,
   feedbackContextAtom,
   settingsModalOpenAtom,
+  shareModalOpenAtom,
   exportWorkspacesModalOpenAtom,
   importWorkspacesModalOpenAtom,
   mathLoadingAtom,
@@ -122,6 +130,7 @@ import {
   previousRightSidebarSizeAtom,
   isGraphViableAtom,
   settingsAtom,
+  DEFAULT_SETTINGS,
   TEXT_SIZE_OPTIONS,
   cycleChromeScale,
   pwaInstallPromptAtom,
@@ -145,7 +154,7 @@ import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import { APP_TAGLINE } from '../constants/brand';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil, AlertTriangle } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil, AlertTriangle, Share2 } from 'lucide-react';
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -243,6 +252,17 @@ const RovingToolbarButton = ({
   );
 };
 
+const SequenceChips: React.FC<{ keys: string[]; className?: string }> = ({ keys, className = '' }) => (
+  <span className={`inline-flex items-center gap-1 font-sans text-[10px] font-bold text-white/50 ${className}`}>
+    {keys.map((k, i) => (
+      <React.Fragment key={k}>
+        {i > 0 && <span>then</span>}
+        <kbd className="px-1 py-0.5 rounded bg-white/10 text-white font-mono text-[9px] uppercase leading-none">{k}</kbd>
+      </React.Fragment>
+    ))}
+  </span>
+);
+
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
   const liveAnnouncement = useAtomValue(liveAnnouncementAtom);
@@ -312,6 +332,7 @@ export default function Home() {
   const [feedbackOpen, setFeedbackModalOpen] = useAtom(feedbackModalOpenAtom);
   const setFeedbackContext = useSetAtom(feedbackContextAtom);
   const [settingsOpen, setSettingsModalOpen] = useAtom(settingsModalOpenAtom);
+  const setShareModalOpen = useSetAtom(shareModalOpenAtom);
   const setExportWorkspacesModalOpen = useSetAtom(exportWorkspacesModalOpenAtom);
   const setImportWorkspacesModalOpen = useSetAtom(importWorkspacesModalOpenAtom);
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
@@ -320,6 +341,7 @@ export default function Home() {
   const createNewSession = useSetAtom(createNewSessionAtom);
   const createSessionFromState = useSetAtom(createSessionFromStateAtom);
   const setSharedWorkspaceBanner = useSetAtom(sharedWorkspaceBannerAtom);
+  const setSharedWorkspacePreset = useSetAtom(sharedWorkspacePresetAtom);
   const setDeleteConfirmationModalOpen = useSetAtom(deleteConfirmationModalOpenAtom);
   const setResetHistoryModalOpen = useSetAtom(resetHistoryModalOpenAtom);
   const currentTabName = useAtomValue(currentTabNameAtom);
@@ -675,6 +697,28 @@ export default function Home() {
 
             if (isValid && tree && currentNodeId) {
               const { matched } = createSessionFromState({ tree, currentNodeId, name });
+
+              if (envelope && envelope.g) {
+                setSettings((prev) => ({
+                  ...prev,
+                  ...envelope.g,
+                }));
+              // Format a descriptive string of capability restrictions set by the link
+              const parts: string[] = [];
+              const finalComplex = envelope.g.allowComplex !== undefined ? envelope.g.allowComplex : DEFAULT_SETTINGS.allowComplex;
+              const finalDecimal = envelope.g.allowEvaluateToDecimal !== undefined ? envelope.g.allowEvaluateToDecimal : DEFAULT_SETTINGS.allowEvaluateToDecimal;
+              const finalProgressive = envelope.g.progressiveMode !== undefined ? envelope.g.progressiveMode : DEFAULT_SETTINGS.progressiveMode;
+
+              if (!finalComplex) parts.push('Real numbers only');
+              if (!finalDecimal) parts.push('Exact forms only');
+              if (finalProgressive) parts.push('Progressive simplification');
+
+              const label = parts.length > 0 ? parts.join(', ') : 'All capabilities enabled';
+              setSharedWorkspacePreset(label);
+            } else {
+              setSharedWorkspacePreset(null);
+            }
+
               // Recipient loop (#241): the link restored someone's full derivation —
               // acknowledge it and teach the share feature at this primed moment.
               // On a dedupe match (#299) nothing new arrived, so the store already
@@ -817,7 +861,7 @@ export default function Home() {
     };
 
     initialize();
-  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession, createSessionFromState, setSharedWorkspaceBanner, setAppHydrated, setEquationInputModalOpen, setEquationEditSeed, setToast]);
+  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession, createSessionFromState, setSharedWorkspaceBanner, setSharedWorkspacePreset, setSettings, setAppHydrated, setEquationInputModalOpen, setEquationEditSeed, setToast]);
 
   // Save derivation steps to local storage and update address bar URL reactively
   React.useEffect(() => {
@@ -1110,7 +1154,7 @@ export default function Home() {
   const copyShortLinkChord = async (scope: ShareScope, trackAction: string) => {
     const noun = SHORT_LINK_CHORD_NOUN[scope];
     try {
-      const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName, scope);
+      const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName, scope, settings);
       if (!compressed) return; // nothing to share
       if (!navigator.onLine) {
         setToast({ message: "You're offline — open Share for a link that works offline.", key: Date.now(), type: 'error' });
@@ -1128,7 +1172,7 @@ export default function Home() {
       }
       const success = await safeCopyText(result.url);
       if (success) {
-        setToast({ message: `${noun} link copied`, key: Date.now() });
+        setToast({ message: `${noun} link copied — open Share to configure`, key: Date.now() });
         trackEvent({ action: trackAction, category: 'keyboard' });
       } else {
         // The link minted but never reached the clipboard — the chord promised
@@ -1534,16 +1578,28 @@ export default function Home() {
           </Link>
         </div>
         <div className="flex items-center gap-3">
-          <ShareMenu
-            equationString={currentEq ? equationToString(currentEq) : ''}
-            getCompressedWorkspace={(scope) => serializeWorkspaceState(tree, currentNodeId, currentTabName, scope)}
-            derivationStepCount={
-              tree && currentNodeId && tree[currentNodeId]
-                ? getActivePathIds(tree, currentNodeId).size - 1
-                : 0
-            }
-            tooltip="Share this worked solution"
-          />
+          <div className={THEME_GLASS.SHARE_PILL}>
+            <Tooltip
+              content={
+                <span className="flex flex-col items-center gap-1 whitespace-nowrap">
+                  <span>Share this worked solution</span>
+                  <SequenceChips keys={['C', 'W']} />
+                </span>
+              }
+              position="bottom"
+              autoAlign={false}
+            >
+              <button
+                type="button"
+                onClick={() => setShareModalOpen(true)}
+                aria-label="Share"
+                className={THEME_GLASS.SHARE_PILL_PRIMARY}
+              >
+                <Share2 size={14} className="text-indigo-300 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Share</span>
+              </button>
+            </Tooltip>
+          </div>
           <Tooltip content="Submit Feedback or Report Bug" position="bottom" autoAlign={false}>
             <button
               onClick={toggleFeedback}
@@ -2132,6 +2188,7 @@ export default function Home() {
       <ResetHistoryModal />
       <EquationInputModal />
       <SettingsModal />
+      <ShareModal />
       <ExportWorkspacesModal />
       <ImportWorkspacesModal />
       <AboutModal />

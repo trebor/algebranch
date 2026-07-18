@@ -294,7 +294,7 @@ export const THEME_GLASS = {
   // headline WORKSPACE link in one gesture) and a caret that reveals the scope
   // menu. `relative group` anchors the one-time hint pulse ring.
   SHARE_PILL: 'flex items-stretch rounded-full border border-white/10 bg-white/5 shadow-md transition-all duration-300 relative group',
-  SHARE_PILL_PRIMARY: 'flex items-center gap-1.5 py-1.5 pl-3 pr-2.5 sm:pl-3.5 text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 rounded-l-full transition-colors cursor-pointer',
+  SHARE_PILL_PRIMARY: 'flex items-center gap-1.5 py-1.5 pl-3 pr-3 sm:pl-3.5 sm:pr-3.5 text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer',
   SHARE_PILL_DIVIDER: 'w-px self-stretch my-1.5 bg-white/15',
   SHARE_PILL_CARET: 'flex items-center px-1.5 sm:px-2 text-white/55 hover:text-white hover:bg-white/10 rounded-r-full transition-colors cursor-pointer',
   // One-time "you have something worth sending" pulse ring on the Share pill

@@ -6,7 +6,7 @@
 import React from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Share2, WifiOff, Hourglass, Loader2, ShieldCheck, AlertTriangle, Copy, ChevronDown } from 'lucide-react';
+import { X, Check, Share2, WifiOff, Hourglass, Loader2, ShieldCheck, AlertTriangle, Copy, GraduationCap, Info } from 'lucide-react';
 import {
   shareModalOpenAtom,
   settingsAtom,
@@ -39,8 +39,9 @@ import {
   LINK_NOT_COPIED_TOAST,
   type ShortLinkFailure,
 } from '../utils/shareLink';
-import { safeStorage } from '../utils/safeStorage';
 import Link from 'next/link';
+
+const PLACEHOLDER_KEY = 'xxxxxxxxxxxxxxxxxxxxxx'; // 22 characters placeholder representing a 128-bit key
 
 const EquationPreviewRow: React.FC<{ eq: Equation }> = ({ eq }) => (
   <div className="flex items-center justify-center gap-1.5 flex-nowrap text-lg text-white w-max mx-auto">
@@ -65,6 +66,7 @@ export const ShareModal: React.FC = () => {
 
   // Modal configuration states
   const [scope, setScope] = React.useState<ShareScope>('full');
+  const [includeSettings, setIncludeSettings] = React.useState(false);
 
   // Handle path dimming preview dynamically
   React.useEffect(() => {
@@ -87,24 +89,7 @@ export const ShareModal: React.FC = () => {
   
   // Real-time link values
   const [rawUrl, setRawUrl] = React.useState('');
-  const [isClassroomExpanded, setIsClassroomExpanded] = React.useState(() => {
-    try {
-      const saved = safeStorage.getItem('algebranch_classroom_expanded');
-      return saved === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const handleToggleClassroom = () => {
-    setIsClassroomExpanded((prev) => {
-      const next = !prev;
-      try {
-        safeStorage.setItem('algebranch_classroom_expanded', String(next));
-      } catch {}
-      return next;
-    });
-  };
+  // classroom settings are collapsed by default via includeSettings state
 
   // Compute active path equations for conflict checks
   const equationsToInspect = React.useMemo(() => {
@@ -187,14 +172,14 @@ export const ShareModal: React.FC = () => {
     let active = true;
     const updateUrl = async () => {
       try {
-        const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName, scope, settings);
+        const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName, scope, includeSettings ? settings : undefined);
         if (!active) return;
         const origin = window.location.origin;
         if (delivery === 'offline') {
           setRawUrl(`${origin}?ws=${compressed}`);
         } else {
           // Temporarily set placeholder until they click Copy or load short link
-          setRawUrl(`${origin}/s#key`);
+          setRawUrl(`${origin}/s#${PLACEHOLDER_KEY}`);
         }
       } catch (err) {
         console.error('Failed to compute workspace URL:', err);
@@ -202,7 +187,7 @@ export const ShareModal: React.FC = () => {
     };
     updateUrl();
     return () => { active = false; };
-  }, [isOpen, tree, currentNodeId, currentTabName, scope, delivery, settings]);
+  }, [isOpen, tree, currentNodeId, currentTabName, scope, delivery, settings, includeSettings]);
 
   const handleCopyLink = async () => {
     setShortLinkFailure(null);
@@ -221,7 +206,7 @@ export const ShareModal: React.FC = () => {
     // Short link creation
     setCreating(true);
     try {
-      const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName, scope, settings);
+      const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName, scope, includeSettings ? settings : undefined);
       const origin = window.location.origin;
       const result = await createShareLink(compressed, origin);
       if (result.status === 'ok') {
@@ -369,75 +354,116 @@ export const ShareModal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Classroom Settings (Collapsible, collapsed by default) */}
-              <div className="border border-white/5 bg-white/[0.01] rounded-xl overflow-hidden shrink-0">
-                <button
-                  type="button"
-                  onClick={handleToggleClassroom}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] text-left transition-colors cursor-pointer select-none"
+              {/* Classroom Settings (Collapsible via toggle) */}
+              <div className={`border border-white/5 bg-white/[0.01] rounded-xl overflow-hidden shrink-0 transition-opacity duration-200 ${scope === 'equation' ? 'opacity-60' : ''}`}>
+                <div
+                  className={`w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] text-left transition-colors select-none ${scope === 'equation' ? 'cursor-not-allowed' : ''}`}
                 >
-                  <span className="text-xs font-semibold text-indigo-300 tracking-wide uppercase">Classroom Settings</span>
-                  <ChevronDown size={14} className={`text-indigo-400 transition-transform duration-200 ${isClassroomExpanded ? 'rotate-180' : 'rotate-0'}`} />
-                </button>
-                {isClassroomExpanded && (
+                  <div className="flex items-center gap-2">
+                    <GraduationCap size={14} className={scope === 'equation' ? 'text-white/60' : 'text-indigo-400'} />
+                    <span className={`text-xs font-semibold tracking-wide uppercase ${scope === 'equation' ? 'text-white/70' : 'text-indigo-300'}`}>Classroom Settings</span>
+                    {scope !== 'equation' && (
+                      <Tooltip
+                        content="Embed these capability rules into the URL so the recipient loads them automatically."
+                        position="top"
+                        className="text-xs text-center"
+                      >
+                        <Info size={12} className="text-white/40 hover:text-white/60 cursor-help shrink-0" />
+                      </Tooltip>
+                    )}
+                  </div>
+                  {scope === 'equation' ? (
+                    <span className="text-[10px] text-white/60 font-medium normal-case">Not supported for Equation only</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextVal = !includeSettings;
+                        setIncludeSettings(nextVal);
+                        trackEvent({
+                          action: 'toggle_include_settings',
+                          category: 'share_modal',
+                          label: nextVal ? 'on' : 'off',
+                        });
+                      }}
+                      className={`${THEME_GLASS.TOGGLE_TRACK} ${
+                        includeSettings
+                          ? THEME_GLASS.TOGGLE_TRACK_ON
+                          : THEME_GLASS.TOGGLE_TRACK_OFF
+                      }`}
+                      role="switch"
+                      aria-checked={includeSettings}
+                      aria-label="Include settings in share link"
+                    >
+                      <span
+                        className={`${THEME_GLASS.TOGGLE_KNOB} ${
+                          includeSettings ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  )}
+                </div>
+                {includeSettings && scope !== 'equation' && (
                   <div className="px-4 pb-4 flex flex-col gap-4 border-t border-white/5 pt-3 animate-[fadeIn_0.2s_ease-out]">
-                    {CAPABILITY_GATES.map((gate) => {
-                      const lockReason = gateLockMessages[gate.key];
-                      const isLocked = !!lockReason;
-                      const isChecked = settings[gate.key];
+                    <div className="flex flex-col gap-4">
+                      {CAPABILITY_GATES.map((gate) => {
+                        const lockReason = gateLockMessages[gate.key];
+                        const isLocked = !!lockReason;
+                        const isChecked = settings[gate.key];
 
-                      return (
-                        <div key={gate.key} className="flex items-center justify-between gap-4">
-                          <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs font-semibold text-white">{gate.label}</span>
-                              {isLocked && (
-                                <Tooltip
-                                  content={lockReason}
-                                  position="top"
-                                  className="text-xs text-center"
-                                >
-                                  <AlertTriangle size={12} className="text-amber-400 cursor-help shrink-0" />
-                                </Tooltip>
-                              )}
+                        return (
+                          <div key={gate.key} className="flex items-center justify-between gap-4">
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs font-semibold text-white">{gate.label}</span>
+                                {isLocked && (
+                                  <Tooltip
+                                    content={lockReason}
+                                    position="top"
+                                    className="text-xs text-center"
+                                  >
+                                    <AlertTriangle size={12} className="text-amber-400 cursor-help shrink-0" />
+                                  </Tooltip>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-white/50 leading-snug">
+                                {gate.description}
+                              </span>
                             </div>
-                            <span className="text-[10px] text-white/50 leading-snug">
-                              {gate.description}
-                            </span>
+                            <button
+                              type="button"
+                              disabled={isLocked}
+                              onClick={() => {
+                                const nextVal = !isChecked;
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  [gate.key]: nextVal,
+                                }));
+                                trackEvent({
+                                  action: `toggle_${gate.key}`,
+                                  category: 'share_modal',
+                                  label: nextVal ? 'on' : 'off',
+                                });
+                              }}
+                              className={`${THEME_GLASS.TOGGLE_TRACK} ${
+                                isChecked
+                                  ? THEME_GLASS.TOGGLE_TRACK_ON
+                                  : THEME_GLASS.TOGGLE_TRACK_OFF
+                              } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              role="switch"
+                              aria-checked={isChecked}
+                              aria-label={`Toggle ${gate.label.toLowerCase()} option`}
+                            >
+                              <span
+                                className={`${THEME_GLASS.TOGGLE_KNOB} ${
+                                  isChecked ? 'translate-x-5' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            disabled={isLocked}
-                            onClick={() => {
-                              const nextVal = !isChecked;
-                              setSettings((prev) => ({
-                                ...prev,
-                                [gate.key]: nextVal,
-                              }));
-                              trackEvent({
-                                action: `toggle_${gate.key}`,
-                                category: 'share_modal',
-                                label: nextVal ? 'on' : 'off',
-                              });
-                            }}
-                            className={`${THEME_GLASS.TOGGLE_TRACK} ${
-                              isChecked
-                                ? THEME_GLASS.TOGGLE_TRACK_ON
-                                : THEME_GLASS.TOGGLE_TRACK_OFF
-                            } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            role="switch"
-                            aria-checked={isChecked}
-                            aria-label={`Toggle ${gate.label.toLowerCase()} option`}
-                          >
-                            <span
-                              className={`${THEME_GLASS.TOGGLE_KNOB} ${
-                                isChecked ? 'translate-x-5' : 'translate-x-0'
-                              }`}
-                            />
-                          </button>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

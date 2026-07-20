@@ -1211,28 +1211,48 @@ export const filteredPresetsAtom = atom<Preset[]>((get) => {
   });
 });
 
+export interface PresetSubcategoryGroup {
+  subcategory: string;
+  presets: Preset[];
+}
+
 export interface PresetCategoryGroup {
   category: string;
-  presets: Preset[];
+  subcategories: PresetSubcategoryGroup[];
 }
 
 // Groups the *filtered* presets (#54) so search narrows the accordion live.
 export const presetCategoriesAtom = atom<PresetCategoryGroup[]>((get) => {
   const presets = get(filteredPresetsAtom);
-  const groups: Record<string, Preset[]> = {};
+  const groups: Record<string, Record<string, Preset[]>> = {};
 
   presets.forEach((p) => {
     if (!groups[p.category]) {
-      groups[p.category] = [];
+      groups[p.category] = {};
     }
-    groups[p.category].push(p);
+    if (!groups[p.category][p.subcategory]) {
+      groups[p.category][p.subcategory] = [];
+    }
+    groups[p.category][p.subcategory].push(p);
   });
 
-  return Object.entries(groups).map(([category, items]) => ({
-    category,
-    presets: items,
-  }));
+  const categoryOrder = ['Practice Problems', 'Formulas & Laws', 'Algebraic Identities'];
+
+  return categoryOrder
+    .filter((cat) => groups[cat] !== undefined)
+    .map((category) => {
+      const subcatsMap = groups[category];
+      const subcategories = Object.entries(subcatsMap).map(([subcategory, items]) => ({
+        subcategory,
+        presets: items,
+      }));
+      return {
+        category,
+        subcategories,
+      };
+    });
 });
+
 
 export const sourcePathAtom = atom<string | null>(null);
 export const hoverPathAtom = atom<string | null>(null);
@@ -1458,6 +1478,70 @@ export const DEFAULT_SETTINGS: UserSettings = {
   seenEqualsHint: false,
   chromeScale: CHROME_SCALE_DEFAULT,
   animationSpeed: ANIMATION_SPEED_DEFAULT,
+};
+
+/**
+ * Returns a list of settings that do not match the requirements of a given preset.
+ * Generic and extensible for future classroom settings.
+ */
+export const getPresetMismatchedSettings = (
+  preset: Preset,
+  settings: UserSettings
+): Array<{ key: keyof UserSettings; label: string; requiredValue: boolean }> => {
+  if (!preset.requiredSettings) return [];
+  const mismatches: Array<{ key: keyof UserSettings; label: string; requiredValue: boolean }> = [];
+
+  if (
+    preset.requiredSettings.allowComplex !== undefined &&
+    settings.allowComplex !== preset.requiredSettings.allowComplex
+  ) {
+    mismatches.push({
+      key: 'allowComplex',
+      label: 'Complex Numbers',
+      requiredValue: preset.requiredSettings.allowComplex,
+    });
+  }
+
+  if (
+    preset.requiredSettings.allowEvaluateToDecimal !== undefined &&
+    settings.allowEvaluateToDecimal !== preset.requiredSettings.allowEvaluateToDecimal
+  ) {
+    mismatches.push({
+      key: 'allowEvaluateToDecimal',
+      label: 'Evaluate to Decimal',
+      requiredValue: preset.requiredSettings.allowEvaluateToDecimal,
+    });
+  }
+
+  return mismatches;
+};
+
+/**
+ * Returns a list of all setting requirements defined for a preset (regardless of user settings state).
+ */
+export const getPresetRequiredSettingsList = (
+  preset: Preset
+): Array<{ key: keyof UserSettings; label: string; requiredValue: boolean }> => {
+  if (!preset.requiredSettings) return [];
+  const reqs: Array<{ key: keyof UserSettings; label: string; requiredValue: boolean }> = [];
+
+  if (preset.requiredSettings.allowComplex !== undefined) {
+    reqs.push({
+      key: 'allowComplex',
+      label: 'Complex Numbers',
+      requiredValue: preset.requiredSettings.allowComplex,
+    });
+  }
+
+  if (preset.requiredSettings.allowEvaluateToDecimal !== undefined) {
+    reqs.push({
+      key: 'allowEvaluateToDecimal',
+      label: 'Evaluate to Decimal',
+      requiredValue: preset.requiredSettings.allowEvaluateToDecimal,
+    });
+  }
+
+  return reqs;
 };
 
 export const settingsModalOpenAtom = atom(false);
@@ -2060,6 +2144,25 @@ export const createNewSessionAtom = atom(
 
     try {
       const newEq = ensureNodeIds(parseEquation(eqStr));
+
+      // Check preset-specific capability requirements
+      const preset = PRESET_LIST.find((p) => p.equation === eqStr);
+      if (preset && preset.requiredSettings) {
+        const currentSettings = get(settingsAtom);
+        const mismatches = getPresetMismatchedSettings(preset, currentSettings);
+        if (mismatches.length > 0) {
+          const nextSettings = { ...currentSettings };
+          mismatches.forEach((m) => {
+            (nextSettings as unknown as Record<string, boolean>)[m.key] = m.requiredValue;
+          });
+          set(settingsAtom, nextSettings);
+          set(toastAtom, {
+            message: `Enabled ${mismatches.map((m) => m.label).join(', ')} for this equation.`,
+            key: Date.now(),
+          });
+        }
+      }
+
       const newTree: Record<string, HistoryNode> = {
         "0": {
           id: "0",

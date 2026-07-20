@@ -9,6 +9,8 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '../constants/site';
 import { DOCS_PAGES } from '../constants/docsPages';
+import { PRESET_LIST } from '../constants/presets';
+
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
@@ -47,6 +49,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly' as const,
       priority: 0.7,
     })),
+    // Solve landing pages for solvable library equations.
+    ...PRESET_LIST.filter((preset) => preset.type === 'solvable').map((preset) => ({
+      url: `${SITE_URL}/solve/${preset.slug}`,
+      lastModified,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
     {
       url: `${SITE_URL}/privacy`,
       lastModified,
@@ -55,3 +64,4 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 }
+

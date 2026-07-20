@@ -449,6 +449,9 @@ export const THEME_GLASS = {
   // the introducing step's edge) so a working answer never hides its conditions.
   ACTIVE_RESTRICTION_CAVEAT: 'flex items-center gap-1.5 text-xs font-semibold leading-snug text-amber-300 rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1',
   ACTIVE_RESTRICTION_CAVEAT_ICON: 'shrink-0 text-amber-400',
+  SETTING_WARNING_CARD: 'p-4 rounded-xl border border-amber-400/30 bg-amber-500/10 flex flex-col gap-2.5 text-left backdrop-blur-md',
+  SETTING_WARNING_BANNER: 'flex items-center gap-1.5 text-xs font-semibold leading-snug text-amber-300 rounded-md border border-amber-400/30 bg-amber-500/10 px-2.5 py-1.5',
+  SETTING_WARNING_BADGE: 'text-[0.6rem] font-sans font-semibold px-1.5 py-0.5 rounded-md bg-amber-950 border border-amber-800 text-amber-300 hover:bg-amber-900 transition-colors cursor-pointer animate-[pulse_2s_infinite]',
   TREE_NODE_BADGE_CONTRADICTION: 'bg-red-600 border-red-400 text-red-50',
   TREE_NODE_BADGE_IDENTITY: 'bg-emerald-600 border-emerald-400 text-emerald-50',
   // Standing terminal-state caveat under the main equation (#487): whenever the

@@ -24,10 +24,13 @@ import {
   onboardingShowDirectoryAtom,
   SavedSession,
   deserializeNodeEquation,
+  settingsAtom,
+  toastAtom,
+  getPresetMismatchedSettings,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
-import { ShieldAlert, X, Percent, Play, FolderGit2, ChevronDown, ChevronRight, Hash, Zap, Triangle, Activity, BookOpen, Library, LayoutGrid, PenTool, Search } from 'lucide-react';
+import { ShieldAlert, X, Play, FolderGit2, ChevronDown, ChevronRight, Triangle, TriangleAlert, Activity, Library, Search, LayoutGrid, PenTool, BookOpen } from 'lucide-react';
 import {
   RovingTabindexProvider,
   useRovingItem,
@@ -36,16 +39,12 @@ import {
 
 const getCategoryIcon = (category: string) => {
   switch (category) {
-    case 'Linear & Basic Algebra':
-      return <Hash size={11} className="text-blue-400 shrink-0" />;
-    case 'Quadratics & Polynomials':
-      return <Zap size={11} className="text-amber-400 shrink-0" />;
-    case 'Fractions, Radicals & Rationals':
-      return <Percent size={11} className="text-teal-400 shrink-0" />;
-    case 'Transcendental, Logs & Trig':
-      return <Activity size={11} className="text-pink-400 shrink-0" />;
-    case 'Physics, Geometry & Science Formulas':
-      return <Triangle size={11} className="text-emerald-400 shrink-0" />;
+    case 'Practice Problems':
+      return <Library size={11} className="text-blue-400 shrink-0" />;
+    case 'Formulas & Laws':
+      return <Triangle size={11} className="text-teal-400 shrink-0" />;
+    case 'Algebraic Identities':
+      return <Activity size={11} className="text-amber-400 shrink-0" />;
     default:
       return <FolderGit2 size={11} className="text-indigo-400 shrink-0" />;
   }
@@ -428,9 +427,7 @@ const RovingLibraryButton = ({
 interface EquationLibraryContentProps {
   onCloseMobile?: () => void;
   showHeader?: boolean;
-}
-
-export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
+}export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
   onCloseMobile,
   showHeader = false,
 }) => {
@@ -440,7 +437,10 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
   const [searchQuery, setSearchQuery] = useAtom(presetSearchQueryAtom);
   const isSearching = searchQuery.trim().length > 0;
   const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>({});
+  const [expandedSubcategories, setExpandedSubcategories] = React.useState<Record<string, boolean>>({});
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
+  const [settings, setSettings] = useAtom(settingsAtom);
+  const setToast = useSetAtom(toastAtom);
 
   // Pre-parse each preset's equation once so the hover tooltip can render it in
   // pretty (typeset) form without re-parsing on every render. Unparseable
@@ -448,24 +448,48 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
   const parsedPresets = React.useMemo(() => {
     const map: Record<string, Equation | null> = {};
     for (const group of presetCategories) {
-      for (const preset of group.presets) {
-        try {
-          map[preset.id] = ensureNodeIds(parseEquation(preset.equation));
-        } catch {
-          map[preset.id] = null;
+      for (const subcat of group.subcategories) {
+        for (const preset of subcat.presets) {
+          try {
+            map[preset.id] = ensureNodeIds(parseEquation(preset.equation));
+          } catch {
+            map[preset.id] = null;
+          }
         }
       }
     }
     return map;
   }, [presetCategories]);
 
-  const toggleCategory = (categoryName: string) => {
+  const toggleCategory = (categoryName: string, targetEl?: HTMLElement | null) => {
+    setExpandedSubcategories({});
     setExpandedCategories((prev) => {
       const wasExpanded = !!prev[categoryName];
       if (wasExpanded) {
         return {};
       } else {
+        if (targetEl) {
+          setTimeout(() => {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 50);
+        }
         return { [categoryName]: true };
+      }
+    });
+  };
+
+  const toggleSubcategory = (subcatKey: string, targetEl?: HTMLElement | null) => {
+    setExpandedSubcategories((prev) => {
+      const wasExpanded = !!prev[subcatKey];
+      if (wasExpanded) {
+        return {};
+      } else {
+        if (targetEl) {
+          setTimeout(() => {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 50);
+        }
+        return { [subcatKey]: true };
       }
     });
   };
@@ -487,8 +511,6 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
       setErrorStr(`Error loading equation: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
-
-
 
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-3">
@@ -556,12 +578,14 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
             // visible without manual expansion.
             const isExpanded = isSearching || !!expandedCategories[group.category];
             const example = CATEGORY_EXAMPLES[group.category];
+            const presetCount = group.subcategories.reduce((acc, sub) => acc + sub.presets.length, 0);
+
             // Category header — hovering previews a typical equation from the
             // section (raw syntax, so it doubles as an input-syntax hint, #245).
             const categoryHeader = (
               <RovingLibraryButton
                 itemKey={`cat-${group.category}`}
-                onClick={() => toggleCategory(group.category)}
+                onClick={(e) => toggleCategory(group.category, e.currentTarget as HTMLElement)}
                 className={`w-full flex items-center justify-between py-2 px-3 text-xs font-bold tracking-wider ${THEME_GLASS.CATEGORY_HEADER}`}
               >
                 <div className="flex items-center gap-2">
@@ -574,7 +598,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
                   </div>
                 </div>
                 <span className={`text-[0.5625rem] font-sans font-semibold px-2 py-0.5 group-hover:text-white ${THEME_GLASS.BADGE_MUTED}`}>
-                  {group.presets.length}
+                  {presetCount}
                 </span>
               </RovingLibraryButton>
             );
@@ -592,42 +616,110 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
                   </Tooltip>
                 ) : categoryHeader}
 
-                {/* Category Items (Collapsible) */}
+                {/* Category Items (Collapsible Subcategories) */}
                 {isExpanded && (
                   <div className={`flex flex-col gap-2 pl-2 border-l ${THEME_GLASS.PANEL_BORDER_SUBTLE} ml-3 mt-1.5 animate-[fadeIn_0.2s_ease-out]`}>
-                    {group.presets.map((preset) => (
-                      <Tooltip
-                        key={preset.id}
-                        className="max-w-[min(92vw,40rem)]"
-                        content={(
-                          <TooltipCard
-                            eyebrow={group.category}
-                            title={preset.label}
-                            description={preset.description}
-                            equation={parsedPresets[preset.id]}
-                            rawEquation={preset.equation}
-                          />
-                        )}
-                      >
-                        <RovingLibraryButton
-                          itemKey={`preset-${preset.id}`}
-                          onClick={() => handlePresetSelect(preset.equation, preset.label)}
-                          className={`w-full flex items-center justify-between text-left p-2.5 pl-3 shrink-0 ${THEME_GLASS.CATEGORY_ITEM}`}
-                        >
-                          <div className="flex-1 min-w-0 pr-2">
-                            <div className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">
-                              {preset.label}
+                    {group.subcategories.map((sub) => {
+                      const subcatKey = `${group.category}-${sub.subcategory}`;
+                      const isSubExpanded = isSearching || !!expandedSubcategories[subcatKey];
+
+                      return (
+                        <div key={sub.subcategory} className="flex flex-col gap-1 shrink-0">
+                          {/* Subcategory Accordion Header */}
+                          <RovingLibraryButton
+                            itemKey={`subcat-${subcatKey}`}
+                            onClick={(e) => toggleSubcategory(subcatKey, e.currentTarget as HTMLElement)}
+                            className="w-full flex items-center justify-between py-1.5 px-2 text-[0.7rem] font-bold tracking-wider rounded-md transition-colors hover:bg-white/5 text-zinc-400 hover:text-white cursor-pointer"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-zinc-500">
+                                {isSubExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                              </span>
+                              <span>{sub.subcategory}</span>
                             </div>
-                            <div className="text-xs font-mono text-zinc-500 group-hover:text-indigo-200/80 transition-colors mt-0.5 truncate">
-                              {preset.equation}
+                            <span className={`text-[0.5rem] font-sans font-semibold px-1.5 py-0.2 opacity-80 ${THEME_GLASS.BADGE_MUTED}`}>
+                              {sub.presets.length}
+                            </span>
+                          </RovingLibraryButton>
+
+                          {/* Subcategory Items */}
+                          {isSubExpanded && (
+                            <div className="flex flex-col gap-2 pl-2 mt-1 animate-[fadeIn_0.15s_ease-out]">
+                              {sub.presets.map((preset) => {
+                                const mismatches = getPresetMismatchedSettings(preset, settings);
+                                const isMismatched = mismatches.length > 0;
+                                const mismatchLabels = mismatches.map((m) => m.label).join(', ');
+
+                                return (
+                                  <Tooltip
+                                    key={preset.id}
+                                    className="max-w-[min(92vw,40rem)]"
+                                    content={(
+                                      <TooltipCard
+                                        eyebrow={`${group.category} · ${sub.subcategory}`}
+                                        title={preset.label}
+                                        description={preset.description}
+                                        equation={parsedPresets[preset.id]}
+                                        rawEquation={preset.equation}
+                                        wikiUrl={preset.wikiUrl}
+                                        footer={isMismatched ? (
+                                          <span className={`${THEME_GLASS.SETTING_WARNING_BANNER} text-[0.6875rem] w-full`}>
+                                            <TriangleAlert size={12} className={THEME_GLASS.ACTIVE_RESTRICTION_CAVEAT_ICON} />
+                                            <span>{mismatchLabels} disabled. Selecting will auto-enable it.</span>
+                                          </span>
+                                        ) : undefined}
+                                      />
+                                    )}
+                                  >
+                                    <RovingLibraryButton
+                                      itemKey={`preset-${preset.id}`}
+                                      onClick={() => handlePresetSelect(preset.equation, preset.label)}
+                                      className={`w-full flex items-center justify-between text-left p-2 pl-2.5 shrink-0 ${THEME_GLASS.CATEGORY_ITEM}`}
+                                    >
+                                      <div className="flex-1 min-w-0 pr-2">
+                                        <div className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors flex items-center gap-2">
+                                          <span>{preset.label}</span>
+                                          {isMismatched && mismatches.map((m) => (
+                                            <span
+                                              key={m.key}
+                                              role="button"
+                                              tabIndex={0}
+                                              title={`${m.label} disabled. Click to enable.`}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSettings((prev) => ({ ...prev, [m.key]: m.requiredValue }));
+                                                setToast({ message: `Enabled ${m.label} setting.`, key: Date.now() });
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                  e.stopPropagation();
+                                                  e.preventDefault();
+                                                  setSettings((prev) => ({ ...prev, [m.key]: m.requiredValue }));
+                                                  setToast({ message: `Enabled ${m.label} setting.`, key: Date.now() });
+                                                }
+                                              }}
+                                              className={THEME_GLASS.SETTING_WARNING_BADGE}
+                                            >
+                                              Enable {m.label}
+                                            </span>
+                                          ))}
+                                        </div>
+                                        <div className="text-xs font-mono text-zinc-500 group-hover:text-indigo-200/80 transition-colors mt-0.5 truncate">
+                                          {preset.equation}
+                                        </div>
+                                      </div>
+                                      <div className={THEME_GLASS.ACCENT_PLAY}>
+                                        <Play size={10} />
+                                      </div>
+                                    </RovingLibraryButton>
+                                  </Tooltip>
+                                );
+                              })}
                             </div>
-                          </div>
-                          <div className={THEME_GLASS.ACCENT_PLAY}>
-                            <Play size={10} />
-                          </div>
-                        </RovingLibraryButton>
-                      </Tooltip>
-                    ))}
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -638,6 +730,7 @@ export const EquationLibraryContent: React.FC<EquationLibraryContentProps> = ({
     </div>
   );
 };
+
 
 export const Sidebar: React.FC = () => {
   const leftSidebarOpen = useAtomValue(leftSidebarOpenAtom);

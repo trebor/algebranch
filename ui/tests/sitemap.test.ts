@@ -21,6 +21,14 @@ describe('sitemap.ts (#501)', () => {
     expect(urls).toContain(`${SITE_URL}/link-format`);
   });
 
+  it('includes solve landing pages for all solvable presets', () => {
+    const solveUrls = urls.filter((u) => u.includes('/solve/'));
+    // There should be at least 19 solvable presets
+    expect(solveUrls.length).toBeGreaterThanOrEqual(19);
+    // Explicitly check for one of the main ones
+    expect(urls).toContain(`${SITE_URL}/solve/linear-basic`);
+  });
+
   it('excludes non-content routes (api, share redirect)', () => {
     expect(urls.some((u) => u.includes('/api'))).toBe(false);
     expect(urls.some((u) => u.endsWith('/s'))).toBe(false);
@@ -33,3 +41,4 @@ describe('sitemap.ts (#501)', () => {
     }
   });
 });
+

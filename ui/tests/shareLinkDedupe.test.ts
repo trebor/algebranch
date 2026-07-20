@@ -13,6 +13,7 @@ import {
   currentSessionIdAtom,
   createSessionFromStateAtom,
   createNewSessionAtom,
+  resetToEquationStringAtom,
   loadSessionAtom,
   toastAtom,
   serializeTree,
@@ -167,6 +168,50 @@ describe('createNewSessionAtom — ?eq= arrival dedupe (#299)', () => {
     expect(store.get(rawTabsAtom)).toHaveLength(2);
     expect(store.get(rawActiveTabIdAtom)).toBe('tab-existing');
     expect(store.get(currentSessionIdAtom)).toBe('session-existing');
+  });
+});
+
+describe('resetToEquationStringAtom — library selection dedupe', () => {
+  it('deduplicates when selecting an equation that is already open in a pristine workspace', () => {
+    const store = createStore();
+    const existingTab: WorkspaceTab = {
+      id: 'tab-existing',
+      name: 'Difference of Squares',
+      historyTree: {
+        '0': { id: '0', equation: parseEquation('x^2-9=0'), parentId: null, childrenIds: [], label: 'Initial', timestamp: 1 }
+      },
+      currentNodeId: '0',
+      sessionId: 'session-existing',
+      timestamp: 1
+    };
+
+    store.set(rawTabsAtom, [emptyTab('scratch'), existingTab]);
+    store.set(rawActiveTabIdAtom, 'scratch');
+
+    // Selecting from library calls resetToEquationStringAtom
+    const result = store.set(resetToEquationStringAtom, 'x^2-9=0', 'Difference of Squares');
+
+    expect(result).toEqual({ matched: true });
+    expect(store.get(rawTabsAtom)).toHaveLength(2);
+    expect(store.get(rawActiveTabIdAtom)).toBe('tab-existing');
+    expect(store.get(currentSessionIdAtom)).toBe('session-existing');
+    expect(store.get(toastAtom)?.message).toBe(DEDUPE_TOAST);
+  });
+
+  it('deduplicates when hitting Enter multiple times on a library equation', () => {
+    const store = createStore();
+    store.set(rawTabsAtom, [emptyTab('scratch')]);
+    store.set(rawActiveTabIdAtom, 'scratch');
+
+    // First Enter press
+    store.set(resetToEquationStringAtom, 'x^2-9=0', 'Difference of Squares');
+    const tabsAfterFirst = store.get(rawTabsAtom);
+
+    // Second Enter press on the exact same equation preset
+    const result = store.set(resetToEquationStringAtom, 'x^2-9=0', 'Difference of Squares');
+
+    expect(result).toEqual({ matched: true });
+    expect(store.get(rawTabsAtom)).toHaveLength(tabsAfterFirst.length);
     expect(store.get(toastAtom)?.message).toBe(DEDUPE_TOAST);
   });
 });

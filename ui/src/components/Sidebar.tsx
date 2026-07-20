@@ -653,6 +653,7 @@ interface EquationLibraryContentProps {
                                 return (
                                   <Tooltip
                                     key={preset.id}
+                                    interactive={true}
                                     className="max-w-[min(92vw,40rem)]"
                                     content={(
                                       <TooltipCard

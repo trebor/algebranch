@@ -45,6 +45,7 @@ export const FactsStrip: React.FC = () => {
         return (
           <Tooltip
             key={`${fact.sourceId ?? 'tutorial'}-${fact.variable}-${i}`}
+            interactive={true}
             content={
               <TooltipCard
                 eyebrow="Available substitution"

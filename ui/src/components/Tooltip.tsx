@@ -59,6 +59,7 @@ interface TooltipProps {
   readonly style?: React.CSSProperties; // Optional wrapper container styles
   readonly autoAlign?: boolean; // Dynamic horizontal screen alignment
   readonly visible?: boolean; // Controlled visibility
+  readonly interactive?: boolean; // When true, enables pointer events & hover bridge for links/buttons inside tooltip
 }
 
 /**
@@ -80,13 +81,15 @@ export const Tooltip: React.FC<TooltipProps> = ({
   children,
   position = 'top',
   delay = 150, // Snappy 150ms default delay
-  hideDelay = 150, // Default hover-bridge grace before hiding
+  hideDelay,
   className = '',
   wrapperClassName = '',
   style,
   autoAlign = true,
   visible,
+  interactive = false,
 }) => {
+  const effectiveHideDelay = hideDelay !== undefined ? hideDelay : (interactive ? 300 : 150);
   const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
@@ -291,8 +294,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
       console.error('Failed to compute dynamic tooltip position:', err);
     }
 
-    if (hideTimeoutId) {
-      clearTimeout(hideTimeoutId);
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
       setHideTimeoutId(null);
     }
     // A controlled-OFF tooltip (owner passed visible={false}) still positions
@@ -304,7 +308,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     // after it appears (#388). Controlled-ON tooltips drive visibility from the
     // prop + its effect, so they don't need this timer either.
     if (visible !== undefined) return;
-    if (showTimeoutId) return;
+    if (showCancelRef.current) return;
     const id = setTimeout(() => {
       pendingTooltipShows.delete(cancelPending);
       // Abort every other still-pending show so none can supersede us a beat later.
@@ -319,6 +323,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     const cancelPending = () => {
       clearTimeout(id);
       pendingTooltipShows.delete(cancelPending);
+      showCancelRef.current = null;
       setShowTimeoutId(null);
     };
     showCancelRef.current = cancelPending;
@@ -326,16 +331,12 @@ export const Tooltip: React.FC<TooltipProps> = ({
     setShowTimeoutId(id);
   };
 
-  const hideTooltip = () => {
+  const hideTooltip = (overrideDelay?: number) => {
     if (showCancelRef.current) {
-      pendingTooltipShows.delete(showCancelRef.current);
-      showCancelRef.current = null;
+      showCancelRef.current();
     }
-    if (showTimeoutId) {
-      clearTimeout(showTimeoutId);
-      setShowTimeoutId(null);
-    }
-    if (hideTimeoutId) return;
+    if (hideTimeoutRef.current) return;
+    const delayToUse = overrideDelay !== undefined ? overrideDelay : effectiveHideDelay;
     // Hover-bridge grace period to cross from trigger into tooltip popover safely
     const id = setTimeout(() => {
       setIsVisible(false);
@@ -344,19 +345,16 @@ export const Tooltip: React.FC<TooltipProps> = ({
       }
       setHideTimeoutId(null);
       hideTimeoutRef.current = null;
-    }, hideDelay);
+    }, delayToUse);
     setHideTimeoutId(id);
     hideTimeoutRef.current = id;
   };
 
   const cancelHide = () => {
-    if (hideTimeoutId) {
-      clearTimeout(hideTimeoutId);
-      setHideTimeoutId(null);
-    }
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current);
       hideTimeoutRef.current = null;
+      setHideTimeoutId(null);
     }
   };
 
@@ -491,8 +489,16 @@ export const Tooltip: React.FC<TooltipProps> = ({
     },
   });
 
-  const hasPointerEvents = className.includes('pointer-events-auto');
+  const hasPointerEvents = interactive || className.includes('pointer-events-auto');
   const pointerClass = hasPointerEvents ? 'pointer-events-auto' : 'pointer-events-none';
+
+  const bridgeClasses = {
+    top: 'before:absolute before:inset-x-0 before:-bottom-3 before:h-3',
+    bottom: 'before:absolute before:inset-x-0 before:-top-3 before:h-3',
+    left: 'before:absolute before:inset-y-0 before:-right-3 before:w-3',
+    right: 'before:absolute before:inset-y-0 before:-left-3 before:w-3',
+  };
+  const bridgeClass = interactive ? bridgeClasses[calculatedPosition] : '';
 
   const hasPadding = className.includes('p-') || className.includes('px-') || className.includes('py-');
   const paddingClass = hasPadding ? '' : 'px-3 py-1.5';
@@ -507,7 +513,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     <div
       ref={tooltipRef}
       onMouseEnter={cancelHide}
-      onMouseLeave={hideTooltip}
+      onMouseLeave={() => hideTooltip(150)}
       style={{
         position: 'fixed',
         left: `${adjustedLeft !== null ? adjustedLeft : coords.left}px`,
@@ -519,7 +525,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           'translate(-50%, 0)',
         zIndex: 9999, // Guarantee absolute topmost visual layer
       }}
-      className={`${pointerClass} ${paddingClass} ${widthClass} ${textClass} select-text rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 shadow-2xl shadow-[0_0_30px_rgba(129,140,248,0.45)] transition-all duration-150 animate-in fade-in zoom-in-95 ${className}`}
+      className={`${pointerClass} ${bridgeClass} ${paddingClass} ${widthClass} ${textClass} select-text rounded-lg border border-white/10 bg-neutral-950/95 backdrop-blur-md text-indigo-200 shadow-2xl shadow-[0_0_30px_rgba(129,140,248,0.45)] transition-all duration-150 animate-in fade-in zoom-in-95 ${className}`}
       role="tooltip"
     >
       {content}

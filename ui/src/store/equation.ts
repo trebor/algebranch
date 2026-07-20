@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Robert Harris
 
-import { atom } from 'jotai';
+import { atom, Getter, Setter } from 'jotai';
 import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, nodeToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getChildren, stripRedundantParentheses, getFunctionName, flipRelation, compressString } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
@@ -2133,6 +2133,63 @@ export const pushEquationAtom = atom(
 );
 
 /**
+ * Helper to check if a workspace matching the candidate (by content hash)
+ * already exists in open tabs or saved sessions.
+ */
+const findMatchingWorkspace = (
+  get: Getter,
+  set: Setter,
+  candidateWorkspace: { name?: string; currentNodeId: string; tree: Record<string, SerializedHistoryNode> },
+  options?: { pristineOnly?: boolean }
+): { matched: boolean } => {
+  const candidateHash = hashWorkspace(
+    { name: candidateWorkspace.name || '', currentNodeId: candidateWorkspace.currentNodeId, tree: candidateWorkspace.tree },
+    { ignoreName: true }
+  );
+
+  // Check open tabs first
+  const prevTabs = get(tabsAtom);
+  const existingTab = prevTabs.find((t: WorkspaceTab) => {
+    if (options?.pristineOnly) {
+      const nodeIds = Object.keys(t.historyTree);
+      if (nodeIds.length !== 1) return false;
+      const root = t.historyTree[nodeIds[0]];
+      if (root.childrenIds && root.childrenIds.length > 0) return false;
+    }
+    return (
+      hashWorkspace(
+        { name: t.name, currentNodeId: t.currentNodeId, tree: serializeTree(t.historyTree) },
+        { ignoreName: true }
+      ) === candidateHash
+    );
+  });
+  if (existingTab) {
+    set(activeTabIdAtom, existingTab.id);
+    set(currentSessionIdAtom, existingTab.sessionId || '');
+    set(toastAtom, { message: 'You already have this workspace — opened it.', key: Date.now() });
+    return { matched: true };
+  }
+
+  // Next check saved sessions
+  const match = get(savedSessionsAtom).find((s: SavedSession) => {
+    if (options?.pristineOnly) {
+      const nodeIds = Object.keys(s.tree);
+      if (nodeIds.length !== 1) return false;
+      const root = s.tree[nodeIds[0]];
+      if (root.childrenIds && root.childrenIds.length > 0) return false;
+    }
+    return hashWorkspace(s, { ignoreName: true }) === candidateHash;
+  });
+  if (match) {
+    set(loadSessionAtom, match.id);
+    set(toastAtom, { message: 'You already have this workspace — opened it.', key: Date.now() });
+    return { matched: true };
+  }
+
+  return { matched: false };
+};
+
+/**
  * Action: Create a new blank session.
  */
 export const createNewSessionAtom = atom(
@@ -2174,51 +2231,19 @@ export const createNewSessionAtom = atom(
         }
       };
 
-      // Share-link arrival dedupe (#299): when opening a `?eq=` link, if an
-      // untouched (pristine) workspace built from the same equation already
-      // exists, open it instead of spawning a duplicate. We compare canonical
-      // equation strings rather than a content hash because a rebuilt tree gets
-      // fresh node timestamps — only the equation itself is stable. "Pristine" =
-      // a single root node with no derivation steps, so a further-derived
-      // workspace that merely started from this equation is never hijacked.
+      // Share-link arrival and library selection dedupe (#299): when opening an
+      // equation, if an untouched (pristine) workspace built from the same equation
+      // already exists (by content hash), open it instead of spawning a duplicate.
       if (options?.dedupe) {
-        const candidateEq = equationToString(newEq);
-
-        // First check open tabs to see if a pristine tab matches this equation
-        const prevTabs = get(tabsAtom);
-        const existingTab = prevTabs.find(t => {
-          const nodeIds = Object.keys(t.historyTree);
-          if (nodeIds.length !== 1) return false;
-          const root = t.historyTree[nodeIds[0]];
-          if (root.childrenIds && root.childrenIds.length > 0) return false;
-          try {
-            return equationToString(root.equation) === candidateEq;
-          } catch {
-            return false;
-          }
-        });
-        if (existingTab) {
-          set(activeTabIdAtom, existingTab.id);
-          set(currentSessionIdAtom, existingTab.sessionId || "");
-          set(toastAtom, { message: "You already have this workspace — opened it.", key: Date.now() });
-          return { matched: true };
-        }
-
-        const match = get(savedSessionsAtom).find(s => {
-          const nodeIds = Object.keys(s.tree);
-          if (nodeIds.length !== 1) return false;
-          const root = s.tree[nodeIds[0]];
-          if (root.childrenIds && root.childrenIds.length > 0) return false;
-          try {
-            return serializedEquationToString(root.equation) === candidateEq;
-          } catch {
-            return false;
-          }
-        });
-        if (match) {
-          set(loadSessionAtom, match.id);
-          set(toastAtom, { message: "You already have this workspace — opened it.", key: Date.now() });
-          return { matched: true };
+        const candidateTree = serializeTree(newTree);
+        const matchResult = findMatchingWorkspace(
+          get,
+          set,
+          { name: tabName, currentNodeId: "0", tree: candidateTree },
+          { pristineOnly: true }
+        );
+        if (matchResult.matched) {
+          return matchResult;
         }
       }
 
@@ -2298,27 +2323,12 @@ export const createSessionFromStateAtom = atom(
       // Share-link arrival dedupe (#299): if this exact workspace (same
       // derivation tree, by content hash) is already saved, open the existing
       // one instead of creating a duplicate tab.
-      const candidateHash = hashWorkspace({ name: tabName, currentNodeId, tree: serializedTree }, { ignoreName: true });
+      const matchResult = findMatchingWorkspace(get, set, { name: tabName, currentNodeId, tree: serializedTree });
+      if (matchResult.matched) {
+        return matchResult;
+      }
 
-      // First check open tabs to see if we already have this exact workspace open
       const prevTabs = get(tabsAtom);
-      const existingTab = prevTabs.find(t =>
-        hashWorkspace({ name: t.name, currentNodeId: t.currentNodeId, tree: serializeTree(t.historyTree) }, { ignoreName: true }) === candidateHash
-      );
-      if (existingTab) {
-        set(activeTabIdAtom, existingTab.id);
-        set(currentSessionIdAtom, existingTab.sessionId || "");
-        set(toastAtom, { message: "You already have this workspace — opened it.", key: Date.now() });
-        return { matched: true };
-      }
-
-      const match = get(savedSessionsAtom).find(s => hashWorkspace(s, { ignoreName: true }) === candidateHash);
-      if (match) {
-        set(loadSessionAtom, match.id);
-        set(toastAtom, { message: "You already have this workspace — opened it.", key: Date.now() });
-        return { matched: true };
-      }
-
       const newTabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const newTab: WorkspaceTab = {
         id: newTabId,
@@ -2529,14 +2539,16 @@ export const deleteSessionAtom = atom(
  */
 export const resetToEquationStringAtom = atom(
   null,
-  (_get, set, eqStr: string, customName?: string) => {
-    set(createNewSessionAtom, eqStr, customName);
+  (_get, set, eqStr: string, customName?: string, options?: { dedupe?: boolean }) => {
+    const dedupe = options?.dedupe ?? true;
+    const result = set(createNewSessionAtom, eqStr, customName, { dedupe });
     // Loading an equation from the library or the input modal is an explicit
     // "give me this equation" action, so move keyboard/screen-reader focus to
     // its first term (#231). Only this explicit-reset wrapper bumps the nonce —
     // createNewSessionAtom is also used for the passive initial mount, which
     // must not steal focus on first paint.
     set(requestTreeRefocusAtom);
+    return result;
   }
 );
 

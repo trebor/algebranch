@@ -10,7 +10,7 @@ import { EquationNode } from '../components/EquationNode';
 import { ActiveRestrictionsCaveat } from '../components/ActiveRestrictionsCaveat';
 import { TerminalStateCaveat } from '../components/TerminalStateCaveat';
 import { PracticeSetBanner } from '../components/PracticeSetBanner';
-import { Sidebar, SidebarContent, EquationLibraryContent } from '../components/Sidebar';
+import { Sidebar, SidebarContent, LearnPracticeContent, EquationLibraryContent } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import { GraphPanel } from '../components/GraphPanel';
 import { FeedbackModal } from '../components/FeedbackModal';
@@ -157,7 +157,7 @@ import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import { APP_TAGLINE } from '../constants/brand';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil, AlertTriangle, Share2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, GraduationCap, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil, AlertTriangle, Share2 } from 'lucide-react';
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -1394,6 +1394,15 @@ export default function Home() {
       }
       trackEvent({ action: 'shortcut_toggle_workspace', category: 'keyboard' });
     },
+    'toggle-practice-sets': () => {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+      if (isMobile) {
+        setActiveBottomSheet((prev) => (prev === 'practice' ? null : 'practice'));
+      } else {
+        setLeftSidebarOpen((prev) => !prev);
+      }
+      trackEvent({ action: 'shortcut_toggle_practice_sets', category: 'keyboard' });
+    },
     'toggle-library': () => {
       const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
       if (isMobile) {
@@ -2320,6 +2329,19 @@ export default function Home() {
         fitContent
       >
         <SidebarContent onCloseMobile={() => setActiveBottomSheet(null)} />
+      </BottomSheet>
+
+      <BottomSheet
+        isOpen={activeBottomSheet === 'practice'}
+        onClose={() => setActiveBottomSheet(null)}
+        title={
+          <>
+            <GraduationCap className="text-emerald-400" size={18} />
+            <span>Learn &amp; Practice</span>
+          </>
+        }
+      >
+        <LearnPracticeContent showHeader={false} onCloseMobile={() => setActiveBottomSheet(null)} />
       </BottomSheet>
 
       <BottomSheet

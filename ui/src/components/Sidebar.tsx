@@ -32,7 +32,7 @@ import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
 import { PRACTICE_SETS } from '../constants/ladders';
 import { practiceSetProgressAtom, activePracticeSetAtom, startPracticeSetAtom } from '../store/ladders';
-import { ShieldAlert, X, Play, FolderGit2, ChevronDown, ChevronRight, Triangle, TriangleAlert, Activity, Library, Search, LayoutGrid, PenTool, BookOpen, Target } from 'lucide-react';
+import { ShieldAlert, X, Play, FolderGit2, ChevronDown, ChevronRight, Triangle, TriangleAlert, Activity, Library, Search, LayoutGrid, PenTool, BookOpen, Target, GraduationCap } from 'lucide-react';
 import {
   RovingTabindexProvider,
   useRovingItem,
@@ -82,7 +82,6 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
   const loadSession = useSetAtom(loadSessionAtom);
 
   const setIsInputModalOpen = useSetAtom(equationInputModalOpenAtom);
-  const setOnboardingShowDirectory = useSetAtom(onboardingShowDirectoryAtom);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [isMobileRecentsOpen, setIsMobileRecentsOpen] = React.useState(false);
   const mounted = useIsHydrated();
@@ -159,34 +158,19 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
           <span className={`text-xs ${THEME_GLASS.TEXT_MUTED} tracking-wider font-semibold select-none`}>
             Define Equation
           </span>
-          <div className="grid grid-cols-2 gap-2">
-            <Tooltip content={<HotkeyHint label="Enter equation in new workspace" keys="N" />} position="bottom" autoAlign={false} wrapperClassName="w-full" className="max-w-max">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsInputModalOpen(true);
-                  onCloseMobile?.();
-                }}
-                className={`w-full h-9 px-3 text-xs font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_PRIMARY}`}
-              >
-                <PenTool size={12} />
-                <span>New</span>
-              </button>
-            </Tooltip>
-            <Tooltip content="Learn the app with an interactive, guided tutorial" position="bottom" autoAlign={false} wrapperClassName="w-full">
-              <button
-                type="button"
-                onClick={() => {
-                  setOnboardingShowDirectory(true);
-                  onCloseMobile?.();
-                }}
-                className={`w-full h-9 px-3 text-xs font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_SECONDARY}`}
-              >
-                <BookOpen size={12} className="text-indigo-400" />
-                <span>Tutorial</span>
-              </button>
-            </Tooltip>
-          </div>
+          <Tooltip content={<HotkeyHint label="Enter equation in new workspace" keys="N" />} position="bottom" autoAlign={false} wrapperClassName="w-full">
+            <button
+              type="button"
+              onClick={() => {
+                setIsInputModalOpen(true);
+                onCloseMobile?.();
+              }}
+              className={`w-full h-9 px-3 text-xs font-bold flex items-center justify-center gap-1.5 ${THEME_GLASS.BUTTON_PRIMARY}`}
+            >
+              <PenTool size={12} />
+              <span>New Equation</span>
+            </button>
+          </Tooltip>
         </div>
 
         {/* Recents Dropdown Selector Section */}
@@ -426,6 +410,208 @@ const RovingLibraryButton = ({
   );
 };
 
+interface LearnPracticeContentProps {
+  onCloseMobile?: () => void;
+  showHeader?: boolean;
+}
+
+export const LearnPracticeContent: React.FC<LearnPracticeContentProps> = ({
+  onCloseMobile,
+  showHeader = false,
+}) => {
+  const [, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
+  const setOnboardingShowDirectory = useSetAtom(onboardingShowDirectoryAtom);
+  const activePracticeSet = useAtomValue(activePracticeSetAtom);
+  const practiceProgress = useAtomValue(practiceSetProgressAtom);
+  const startPracticeSet = useSetAtom(startPracticeSetAtom);
+  const [expandedPracticeSets, setExpandedPracticeSets] = React.useState(false);
+
+  return (
+    <div className="shrink-0 flex flex-col gap-3">
+      {showHeader && (
+        <div className={`hidden xl:flex items-center justify-between ${THEME_GLASS.PANEL_HEADER} shrink-0`}>
+          <Tooltip content={<HotkeyHint label="Toggle Learn & Practice" keys="Shift+P" />} position="right" autoAlign={false}>
+            <h2 
+              onClick={() => setLeftSidebarOpen(false)}
+              className="text-lg font-bold text-white flex items-center gap-2 select-none cursor-pointer hover:text-indigo-200 transition-colors"
+            >
+              <GraduationCap className="text-indigo-400" size={18} />
+              <span>Learn &amp; Practice</span>
+            </h2>
+          </Tooltip>
+        </div>
+      )}
+
+      {/* Recessed Content Box */}
+      <RovingTabindexProvider>
+        <div className={`p-4 flex flex-col gap-3 ${THEME_GLASS.TREE_BG}`}>
+          {/* Interactive Tutorials Entry */}
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <Tooltip
+              content={(
+                <TooltipCard
+                  eyebrow="Tutorials"
+                  title="Interactive Tutorials"
+                  description="Guided, interactive chapter workspaces designed to teach step-by-step app mechanics and features."
+                  footer={<span className="text-zinc-400">Select a chapter from the directory modal to begin.</span>}
+                />
+              )}
+              position="right"
+              autoAlign={false}
+              wrapperClassName="w-full"
+              className="max-w-[min(92vw,24rem)]"
+            >
+              <RovingLibraryButton
+                itemKey="cat-tutorials"
+                onClick={() => {
+                  setOnboardingShowDirectory(true);
+                  if (window.innerWidth < 1024) {
+                    setLeftSidebarOpen(false);
+                  }
+                  onCloseMobile?.();
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-white/10 bg-neutral-900/60 hover:bg-neutral-800/90 hover:border-indigo-500/30 text-white transition-all cursor-pointer group shadow-sm"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 group-hover:bg-indigo-500/20 group-hover:border-indigo-500/30 transition-all">
+                    <BookOpen size={14} className="text-indigo-400 shrink-0" />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-xs font-bold text-white group-hover:text-indigo-200 transition-colors">Interactive Tutorials</span>
+                    <span className="text-[0.625rem] text-white/50 font-medium">Guided Chapters</span>
+                  </div>
+                </div>
+                <span className="text-[0.625rem] font-semibold px-2 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 group-hover:text-white transition-colors">
+                  Open
+                </span>
+              </RovingLibraryButton>
+            </Tooltip>
+          </div>
+
+          {/* Practice Sets Entry */}
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <Tooltip
+              content={(
+                <TooltipCard
+                  eyebrow="Practice Sets"
+                  meta={`${PRACTICE_SETS.length} sets`}
+                  title="Practice Sets"
+                  description="Curated problem progressions of five to eight problems each, designed to build step-by-step algebraic fluency and retention."
+                  footer={<span className="text-zinc-400">Starts at saved position &amp; advances automatically upon solving.</span>}
+                />
+              )}
+              position="right"
+              autoAlign={false}
+              wrapperClassName="w-full"
+              className="max-w-[min(92vw,24rem)]"
+            >
+              <RovingLibraryButton
+                itemKey="cat-practice-sets"
+                onClick={() => setExpandedPracticeSets((prev) => !prev)}
+                className={`w-full flex items-center justify-between py-2 px-3 text-xs font-bold tracking-wider ${THEME_GLASS.CATEGORY_HEADER}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={THEME_GLASS.TEXT_MUTED}>
+                    {expandedPracticeSets ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Target size={11} className="text-emerald-400 shrink-0" />
+                    <span>Practice Sets</span>
+                  </div>
+                </div>
+                <span className={`text-[0.5625rem] font-sans font-semibold px-2 py-0.5 group-hover:text-white ${THEME_GLASS.BADGE_MUTED}`}>
+                  {PRACTICE_SETS.length}
+                </span>
+              </RovingLibraryButton>
+            </Tooltip>
+
+            {expandedPracticeSets && (
+              <div className={`flex flex-col gap-2 pl-2 border-l ${THEME_GLASS.PANEL_BORDER_SUBTLE} ml-3 mt-1.5 animate-[fadeIn_0.2s_ease-out]`}>
+                {PRACTICE_SETS.map((set) => {
+                  const isCompleted = practiceProgress.completedSetIds.includes(set.id);
+                  const pos = practiceProgress.setPositions[set.id] ?? 0;
+                  const isActive = activePracticeSet?.set.id === set.id;
+                  const total = set.presetIds.length;
+                  const percent = Math.min(100, Math.round(((isCompleted ? total : pos) / total) * 100));
+
+                  return (
+                    <Tooltip
+                      key={set.id}
+                      interactive={true}
+                      position="right"
+                      autoAlign={false}
+                      wrapperClassName="w-full"
+                      className="max-w-[min(92vw,24rem)]"
+                      content={(
+                        <TooltipCard
+                          eyebrow="Practice Set"
+                          title={`${pos > 0 || isCompleted ? 'Continue' : 'Start'} ${set.title}`}
+                          description={set.description}
+                          meta={`${total} problems`}
+                          footer={
+                            <div className="flex items-center justify-between text-xs w-full">
+                              <span className={THEME_GLASS.TEXT_MUTED}>Progress</span>
+                              <span className={isCompleted ? 'text-emerald-400 font-bold' : 'text-indigo-300 font-bold'}>
+                                {isCompleted ? 'Completed ✓' : `${pos} of ${total} solved`}
+                              </span>
+                            </div>
+                          }
+                        />
+                      )}
+                    >
+                      <RovingLibraryButton
+                        itemKey={`practice-set-${set.id}`}
+                        onClick={() => {
+                          startPracticeSet({ setId: set.id });
+                          if (window.innerWidth < 1024) {
+                            setLeftSidebarOpen(false);
+                          }
+                          onCloseMobile?.();
+                        }}
+                        className={`w-full flex flex-col gap-1 text-left p-2.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
+                          isActive
+                            ? 'border-indigo-500/50 bg-indigo-950/40 text-indigo-200 shadow-[0_0_12px_rgba(99,102,241,0.2)]'
+                            : `border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-[#16142a]/30 hover:bg-[#16142a]/60 text-zinc-300 hover:text-white`
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold truncate text-white">{set.title}</span>
+                          <span
+                            className={`text-[0.5625rem] font-sans font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                              isCompleted
+                                ? THEME_GLASS.ACTIVE_BADGE
+                                : isActive
+                                ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-400/30'
+                                : THEME_GLASS.BADGE_MUTED
+                            }`}
+                          >
+                            {isCompleted ? 'Completed ✓' : `${pos}/${total}`}
+                          </span>
+                        </div>
+                        {/* Progress Bar */}
+                        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-0.5">
+                          <div
+                            className={`h-full transition-all duration-300 ${
+                              isCompleted ? 'bg-emerald-400' : 'bg-indigo-500'
+                            }`}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </RovingLibraryButton>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </RovingTabindexProvider>
+    </div>
+  );
+};
+
+export const PracticeSetsContent = LearnPracticeContent;
+
 interface EquationLibraryContentProps {
   onCloseMobile?: () => void;
   showHeader?: boolean;
@@ -443,10 +629,6 @@ interface EquationLibraryContentProps {
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
   const [settings, setSettings] = useAtom(settingsAtom);
   const setToast = useSetAtom(toastAtom);
-  const practiceProgress = useAtomValue(practiceSetProgressAtom);
-  const activePracticeSet = useAtomValue(activePracticeSetAtom);
-  const startPracticeSet = useSetAtom(startPracticeSetAtom);
-  const [expandedPracticeSets, setExpandedPracticeSets] = React.useState(false);
 
   // Pre-parse category example equations for the category header tooltips
   const parsedCategoryExamples = React.useMemo(() => {
@@ -586,125 +768,6 @@ interface EquationLibraryContentProps {
       {/* Recessed Content Box */}
       <RovingTabindexProvider>
         <div id="library-region" className={`flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 ${THEME_GLASS.TREE_BG}`}>
-          {/* Practice Sets Section (#500) */}
-          {(!isSearching || PRACTICE_SETS.some((s) => s.title.toLowerCase().includes(searchQuery.toLowerCase()) || s.description.toLowerCase().includes(searchQuery.toLowerCase()))) && (
-            <div className="flex flex-col gap-1.5 mb-1.5 shrink-0">
-              <Tooltip
-                content={(
-                  <TooltipCard
-                    eyebrow="Practice Sets"
-                    meta={`${PRACTICE_SETS.length} sets`}
-                    title="Practice Sets"
-                    description="Curated problem progressions of five to eight problems each, designed to build step-by-step algebraic fluency and retention."
-                    footer={<span className="text-zinc-400">Starts at saved position &amp; advances automatically upon solving.</span>}
-                  />
-                )}
-                position="right"
-                autoAlign={false}
-                wrapperClassName="w-full"
-                className="max-w-[min(92vw,24rem)]"
-              >
-                <RovingLibraryButton
-                  itemKey="cat-practice-sets"
-                  onClick={() => setExpandedPracticeSets((prev) => !prev)}
-                  className={`w-full flex items-center justify-between py-2 px-3 text-xs font-bold tracking-wider ${THEME_GLASS.CATEGORY_HEADER}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={THEME_GLASS.TEXT_MUTED}>
-                      {expandedPracticeSets || isSearching ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <Target size={11} className="text-emerald-400 shrink-0" />
-                      <span>Practice Sets</span>
-                    </div>
-                  </div>
-                  <span className={`text-[0.5625rem] font-sans font-semibold px-2 py-0.5 group-hover:text-white ${THEME_GLASS.BADGE_MUTED}`}>
-                    {PRACTICE_SETS.length}
-                  </span>
-                </RovingLibraryButton>
-              </Tooltip>
-
-              {(expandedPracticeSets || isSearching) && (
-                <div className={`flex flex-col gap-2 pl-2 border-l ${THEME_GLASS.PANEL_BORDER_SUBTLE} ml-3 mt-1.5 animate-[fadeIn_0.2s_ease-out]`}>
-                  {PRACTICE_SETS.filter((s) => !isSearching || s.title.toLowerCase().includes(searchQuery.toLowerCase()) || s.description.toLowerCase().includes(searchQuery.toLowerCase())).map((set) => {
-                    const isCompleted = practiceProgress.completedSetIds.includes(set.id);
-                    const pos = practiceProgress.setPositions[set.id] ?? 0;
-                    const isActive = activePracticeSet?.set.id === set.id;
-                    const total = set.presetIds.length;
-                    const percent = Math.min(100, Math.round(((isCompleted ? total : pos) / total) * 100));
-
-                    return (
-                      <Tooltip
-                        key={set.id}
-                        interactive={true}
-                        position="right"
-                        autoAlign={false}
-                        wrapperClassName="w-full"
-                        className="max-w-[min(92vw,24rem)]"
-                        content={(
-                          <TooltipCard
-                            eyebrow="Practice Set"
-                            title={`${pos > 0 || isCompleted ? 'Continue' : 'Start'} ${set.title}`}
-                            description={set.description}
-                            meta={`${total} problems`}
-                            footer={
-                              <div className="flex items-center justify-between text-xs w-full">
-                                <span className={THEME_GLASS.TEXT_MUTED}>Progress</span>
-                                <span className={isCompleted ? 'text-emerald-400 font-bold' : 'text-indigo-300 font-bold'}>
-                                  {isCompleted ? 'Completed ✓' : `${pos} of ${total} solved`}
-                                </span>
-                              </div>
-                            }
-                          />
-                        )}
-                      >
-                        <RovingLibraryButton
-                          itemKey={`practice-set-${set.id}`}
-                          onClick={() => {
-                            startPracticeSet({ setId: set.id });
-                            if (window.innerWidth < 1024) {
-                              setLeftSidebarOpen(false);
-                            }
-                            onCloseMobile?.();
-                          }}
-                          className={`w-full flex flex-col gap-1 text-left p-2.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
-                            isActive
-                              ? 'border-indigo-500/50 bg-indigo-950/40 text-indigo-200 shadow-[0_0_12px_rgba(99,102,241,0.2)]'
-                              : `border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-[#16142a]/30 hover:bg-[#16142a]/60 text-zinc-300 hover:text-white`
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold truncate text-white">{set.title}</span>
-                            <span
-                              className={`text-[0.5625rem] font-sans font-semibold px-2 py-0.5 rounded-full shrink-0 ${
-                                isCompleted
-                                  ? THEME_GLASS.ACTIVE_BADGE
-                                  : isActive
-                                  ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-400/30'
-                                  : THEME_GLASS.BADGE_MUTED
-                              }`}
-                            >
-                              {isCompleted ? 'Completed ✓' : `${pos}/${total}`}
-                            </span>
-                          </div>
-                          {/* Progress Bar */}
-                          <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-0.5">
-                            <div
-                              className={`h-full transition-all duration-300 ${
-                                isCompleted ? 'bg-emerald-400' : 'bg-indigo-500'
-                              }`}
-                              style={{ width: `${percent}%` }}
-                            />
-                          </div>
-                        </RovingLibraryButton>
-                      </Tooltip>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
           {presetCategories.length === 0 && (
             <div className={`flex flex-col items-center justify-center gap-1 py-10 text-center select-none ${THEME_GLASS.TEXT_MUTED}`}>
               <Search size={20} className="opacity-50" />
@@ -888,7 +951,7 @@ export const Sidebar: React.FC = () => {
     // symmetric with the right-hand "History" aside in ControlPanel.
     <aside
       aria-label="Workspace and library"
-      className={`flex flex-col gap-4 fixed top-[var(--header-height)] bottom-0 left-0 z-38 transform transition-all duration-300 ease-in-out ${
+      className={`flex flex-col gap-4 fixed top-[var(--header-height)] bottom-0 left-0 z-38 transform transition-all duration-300 ease-in-out overflow-y-auto ${
       leftSidebarOpen
         ? 'w-80 p-4 translate-x-0 opacity-100'
         : 'w-80 p-4 -translate-x-full opacity-100 max-lg:pointer-events-none'
@@ -898,6 +961,7 @@ export const Sidebar: React.FC = () => {
         : 'lg:w-0 lg:min-w-0 lg:p-0 lg:mr-0 lg:opacity-0 lg:border-0 lg:overflow-hidden lg:pointer-events-none'
     } ${THEME_GLASS.PANEL}`}>
       <SidebarContent />
+      <LearnPracticeContent showHeader={true} />
       <EquationLibraryContent showHeader={true} />
     </aside>
   );

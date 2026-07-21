@@ -11,7 +11,7 @@ import { Tooltip } from './Tooltip';
 import { HotkeyHint } from './HotkeyHint';
 import { TooltipCard } from './TooltipCard';
 import { Equation, parseEquation, ensureNodeIds } from 'math-engine-client';
-import { CATEGORY_EXAMPLES } from '../constants/presets';
+import { CATEGORY_DESCRIPTIONS } from '../constants/presets';
 import {
   resetToEquationStringAtom,
   savedSessionsAtom,
@@ -30,7 +30,9 @@ import {
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
 import { trackEvent } from '../utils/analytics';
-import { ShieldAlert, X, Play, FolderGit2, ChevronDown, ChevronRight, Triangle, TriangleAlert, Activity, Library, Search, LayoutGrid, PenTool, BookOpen } from 'lucide-react';
+import { PRACTICE_SETS } from '../constants/ladders';
+import { practiceSetProgressAtom, activePracticeSetAtom, startPracticeSetAtom } from '../store/ladders';
+import { ShieldAlert, X, Play, FolderGit2, ChevronDown, ChevronRight, Triangle, TriangleAlert, Activity, Library, Search, LayoutGrid, PenTool, BookOpen, Target } from 'lucide-react';
 import {
   RovingTabindexProvider,
   useRovingItem,
@@ -441,6 +443,23 @@ interface EquationLibraryContentProps {
   const [errorStr, setErrorStr] = React.useState<string | null>(null);
   const [settings, setSettings] = useAtom(settingsAtom);
   const setToast = useSetAtom(toastAtom);
+  const practiceProgress = useAtomValue(practiceSetProgressAtom);
+  const activePracticeSet = useAtomValue(activePracticeSetAtom);
+  const startPracticeSet = useSetAtom(startPracticeSetAtom);
+  const [expandedPracticeSets, setExpandedPracticeSets] = React.useState(false);
+
+  // Pre-parse category example equations for the category header tooltips
+  const parsedCategoryExamples = React.useMemo(() => {
+    const map: Record<string, Equation | null> = {};
+    for (const [cat, info] of Object.entries(CATEGORY_DESCRIPTIONS)) {
+      try {
+        map[cat] = ensureNodeIds(parseEquation(info.example));
+      } catch {
+        map[cat] = null;
+      }
+    }
+    return map;
+  }, []);
 
   // Pre-parse each preset's equation once so the hover tooltip can render it in
   // pretty (typeset) form without re-parsing on every render. Unparseable
@@ -567,6 +586,125 @@ interface EquationLibraryContentProps {
       {/* Recessed Content Box */}
       <RovingTabindexProvider>
         <div id="library-region" className={`flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 ${THEME_GLASS.TREE_BG}`}>
+          {/* Practice Sets Section (#500) */}
+          {(!isSearching || PRACTICE_SETS.some((s) => s.title.toLowerCase().includes(searchQuery.toLowerCase()) || s.description.toLowerCase().includes(searchQuery.toLowerCase()))) && (
+            <div className="flex flex-col gap-1.5 mb-1.5 shrink-0">
+              <Tooltip
+                content={(
+                  <TooltipCard
+                    eyebrow="Practice Sets"
+                    meta={`${PRACTICE_SETS.length} sets`}
+                    title="Practice Sets"
+                    description="Curated problem progressions of five to eight problems each, designed to build step-by-step algebraic fluency and retention."
+                    footer={<span className="text-zinc-400">Starts at saved position &amp; advances automatically upon solving.</span>}
+                  />
+                )}
+                position="right"
+                autoAlign={false}
+                wrapperClassName="w-full"
+                className="max-w-[min(92vw,24rem)]"
+              >
+                <RovingLibraryButton
+                  itemKey="cat-practice-sets"
+                  onClick={() => setExpandedPracticeSets((prev) => !prev)}
+                  className={`w-full flex items-center justify-between py-2 px-3 text-xs font-bold tracking-wider ${THEME_GLASS.CATEGORY_HEADER}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={THEME_GLASS.TEXT_MUTED}>
+                      {expandedPracticeSets || isSearching ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <Target size={11} className="text-emerald-400 shrink-0" />
+                      <span>Practice Sets</span>
+                    </div>
+                  </div>
+                  <span className={`text-[0.5625rem] font-sans font-semibold px-2 py-0.5 group-hover:text-white ${THEME_GLASS.BADGE_MUTED}`}>
+                    {PRACTICE_SETS.length}
+                  </span>
+                </RovingLibraryButton>
+              </Tooltip>
+
+              {(expandedPracticeSets || isSearching) && (
+                <div className={`flex flex-col gap-2 pl-2 border-l ${THEME_GLASS.PANEL_BORDER_SUBTLE} ml-3 mt-1.5 animate-[fadeIn_0.2s_ease-out]`}>
+                  {PRACTICE_SETS.filter((s) => !isSearching || s.title.toLowerCase().includes(searchQuery.toLowerCase()) || s.description.toLowerCase().includes(searchQuery.toLowerCase())).map((set) => {
+                    const isCompleted = practiceProgress.completedSetIds.includes(set.id);
+                    const pos = practiceProgress.setPositions[set.id] ?? 0;
+                    const isActive = activePracticeSet?.set.id === set.id;
+                    const total = set.presetIds.length;
+                    const percent = Math.min(100, Math.round(((isCompleted ? total : pos) / total) * 100));
+
+                    return (
+                      <Tooltip
+                        key={set.id}
+                        interactive={true}
+                        position="right"
+                        autoAlign={false}
+                        wrapperClassName="w-full"
+                        className="max-w-[min(92vw,24rem)]"
+                        content={(
+                          <TooltipCard
+                            eyebrow="Practice Set"
+                            title={`${pos > 0 || isCompleted ? 'Continue' : 'Start'} ${set.title}`}
+                            description={set.description}
+                            meta={`${total} problems`}
+                            footer={
+                              <div className="flex items-center justify-between text-xs w-full">
+                                <span className={THEME_GLASS.TEXT_MUTED}>Progress</span>
+                                <span className={isCompleted ? 'text-emerald-400 font-bold' : 'text-indigo-300 font-bold'}>
+                                  {isCompleted ? 'Completed ✓' : `${pos} of ${total} solved`}
+                                </span>
+                              </div>
+                            }
+                          />
+                        )}
+                      >
+                        <RovingLibraryButton
+                          itemKey={`practice-set-${set.id}`}
+                          onClick={() => {
+                            startPracticeSet({ setId: set.id });
+                            if (window.innerWidth < 1024) {
+                              setLeftSidebarOpen(false);
+                            }
+                            onCloseMobile?.();
+                          }}
+                          className={`w-full flex flex-col gap-1 text-left p-2.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
+                            isActive
+                              ? 'border-indigo-500/50 bg-indigo-950/40 text-indigo-200 shadow-[0_0_12px_rgba(99,102,241,0.2)]'
+                              : `border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-[#16142a]/30 hover:bg-[#16142a]/60 text-zinc-300 hover:text-white`
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold truncate text-white">{set.title}</span>
+                            <span
+                              className={`text-[0.5625rem] font-sans font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                                isCompleted
+                                  ? THEME_GLASS.ACTIVE_BADGE
+                                  : isActive
+                                  ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-400/30'
+                                  : THEME_GLASS.BADGE_MUTED
+                              }`}
+                            >
+                              {isCompleted ? 'Completed ✓' : `${pos}/${total}`}
+                            </span>
+                          </div>
+                          {/* Progress Bar */}
+                          <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-0.5">
+                            <div
+                              className={`h-full transition-all duration-300 ${
+                                isCompleted ? 'bg-emerald-400' : 'bg-indigo-500'
+                              }`}
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                        </RovingLibraryButton>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {presetCategories.length === 0 && (
             <div className={`flex flex-col items-center justify-center gap-1 py-10 text-center select-none ${THEME_GLASS.TEXT_MUTED}`}>
               <Search size={20} className="opacity-50" />
@@ -577,11 +715,10 @@ interface EquationLibraryContentProps {
             // While searching, every matching category is open so results are
             // visible without manual expansion.
             const isExpanded = isSearching || !!expandedCategories[group.category];
-            const example = CATEGORY_EXAMPLES[group.category];
+            const catInfo = CATEGORY_DESCRIPTIONS[group.category];
             const presetCount = group.subcategories.reduce((acc, sub) => acc + sub.presets.length, 0);
 
-            // Category header — hovering previews a typical equation from the
-            // section (raw syntax, so it doubles as an input-syntax hint, #245).
+            // Category header — hovering previews category description and typeset example equation
             const categoryHeader = (
               <RovingLibraryButton
                 itemKey={`cat-${group.category}`}
@@ -605,12 +742,20 @@ interface EquationLibraryContentProps {
             return (
               <div key={group.category} className="flex flex-col gap-1.5 mb-1.5 shrink-0">
                 {/* Category Header */}
-                {example ? (
+                {catInfo ? (
                   <Tooltip
-                    content={<span>e.g. <span className="font-mono">{example}</span></span>}
+                    content={(
+                      <TooltipCard
+                        eyebrow="Category"
+                        title={`${group.category}, like:`}
+                        description={catInfo.description}
+                        equation={parsedCategoryExamples[group.category]}
+                      />
+                    )}
                     position="right"
                     autoAlign={false}
                     wrapperClassName="w-full"
+                    className="max-w-[min(92vw,24rem)]"
                   >
                     {categoryHeader}
                   </Tooltip>

@@ -28,7 +28,9 @@ import {
 import { equationToString } from 'math-engine-client';
 import { prefetchChapterScans } from '../utils/mathScan';
 import Image from 'next/image';
-import { Play, ArrowRight, ArrowLeft, CheckCircle2, X, BookOpen, Trophy } from 'lucide-react';
+import { startPracticeSetAtom } from '../store/ladders';
+import { getPracticeSetForChapter } from '../constants/ladders';
+import { Play, ArrowRight, ArrowLeft, CheckCircle2, X, BookOpen, Trophy, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -98,6 +100,7 @@ export const OnboardingTour: React.FC = () => {
   const [showDirectory, setShowDirectory] = useAtom(onboardingShowDirectoryAtom);
   const setStep = useSetAtom(setOnboardingStepAtom);
   const startChapter = useSetAtom(startOnboardingChapterAtom);
+  const startPracticeSet = useSetAtom(startPracticeSetAtom);
   const [completed, setCompleted] = useAtom(onboardingCompletedAtom);
   const currentEq = useAtomValue(currentEquationAtom);
   const sourcePath = useAtomValue(sourcePathAtom);
@@ -534,43 +537,45 @@ export const OnboardingTour: React.FC = () => {
               </div>
 
               <div className="flex flex-col gap-2.5 w-full pt-2">
-                {nextChapter ? (
-                  <button
-                    ref={celebrationPrimaryRef}
-                    onClick={() => startChapter(nextChapter.id)}
-                    className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_PRIMARY}`}
-                  >
-                    <span>Next: {nextChapter.title.split('. ')[1] || nextChapter.title}</span>
-                    <ArrowRight size={13} />
-                  </button>
-                ) : (
-                  <button
-                    ref={celebrationPrimaryRef}
-                    onClick={handleFinishTour}
-                    className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_SUCCESS}`}
-                  >
-                    <CheckCircle2 size={13} />
-                    <span>Finish &amp; Explore Freely</span>
-                  </button>
-                )}
+                {/* Primary CTA: Practice This Skill */}
+                <button
+                  ref={celebrationPrimaryRef}
+                  onClick={() => {
+                    const matchingSet = getPracticeSetForChapter(activeChapter.id);
+                    handleFinishTour();
+                    startPracticeSet({ setId: matchingSet.id, position: 0 });
+                  }}
+                  className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_PRIMARY}`}
+                >
+                  <Target size={13} />
+                  <span>Practice This Skill</span>
+                </button>
 
                 <div className="flex items-center justify-between gap-2.5 w-full">
-                  <button
-                    onClick={handleAllChapters}
-                    className={`flex-1 h-8 px-2 text-xs font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
-                  >
-                    <BookOpen size={12} className="shrink-0" />
-                    <span>All Chapters</span>
-                  </button>
-                  {nextChapter && (
+                  {nextChapter ? (
                     <button
-                      onClick={handleFinishTour}
+                      onClick={() => startChapter(nextChapter.id)}
                       className={`flex-1 h-8 px-2 text-xs font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
                     >
-                      <Play size={12} className="shrink-0" />
-                      <span>Explore Freely</span>
+                      <span>Next Chapter</span>
+                      <ArrowRight size={12} className="shrink-0" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleAllChapters}
+                      className={`flex-1 h-8 px-2 text-xs font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
+                    >
+                      <BookOpen size={12} className="shrink-0" />
+                      <span>All Chapters</span>
                     </button>
                   )}
+                  <button
+                    onClick={handleFinishTour}
+                    className={`flex-1 h-8 px-2 text-xs font-bold flex items-center justify-center gap-1 whitespace-nowrap ${THEME_GLASS.BUTTON_SECONDARY_ACCENT}`}
+                  >
+                    <Play size={12} className="shrink-0" />
+                    <span>Free Workspace</span>
+                  </button>
                 </div>
               </div>
             </motion.div>

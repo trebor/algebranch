@@ -9,6 +9,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
 import { ActiveRestrictionsCaveat } from '../components/ActiveRestrictionsCaveat';
 import { TerminalStateCaveat } from '../components/TerminalStateCaveat';
+import { PracticeSetBanner } from '../components/PracticeSetBanner';
 import { Sidebar, SidebarContent, EquationLibraryContent } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import { GraphPanel } from '../components/GraphPanel';
@@ -150,6 +151,7 @@ import {
   equationToFormat,
   getDerivationSteps,
 } from '../store/equation';
+import { hydratePracticeSetsAtom } from '../store/ladders';
 import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import { APP_TAGLINE } from '../constants/brand';
@@ -344,6 +346,7 @@ export default function Home() {
   const setImportWorkspacesModalOpen = useSetAtom(importWorkspacesModalOpenAtom);
   const [isMathLoading, setMathLoading] = useAtom(mathLoadingAtom);
   const hydrateWorkspaceTabs = useSetAtom(hydrateWorkspaceTabsAtom);
+  const hydratePracticeSets = useSetAtom(hydratePracticeSetsAtom);
   const setAppHydrated = useSetAtom(appHydratedAtom);
   const createNewSession = useSetAtom(createNewSessionAtom);
   const createSessionFromState = useSetAtom(createSessionFromStateAtom);
@@ -676,6 +679,9 @@ export default function Home() {
         // Hydrate workspace tabs state
         hydrateWorkspaceTabs();
 
+        // Hydrate practice sets progress state
+        hydratePracticeSets();
+
         // A `/s#key` short link (#480) resolves + decrypts on the `/s` page, then
         // hands its compressed payload here out-of-band (sessionStorage, never the
         // URL). Consume it once — it is byte-identical to a `?ws=` value, so it
@@ -958,7 +964,7 @@ export default function Home() {
     };
 
     initialize();
-  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, createNewSession, createSessionFromState, setSharedWorkspaceBanner, setSharedWorkspacePreset, setSettings, setAppHydrated, setEquationInputModalOpen, setEquationEditSeed, setToast]);
+  }, [setTree, setCurrentNodeId, setSavedSessions, setCurrentSessionId, setLeftSidebarOpen, setRightSidebarOpen, hydrateWorkspaceTabs, hydratePracticeSets, createNewSession, createSessionFromState, setSharedWorkspaceBanner, setSharedWorkspacePreset, setSettings, setAppHydrated, setEquationInputModalOpen, setEquationEditSeed, setToast]);
 
   // Save derivation steps to local storage and update address bar URL reactively
   React.useEffect(() => {
@@ -2162,6 +2168,8 @@ export default function Home() {
                       equation. At most one halt banner shows; it may stack under the
                       restriction caveat above when both apply. */}
                   <TerminalStateCaveat />
+                  {/* Standing Practice Set next-problem loop affordance (#500) */}
+                  <PracticeSetBanner />
                 </div>
                 </RovingTabindexProvider>
               )}

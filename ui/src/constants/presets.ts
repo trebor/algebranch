@@ -995,3 +995,18 @@ export const CATEGORY_EXAMPLES: Record<string, string> = {
   'Formulas & Laws': 'E = m * c^2',
   'Algebraic Identities': 'sin(phi)^2 + cos(phi)^2 = 1',
 };
+
+export const CATEGORY_DESCRIPTIONS: Record<string, { description: string; example: string }> = {
+  'Practice Problems': {
+    description: 'Curated linear, quadratic, radical, rational, and exponential practice equations.',
+    example: '2 * x + 4 = 10',
+  },
+  'Formulas & Laws': {
+    description: 'Physics, geometry, finance, and algebra formulas ready to solve or isolate.',
+    example: 'E = m * c^2',
+  },
+  'Algebraic Identities': {
+    description: 'Fundamental trigonometric, logarithmic, and polynomial identities.',
+    example: 'sin(phi)^2 + cos(phi)^2 = 1',
+  },
+};

@@ -37,6 +37,7 @@ export type ShortcutId =
   | 'redo'
   | 'redo-ctrl-y'
   | 'toggle-workspace'
+  | 'toggle-practice-sets'
   | 'toggle-library'
   | 'toggle-history'
   | 'clear-selection'
@@ -93,6 +94,7 @@ export const SHORTCUT_CATALOG: ShortcutCatalogEntry[] = [
   // Ctrl+Y redo alias; hidden so the cheat-sheet shows the single canonical row.
   { id: 'redo-ctrl-y', key: 'y', meta: true, description: 'Redo step (Ctrl+Y)', category: 'History', hidden: true },
   { id: 'toggle-workspace', key: 'w', description: 'Toggle Workspace panel', category: 'Panels' },
+  { id: 'toggle-practice-sets', key: 'p', shift: true, description: 'Toggle Practice Sets panel', category: 'Panels', keyLabel: 'Shift+P' },
   { id: 'toggle-library', key: 'l', description: 'Toggle Equation Library', category: 'Panels' },
   { id: 'toggle-history', key: 'h', description: 'Toggle History Sidebar', category: 'Panels' },
   { id: 'clear-selection', key: 'escape', description: 'Clear selection', category: 'Equation' },

@@ -5,7 +5,7 @@
 
 import { useCallback } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
-import { Undo2, LayoutGrid, Library, GitFork, Redo2 } from 'lucide-react';
+import { Undo2, LayoutGrid, Library, GraduationCap, GitFork, Redo2 } from 'lucide-react';
 import { historyTreeAtom, currentNodeIdAtom, activeBottomSheetAtom } from '../store/equation';
 import { Tooltip } from './Tooltip';
 import { useIsHydrated } from '../hooks/useIsHydrated';
@@ -13,13 +13,13 @@ import { useIsHydrated } from '../hooks/useIsHydrated';
 /**
  * BottomNav — Fixed bottom navigation bar for mobile.
  *
- * Layout: Undo | Workspace | = | History | Redo
+ * Layout: Undo | Workspace | Learn | Library | History | Redo
  *
  * - Only visible on screens < 1024px (hidden via `xl:hidden`)
  * - Glass-morphic dark theme with safe area padding
  * - Center "=" button dispatches 'open-radial-menu' custom event
  * - Undo/Redo navigate the history tree linearly
- * - Workspace and History toggle their respective bottom sheets
+ * - Workspace, Learn, Library, and History toggle their respective bottom sheets
  * - Undo/Redo are disabled until hydration completes to avoid mismatch
  */
 
@@ -52,6 +52,10 @@ export const BottomNav: React.FC = () => {
 
   const handleToggleWorkspace = useCallback(() => {
     setActiveBottomSheet((prev) => (prev === 'workspace' ? null : 'workspace'));
+  }, [setActiveBottomSheet]);
+
+  const handleTogglePractice = useCallback(() => {
+    setActiveBottomSheet((prev) => (prev === 'practice' ? null : 'practice'));
   }, [setActiveBottomSheet]);
 
   const handleToggleLibrary = useCallback(() => {
@@ -91,6 +95,15 @@ export const BottomNav: React.FC = () => {
           tooltip="Workspace"
           active={activeBottomSheet === 'workspace'}
           onClick={handleToggleWorkspace}
+        />
+
+        {/* Learn & Practice */}
+        <NavButton
+          icon={<GraduationCap size={24} />}
+          label="Learn"
+          tooltip="Learn & Practice"
+          active={activeBottomSheet === 'practice'}
+          onClick={handleTogglePractice}
         />
 
         {/* Library */}

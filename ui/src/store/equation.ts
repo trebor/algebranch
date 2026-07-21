@@ -1315,7 +1315,7 @@ export const equationInputModalOpenAtom = atom(false);
 export const immersiveAtom = atom(false);
 
 // Mobile UI state atoms
-export type BottomSheetType = 'workspace' | 'history' | 'library' | null;
+export type BottomSheetType = 'workspace' | 'history' | 'library' | 'practice' | null;
 export const activeBottomSheetAtom = atom<BottomSheetType>(null);
 export const radialMenuOpenAtom = atom(false);
 

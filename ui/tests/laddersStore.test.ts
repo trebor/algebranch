@@ -88,6 +88,17 @@ describe('Practice Set Store (ladders.ts)', () => {
     expect(store.get(activePracticeSetAtom)).toBeNull();
   });
 
+  test('re-triggering startPracticeSet reuses existing tab instead of creating duplicate tabs', () => {
+    store.set(startPracticeSetAtom, { setId: 'linear_basics' });
+    const tabsCountInitial = store.get(tabsAtom).length;
+
+    // Trigger startPracticeSet again for the same active set
+    store.set(startPracticeSetAtom, { setId: 'linear_basics' });
+    const tabsCountAfter = store.get(tabsAtom).length;
+
+    expect(tabsCountAfter).toBe(tabsCountInitial);
+  });
+
   test('localStorage persistence round-trips state', () => {
     const initialState = {
       activeSetId: 'identities_factoring',

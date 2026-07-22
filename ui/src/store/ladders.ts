@@ -9,7 +9,7 @@ import {
   currentEquationAtom,
   terminalStatusAtom,
 } from './equation';
-import { getIsolatedDefinition, getVariables } from 'math-engine';
+import { getIsolatedDefinition, getVariables, generateEquationVariation } from 'math-engine';
 import { trackEvent } from '../utils/analytics';
 import { safeStorage } from '../utils/safeStorage';
 
@@ -134,7 +134,10 @@ export const startPracticeSetAtom = atom(
     const presetId = practiceSet.presetIds[targetPos];
     const preset = PRESET_LIST.find((p) => p.id === presetId);
     if (preset) {
-      set(resetToEquationStringAtom, preset.equation, preset.label);
+      const seed = Date.now() + targetPos;
+      const targetVariable = targetPos === 0 ? 'x' : undefined;
+      const variation = generateEquationVariation(preset.equation, { seed, targetVariable });
+      set(resetToEquationStringAtom, variation, preset.label);
     }
 
     trackEvent({
@@ -167,7 +170,10 @@ export const advancePracticeSetAtom = atom(null, (get, set) => {
     const nextPresetId = active.set.presetIds[nextPos];
     const preset = PRESET_LIST.find((p) => p.id === nextPresetId);
     if (preset) {
-      set(resetToEquationStringAtom, preset.equation, preset.label);
+      const seed = Date.now() + nextPos;
+      const targetVariable = nextPos === 0 ? 'x' : undefined;
+      const variation = generateEquationVariation(preset.equation, { seed, targetVariable });
+      set(resetToEquationStringAtom, variation, preset.label);
     }
 
     trackEvent({

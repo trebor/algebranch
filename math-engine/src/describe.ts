@@ -47,13 +47,14 @@ export const handleFamilyForReductionType = (type: ReductionOption['type']): Han
 export type StepChange =
   | {
       readonly kind: 'bothSides';
-      readonly op: 'add' | 'subtract' | 'multiply' | 'divide' | 'power' | 'root' | 'reciprocal';
+      readonly op: 'add' | 'subtract' | 'multiply' | 'divide' | 'power' | 'root' | 'reciprocal' | 'swap';
       // For add/subtract/multiply/divide: the term. For power/root: the
       // exponent / root index (e.g. '2' = square / square-root). For
       // reciprocal — the compound "take the reciprocal of both sides, then
       // multiply by N" a fraction-numerator drag performs (#491), net effect
       // s ↦ N/s — the numerator N. Always a strictly parsable symbolic string.
-      readonly operand: string;
+      // Optional for swap operations.
+      readonly operand?: string;
       readonly text: string;
       // Domain restrictions the step relies on, e.g. ['x ≠ 0'] when dividing
       // both sides by a variable expression (#63). Omitted when there are none.
@@ -652,6 +653,10 @@ export const describeCollapse = (expression: string, variable: string): StepChan
 export const describeGlobalOp = (params: GlobalOpParams): StepChange => {
   const { type, term, power } = params;
   const p = power ?? 2;
+
+  if (type === 'swap') {
+    return { kind: 'bothSides', op: 'swap', text: 'swap left and right sides' };
+  }
 
   if (type === 'square' || type === 'power') {
     const text = p === 2 ? 'square both sides' : p === 3 ? 'cube both sides' : `raise both sides to the power of ${p}`;

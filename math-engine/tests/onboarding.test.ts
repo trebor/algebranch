@@ -68,7 +68,9 @@ const deriveStep = (
     const effectivePower = power ?? 2;
     let result: Equation | null = null;
 
-    if (type === 'sqrt' || type === 'root') {
+    if (type === 'swap') {
+      result = { lhs: eq.rhs, rhs: eq.lhs, relation: eq.relation };
+    } else if (type === 'sqrt' || type === 'root') {
       result = effectivePower === 2
         ? { lhs: new math.FunctionNode('sqrt', [eq.lhs]), rhs: new math.FunctionNode('sqrt', [eq.rhs]) }
         : {

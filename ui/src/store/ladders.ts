@@ -9,7 +9,7 @@ import {
   currentEquationAtom,
   terminalStatusAtom,
 } from './equation';
-import { getIsolatedDefinition, getVariables, generateEquationVariation } from 'math-engine';
+import { isEquationSolved, generateEquationVariation } from 'math-engine';
 import { trackEvent } from '../utils/analytics';
 import { safeStorage } from '../utils/safeStorage';
 
@@ -95,10 +95,7 @@ export const readyForNextProblemAtom = atom((get) => {
   if (!currentEq) return false;
 
   try {
-    const def = getIsolatedDefinition(currentEq);
-    if (!def) return false;
-    const rhsVars = getVariables(def.expression);
-    return rhsVars.length === 0;
+    return isEquationSolved(currentEq);
   } catch {
     return false;
   }
@@ -136,7 +133,8 @@ export const startPracticeSetAtom = atom(
     if (preset) {
       const seed = Date.now() + targetPos;
       const targetVariable = targetPos === 0 ? 'x' : undefined;
-      const variation = generateEquationVariation(preset.equation, { seed, targetVariable });
+      const varyStructure = practiceSet.id !== 'linear_basics';
+      const variation = generateEquationVariation(preset.equation, { seed, targetVariable, varyStructure });
       set(resetToEquationStringAtom, variation, preset.label);
     }
 
@@ -172,7 +170,8 @@ export const advancePracticeSetAtom = atom(null, (get, set) => {
     if (preset) {
       const seed = Date.now() + nextPos;
       const targetVariable = nextPos === 0 ? 'x' : undefined;
-      const variation = generateEquationVariation(preset.equation, { seed, targetVariable });
+      const varyStructure = active.set.id !== 'linear_basics';
+      const variation = generateEquationVariation(preset.equation, { seed, targetVariable, varyStructure });
       set(resetToEquationStringAtom, variation, preset.label);
     }
 

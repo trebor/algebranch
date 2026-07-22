@@ -13,7 +13,8 @@ export type GlobalOpType =
   | 'mul'
   | 'div'
   | 'power'
-  | 'root';
+  | 'root'
+  | 'swap';
 
 export interface GlobalOpParams {
   readonly type: GlobalOpType;
@@ -57,6 +58,15 @@ export const applyGlobalOp = (eq: Equation, params: GlobalOpParams): Equation =>
   const { type, term, power } = params;
   const effectivePower = power ?? 2;
   const relation = eq.relation;
+
+  if (type === 'swap') {
+    return {
+      lhs: eq.rhs,
+      rhs: eq.lhs,
+      relation: flipRelation(relation),
+    };
+  }
+
 
   if (type === 'square' || type === 'power') {
     return {

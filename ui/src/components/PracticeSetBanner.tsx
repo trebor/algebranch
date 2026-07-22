@@ -33,26 +33,24 @@ export const PracticeSetBanner: React.FC = () => {
   const startSet = useSetAtom(startPracticeSetAtom);
   const exitSet = useSetAtom(exitPracticeSetAtom);
   const recordProblemSolved = useSetAtom(recordProblemSolvedAtom);
-
   const [shouldCelebrate, setShouldCelebrate] = React.useState(false);
-  const prevReadyRef = React.useRef<boolean>(readyForNext);
-  const activeKey = active ? `${active.set.id}_${active.position}` : null;
-  const prevKeyRef = React.useRef<string | null>(activeKey);
+
+  const activeSetId = active?.set.id ?? null;
+  const activePosition = active?.position ?? 0;
 
   React.useEffect(() => {
-    const keyChanged = prevKeyRef.current !== activeKey;
-    const justSolved = !prevReadyRef.current && readyForNext;
+    if (!activeSetId || !readyForNext) return;
 
-    prevKeyRef.current = activeKey;
-    prevReadyRef.current = readyForNext;
-
-    if (justSolved && !keyChanged && active) {
-      recordProblemSolved();
-      setShouldCelebrate(true);
-      const timer = setTimeout(() => setShouldCelebrate(false), 2500);
-      return () => clearTimeout(timer);
+    const isFresh = recordProblemSolved();
+    if (isFresh) {
+      const celebrateTimer = setTimeout(() => setShouldCelebrate(true), 0);
+      const resetTimer = setTimeout(() => setShouldCelebrate(false), 2500);
+      return () => {
+        clearTimeout(celebrateTimer);
+        clearTimeout(resetTimer);
+      };
     }
-  }, [active, readyForNext, activeKey, recordProblemSolved]);
+  }, [activeSetId, activePosition, readyForNext, recordProblemSolved]);
 
   if (!active || !readyForNext) return null;
 

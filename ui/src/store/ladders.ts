@@ -24,6 +24,7 @@ export interface PracticeSetProgress {
   completedSetIds: string[];
   setPositions: Record<string, number>;
   generatedEquations?: Record<string, Record<number, string>>;
+  celebratedKeys?: string[];
 }
 
 export const DEFAULT_PRACTICE_SET_PROGRESS: PracticeSetProgress = {
@@ -32,6 +33,7 @@ export const DEFAULT_PRACTICE_SET_PROGRESS: PracticeSetProgress = {
   completedSetIds: [],
   setPositions: {},
   generatedEquations: {},
+  celebratedKeys: [],
 };
 
 export const getPracticeSetsFromStorage = (): PracticeSetProgress => {
@@ -47,6 +49,9 @@ export const getPracticeSetsFromStorage = (): PracticeSetProgress => {
     };
     if (parsed.generatedEquations && typeof parsed.generatedEquations === 'object') {
       progress.generatedEquations = parsed.generatedEquations;
+    }
+    if (Array.isArray(parsed.celebratedKeys)) {
+      progress.celebratedKeys = parsed.celebratedKeys;
     }
     return progress;
   } catch {
@@ -275,11 +280,15 @@ export const advancePracticeSetAtom = atom(null, (get, set) => {
   }
 });
 
-export const recordProblemSolvedAtom = atom(null, (get, set) => {
+export const recordProblemSolvedAtom = atom(null, (get, set): boolean => {
   const active = get(activePracticeSetAtom);
-  if (!active) return;
+  if (!active) return false;
 
+  const key = `${active.set.id}_${active.position}`;
   const currentProgress = get(practiceSetProgressAtom);
+  const celebratedKeys = currentProgress.celebratedKeys ?? [];
+  const alreadyCelebrated = celebratedKeys.includes(key);
+
   const nextPos = Math.min(active.position + 1, active.set.presetIds.length);
   const isLastProblem = active.position >= active.set.presetIds.length - 1;
 
@@ -294,9 +303,11 @@ export const recordProblemSolvedAtom = atom(null, (get, set) => {
       ...currentProgress.setPositions,
       [active.set.id]: Math.max(currentProgress.setPositions[active.set.id] ?? 0, nextPos),
     },
+    celebratedKeys: alreadyCelebrated ? celebratedKeys : [...celebratedKeys, key],
   };
 
   set(practiceSetProgressAtom, nextProgress);
+  return !alreadyCelebrated;
 });
 
 export const exitPracticeSetAtom = atom(null, (get, set) => {

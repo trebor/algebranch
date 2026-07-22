@@ -2,12 +2,12 @@
 // `prebuild` step (scripts/stamp-sw.mjs) rewrites them from root package.json, and
 // release-please keeps the committed values in sync via the x-release-please-version
 // annotations below. Do not hand-edit the versions.
-const PRECACHE_NAME = 'algebranch-precache-v1.4.0'; // x-release-please-version
+const PRECACHE_NAME = 'algebranch-precache-v1.5.0'; // x-release-please-version
 const STATIC_CACHE_NAME = 'algebranch-static-v1';
 const RUNTIME_CACHE_NAME = 'algebranch-runtime-v1';
 const CURRENT_CACHES = [PRECACHE_NAME, STATIC_CACHE_NAME, RUNTIME_CACHE_NAME];
 
-const SW_VERSION = '1.4.0'; // x-release-please-version
+const SW_VERSION = '1.5.0'; // x-release-please-version
 
 const MAX_STATIC_ENTRIES = 150;
 const MAX_RUNTIME_ENTRIES = 50;

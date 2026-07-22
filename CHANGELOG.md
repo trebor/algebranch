@@ -8,6 +8,66 @@ and the monorepo uses a single unified version across all workspaces; the root
 v1.0.0 onward, entries are generated automatically from conventional commits by
 [release-please](https://github.com/googleapis/release-please) (#337).
 
+## [1.5.0](https://github.com/trebor/algebranch/compare/v1.4.0...v1.5.0) (2026-07-22)
+
+
+### Features
+
+* **a11y:** carry the keyboard cursor across Exploration ↔ Interaction switches ([#373](https://github.com/trebor/algebranch/issues/373)) ([#517](https://github.com/trebor/algebranch/issues/517)) ([de2a4af](https://github.com/trebor/algebranch/commit/de2a4af031690196c2a852b9212c4a1b139a8306))
+* **a11y:** implement keyboard navigation, skip-links, roving toolbars, and pane cycling ([993922d](https://github.com/trebor/algebranch/commit/993922d366f8fc09fd8fa8ff8e8ff4b104558f96))
+* add problem ladders and practice sets with local storage hydration ([#548](https://github.com/trebor/algebranch/issues/548)) ([000d689](https://github.com/trebor/algebranch/commit/000d689a0fcde30293bbdc696490753dafa04898))
+* add progressive simplification mode ([#368](https://github.com/trebor/algebranch/issues/368)) ([#533](https://github.com/trebor/algebranch/issues/533)) ([6b7c168](https://github.com/trebor/algebranch/commit/6b7c168ddd4091b59ad2cf59a1625590ae88da41))
+* **engine,ui:** freeze the tree on terminal conclusions ([#487](https://github.com/trebor/algebranch/issues/487)) ([#494](https://github.com/trebor/algebranch/issues/494)) ([f4170f2](https://github.com/trebor/algebranch/commit/f4170f2dcf08ef6326f9c21fd807b7b5306dc910))
+* **feedback:** first-party POST endpoint so feedback needs no GitHub account ([#519](https://github.com/trebor/algebranch/issues/519)) ([#528](https://github.com/trebor/algebranch/issues/528)) ([4c00d89](https://github.com/trebor/algebranch/commit/4c00d894554ad6773ee437b96a6120082fd1b6d7))
+* **math-engine:** normalize middle-dot, ≤/≥, vulgar fractions, ∛/∜ ([#394](https://github.com/trebor/algebranch/issues/394)) ([#473](https://github.com/trebor/algebranch/issues/473)) ([5a8b3da](https://github.com/trebor/algebranch/commit/5a8b3da2393afcdcd682388d73a2f74599877f93))
+* **ops:** first-party privacy-clean error beacon ([#505](https://github.com/trebor/algebranch/issues/505)) ([#526](https://github.com/trebor/algebranch/issues/526)) ([39425e3](https://github.com/trebor/algebranch/commit/39425e3790b3074a8e01838db11e2cb7c821e235))
+* practice sets structural equation variations ([#546](https://github.com/trebor/algebranch/issues/546)) ([#552](https://github.com/trebor/algebranch/issues/552)) ([c26182e](https://github.com/trebor/algebranch/commit/c26182e5506fc7ae962307318f177981c372609c))
+* **practice:** refine equation completion conditions and teach equation flipping ([#553](https://github.com/trebor/algebranch/issues/553)) ([f81fcd7](https://github.com/trebor/algebranch/commit/f81fcd7683705094d281b02e6cebf02ace3c0c56))
+* **presets:** audit and reorganize library presets, SEO solve pages, and tooltip variable lists ([#499](https://github.com/trebor/algebranch/issues/499)) ([#543](https://github.com/trebor/algebranch/issues/543)) ([68ccf66](https://github.com/trebor/algebranch/commit/68ccf6661cb29e60df66e381c996d5ee6c987979))
+* replace presets with dynamic capability gates and rename progressive mode ([#538](https://github.com/trebor/algebranch/issues/538)) ([cb9f510](https://github.com/trebor/algebranch/commit/cb9f510e36ab1b5ef87af2454783870e9285e77f))
+* **seo,docs,ui:** mirror docs onto the domain with per-page structured data ([#509](https://github.com/trebor/algebranch/issues/509)) ([#515](https://github.com/trebor/algebranch/issues/515)) ([3b2dcf8](https://github.com/trebor/algebranch/commit/3b2dcf85f8c0e64aa9a69cd6400cc6eb4ecb8dab))
+* **seo,ui:** AI-discoverable crawl surface, deep-link spec, and secondary-route hydration fix ([#508](https://github.com/trebor/algebranch/issues/508)) ([9215652](https://github.com/trebor/algebranch/commit/9215652da2023fcf1197c03bcda665702592fcbc))
+* **share:** first-party zero-knowledge short links at /s#key ([#480](https://github.com/trebor/algebranch/issues/480)) ([#483](https://github.com/trebor/algebranch/issues/483)) ([9b21f7a](https://github.com/trebor/algebranch/commit/9b21f7a9c21cef6b36509ed9606bf0f27d633d37))
+* **share:** global daily write budget on short-link creates ([#505](https://github.com/trebor/algebranch/issues/505)) ([#525](https://github.com/trebor/algebranch/issues/525)) ([65db02e](https://github.com/trebor/algebranch/commit/65db02eb97780501d8313fb0f356577e61c984aa))
+* **ui,docs:** dedicated equation-input-format reference; replace math.js link ([#513](https://github.com/trebor/algebranch/issues/513)) ([3dc2f30](https://github.com/trebor/algebranch/commit/3dc2f3035ffc23ae530ea1e98b9aaf9fc3fd0cfe)), closes [#507](https://github.com/trebor/algebranch/issues/507)
+* **ui,docs:** unify help + shortcuts into one URL-addressable source of truth ([#514](https://github.com/trebor/algebranch/issues/514)) ([#516](https://github.com/trebor/algebranch/issues/516)) ([5b36934](https://github.com/trebor/algebranch/commit/5b3693476fd4429b3386f040be29c98a46cbe4f8))
+* **ui:** add interactive Wikipedia explanation links to chooser option rows ([#535](https://github.com/trebor/algebranch/issues/535)) ([f70df5e](https://github.com/trebor/algebranch/commit/f70df5e223b116937d7dfdc62e98fb78eaaa6bb4))
+* **ui:** add user-controlled animation speed settings and heal duplicate AST keys ([#478](https://github.com/trebor/algebranch/issues/478)) ([2902689](https://github.com/trebor/algebranch/commit/29026896a63eebc0553043e0357382bcbb791798))
+* **ui:** classroom settings polish and keyboard-only focus tooltips ([#540](https://github.com/trebor/algebranch/issues/540)) ([b03f73d](https://github.com/trebor/algebranch/commit/b03f73d5ef1e9b8a3dcecd78980f1816ce4368d5))
+* **ui:** diff-emphasized transform previews ([#423](https://github.com/trebor/algebranch/issues/423)) ([#467](https://github.com/trebor/algebranch/issues/467)) ([693c61e](https://github.com/trebor/algebranch/commit/693c61e9f9f5aa465543785c4578d1721efe774b))
+* **ui:** global Escape dismissal for the shared-workspace banner ([#484](https://github.com/trebor/algebranch/issues/484)) ([#496](https://github.com/trebor/algebranch/issues/496)) ([4adc255](https://github.com/trebor/algebranch/commit/4adc2559ad998583e395208fdb3cc36e1c6e44ef))
+* **ui:** interactive tooltips with hover bridge and exit dismissal ([#544](https://github.com/trebor/algebranch/issues/544)) ([3f386a8](https://github.com/trebor/algebranch/commit/3f386a844cb10a0da6f7567922bbe2ffe39f9e94))
+* **ui:** propagate and stack domain restrictions down the branch ([#486](https://github.com/trebor/algebranch/issues/486)) ([#490](https://github.com/trebor/algebranch/issues/490)) ([9459712](https://github.com/trebor/algebranch/commit/9459712414cd220bc404c2a4914d4cb0ae12b452))
+* **ui:** refactor left sidebar into Learn & Practice three-pillar architecture ([#550](https://github.com/trebor/algebranch/issues/550)) ([#551](https://github.com/trebor/algebranch/issues/551)) ([02473f2](https://github.com/trebor/algebranch/commit/02473f2f9bd16c635de524b34e70df42ef4f3f03))
+* **ui:** sharpen active-path contrast in the history tree ([#485](https://github.com/trebor/algebranch/issues/485)) ([#495](https://github.com/trebor/algebranch/issues/495)) ([40ff521](https://github.com/trebor/algebranch/commit/40ff521eba5170124f3776a96939b14af26a5417))
+* **ui:** show keyboard-shortcut keycaps in the overflow menu ([#469](https://github.com/trebor/algebranch/issues/469)) ([9f09046](https://github.com/trebor/algebranch/commit/9f09046d7c0a484d87a955fee6dacf62f74dd4aa))
+* **ui:** stall-signal instrumentation for hint-ladder ([#497](https://github.com/trebor/algebranch/issues/497)) ([45fd52d](https://github.com/trebor/algebranch/commit/45fd52d036ef597d1cf083f3cec1b9e08853953e))
+* **ui:** stall-signal instrumentation for hint-ladder ([#497](https://github.com/trebor/algebranch/issues/497)) ([#541](https://github.com/trebor/algebranch/issues/541)) ([45fd52d](https://github.com/trebor/algebranch/commit/45fd52d036ef597d1cf083f3cec1b9e08853953e))
+* **ui:** submittable worked-solution export, unified with equation export ([#130](https://github.com/trebor/algebranch/issues/130)) ([#479](https://github.com/trebor/algebranch/issues/479)) ([346d6f7](https://github.com/trebor/algebranch/commit/346d6f73bc6949130f3359364bc1751eb993b63e))
+* **ui:** teacher answer-key affordances — blanked worksheet and reveal ([#476](https://github.com/trebor/algebranch/issues/476)) ([#537](https://github.com/trebor/algebranch/issues/537)) ([c85e830](https://github.com/trebor/algebranch/commit/c85e830f7c5bca94ba0dfe2b1a2f240fb9761bd8))
+* **ui:** touch long-press preview for chooser option rows ([#457](https://github.com/trebor/algebranch/issues/457)) ([#460](https://github.com/trebor/algebranch/issues/460)) ([27d387a](https://github.com/trebor/algebranch/commit/27d387a9bb0dd6fb4307e341370d58526f1597e2))
+* **ui:** unify handle interaction — hover informs, click commits ([#456](https://github.com/trebor/algebranch/issues/456)) ([#458](https://github.com/trebor/algebranch/issues/458)) ([09a08c7](https://github.com/trebor/algebranch/commit/09a08c7a77a020ec7e2ec27acd8fff7a632c0098))
+
+
+### Bug Fixes
+
+* **analytics:** resolve GA consent race condition ([#532](https://github.com/trebor/algebranch/issues/532)) ([04dcd7f](https://github.com/trebor/algebranch/commit/04dcd7f1891c829fce6e3a9b748472f5a5e01bf7))
+* **math-engine:** describe fraction-numerator transposition as a reciprocal move ([#491](https://github.com/trebor/algebranch/issues/491)) ([#492](https://github.com/trebor/algebranch/issues/492)) ([fa751c4](https://github.com/trebor/algebranch/commit/fa751c477f2bfc68a40478b4dfb0a5f236f6f465))
+* **math-engine:** file power-unfolding under Rewrite, not Expand ([#466](https://github.com/trebor/algebranch/issues/466)) ([#468](https://github.com/trebor/algebranch/issues/468)) ([1daea4b](https://github.com/trebor/algebranch/commit/1daea4be3adaadafe31c6c046f989d855fe595e0))
+* **math-engine:** fold a product of two negatives independent of inner complexity ([#465](https://github.com/trebor/algebranch/issues/465)) ([07f94d7](https://github.com/trebor/algebranch/commit/07f94d75cdfe78b3ef04d8b30e87b61cf288588d))
+* **math-engine:** prevent decimal folding from blocking exact simplifications ([#534](https://github.com/trebor/algebranch/issues/534)) ([#536](https://github.com/trebor/algebranch/issues/536)) ([3186929](https://github.com/trebor/algebranch/commit/31869295e04f9cdbb8df66e0c388d4d39386a4c8))
+* **math-engine:** stop ensureNodeIds re-minting a preserved node id ([#462](https://github.com/trebor/algebranch/issues/462)) ([#463](https://github.com/trebor/algebranch/issues/463)) ([f4d74e6](https://github.com/trebor/algebranch/commit/f4d74e6023ec62c43640b6ad730171efe27823d2))
+* **math-engine:** suppress factor-onto-own-multiplier dead-end selectable nodes ([#475](https://github.com/trebor/algebranch/issues/475)) ([33a26b9](https://github.com/trebor/algebranch/commit/33a26b9221e138b560449d88569389451b3c8b7f))
+* **ui:** concise transition-tooltip titles with uniform before → after ([#471](https://github.com/trebor/algebranch/issues/471)) ([9348bcb](https://github.com/trebor/algebranch/commit/9348bcbc9b5aa59095ff873b5c3ef3482f974577))
+* **ui:** deduplicate equation selection from equation library ([#545](https://github.com/trebor/algebranch/issues/545)) ([c8053af](https://github.com/trebor/algebranch/commit/c8053af9c577d1f72da7ab2eb34046a124fbb803))
+* **ui:** describe within-a-side moves as "Rearrange", not bare "Move" ([#512](https://github.com/trebor/algebranch/issues/512)) ([#527](https://github.com/trebor/algebranch/issues/527)) ([4c14fdd](https://github.com/trebor/algebranch/commit/4c14fdd787c76968eb2704860e876669f0ce9463))
+* **ui:** show pulsing skeleton and fade-in history tree on load ([#474](https://github.com/trebor/algebranch/issues/474)) ([a73260e](https://github.com/trebor/algebranch/commit/a73260e7f2b868a703f0662a20ca9bce917e11f0))
+
+
+### Performance Improvements
+
+* **ui:** async math scan via web worker ([#437](https://github.com/trebor/algebranch/issues/437)) ([#530](https://github.com/trebor/algebranch/issues/530)) ([be3d6f2](https://github.com/trebor/algebranch/commit/be3d6f2041aee5b825d5285f20383dde2cc10612))
+
 ## [1.4.0](https://github.com/trebor/algebranch/compare/v1.3.1...v1.4.0) (2026-07-07)
 
 

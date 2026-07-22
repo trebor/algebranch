@@ -424,7 +424,18 @@ export const LearnPracticeContent: React.FC<LearnPracticeContentProps> = ({
   const activePracticeSet = useAtomValue(activePracticeSetAtom);
   const practiceProgress = useAtomValue(practiceSetProgressAtom);
   const startPracticeSet = useSetAtom(startPracticeSetAtom);
-  const [expandedPracticeSets, setExpandedPracticeSets] = React.useState(false);
+  const [userExpandedPracticeSets, setUserExpandedPracticeSets] = React.useState<boolean | null>(null);
+  const expandedPracticeSets = userExpandedPracticeSets ?? Boolean(activePracticeSet);
+  const activeItemRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (activePracticeSet && expandedPracticeSets) {
+      const timer = setTimeout(() => {
+        activeItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [activePracticeSet, expandedPracticeSets]);
 
   return (
     <div className="shrink-0 flex flex-col gap-3">
@@ -507,7 +518,7 @@ export const LearnPracticeContent: React.FC<LearnPracticeContentProps> = ({
             >
               <RovingLibraryButton
                 itemKey="cat-practice-sets"
-                onClick={() => setExpandedPracticeSets((prev) => !prev)}
+                onClick={() => setUserExpandedPracticeSets((prev) => !(prev ?? Boolean(activePracticeSet)))}
                 className={`w-full flex items-center justify-between py-2 px-3 text-xs font-bold tracking-wider ${THEME_GLASS.CATEGORY_HEADER}`}
               >
                 <div className="flex items-center gap-2">
@@ -535,70 +546,71 @@ export const LearnPracticeContent: React.FC<LearnPracticeContentProps> = ({
                   const percent = Math.min(100, Math.round(((isCompleted ? total : pos) / total) * 100));
 
                   return (
-                    <Tooltip
-                      key={set.id}
-                      interactive={true}
-                      position="right"
-                      autoAlign={false}
-                      wrapperClassName="w-full"
-                      className="max-w-[min(92vw,24rem)]"
-                      content={(
-                        <TooltipCard
-                          eyebrow="Practice Set"
-                          title={`${pos > 0 || isCompleted ? 'Continue' : 'Start'} ${set.title}`}
-                          description={set.description}
-                          meta={`${total} problems`}
-                          footer={
-                            <div className="flex items-center justify-between text-xs w-full">
-                              <span className={THEME_GLASS.TEXT_MUTED}>Progress</span>
-                              <span className={isCompleted ? 'text-emerald-400 font-bold' : 'text-indigo-300 font-bold'}>
-                                {isCompleted ? 'Completed ✓' : `${pos} of ${total} solved`}
-                              </span>
-                            </div>
-                          }
-                        />
-                      )}
-                    >
-                      <RovingLibraryButton
-                        itemKey={`practice-set-${set.id}`}
-                        onClick={() => {
-                          startPracticeSet({ setId: set.id });
-                          if (window.innerWidth < 1024) {
-                            setLeftSidebarOpen(false);
-                          }
-                          onCloseMobile?.();
-                        }}
-                        className={`w-full flex flex-col gap-1 text-left p-2.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
-                          isActive
-                            ? 'border-indigo-500/50 bg-indigo-950/40 text-indigo-200 shadow-[0_0_12px_rgba(99,102,241,0.2)]'
-                            : `border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-[#16142a]/30 hover:bg-[#16142a]/60 text-zinc-300 hover:text-white`
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold truncate text-white">{set.title}</span>
-                          <span
-                            className={`text-[0.5625rem] font-sans font-semibold px-2 py-0.5 rounded-full shrink-0 ${
-                              isCompleted
-                                ? THEME_GLASS.ACTIVE_BADGE
-                                : isActive
-                                ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-400/30'
-                                : THEME_GLASS.BADGE_MUTED
-                            }`}
-                          >
-                            {isCompleted ? 'Completed ✓' : `${pos}/${total}`}
-                          </span>
-                        </div>
-                        {/* Progress Bar */}
-                        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-0.5">
-                          <div
-                            className={`h-full transition-all duration-300 ${
-                              isCompleted ? 'bg-emerald-400' : 'bg-indigo-500'
-                            }`}
-                            style={{ width: `${percent}%` }}
+                    <div key={set.id} ref={isActive ? activeItemRef : undefined} className="w-full">
+                      <Tooltip
+                        interactive={true}
+                        position="right"
+                        autoAlign={false}
+                        wrapperClassName="w-full"
+                        className="max-w-[min(92vw,24rem)]"
+                        content={(
+                          <TooltipCard
+                            eyebrow="Practice Set"
+                            title={`${pos > 0 || isCompleted ? 'Continue' : 'Start'} ${set.title}`}
+                            description={set.description}
+                            meta={`${total} problems`}
+                            footer={
+                              <div className="flex items-center justify-between text-xs w-full">
+                                <span className={THEME_GLASS.TEXT_MUTED}>Progress</span>
+                                <span className={isCompleted ? 'text-emerald-400 font-bold' : 'text-indigo-300 font-bold'}>
+                                  {isCompleted ? 'Completed ✓' : `${pos} of ${total} solved`}
+                                </span>
+                              </div>
+                            }
                           />
-                        </div>
-                      </RovingLibraryButton>
-                    </Tooltip>
+                        )}
+                      >
+                        <RovingLibraryButton
+                          itemKey={`practice-set-${set.id}`}
+                          onClick={() => {
+                            startPracticeSet({ setId: set.id });
+                            if (window.innerWidth < 1024) {
+                              setLeftSidebarOpen(false);
+                            }
+                            onCloseMobile?.();
+                          }}
+                          className={`w-full flex flex-col gap-1 text-left p-2.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
+                            isActive
+                              ? 'border-indigo-500/50 bg-indigo-950/40 text-indigo-200 shadow-[0_0_12px_rgba(99,102,241,0.2)]'
+                              : `border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-[#16142a]/30 hover:bg-[#16142a]/60 text-zinc-300 hover:text-white`
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold truncate text-white">{set.title}</span>
+                            <span
+                              className={`text-[0.5625rem] font-sans font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                                isCompleted
+                                  ? THEME_GLASS.ACTIVE_BADGE
+                                  : isActive
+                                  ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-400/30'
+                                  : THEME_GLASS.BADGE_MUTED
+                              }`}
+                            >
+                              {isCompleted ? 'Completed ✓' : `${pos}/${total}`}
+                            </span>
+                          </div>
+                          {/* Progress Bar */}
+                          <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-0.5">
+                            <div
+                              className={`h-full transition-all duration-300 ${
+                                isCompleted ? 'bg-emerald-400' : 'bg-indigo-500'
+                              }`}
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                        </RovingLibraryButton>
+                      </Tooltip>
+                    </div>
                   );
                 })}
               </div>

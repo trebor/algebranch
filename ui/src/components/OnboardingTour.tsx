@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useIsHydrated } from '../hooks/useIsHydrated';
+import { useIsMobile } from '../hooks/useBreakpoint';
 import {
   onboardingChapterIdAtom,
   onboardingStepIndexAtom,
@@ -23,6 +24,8 @@ import {
   activeTabIdAtom,
   tabsAtom,
   onboardingCompletedAtom,
+  leftSidebarOpenAtom,
+  activeBottomSheetAtom,
   safeLocalStorage
 } from '../store/equation';
 import { equationToString } from 'math-engine-client';
@@ -101,6 +104,9 @@ export const OnboardingTour: React.FC = () => {
   const setStep = useSetAtom(setOnboardingStepAtom);
   const startChapter = useSetAtom(startOnboardingChapterAtom);
   const startPracticeSet = useSetAtom(startPracticeSetAtom);
+  const isMobile = useIsMobile();
+  const setLeftSidebarOpen = useSetAtom(leftSidebarOpenAtom);
+  const setActiveBottomSheet = useSetAtom(activeBottomSheetAtom);
   const [completed, setCompleted] = useAtom(onboardingCompletedAtom);
   const currentEq = useAtomValue(currentEquationAtom);
   const sourcePath = useAtomValue(sourcePathAtom);
@@ -544,6 +550,11 @@ export const OnboardingTour: React.FC = () => {
                     const matchingSet = getPracticeSetForChapter(activeChapter.id);
                     handleFinishTour();
                     startPracticeSet({ setId: matchingSet.id, position: 0 });
+                    if (isMobile) {
+                      setActiveBottomSheet('practice');
+                    } else {
+                      setLeftSidebarOpen(true);
+                    }
                   }}
                   className={`w-full h-9 px-4 text-xs font-bold flex items-center justify-center gap-2 ${THEME_GLASS.BUTTON_PRIMARY}`}
                 >

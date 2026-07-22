@@ -5,10 +5,11 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
-import { Provider } from 'jotai';
+import { Provider, createStore } from 'jotai';
 import { SHORTCUT_CATALOG } from '@/constants/shortcutCatalog';
 import { LearnPracticeContent, Sidebar } from '@/components/Sidebar';
 import { BottomSheetType } from '@/store/equation';
+import { startPracticeSetAtom } from '@/store/ladders';
 
 describe('Learn & Practice Section (#550)', () => {
   it('registers toggle-practice-sets in shortcutCatalog', () => {
@@ -61,5 +62,19 @@ describe('Learn & Practice Section (#550)', () => {
     expect(sidebar).toBeInTheDocument();
     expect(screen.getByText('Learn & Practice')).toBeInTheDocument();
     expect(screen.getByText('Equation Library')).toBeInTheDocument();
+  });
+
+  it('automatically expands practice sets when an active practice set is set', () => {
+    const customStore = createStore();
+    customStore.set(startPracticeSetAtom, { setId: 'powers_roots', position: 0 });
+
+    render(
+      <Provider store={customStore}>
+        <LearnPracticeContent showHeader={true} />
+      </Provider>
+    );
+
+    // Should be automatically expanded when activePracticeSet is non-null
+    expect(screen.getByText('Powers & Radical Equations')).toBeInTheDocument();
   });
 });

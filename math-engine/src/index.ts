@@ -28,6 +28,7 @@ export * from './explore';
 export * from './compress';
 export * from './sync';
 export * from './normalizeInput';
+export * from './variation';
 
 /**
  * Parses an equation string of the form "LHS = RHS" into an Equation tree.

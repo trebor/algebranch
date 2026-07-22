@@ -44,6 +44,19 @@ describe('Practice Set Store (ladders.ts)', () => {
     const activeId = store.get(activeTabIdAtom);
     const activeTab = tabs.find((t) => t.id === activeId);
     expect(activeTab?.name).toBe('Basic Linear Equation');
+    // Problem 1 must scaffold with variable 'x'
+    expect(activeTab?.historyTree[activeTab.currentNodeId].equation.lhs).toBeDefined();
+  });
+
+  test('problem 0 preserves x as target variable for initial scaffolding', () => {
+    store.set(startPracticeSetAtom, { setId: 'linear_basics', position: 0 });
+    const tabs = store.get(tabsAtom);
+    const activeId = store.get(activeTabIdAtom);
+    const activeTab = tabs.find((t) => t.id === activeId);
+    const eqNode = activeTab?.historyTree[activeTab.currentNodeId].equation;
+    // Inspect variables present in equation
+    const eqStr = JSON.stringify(eqNode);
+    expect(eqStr).toContain('"name":"x"');
   });
 
   test('advancing a practice set moves position forward and loads next equation', () => {

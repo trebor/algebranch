@@ -45,7 +45,9 @@ export const TransitionTooltipCard: React.FC<TransitionTooltipCardProps> = ({
       if (change.kind === 'bothSides') {
         let parsedNode: math.MathNode | null = null;
         try {
-          parsedNode = mjs.parse(change.operand);
+          if (change.operand) {
+            parsedNode = mjs.parse(change.operand);
+          }
         } catch {
           // Ignore parse errors
         }

@@ -2300,3 +2300,49 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
 
   return reduciblePaths;
 };
+
+/**
+ * Checks if an equation is in a fully solved state:
+ * 1. One side is a single isolated variable.
+ * 2. The other side contains no variables.
+ * 3. The non-variable side has no remaining simplification steps available.
+ */
+export const isEquationSolved = (eq: Equation): boolean => {
+  const isBareVar = (n: math.MathNode): n is math.SymbolNode => {
+    if (n.type !== 'SymbolNode') return false;
+    const name = (n as math.SymbolNode).name;
+    return !isReservedConstantName(name);
+  };
+
+  const lhsNode = unwrapParens(eq.lhs);
+  const rhsNode = unwrapParens(eq.rhs);
+
+  const lhsBare = isBareVar(lhsNode);
+  const rhsBare = isBareVar(rhsNode);
+
+  let exprSidePrefix: 'lhs' | 'rhs' | null = null;
+
+  if (lhsBare && !getVariables(eq.rhs).includes((lhsNode as math.SymbolNode).name)) {
+    exprSidePrefix = 'rhs';
+  } else if (rhsBare && !getVariables(eq.lhs).includes((rhsNode as math.SymbolNode).name)) {
+    exprSidePrefix = 'lhs';
+  }
+
+  if (!exprSidePrefix) return false;
+
+  const exprNode = exprSidePrefix === 'rhs' ? eq.rhs : eq.lhs;
+  if (getVariables(exprNode).length > 0) return false;
+
+  // Check if there are remaining exact-form reducible options on the expression side
+  // (excluding identity expansions and opt-in decimal evaluation options)
+  const reductions = getReducibleOptions(eq);
+  const hasReductionOnExprSide = Object.entries(reductions).some(([path, options]) => {
+    if (path !== exprSidePrefix && !path.startsWith(`${exprSidePrefix}/`)) return false;
+    return options.some((opt) => opt.type === 'reduce' && opt.label !== 'Evaluate to Decimal');
+  });
+
+  return !hasReductionOnExprSide;
+};
+
+
+

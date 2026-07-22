@@ -13,7 +13,7 @@ export interface OnboardingStep {
   stepLabel?: string;
   selectPath?: string;
   /** When set, the Next button performs this both-sides operation via applyGlobalOpAtom */
-  globalOp?: { type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div' | 'power' | 'root'; term?: string; power?: number };
+  globalOp?: { type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div' | 'power' | 'root' | 'swap'; term?: string; power?: number };
   /** Renders a color legend on this step's coach card: node kinds, or the source/target selection states */
   legend?: 'nodeTypes' | 'sourceTarget';
 }
@@ -104,15 +104,16 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
   {
     id: 'complex',
     title: '2. Powers & Roots',
-    description: 'Learn how to solve equations containing exponents by applying roots to both sides.',
-    initialEquation: 'x ^ 2 - 9 = 0',
+    description: 'Learn how to solve equations containing exponents by applying roots and flipping equations.',
+    initialEquation: '9 = x ^ 2',
     steps: [
       {
-        title: 'Isolate the Power',
-        description: 'First, let\'s isolate the x^2 term. Click on the highlighted 9, then click the glowing target to move it to the other side. Subtracting 9 becomes adding 9, and 0 + 9 folds straight to 9.',
-        highlightPath: 'lhs/1', // constant 9
+        title: 'Flip the Equation',
+        description: 'The variable is on the right side. Click the circled = sign and choose the ↔ swap operation to flip the equation so x^2 is on the left side.',
+        highlightPath: null,
         nextEquation: 'x ^ 2 = 9',
-        stepLabel: 'Transpose'
+        stepLabel: 'Swap Sides',
+        globalOp: { type: 'swap' }
       },
       {
         title: 'Square Root Both Sides',
@@ -124,21 +125,21 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       },
       {
         title: 'Cancel the Root',
-        description: 'The square root undoes the square: sqrt(x^2) is just x. Click the handle to simplify the left side.',
+        description: 'The square root undoes the square: the square root of x^2 simplifies to x. Click the handle to simplify the left side.',
         highlightPath: 'lhs', // sqrt(x^2) node
         nextEquation: 'x = sqrt(9)',
         stepLabel: 'Simplify'
       },
       {
         title: 'Calculate the Root',
-        description: 'Now, simplify the square root of 9 to get the final positive integer root.',
+        description: 'Now, simplify the square root of 9 to calculate the final root.',
         highlightPath: 'rhs', // sqrt node
         nextEquation: 'x = 3',
         stepLabel: 'Simplify'
       },
       {
         title: 'Solved!',
-        description: 'Perfect! You solved for x. Applying the same root to both sides undoes an exponent.',
+        description: 'Perfect! You solved for x by flipping the equation and taking square roots.',
         highlightPath: null,
         nextEquation: ''
       }

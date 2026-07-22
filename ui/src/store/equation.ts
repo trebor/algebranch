@@ -360,20 +360,21 @@ const eqChecksum = (s: string): string => {
 
 /** Map a `bothSides` StepChange op to a compact char and back to GlobalOpParams. */
 const BOTHSIDES_OP_CHAR: Record<string, string> = {
-  add: '+', subtract: '-', multiply: '*', divide: '/', power: '^', root: 'v',
+  add: '+', subtract: '-', multiply: '*', divide: '/', power: '^', root: 'v', swap: 's',
 };
-const charToGlobalOpParams = (opChar: string, operand: string): GlobalOpParams | null => {
+const charToGlobalOpParams = (opChar: string, operand?: string): GlobalOpParams | null => {
   switch (opChar) {
-    case '+': return { type: 'add', term: operand };
-    case '-': return { type: 'sub', term: operand };
-    case '*': return { type: 'mul', term: operand };
-    case '/': return { type: 'div', term: operand };
-    case '^': return { type: 'power', power: Number(operand) };
-    case 'v': return { type: 'root', power: Number(operand) };
+    case '+': return operand ? { type: 'add', term: operand } : null;
+    case '-': return operand ? { type: 'sub', term: operand } : null;
+    case '*': return operand ? { type: 'mul', term: operand } : null;
+    case '/': return operand ? { type: 'div', term: operand } : null;
+    case '^': return operand ? { type: 'power', power: Number(operand) } : null;
+    case 'v': return operand ? { type: 'root', power: Number(operand) } : null;
+    case 's': return { type: 'swap' };
     default: return null;
   }
 };
-const bothSidesToGlobalOpParams = (op: string, operand: string): GlobalOpParams | null =>
+const bothSidesToGlobalOpParams = (op: string, operand?: string): GlobalOpParams | null =>
   charToGlobalOpParams(BOTHSIDES_OP_CHAR[op], operand);
 
 /** Forward substitution result (replace every `variable` with `replacement`), or null. */
@@ -434,7 +435,7 @@ const deriveReplayRecord = (
   if (change?.kind === 'bothSides') {
     const params = bothSidesToGlobalOpParams(change.op, change.operand);
     if (params) {
-      try { if (reproduces(applyGlobalOp(parent, params))) return [pIdx, 'b', BOTHSIDES_OP_CHAR[change.op], change.operand, label, chk]; } catch { /* fall through */ }
+      try { if (reproduces(applyGlobalOp(parent, params))) return [pIdx, 'b', BOTHSIDES_OP_CHAR[change.op], change.operand ?? '', label, chk]; } catch { /* fall through */ }
     }
   }
   // 2. Reduce / distribute / identity (search for the option that matches).
@@ -2776,7 +2777,9 @@ export const applyGlobalOpAtom = atom(
     const { type, term, power } = params;
     const effectivePower = power ?? 2;
     let label: string;
-    if (type === 'square' || type === 'power') {
+    if (type === 'swap') {
+      label = 'Swap Sides';
+    } else if (type === 'square' || type === 'power') {
       label = effectivePower === 2 ? 'Global Sq' : `Global Power ${effectivePower}`;
     } else if (type === 'sqrt' || type === 'root') {
       label = effectivePower === 2 ? 'Global Sqrt' : `Global ${effectivePower}-Root`;

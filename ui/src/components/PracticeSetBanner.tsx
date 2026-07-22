@@ -4,6 +4,7 @@
 'use client';
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useAtomValue, useSetAtom } from 'jotai';
 import {
   activePracticeSetAtom,
@@ -11,9 +12,12 @@ import {
   advancePracticeSetAtom,
   startPracticeSetAtom,
   exitPracticeSetAtom,
+  recordProblemSolvedAtom,
 } from '../store/ladders';
 import { PRACTICE_SETS } from '../constants/ladders';
 import { Sparkles, ArrowRight, Trophy, X } from 'lucide-react';
+import { ConfettiBurst } from './ConfettiBurst';
+import { useIsHydrated } from '../hooks/useIsHydrated';
 
 /**
  * Standing Practice Set "Next problem →" loop affordance (#500).
@@ -22,11 +26,33 @@ import { Sparkles, ArrowRight, Trophy, X } from 'lucide-react';
  * is active AND the current equation reaches a solved state or terminal status.
  */
 export const PracticeSetBanner: React.FC = () => {
+  const mounted = useIsHydrated();
   const active = useAtomValue(activePracticeSetAtom);
   const readyForNext = useAtomValue(readyForNextProblemAtom);
   const advanceSet = useSetAtom(advancePracticeSetAtom);
   const startSet = useSetAtom(startPracticeSetAtom);
   const exitSet = useSetAtom(exitPracticeSetAtom);
+  const recordProblemSolved = useSetAtom(recordProblemSolvedAtom);
+
+  const [shouldCelebrate, setShouldCelebrate] = React.useState(false);
+  const prevReadyRef = React.useRef<boolean>(readyForNext);
+  const activeKey = active ? `${active.set.id}_${active.position}` : null;
+  const prevKeyRef = React.useRef<string | null>(activeKey);
+
+  React.useEffect(() => {
+    const keyChanged = prevKeyRef.current !== activeKey;
+    const justSolved = !prevReadyRef.current && readyForNext;
+
+    prevKeyRef.current = activeKey;
+    prevReadyRef.current = readyForNext;
+
+    if (justSolved && !keyChanged && active) {
+      recordProblemSolved();
+      setShouldCelebrate(true);
+      const timer = setTimeout(() => setShouldCelebrate(false), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [active, readyForNext, activeKey, recordProblemSolved]);
 
   if (!active || !readyForNext) return null;
 
@@ -38,7 +64,12 @@ export const PracticeSetBanner: React.FC = () => {
   const nextSet = PRACTICE_SETS[(currentIndex + 1) % PRACTICE_SETS.length];
 
   return (
-    <div
+    <>
+      {shouldCelebrate && mounted && typeof document !== 'undefined' && createPortal(
+        <ConfettiBurst key={`confetti_${set.id}_${position}`} />,
+        document.body
+      )}
+      <div
       role="region"
       aria-label="Practice Set Progress"
       className={`mt-2 flex items-center justify-between gap-2.5 text-xs font-semibold leading-snug rounded-md px-2.5 py-1 border transition-all animate-[fadeIn_0.2s_ease-out] max-w-full backdrop-blur-md ${
@@ -90,5 +121,6 @@ export const PracticeSetBanner: React.FC = () => {
         </button>
       </div>
     </div>
-  );
+  </>
+);
 };

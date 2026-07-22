@@ -275,6 +275,30 @@ export const advancePracticeSetAtom = atom(null, (get, set) => {
   }
 });
 
+export const recordProblemSolvedAtom = atom(null, (get, set) => {
+  const active = get(activePracticeSetAtom);
+  if (!active) return;
+
+  const currentProgress = get(practiceSetProgressAtom);
+  const nextPos = Math.min(active.position + 1, active.set.presetIds.length);
+  const isLastProblem = active.position >= active.set.presetIds.length - 1;
+
+  const completedSetIds = isLastProblem
+    ? Array.from(new Set([...currentProgress.completedSetIds, active.set.id]))
+    : currentProgress.completedSetIds;
+
+  const nextProgress: PracticeSetProgress = {
+    ...currentProgress,
+    completedSetIds,
+    setPositions: {
+      ...currentProgress.setPositions,
+      [active.set.id]: Math.max(currentProgress.setPositions[active.set.id] ?? 0, nextPos),
+    },
+  };
+
+  set(practiceSetProgressAtom, nextProgress);
+});
+
 export const exitPracticeSetAtom = atom(null, (get, set) => {
   const currentProgress = get(practiceSetProgressAtom);
   set(practiceSetProgressAtom, {

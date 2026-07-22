@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useIsHydrated } from '../hooks/useIsHydrated';
 import { useIsMobile } from '../hooks/useBreakpoint';
+import { ConfettiBurst } from './ConfettiBurst';
 import {
   onboardingChapterIdAtom,
   onboardingStepIndexAtom,
@@ -38,9 +39,6 @@ import { motion } from 'framer-motion';
 import { THEME_GLASS, THEME_ANIMATIONS } from '../constants/theme';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
-// Node-color palette for the completion confetti (indigo, emerald, amber, sky, rose)
-const CONFETTI_COLORS = ['#818cf8', '#34d399', '#fbbf24', '#38bdf8', '#fb7185'];
-
 // Legend swatches reuse the live node semantics from THEME_GLASS so the tutorial
 // can never drift from the real Candidate/Static node styling. Text color and
 // cursor are stripped: each swatch sets its own text color, and swatches aren't clickable.
@@ -51,46 +49,7 @@ const SWATCH_LOCKED = THEME_GLASS.STATIC.replace('cursor-default', '');
 const SWATCH_SOURCE = THEME_GLASS.SOURCE.replace('cursor-pointer', '');
 const SWATCH_TARGET = THEME_GLASS.TARGET.replace('cursor-pointer', '');
 
-// Confetti geometry is intentionally randomized once per burst. Generated at
-// module scope (not in the component body) so the Math.random() calls are not
-// flagged as impure render-phase work; the component memoizes one batch for its
-// lifetime.
-function makeConfettiPieces() {
-  return Array.from({ length: 28 }, (_, i) => ({
-    left: Math.random() * 100,
-    delay: Math.random() * 0.5,
-    duration: 1.8 + Math.random() * 1.4,
-    size: 5 + Math.random() * 5,
-    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-    drift: (Math.random() - 0.5) * 120,
-    rotate: 360 + Math.random() * 540,
-  }));
-}
 
-const ConfettiBurst: React.FC = () => {
-  const pieces = React.useMemo(() => makeConfettiPieces(), []);
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-      {pieces.map((p, i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-[2px]"
-          style={{
-            left: `${p.left}%`,
-            top: '-3%',
-            width: p.size,
-            height: p.size * 0.45,
-            backgroundColor: p.color,
-          }}
-          initial={{ y: 0, x: 0, opacity: 1, rotate: 0 }}
-          animate={{ y: '108vh', x: p.drift, opacity: [1, 1, 0.85, 0], rotate: p.rotate }}
-          transition={{ duration: p.duration, delay: p.delay, ease: 'easeIn' }}
-        />
-      ))}
-    </div>
-  );
-};
 
 export const OnboardingTour: React.FC = () => {
   const mounted = useIsHydrated();

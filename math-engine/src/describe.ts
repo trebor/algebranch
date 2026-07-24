@@ -210,6 +210,31 @@ export const describeTransposition = (
     } catch {
       return null;
     }
+    if (
+      moved.type === 'OperatorNode' &&
+      (moved as math.OperatorNode).fn === 'unaryMinus' &&
+      resultEq
+    ) {
+      try {
+        const targetSideNode = getNodeByPath(resultEq, tgtSide);
+        if (
+          targetSideNode &&
+          targetSideNode.type === 'OperatorNode' &&
+          (targetSideNode as math.OperatorNode).op === '/' &&
+          (targetSideNode as math.OperatorNode).args[1]?.type === 'ConstantNode' &&
+          ((targetSideNode as math.OperatorNode).args[1] as math.ConstantNode).value === -1
+        ) {
+          return {
+            kind: 'bothSides',
+            op: 'divide',
+            operand: '-1',
+            text: 'divide both sides by -1',
+          };
+        }
+      } catch {
+        /* fall through to default subtract */
+      }
+    }
     const operand = nodeToString(moved);
     const op = 'subtract';
     const baseText = `subtract ${operand} from both sides`;

@@ -70,7 +70,7 @@ describe('Practice Set Store (ladders.ts)', () => {
     const tabs = store.get(tabsAtom);
     const activeId = store.get(activeTabIdAtom);
     const activeTab = tabs.find((t) => t.id === activeId);
-    expect(activeTab?.name).toBe('Negative Coefficients');
+    expect(activeTab?.name).toBe('Linear Subtraction');
   });
 
   test('advancing past last problem marks set completed', () => {

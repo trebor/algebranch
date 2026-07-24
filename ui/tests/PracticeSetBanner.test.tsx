@@ -104,7 +104,7 @@ describe('PracticeSetBanner Component', () => {
     const newTabs = store.get(tabsAtom);
     const newActiveId = store.get(activeTabIdAtom);
     const activeTab = newTabs.find((t) => t.id === newActiveId);
-    expect(activeTab?.name).toBe('Negative Coefficients');
+    expect(activeTab?.name).toBe('Linear Subtraction');
   });
 
   test('renders when terminalStatusAtom is contradiction or identity', () => {

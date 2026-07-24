@@ -1654,6 +1654,28 @@ const collectValidMoves = (
         return moves;
       }
     }
+
+    if (sourcePath === 'lhs' || sourcePath === 'rhs') {
+      const sourceSideNode = sourcePath === 'lhs' ? originalEq.lhs : originalEq.rhs;
+      if (
+        sourceSideNode &&
+        sourceSideNode.type === 'OperatorNode' &&
+        (sourceSideNode as math.OperatorNode).fn === 'unaryMinus'
+      ) {
+        const targetPath = sourcePath === 'lhs' ? 'rhs' : 'lhs';
+        const innerNode = (sourceSideNode as math.OperatorNode).args[0];
+        const targetNode = sourcePath === 'lhs' ? originalEq.rhs : originalEq.lhs;
+        const divByNegOne = new mjs.OperatorNode('/', 'divide', [targetNode, new mjs.ConstantNode(-1)]);
+        const candidateEq: Equation =
+          sourcePath === 'lhs'
+            ? { lhs: innerNode, rhs: divByNegOne, relation: originalEq.relation }
+            : { lhs: divByNegOne, rhs: innerNode, relation: originalEq.relation };
+
+        if (areEquationsEquivalent(originalEq, candidateEq)) {
+          moves[targetPath] = candidateEq;
+        }
+      }
+    }
   } catch (err) {
     console.error('Error generating valid moves:', err);
   }

@@ -17,10 +17,10 @@ export const PRACTICE_SETS: PracticeSet[] = [
   {
     id: 'linear_basics',
     title: 'Linear Equations',
-    description: 'Master 1-step and 2-step linear equations, negative coefficients, distribution, and multi-step terms.',
+    description: 'Master 1-step and 2-step linear equations, distribution, and multi-step terms.',
     presetIds: [
       'linear_basic',
-      'linear_negative',
+      'linear_simple_sub',
       'linear_both_sides',
       'linear_distribution',
       'linear_multi_step',
@@ -53,8 +53,9 @@ export const PRACTICE_SETS: PracticeSet[] = [
   {
     id: 'global_rationals',
     title: 'Global Operations & Rationals',
-    description: 'Clear denominators and solve rational expressions using global multiplication and proportion rules.',
+    description: 'Clear denominators, handle negative coefficients, and solve rational expressions using global multiplication and proportion rules.',
     presetIds: [
+      'linear_negative',
       'fraction_coefficients',
       'rational_basic',
       'rational_proportion',

@@ -104,6 +104,20 @@ describe('Math Engine Validator & Simplifier', () => {
     expect(equationToString(moves['rhs'])).toBe('x = 5 - 2');
   });
 
+  test('generateValidMoves suggests division by -1 for root-level unary minus', () => {
+    const eq = parseEquation('-x = 8');
+    const moves = generateValidMoves(eq, 'lhs');
+    expect(moves['rhs']).toBeDefined();
+    expect(equationToString(moves['rhs'])).toBe('x = 8 / -1');
+  });
+
+  test('generateValidMoves does NOT suggest unary minus transposition for buried negative terms', () => {
+    const eq = parseEquation('5 - x = 10');
+    // Path for x in 5 - x is lhs/1
+    const moves = generateValidMoves(eq, 'lhs/1');
+    expect(moves['rhs'] ? equationToString(moves['rhs']) : '').not.toBe('5 + x = 10 / -1');
+  });
+
   test('generateValidMoves excludes parent and parenthesis-wrapped parent paths from destinations', () => {
     const eq = parseEquation('x + 2 = 5');
     // Path for 'x' in 'x + 2 = 5' is 'lhs/0'. Immediate parent is 'lhs'.

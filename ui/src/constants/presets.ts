@@ -47,6 +47,16 @@ export const PRESET_LIST: Preset[] = [
     type: 'solvable',
   },
   {
+    id: 'linear_simple_sub',
+    slug: 'linear-simple-sub',
+    label: 'Linear Subtraction',
+    equation: '3 * x - 5 = 10',
+    description: "Linear equation with constant subtraction.\n\n- **x**: target variable\n- **3**: coefficient\n- **5, 10**: constants",
+    category: 'Practice Problems',
+    subcategory: 'Linear',
+    type: 'solvable',
+  },
+  {
     id: 'linear_negative',
     slug: 'linear-negative',
     label: 'Negative Coefficients',

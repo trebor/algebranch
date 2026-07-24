@@ -206,33 +206,55 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
     id: 'global',
     title: '4. Global Operations',
     description: 'Learn how to apply operations to both sides of the equation simultaneously.',
-    initialEquation: 'x / 3 = 4',
+    initialEquation: '-x / 3 = 4',
     steps: [
       {
         title: 'Undo Division Globally',
-        description: 'Since x is divided by 3, we can cancel it out by multiplying both sides of the equation by 3. We call this a Global Operation.',
-        highlightPath: null, // no term highlighted
-        nextEquation: 'x / 3 * 3 = 4 * 3',
+        description: 'Since x is divided by 3, cancel it out by multiplying both sides of the equation by 3. We call this a Global Operation.',
+        highlightPath: null,
+        nextEquation: '-x / 3 * 3 = 4 * 3',
         stepLabel: 'Global ⋅ 3',
         globalOp: { type: 'mul', term: '3' }
       },
       {
         title: 'Cancel the Division',
-        description: 'On the left side, dividing by 3 and multiplying by 3 cancel each other out. Let\'s simplify the left-hand side.',
-        highlightPath: 'lhs', // (x / 3) * 3
-        nextEquation: 'x = 4 * 3',
+        description: 'On the left side, dividing by 3 and multiplying by 3 cancel each other out. Simplify the left-hand side.',
+        highlightPath: 'lhs',
+        nextEquation: '-x = 4 * 3',
         stepLabel: 'Simplify'
       },
       {
         title: 'Calculate Solution',
-        description: 'Now, simplify the multiplication 4 * 3 on the right side to get the final value.',
-        highlightPath: 'rhs', // 4 * 3
-        nextEquation: 'x = 12',
+        description: 'Simplify the multiplication 4 * 3 on the right side.',
+        highlightPath: 'rhs',
+        nextEquation: '-x = 12',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Clear Negative Sign Globally',
+        description: 'We have -x = 12. To clear the negative sign on x, multiply both sides of the equation by -1.',
+        highlightPath: null,
+        nextEquation: '-x * -1 = 12 * -1',
+        stepLabel: 'Global ⋅ -1',
+        globalOp: { type: 'mul', term: '-1' }
+      },
+      {
+        title: 'Simplify Left Side',
+        description: 'On the left side, -x * -1 simplifies to x.',
+        highlightPath: 'lhs',
+        nextEquation: 'x = 12 * -1',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Calculate Final Answer',
+        description: 'Simplify 12 * -1 on the right side to find the final value of x.',
+        highlightPath: 'rhs',
+        nextEquation: 'x = -12',
         stepLabel: 'Simplify'
       },
       {
         title: 'Completed!',
-        description: 'Outstanding! Applying operations globally to both sides is a very powerful way to solve complex algebraic equations.',
+        description: 'Outstanding! Applying operations globally to both sides is a powerful way to solve complex algebraic equations.',
         highlightPath: null,
         nextEquation: ''
       }

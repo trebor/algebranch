@@ -125,7 +125,35 @@ const hasDecimalConstant = (node: math.MathNode): boolean => {
 };
 
 /**
+ * Checks if a simplified node introduces new decimal floating-point approximations
+ * (e.g. math.simplify automatically evaluating radicals like sqrt(2) -> 1.414...).
+ */
+const introducesDecimalFloat = (original: math.MathNode, simplified: math.MathNode): boolean => {
+  if (!hasDecimalConstant(simplified)) return false;
+  if (!hasDecimalConstant(original)) return true;
+
+  const getDecimalValues = (n: math.MathNode): number[] => {
+    const vals: number[] = [];
+    n.traverse((child) => {
+      if (child.type === 'ConstantNode') {
+        const v = Number((child as math.ConstantNode).value);
+        if (Number.isFinite(v) && !Number.isInteger(v)) {
+          vals.push(v);
+        }
+      }
+    });
+    return vals;
+  };
+
+  const origDecimals = getDecimalValues(original);
+  const simpDecimals = getDecimalValues(simplified);
+
+  return simpDecimals.some((v) => !origDecimals.some((ov) => Math.abs(v - ov) < 1e-9));
+};
+
+/**
  * Evaluates a constant subtree to its simplified form, preserving fractions (e.g. 2/12 -> 1/6)
+
  * instead of converting to decimal float.
  */
 export const evaluateConstantSubtree = (
@@ -1608,6 +1636,11 @@ const getSimplificationForPathRaw = (eq: Equation, p: string): Equation | null =
             countNodes(simplifiedNode) < countNodes(node) ||
             (countNodes(simplifiedNode) === countNodes(node) && countSymbolNodes(simplifiedNode) < countSymbolNodes(node))
           ) {
+            // #554: Reject candidate simplifications that introduce decimal floating-point approximations
+            // (e.g. math.simplify automatically evaluating radicals like sqrt(2) -> 1.414...)
+            if (introducesDecimalFloat(node, simplifiedNode)) {
+              return null;
+            }
             const candidate = replaceNodeAtPath(eq, p, simplifiedNode);
             if (isDiff(candidate) && areEquationsEquivalent(eq, candidate)) {
               return candidate;

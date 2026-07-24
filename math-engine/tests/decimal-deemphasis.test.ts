@@ -58,4 +58,27 @@ describe('Evaluate to Decimal is de-emphasized (ordering only)', () => {
     const labels = labelsAt('y = e', 'rhs');
     expect(labels).toEqual(['Evaluate to Decimal']);
   });
+
+  test('#554: math.simplify fallback does not offer decimal float conversion under Simplify label', () => {
+    const sources = [
+      'y = (sqrt(2) + 1) * x',
+      'x = 1 / (sqrt(2) - sqrt(x)) ^ 2',
+      'y = (sqrt(2) - 1) / (sqrt(2) + 1)',
+    ];
+    for (const src of sources) {
+      const eq = parseEquation(src);
+      const opts = getReducibleOptions(eq);
+
+      for (const list of Object.values(opts)) {
+        for (const opt of list) {
+          if (opt.label === 'Simplify' || opt.label === 'Simplify Fraction') {
+            const str = opt.simplified.rhs.toString();
+            expect(str).not.toMatch(/\d+\.\d+/);
+          }
+        }
+      }
+    }
+  });
 });
+
+

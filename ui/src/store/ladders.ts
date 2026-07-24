@@ -8,8 +8,11 @@ import {
   resetToEquationStringAtom,
   currentEquationAtom,
   terminalStatusAtom,
+  tabsAtom,
+  activeTabIdAtom,
 } from './equation';
 import { isEquationSolved, generateEquationVariation } from 'math-engine';
+import { equationToString } from 'math-engine-client';
 import { trackEvent } from '../utils/analytics';
 import { safeStorage } from '../utils/safeStorage';
 
@@ -20,6 +23,8 @@ export interface PracticeSetProgress {
   position: number;
   completedSetIds: string[];
   setPositions: Record<string, number>;
+  generatedEquations?: Record<string, Record<number, string>>;
+  celebratedKeys?: string[];
 }
 
 export const DEFAULT_PRACTICE_SET_PROGRESS: PracticeSetProgress = {
@@ -27,6 +32,8 @@ export const DEFAULT_PRACTICE_SET_PROGRESS: PracticeSetProgress = {
   position: 0,
   completedSetIds: [],
   setPositions: {},
+  generatedEquations: {},
+  celebratedKeys: [],
 };
 
 export const getPracticeSetsFromStorage = (): PracticeSetProgress => {
@@ -34,12 +41,19 @@ export const getPracticeSetsFromStorage = (): PracticeSetProgress => {
     const raw = safeStorage.getItem(PRACTICE_SET_STORAGE_KEY);
     if (!raw) return DEFAULT_PRACTICE_SET_PROGRESS;
     const parsed = JSON.parse(raw) as Partial<PracticeSetProgress>;
-    return {
+    const progress: PracticeSetProgress = {
       activeSetId: typeof parsed.activeSetId === 'string' ? parsed.activeSetId : null,
       position: typeof parsed.position === 'number' ? parsed.position : 0,
       completedSetIds: Array.isArray(parsed.completedSetIds) ? parsed.completedSetIds : [],
       setPositions: typeof parsed.setPositions === 'object' && parsed.setPositions !== null ? parsed.setPositions : {},
     };
+    if (parsed.generatedEquations && typeof parsed.generatedEquations === 'object') {
+      progress.generatedEquations = parsed.generatedEquations;
+    }
+    if (Array.isArray(parsed.celebratedKeys)) {
+      progress.celebratedKeys = parsed.celebratedKeys;
+    }
+    return progress;
   } catch {
     return DEFAULT_PRACTICE_SET_PROGRESS;
   }
@@ -101,6 +115,16 @@ export const readyForNextProblemAtom = atom((get) => {
   }
 });
 
+const getDeterministicSeed = (setId: string, position: number): number => {
+  let hash = 0;
+  const str = `algebranch_seed_${setId}_${position}`;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
 export const startPracticeSetAtom = atom(
   null,
   (get, set, payload: { setId: string; position?: number }) => {
@@ -116,6 +140,20 @@ export const startPracticeSetAtom = atom(
       )
     );
 
+    let eqStr = currentProgress.generatedEquations?.[payload.setId]?.[targetPos];
+    if (!eqStr) {
+      const presetId = practiceSet.presetIds[targetPos];
+      const preset = PRESET_LIST.find((p) => p.id === presetId);
+      if (preset) {
+        const seed = getDeterministicSeed(payload.setId, targetPos);
+        const targetVariable = targetPos === 0 ? 'x' : undefined;
+        const varyStructure = practiceSet.id !== 'linear_basics';
+        eqStr = generateEquationVariation(preset.equation, { seed, targetVariable, varyStructure });
+      }
+    }
+
+    if (!eqStr) return;
+
     const nextProgress: PracticeSetProgress = {
       ...currentProgress,
       activeSetId: payload.setId,
@@ -124,18 +162,34 @@ export const startPracticeSetAtom = atom(
         ...currentProgress.setPositions,
         [payload.setId]: Math.max(currentProgress.setPositions[payload.setId] ?? 0, targetPos),
       },
+      generatedEquations: {
+        ...currentProgress.generatedEquations,
+        [payload.setId]: {
+          ...(currentProgress.generatedEquations?.[payload.setId] ?? {}),
+          [targetPos]: eqStr,
+        },
+      },
     };
 
     set(practiceSetProgressAtom, nextProgress);
 
     const presetId = practiceSet.presetIds[targetPos];
     const preset = PRESET_LIST.find((p) => p.id === presetId);
-    if (preset) {
-      const seed = Date.now() + targetPos;
-      const targetVariable = targetPos === 0 ? 'x' : undefined;
-      const varyStructure = practiceSet.id !== 'linear_basics';
-      const variation = generateEquationVariation(preset.equation, { seed, targetVariable, varyStructure });
-      set(resetToEquationStringAtom, variation, preset.label);
+    const tabName = preset?.label || eqStr;
+
+    // Check if an existing open tab matches this equation string to prevent duplicate tab creation
+    const existingTabs = get(tabsAtom);
+    const matchingTab = existingTabs.find((tab) => {
+      const rootNode = tab.historyTree['0'];
+      if (!rootNode) return false;
+      const rootEqStr = equationToString(rootNode.equation);
+      return rootEqStr === eqStr || tab.name === tabName;
+    });
+
+    if (matchingTab) {
+      set(activeTabIdAtom, matchingTab.id);
+    } else {
+      set(resetToEquationStringAtom, eqStr, tabName, { dedupe: true });
     }
 
     trackEvent({
@@ -155,6 +209,18 @@ export const advancePracticeSetAtom = atom(null, (get, set) => {
   const nextPos = active.position + 1;
 
   if (nextPos < active.set.presetIds.length) {
+    let eqStr = currentProgress.generatedEquations?.[active.set.id]?.[nextPos];
+    if (!eqStr) {
+      const nextPresetId = active.set.presetIds[nextPos];
+      const preset = PRESET_LIST.find((p) => p.id === nextPresetId);
+      if (preset) {
+        const seed = getDeterministicSeed(active.set.id, nextPos);
+        const targetVariable = nextPos === 0 ? 'x' : undefined;
+        const varyStructure = active.set.id !== 'linear_basics';
+        eqStr = generateEquationVariation(preset.equation, { seed, targetVariable, varyStructure });
+      }
+    }
+
     const nextProgress: PracticeSetProgress = {
       ...currentProgress,
       position: nextPos,
@@ -162,17 +228,34 @@ export const advancePracticeSetAtom = atom(null, (get, set) => {
         ...currentProgress.setPositions,
         [active.set.id]: Math.max(currentProgress.setPositions[active.set.id] ?? 0, nextPos),
       },
+      generatedEquations: {
+        ...currentProgress.generatedEquations,
+        [active.set.id]: {
+          ...(currentProgress.generatedEquations?.[active.set.id] ?? {}),
+          [nextPos]: eqStr || '',
+        },
+      },
     };
     set(practiceSetProgressAtom, nextProgress);
 
-    const nextPresetId = active.set.presetIds[nextPos];
-    const preset = PRESET_LIST.find((p) => p.id === nextPresetId);
-    if (preset) {
-      const seed = Date.now() + nextPos;
-      const targetVariable = nextPos === 0 ? 'x' : undefined;
-      const varyStructure = active.set.id !== 'linear_basics';
-      const variation = generateEquationVariation(preset.equation, { seed, targetVariable, varyStructure });
-      set(resetToEquationStringAtom, variation, preset.label);
+    if (eqStr) {
+      const nextPresetId = active.set.presetIds[nextPos];
+      const preset = PRESET_LIST.find((p) => p.id === nextPresetId);
+      const tabName = preset?.label || eqStr;
+
+      const existingTabs = get(tabsAtom);
+      const matchingTab = existingTabs.find((tab) => {
+        const rootNode = tab.historyTree['0'];
+        if (!rootNode) return false;
+        const rootEqStr = equationToString(rootNode.equation);
+        return rootEqStr === eqStr || tab.name === tabName;
+      });
+
+      if (matchingTab) {
+        set(activeTabIdAtom, matchingTab.id);
+      } else {
+        set(resetToEquationStringAtom, eqStr, tabName, { dedupe: true });
+      }
     }
 
     trackEvent({
@@ -195,6 +278,36 @@ export const advancePracticeSetAtom = atom(null, (get, set) => {
       label: active.set.id,
     });
   }
+});
+
+export const recordProblemSolvedAtom = atom(null, (get, set): boolean => {
+  const active = get(activePracticeSetAtom);
+  if (!active) return false;
+
+  const key = `${active.set.id}_${active.position}`;
+  const currentProgress = get(practiceSetProgressAtom);
+  const celebratedKeys = currentProgress.celebratedKeys ?? [];
+  const alreadyCelebrated = celebratedKeys.includes(key);
+
+  const nextPos = Math.min(active.position + 1, active.set.presetIds.length);
+  const isLastProblem = active.position >= active.set.presetIds.length - 1;
+
+  const completedSetIds = isLastProblem
+    ? Array.from(new Set([...currentProgress.completedSetIds, active.set.id]))
+    : currentProgress.completedSetIds;
+
+  const nextProgress: PracticeSetProgress = {
+    ...currentProgress,
+    completedSetIds,
+    setPositions: {
+      ...currentProgress.setPositions,
+      [active.set.id]: Math.max(currentProgress.setPositions[active.set.id] ?? 0, nextPos),
+    },
+    celebratedKeys: alreadyCelebrated ? celebratedKeys : [...celebratedKeys, key],
+  };
+
+  set(practiceSetProgressAtom, nextProgress);
+  return !alreadyCelebrated;
 });
 
 export const exitPracticeSetAtom = atom(null, (get, set) => {

@@ -9,6 +9,7 @@ import {
   startPracticeSetAtom,
   advancePracticeSetAtom,
   exitPracticeSetAtom,
+  recordProblemSolvedAtom,
   readyForNextProblemAtom,
   getPracticeSetsFromStorage,
   savePracticeSetsToStorage,
@@ -86,6 +87,25 @@ describe('Practice Set Store (ladders.ts)', () => {
 
     store.set(exitPracticeSetAtom);
     expect(store.get(activePracticeSetAtom)).toBeNull();
+  });
+
+  test('re-triggering startPracticeSet reuses existing tab instead of creating duplicate tabs', () => {
+    store.set(startPracticeSetAtom, { setId: 'linear_basics' });
+    const tabsCountInitial = store.get(tabsAtom).length;
+
+    // Trigger startPracticeSet again for the same active set
+    store.set(startPracticeSetAtom, { setId: 'linear_basics' });
+    const tabsCountAfter = store.get(tabsAtom).length;
+
+    expect(tabsCountAfter).toBe(tabsCountInitial);
+  });
+
+  test('recordProblemSolvedAtom automatically advances setPositions upon solving', () => {
+    store.set(startPracticeSetAtom, { setId: 'linear_basics', position: 0 });
+    store.set(recordProblemSolvedAtom);
+
+    const progress = store.get(practiceSetProgressAtom);
+    expect(progress.setPositions['linear_basics']).toBe(1);
   });
 
   test('localStorage persistence round-trips state', () => {

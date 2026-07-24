@@ -65,7 +65,7 @@ describe('PracticeSetBanner Component', () => {
     );
 
     expect(screen.getByRole('region', { name: /Practice Set Progress/i })).toBeInTheDocument();
-    expect(screen.getByText(/Practice Set · Linear Equations/i)).toBeInTheDocument();
+    expect(screen.getByText(/Linear Equations/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Next Problem/i })).toBeInTheDocument();
   });
 

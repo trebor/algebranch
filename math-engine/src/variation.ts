@@ -17,6 +17,33 @@ export interface VariationOptions {
 
 export const CLEAN_VARIABLES = ['x', 'y', 'z', 'a', 'b', 'n', 't'] as const;
 export const PERFECT_SQUARES = [4, 9, 16, 25, 36, 49, 64, 81, 100] as const;
+export const CLEAN_EXPONENTIAL_PAIRS = [
+  { base: 2, exp: 2, val: 4 },
+  { base: 2, exp: 3, val: 8 },
+  { base: 2, exp: 4, val: 16 },
+  { base: 2, exp: 5, val: 32 },
+  { base: 2, exp: 6, val: 64 },
+  { base: 3, exp: 2, val: 9 },
+  { base: 3, exp: 3, val: 27 },
+  { base: 3, exp: 4, val: 81 },
+  { base: 3, exp: 5, val: 243 },
+  { base: 4, exp: 2, val: 16 },
+  { base: 4, exp: 3, val: 64 },
+  { base: 4, exp: 4, val: 256 },
+  { base: 5, exp: 2, val: 25 },
+  { base: 5, exp: 3, val: 125 },
+  { base: 5, exp: 4, val: 625 },
+  { base: 6, exp: 2, val: 36 },
+  { base: 6, exp: 3, val: 216 },
+  { base: 7, exp: 2, val: 49 },
+  { base: 7, exp: 3, val: 343 },
+  { base: 8, exp: 2, val: 64 },
+  { base: 8, exp: 3, val: 512 },
+  { base: 9, exp: 2, val: 81 },
+  { base: 9, exp: 3, val: 729 },
+  { base: 10, exp: 2, val: 100 },
+  { base: 10, exp: 3, val: 1000 },
+] as const;
 
 class PRNG {
   private state: number;
@@ -59,6 +86,116 @@ const extractVariables = (node: math.MathNode): string[] => {
     }
   });
   return Array.from(vars);
+};
+
+/**
+ * Unwraps nested ParenthesisNodes.
+ */
+const unwrapParentheses = (node: math.MathNode): math.MathNode => {
+  let current = node;
+  while (current.type === 'ParenthesisNode') {
+    current = (current as math.ParenthesisNode).content;
+  }
+  return current;
+};
+
+/**
+ * Returns integer power exponent k if target === base^k for integer k >= 1, or null.
+ */
+const getIntegerPowerExponent = (base: number, target: number): number | null => {
+  if (base < 2 || target < 2) return null;
+  let k = 1;
+  let val = base;
+  while (val < target) {
+    val *= base;
+    k++;
+  }
+  return val === target ? k : null;
+};
+
+interface ExponentialPattern {
+  base: number;
+  exponentNode: math.MathNode;
+}
+
+const extractExponentialPattern = (node: math.MathNode): ExponentialPattern | null => {
+  const unwrapped = unwrapParentheses(node);
+  if (unwrapped.type === 'OperatorNode') {
+    const opNode = unwrapped as math.OperatorNode;
+    if (opNode.op === '^' && opNode.args.length === 2) {
+      const baseNode = unwrapParentheses(opNode.args[0]);
+      const expNode = opNode.args[1];
+      if (baseNode.type === 'ConstantNode') {
+        const val = (baseNode as math.ConstantNode).value;
+        if (typeof val === 'number' && Number.isInteger(val) && val >= 2) {
+          if (extractVariables(expNode).length > 0) {
+            return { base: val, exponentNode: expNode };
+          }
+        }
+      }
+    }
+  }
+  return null;
+};
+
+const extractIntegerConstant = (node: math.MathNode): number | null => {
+  const unwrapped = unwrapParentheses(node);
+  if (unwrapped.type === 'ConstantNode') {
+    const val = (unwrapped as math.ConstantNode).value;
+    if (typeof val === 'number' && Number.isInteger(val) && val >= 2) {
+      return val;
+    }
+  }
+  return null;
+};
+
+interface ExponentialEquationMatch {
+  patternPosition: 'lhs' | 'rhs';
+  base: number;
+  exponentNode: math.MathNode;
+  constant: number;
+  k: number;
+}
+
+const matchExponentialEquation = (
+  lhs: math.MathNode,
+  rhs: math.MathNode
+): ExponentialEquationMatch | null => {
+  const lhsPattern = extractExponentialPattern(lhs);
+  if (lhsPattern) {
+    const rhsConst = extractIntegerConstant(rhs);
+    if (rhsConst !== null) {
+      const k = getIntegerPowerExponent(lhsPattern.base, rhsConst);
+      if (k !== null) {
+        return {
+          patternPosition: 'lhs',
+          base: lhsPattern.base,
+          exponentNode: lhsPattern.exponentNode,
+          constant: rhsConst,
+          k,
+        };
+      }
+    }
+  }
+
+  const rhsPattern = extractExponentialPattern(rhs);
+  if (rhsPattern) {
+    const lhsConst = extractIntegerConstant(lhs);
+    if (lhsConst !== null) {
+      const k = getIntegerPowerExponent(rhsPattern.base, lhsConst);
+      if (k !== null) {
+        return {
+          patternPosition: 'rhs',
+          base: rhsPattern.base,
+          exponentNode: rhsPattern.exponentNode,
+          constant: lhsConst,
+          k,
+        };
+      }
+    }
+  }
+
+  return null;
 };
 
 /**
@@ -138,6 +275,43 @@ export const generateEquationVariation = (
 
     return node.clone();
   };
+
+  const expMatch = matchExponentialEquation(parsed.lhs, parsed.rhs);
+  if (expMatch && varyConsts) {
+    const matchingCandidates = CLEAN_EXPONENTIAL_PAIRS.filter(
+      (pair) => pair.base !== expMatch.base || pair.val !== expMatch.constant
+    );
+    const candidatePool = matchingCandidates.length > 0 ? matchingCandidates : CLEAN_EXPONENTIAL_PAIRS;
+    const chosen = prng.pick(candidatePool);
+
+    const newExpNode = transformSubtree(expMatch.exponentNode, true);
+    const newBaseNode = new mjs.ConstantNode(chosen.base);
+    const newPowNode = new mjs.OperatorNode('^', 'pow', [newBaseNode, newExpNode]);
+    const newConstNode = new mjs.ConstantNode(chosen.val);
+
+    let newLhs = expMatch.patternPosition === 'lhs' ? newPowNode : newConstNode;
+    let newRhs = expMatch.patternPosition === 'lhs' ? newConstNode : newPowNode;
+
+    if (varyStruct && prng.nextFloat() < 0.25) {
+      const temp = newLhs;
+      newLhs = newRhs;
+      newRhs = temp;
+    }
+
+    const resultEq: Equation = {
+      lhs: newLhs,
+      rhs: newRhs,
+      relation: parsed.relation,
+    };
+
+    try {
+      const serialized = equationToString(resultEq);
+      parseEquation(serialized);
+      return serialized;
+    } catch {
+      return rawEquationStr.replaceAll(primaryVar, targetVar);
+    }
+  }
 
   let newLhs = transformSubtree(parsed.lhs);
   let newRhs = transformSubtree(parsed.rhs);

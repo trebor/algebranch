@@ -69,4 +69,47 @@ describe('generateEquationVariation', () => {
       }
     }
   });
+
+  test('preserves integer power relations when varying exponential equations', () => {
+    const input = '2^x = 8';
+    for (let seed = 1; seed <= 20; seed++) {
+      const variation = generateEquationVariation(input, { seed });
+      const parsed = parseEquation(variation);
+
+      let baseVal: number | null = null;
+      let constVal: number | null = null;
+
+      const inspectSide = (node: typeof parsed.lhs) => {
+        if (node.type === 'OperatorNode' && (node as any).op === '^') {
+          const baseNode = (node as any).args[0];
+          if (baseNode.type === 'ConstantNode') {
+            baseVal = baseNode.value;
+          }
+        } else if (node.type === 'ConstantNode') {
+          constVal = (node as any).value;
+        }
+      };
+
+      inspectSide(parsed.lhs);
+      inspectSide(parsed.rhs);
+
+      expect(baseVal).not.toBeNull();
+      expect(constVal).not.toBeNull();
+      expect(baseVal!).toBeGreaterThanOrEqual(2);
+      expect(constVal!).toBeGreaterThanOrEqual(2);
+
+      let val = baseVal!;
+      let isIntegerPower = false;
+      while (val <= constVal!) {
+        if (val === constVal!) {
+          isIntegerPower = true;
+          break;
+        }
+        val *= baseVal!;
+      }
+
+      expect(isIntegerPower).toBe(true);
+    }
+  });
 });
+

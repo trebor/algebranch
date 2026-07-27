@@ -32,6 +32,7 @@ import {
   undefinedPathsAtom,
   ReducibleActionInfo,
 } from '../store/equation';
+import { hintSpotlightPathAtom, hintSpotlightNodeIdAtom, hintLevelAtom, hintActionTypeAtom, hintDestinationPathAtom } from '../store/hint';
 import { OPERATOR_DISPLAY, RELATION_DISPLAY, splitSubscript, symbolHintFor, isImaginaryUnit } from '../constants/mathSymbols';
 import { THEME_GLASS } from '../constants/theme';
 import { getReferenceUrl } from '../constants/referenceLinks';
@@ -412,6 +413,12 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const onboardingTargetPath = useAtomValue(onboardingTargetPathAtom);
   const onboardingReduceHandle = useAtomValue(onboardingReduceHandleAtom);
   const onboardingSubstitution = useAtomValue(onboardingSubstitutionAtom);
+  const hintSpotlightPath = useAtomValue(hintSpotlightPathAtom);
+  const hintSpotlightNodeId = useAtomValue(hintSpotlightNodeIdAtom);
+  const hintLevel = useAtomValue(hintLevelAtom);
+  const hintActionType = useAtomValue(hintActionTypeAtom);
+  const hintDestinationPath = useAtomValue(hintDestinationPathAtom);
+
   // Which option's equation preview the open menu is showing, keyed by stack type
   // so a stale hover from one stack never leaks into another.
   const [hoveredOption, setHoveredOption] = React.useState<{ type: 'reduce' | 'expand' | 'factor' | 'identity' | 'substitute'; index: number } | null>(null);
@@ -533,13 +540,6 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   // transposition steps).
   const isHandleMarked = isOnboardingActive && onboardingReduceHandle?.path === path;
   const isSubHandleMarked = isOnboardingActive && onboardingSubstitution?.path === path;
-  // The "click here" circle yields once its node is selected as Source — from
-  // there the Source styling acknowledges the click and the target circle
-  // takes over guiding the next one.
-  const isOnboardingMarked = !isHandleMarked && !isSubHandleMarked &&
-    ((path === onboardingHighlightPath && sourcePath !== path) ||
-      (isOnboardingActive && path === onboardingTargetPath));
-
   const node = React.useMemo(() => {
     try {
       return getNodeByPath(currentEq, path);
@@ -549,6 +549,19 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   }, [currentEq, path]);
 
   const nodeId = node ? (node as unknown as { id?: string }).id || '' : '';
+
+  const isOnboardingMarked = !isHandleMarked && !isSubHandleMarked &&
+    ((path === onboardingHighlightPath && sourcePath !== path) ||
+      (isOnboardingActive && path === onboardingTargetPath));
+
+  const isHintSpotlighted = !!(
+    (hintSpotlightPath && path === hintSpotlightPath) ||
+    (hintSpotlightNodeId && nodeId === hintSpotlightNodeId)
+  );
+
+  const isNodeMarked = isOnboardingMarked || (isHintSpotlighted && hintLevel === 2);
+
+
 
   // Tall root-index placement (#201). A fraction/radical index grows the node box and
   // must be lifted so it floats just above the radical's crook, not down at its vertex.
@@ -603,11 +616,15 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     try {
       const children = getChildren(node);
       if (children && children[index]) {
-        return (children[index] as unknown as { id?: string }).id || `${path}/${index}`;
+        const rawId = (children[index] as unknown as { id?: string }).id;
+        if (rawId) {
+          return `${rawId}_${index}`;
+        }
       }
     } catch {}
     return `${path}/${index}`;
   };
+
 
   const getOpStyle = (isDivElement: boolean = false): React.CSSProperties => {
     const displayStyle = isDivElement ? {} : { display: 'inline-block' };
@@ -661,7 +678,9 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
 
   const isSelected = sourcePath === path;
   const isHovered = hoverPath === path;
-  const isTarget = !!sourcePath && path in targetPaths;
+  const isHintDestinationMarked = !!(hintDestinationPath && (path === hintDestinationPath || path.startsWith(hintDestinationPath)));
+  const isTarget = (!!sourcePath && path in targetPaths) || isHintDestinationMarked;
+
   const isCandidate = candidatePaths.has(path);
   const isStatic = sourcePath
     ? (!isSelected && !isTarget)
@@ -2099,12 +2118,13 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     >
       {renderedContent}
 
-      {/* Onboarding annotation circle: a bright white loop overshooting the node box,
-          deliberately outside the app's rounded-rect + hue vocabulary. Rendered as a
-          child so it tracks FLIP moves, scaling, and reflows for free. */}
-      {isOnboardingMarked && (
-        <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+      {/* Annotation circle (onboarding tour & step 2 hint ladder): a bright white loop overshooting the node box */}
+      {isNodeMarked && (
+        <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.SPOTLIGHT_CIRCLE}`} />
       )}
+
+
+
 
       {/* Hover selection controls toolbar */}
       {isSelected && canToggleRoot(node) && (
@@ -2188,14 +2208,16 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
               : (sourcePath ? -1 : undefined);
             const handleRef = roving && handlesNavigable ? handleRovingRefs[stack.type] : undefined;
 
-            const isStackMarked = isOnboardingActive && (
+            const isHintHandleMarked = isHintSpotlighted && hintLevel === 3 && (!hintActionType || hintActionType === 'equals' || stack.type === hintActionType);
+
+            const isStackMarked = (isOnboardingActive && (
               (stack.type === 'substitute' && isSubHandleMarked) ||
               (stack.type !== 'substitute' && isHandleMarked && actions.length > 0 && actions[0].type === stack.type)
-            );
+            )) || isHintHandleMarked;
 
             // Only the hovered node's handles pulse (#121); the onboarding tour
-            // still forces its marked handle to pulse so the step reads.
-            const pulse = shouldPulseHandle({ sourcePath, isHovered, isStackMarked, reducedMotion: !!reducedMotion });
+            // or step 3 hint ladder forces its marked handle to pulse so the step reads.
+            const pulse = shouldPulseHandle({ sourcePath, isHovered, isStackMarked, reducedMotion: !!reducedMotion }) || isHintHandleMarked;
 
             // Handles rest at full opacity for discoverability (the hue codes the
             // action type); only the pulse (animate-ping) is hover-gated, so the
@@ -2218,11 +2240,14 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
                   style={{ borderRadius: inExponent ? '0.12em' : '9999px' }}
                 />
                 {isStackMarked && (
-                  <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                  <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.SPOTLIGHT_CIRCLE}`} />
                 )}
+
+
                 <IconComponent className={`h-[65%] w-[65%] ${config.iconClass}`} />
               </>
             );
+
 
             // Every handle — single- or multi-option — opens the same
             // self-contained chooser (#369). Hover only informs now (#456): it

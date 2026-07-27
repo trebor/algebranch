@@ -40,6 +40,7 @@ export type ShortcutId =
   | 'toggle-practice-sets'
   | 'toggle-library'
   | 'toggle-history'
+  | 'toggle-hint'
   | 'clear-selection'
   | 'swap-sides'
   | 'toggle-graph'
@@ -97,6 +98,7 @@ export const SHORTCUT_CATALOG: ShortcutCatalogEntry[] = [
   { id: 'toggle-practice-sets', key: 'p', shift: true, description: 'Toggle Practice Sets panel', category: 'Panels', keyLabel: 'Shift+P' },
   { id: 'toggle-library', key: 'l', description: 'Toggle Equation Library', category: 'Panels' },
   { id: 'toggle-history', key: 'h', description: 'Toggle History Sidebar', category: 'Panels' },
+  { id: 'toggle-hint', key: 'i', description: 'Toggle ambient step-by-step hint ladder', category: 'Equation' },
   { id: 'clear-selection', key: 'escape', description: 'Clear selection', category: 'Equation' },
   { id: 'swap-sides', key: 's', description: 'Swap equation sides', category: 'Equation' },
   { id: 'toggle-graph', key: 'g', description: 'Toggle variable relationship graph size', category: 'Equation' },

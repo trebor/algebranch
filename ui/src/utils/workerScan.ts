@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { Equation, serializeEquation } from 'math-engine-client';
-import { computeMathSync, MathSyncResult } from 'math-engine';
+import { computeMathSync, getHintLadder, HintLadder, HintOptions, MathSyncResult } from 'math-engine';
 import type { WorkerScanResponse } from '../workers/mathScan.worker';
 
 const SOLVE_TIMEOUT_MS = 10000;
@@ -64,17 +64,14 @@ const getWorker = (): Worker | null => {
       worker = new Worker(new URL('../workers/mathScan.worker.ts', import.meta.url));
     } catch (err) {
       console.warn('Failed to instantiate Web Worker, falling back to main-thread execution:', err);
-      return null;
     }
   }
   return worker;
 };
 
-/** @internal */
 export const resetWorkerForTest = (): void => {
   terminateWorker();
-  activeResolver = null;
-  activeRejecter = null;
+  gate.cancel();
 };
 
 /**
@@ -109,8 +106,8 @@ export const runWorkerScan = (
   const { epoch } = gate.next();
 
   workerInstance.onmessage = (event: MessageEvent<WorkerScanResponse>) => {
-    const { result, error, epoch: respEpoch } = event.data;
-    if (respEpoch === gate.getCurrent()) {
+    const { type, result, error, epoch: respEpoch } = event.data;
+    if ((type === 'computeMath' || !type) && respEpoch === gate.getCurrent()) {
       if (timeoutId !== null) {
         clearTimeout(timeoutId);
         timeoutId = null;
@@ -138,7 +135,7 @@ export const runWorkerScan = (
     activeRejecter = reject;
 
     const serializedEq = serializeEquation(eq);
-    workerInstance.postMessage({ serializedEq, sourcePath, epoch });
+    workerInstance.postMessage({ type: 'computeMath', serializedEq, sourcePath, epoch });
 
     timeoutId = setTimeout(() => {
       terminateWorker();
@@ -148,5 +145,52 @@ export const runWorkerScan = (
       activeResolver = null;
       activeRejecter = null;
     }, SOLVE_TIMEOUT_MS);
+  });
+};
+
+/**
+ * Executes a hint ladder search via the Web Worker if available, falling back to the
+ * main-thread synchronous implementation otherwise.
+ */
+export const runWorkerHint = (
+  eq: Equation,
+  customTargetVar?: string,
+  hintOptions?: HintOptions
+): Promise<HintLadder | null> => {
+  const workerInstance = getWorker();
+  if (!workerInstance) {
+    return Promise.resolve(getHintLadder(eq, customTargetVar, hintOptions));
+  }
+
+  const { epoch } = gate.next();
+
+  return new Promise<HintLadder | null>((resolve, reject) => {
+    const handler = (event: MessageEvent<WorkerScanResponse>) => {
+      const { type, hintLadder, error, epoch: respEpoch } = event.data;
+      if (type === 'getHintLadder' && respEpoch === gate.getCurrent()) {
+        workerInstance.removeEventListener('message', handler);
+        if (error) {
+          reject(new Error(error.message));
+        } else {
+          resolve(hintLadder ?? null);
+        }
+      }
+    };
+
+    workerInstance.addEventListener('message', handler);
+
+    try {
+      const serializedEq = serializeEquation(eq);
+      workerInstance.postMessage({
+        type: 'getHintLadder',
+        serializedEq,
+        customTargetVar,
+        hintOptions,
+        epoch,
+      });
+    } catch {
+      workerInstance.removeEventListener('message', handler);
+      resolve(getHintLadder(eq, customTargetVar, hintOptions));
+    }
   });
 };

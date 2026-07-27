@@ -120,6 +120,23 @@ export const getTerminalStatus = (eq: Equation): 'contradiction' | 'identity' | 
   return hasPendingSimplification ? null : status;
 };
 
+export const getActivePaths = (eq: Equation): string[] => {
+  const activePaths: string[] = [];
+  for (const path of getAllPaths(eq)) {
+    try {
+      if (isChainLinkPath(eq, path)) {
+        continue;
+      }
+      if (hasValidMove(eq, path)) {
+        activePaths.push(path);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return activePaths;
+};
+
 export const computeMathSync = (eq: Equation, sourcePath: string | null): MathSyncResult => {
   // 0. Undefined check first: once any subtree is undefined (today: a division by
   //    zero, #413), the WHOLE equation is undefined. "Undefined" is not a value you

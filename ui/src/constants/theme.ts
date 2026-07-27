@@ -53,10 +53,10 @@ export const THEME_GLASS = {
   CARD_CANDIDATE_SCAN: 'border-sky-400/30 bg-sky-500/10 text-sky-100 shadow-[0_0_15px_rgba(56,189,248,0.1)] cursor-pointer',
   CARD_HOVER: 'border-indigo-400/40 bg-neutral-900/90 text-white font-medium shadow-md shadow-indigo-500/5 cursor-pointer',
   TREE_BG: 'bg-[#1c1a35] border border-white/5 rounded-2xl shadow-inner w-full',
-  // Tutorial annotation circle marking the next element to click. Deliberately
-  // outside the app's rounded-rect/hue vocabulary. Pair with an -inset-* class
-  // to control how far it overshoots the marked element.
-  ONBOARDING_CIRCLE: 'absolute rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] pointer-events-none z-20 animate-[onboarding-circle-breathe_1.8s_ease-in-out_infinite]',
+  // Spotlight annotation circle marking the next element or target to act on.
+  // Deliberately outside the app's rounded-rect/hue vocabulary. Pair with an
+  // -inset-* class to control how far it overshoots the marked element.
+  SPOTLIGHT_CIRCLE: 'absolute rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] pointer-events-none z-20 animate-[onboarding-circle-breathe_1.8s_ease-in-out_infinite]',
 
   // --- Chrome Design Tokens (Issue #39) ---
   PANEL_HEADER: 'border-b border-white/10 pb-3',
@@ -216,6 +216,7 @@ export const THEME_GLASS = {
   TOAST_ERROR: 'flex items-center gap-2 px-3 py-1.5 rounded-full border border-red-500/30 bg-neutral-900/80 backdrop-blur-md text-xs text-red-300 font-semibold select-none shadow-lg shadow-black/20 animate-[fadeIn_0.2s_ease-out]',
   SPINNER: 'animate-spin rounded-full border-indigo-500/20 border-t-indigo-400 shrink-0',
   ICON_BUTTON: 'p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-white/10 text-white/55 hover:text-white transition-all cursor-pointer shadow-md',
+  ICON_BUTTON_DISABLED: 'p-2 rounded-xl border border-white/5 bg-neutral-900/30 text-white/20 cursor-not-allowed shadow-none',
   ICON_BUTTON_DANGER: 'p-2 rounded-xl border border-white/5 bg-neutral-900/60 hover:bg-red-500/10 text-white/55 hover:text-red-400 hover:border-red-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-md',
   // Icon button in its "on" state (e.g. the graph toggle while the graph is open)
   ICON_BUTTON_ACTIVE: 'p-2 rounded-xl border border-indigo-400/30 bg-indigo-600/90 hover:bg-indigo-500 text-white transition-all cursor-pointer shadow-md',

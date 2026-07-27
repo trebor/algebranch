@@ -120,4 +120,32 @@ describe('Hint Ladder Engine', () => {
       expect(scoreIsolated).toBeGreaterThan(scoreMixed);
     });
   });
+
+  describe('Radical Equations', () => {
+    it('recommends squaring both sides for dual radical equations: sqrt(2*z - 1) = sqrt(z + 2)', () => {
+      const eq = parseEquation('sqrt(2*z - 1) = sqrt(z + 2)');
+      const ladder = getHintLadder(eq);
+      expect(ladder).not.toBeNull();
+      expect(ladder?.strategicGoal).toContain('Square both sides');
+      expect(ladder?.actionableMove).toContain('square both sides');
+    });
+
+    it('recommends squaring both sides for single radical equations: sqrt(x + 3) = 5', () => {
+      const eq = parseEquation('sqrt(x + 3) = 5');
+      const ladder = getHintLadder(eq);
+      expect(ladder).not.toBeNull();
+      expect(ladder?.strategicGoal).toContain('Square both sides');
+      expect(ladder?.actionableMove).toContain('square both sides');
+    });
+  });
+
+  describe('Decimal Evaluation Guardrail', () => {
+    it('never suggests Evaluate to Decimal in hints for equations with non-integer fractions: x = 1/3 + 2', () => {
+      const eq = parseEquation('x = 1/3 + 2');
+      const ladder = getHintLadder(eq);
+      expect(ladder).not.toBeNull();
+      expect(ladder?.actionableMove).not.toContain('Decimal');
+      expect(ladder?.actionableMove).not.toContain('0.333');
+    });
+  });
 });

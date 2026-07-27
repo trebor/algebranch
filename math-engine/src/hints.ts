@@ -4,7 +4,7 @@
 import type * as math from 'mathjs';
 import { Equation, getNodeByPath } from './tree';
 import { equationToString } from './index';
-import { isEquationSolved, getReducibleOptions, getSimplificationForPath } from './simplify';
+import { isEquationSolved, getReducibleOptions, getSimplificationForPath, autoSimplify } from './simplify';
 import { applyGlobalOp } from './globalOps';
 import { getActivePaths } from './sync';
 import { generateValidMoves, getFunctionName } from './validator';
@@ -164,6 +164,41 @@ const isReductionType = (type?: string): boolean => {
 };
 
 /**
+ * Counts occurrences of targetVar trapped inside non-linear function nodes (e.g. sqrt, nthRoot).
+ */
+export const countTrappedVariables = (node: math.MathNode, targetVar: string): number => {
+  let count = 0;
+  node.traverse((n) => {
+    if (n.type === 'FunctionNode') {
+      const fnName = getFunctionName(n as math.FunctionNode);
+      if (
+        (fnName === 'sqrt' || fnName === 'nthRoot' || fnName === 'cbrt' || fnName === 'abs') &&
+        hasVariableInTree(n, targetVar)
+      ) {
+        count += countVariableOccurrences(n, targetVar);
+      }
+    }
+  });
+  return count;
+};
+
+/**
+ * Checks whether an AST node contains a radical function wrapping the target variable.
+ */
+export const hasRadicalWithVariable = (node: math.MathNode, targetVar: string): boolean => {
+  let found = false;
+  node.traverse((n) => {
+    if (n.type === 'FunctionNode') {
+      const fnName = getFunctionName(n as math.FunctionNode);
+      if ((fnName === 'sqrt' || fnName === 'nthRoot') && hasVariableInTree(n, targetVar)) {
+        found = true;
+      }
+    }
+  });
+  return found;
+};
+
+/**
  * Calculates heuristic score bonus for a candidate derivation transition.
  * Rewards pure local arithmetic simplification ('reduce' / 'simplify') and innermost AST depth (inside-out ordering).
  * Penalizes structural rewrites ('identity' / 'expand') when direct numerical evaluation is available.
@@ -171,9 +206,11 @@ const isReductionType = (type?: string): boolean => {
 export const calculateTransitionBonus = (step: HintStep): number => {
   let bonus = 0;
 
-  // 1. Pure local reductions get top priority over transpositions or structural rewrites
+  // 1. Pure local reductions and global balance operations get top priority over transpositions or structural rewrites
   if (step.destinationPath === undefined && isReductionType(step.actionType)) {
     bonus += 200;
+  } else if (step.actionType === 'equals') {
+    bonus += 180;
   } else if (step.destinationPath !== undefined) {
     bonus += 50; // Term transposition
   } else if (step.actionType === 'identity' || step.actionType === 'expand') {
@@ -225,6 +262,10 @@ export const scoreEquationState = (eq: Equation, targetVar: string): number => {
   if (eq.lhs.type === 'SymbolNode' && (eq.lhs as math.SymbolNode).name === targetVar && rhsVarCount === 0) {
     score += 200;
   }
+
+  // 5. Trapped Variable Penalty: penalty for target variable trapped inside radical/function nodes
+  const trappedVars = countTrappedVariables(eq.lhs, targetVar) + countTrappedVariables(eq.rhs, targetVar);
+  score -= trappedVars * 120;
 
   return score;
 };
@@ -304,6 +345,7 @@ export const getSuccessorStates = (eq: Equation, targetVar: string, options?: Hi
   for (const path of reduciblePaths) {
     const optionsList = filteredOptionsMap[path] || [];
     for (const opt of optionsList) {
+      if (opt.label === 'Evaluate to Decimal') continue; // Exclude decimal conversions from automated hinting
       if (opt.type === 'expand' && path.includes('lhs')) continue; // Skip de-simplifying expansions
 
       // Precise action-level capability filtering against UI's allowedReduciblePaths
@@ -398,6 +440,16 @@ export const getSuccessorStates = (eq: Equation, targetVar: string, options?: Hi
       }
 
 
+      // Skip transposing an entire non-additive side (e.g. moving a top-level radical to produce 0 = B - A)
+      if ((sourcePath === 'lhs' || sourcePath === 'rhs') && sourceNode) {
+        if (
+          sourceNode.type === 'FunctionNode' ||
+          (sourceNode.type === 'OperatorNode' && (sourceNode as math.OperatorNode).op !== '+')
+        ) {
+          continue;
+        }
+      }
+
       const validMoves = generateValidMoves(eq, sourcePath);
       for (const targetPath of Object.keys(validMoves)) {
         if (targetPath === sourcePath) continue;
@@ -449,6 +501,25 @@ export const getSuccessorStates = (eq: Equation, targetVar: string, options?: Hi
   }
 
   // 3. Global Balance Operations Transitions (from Math Engine's applyGlobalOp)
+  if (hasRadicalWithVariable(eq.lhs, targetVar) || hasRadicalWithVariable(eq.rhs, targetVar)) {
+    try {
+      const rawNextEq = applyGlobalOp(eq, { type: 'square' });
+      const nextEq = autoSimplify(rawNextEq);
+      if (canonicalEqKey(nextEq) !== startKey) {
+        steps.push({
+          strategicGoal: sanitizeCopy(`Square both sides to isolate ${targetVar}`),
+          focusPath: 'equals',
+          destinationPath: undefined,
+          focusDescription: sanitizeCopy(`Focus on the equals sign = to balance both sides`),
+          actionableMove: sanitizeCopy(`Click the equals sign = to square both sides`),
+          targetNodeId: undefined,
+          actionType: 'equals',
+          nextEq,
+        });
+      }
+    } catch {}
+  }
+
   const isolateSide = (side: 'lhs' | 'rhs') => {
     const root = side === 'lhs' ? eq.lhs : eq.rhs;
 

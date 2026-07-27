@@ -12,6 +12,7 @@ import { currentEquationAtom } from '../store/equation';
 import { PRESET_LIST } from '../constants/presets';
 import { THEME_GLASS } from '../constants/theme';
 import { splitSubscript } from '../constants/mathSymbols';
+import { EquationBanner } from './EquationBanner';
 
 /**
  * Standing Practice Set Goal Banner docked under the main equation canvas (#564).
@@ -49,12 +50,12 @@ export const PracticeGoalBanner: React.FC = () => {
   const ariaLabel = `Goal: ${template.replace('{var}', targetVar)}`;
 
   return (
-    <div
+    <EquationBanner
+      variant="sky"
       role="note"
-      aria-label={ariaLabel}
-      className={THEME_GLASS.PRACTICE_GOAL_BANNER}
+      ariaLabel={ariaLabel}
+      icon={<Target size={14} aria-hidden />}
     >
-      <Target size={14} className={THEME_GLASS.PRACTICE_GOAL_BANNER_ICON} aria-hidden />
       <span>
         Goal: {prefix}
         <span className="text-sm font-serif italic font-bold text-sky-100 px-0.5">
@@ -63,6 +64,6 @@ export const PracticeGoalBanner: React.FC = () => {
         </span>
         {suffix}
       </span>
-    </div>
+    </EquationBanner>
   );
 };

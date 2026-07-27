@@ -445,6 +445,24 @@ export const THEME_GLASS = {
   TREE_NODE_BADGE_RESTRICTION: 'bg-amber-600 border-amber-400 text-amber-50',
   TOOLTIP_ASSUMPTION: 'flex items-center gap-1.5 text-xs font-semibold leading-snug text-amber-300 rounded-md border border-amber-400/30 bg-amber-500/10 px-1.5 py-1',
   TOOLTIP_ASSUMPTION_ICON: 'shrink-0 text-amber-400',
+  // --- Equation Message Stack & Banners (#569) ---
+  // Unified primitive tokens for equation status messages docked under the main canvas
+  EQUATION_BANNER_BASE: 'flex items-center gap-1.5 text-xs font-semibold leading-snug rounded-md px-2 py-1 border backdrop-blur-md transition-all duration-200',
+  EQUATION_BANNER_VARIANTS: {
+    amber: 'text-amber-300 border-amber-400/30 bg-amber-500/10',
+    red: 'text-red-200 border-red-400/30 bg-red-500/10',
+    emerald: 'text-emerald-200 border-emerald-400/30 bg-emerald-500/10',
+    sky: 'text-sky-200 border-sky-400/30 bg-sky-500/10',
+    gold: 'text-amber-200 border-amber-500/30 bg-amber-500/10',
+  },
+  EQUATION_BANNER_ICON_VARIANTS: {
+    amber: 'shrink-0 text-amber-400',
+    red: 'shrink-0 text-red-400',
+    emerald: 'shrink-0 text-emerald-400',
+    sky: 'shrink-0 text-sky-400',
+    gold: 'shrink-0 text-amber-400',
+  },
+
   // Standing "given x ≠ 0" caveat under the main equation (#486): the accumulated
   // restriction set active on the current branch, shown persistently (not just on
   // the introducing step's edge) so a working answer never hides its conditions.

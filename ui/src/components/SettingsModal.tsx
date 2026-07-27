@@ -93,7 +93,7 @@ export const SettingsModal: React.FC = () => {
   };
 
 
-  const handleToggleGate = (key: 'allowComplex' | 'allowEvaluateToDecimal' | 'progressiveMode') => {
+  const handleToggleGate = (key: 'allowHints' | 'progressiveMode' | 'exactValues' | 'allowComplex') => {
     const newVal = !settings[key];
     setSettings((prev) => ({
       ...prev,

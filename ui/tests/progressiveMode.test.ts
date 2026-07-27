@@ -26,11 +26,9 @@ const mockFactorAction = (label = 'Factor'): ReducibleActionInfo => ({
   label,
 });
 
-
-
 describe('progressiveMode gate on reducible actions', () => {
-  it('defaults to false', () => {
-    expect(DEFAULT_SETTINGS.progressiveMode).toBe(false);
+  it('defaults to true', () => {
+    expect(DEFAULT_SETTINGS.progressiveMode).toBe(true);
   });
 
   it('keeps all actions when progressiveMode is off', () => {
@@ -86,11 +84,11 @@ describe('progressiveMode gate on reducible actions', () => {
 
   it('does not suppress parent reduce when child reduce is independently label-suppressed', () => {
     const store = createStore();
-    // evaluateToDecimal is off by default. A child decimal evaluation should not block parent reduce.
+    // exactValues is true by default. A child decimal evaluation should not block parent reduce because exactValues: true suppresses decimal.
     store.set(rawSettingsAtom, {
       ...DEFAULT_SETTINGS,
       progressiveMode: true,
-      allowEvaluateToDecimal: false,
+      exactValues: true,
     });
 
     const paths = {
@@ -100,7 +98,7 @@ describe('progressiveMode gate on reducible actions', () => {
     store.set(reduciblePathsAtom, paths);
 
     const filtered = store.get(filteredReduciblePathsAtom);
-    // Since 'Evaluate to Decimal' is filtered out by allowEvaluateToDecimal: false,
+    // Since 'Evaluate to Decimal' is filtered out by exactValues: true,
     // the child path has no surviving reduce actions. Thus, Root Simplify survives!
     expect(filtered['rhs']).toBeDefined();
     expect(filtered['rhs'].map(a => a.label)).toEqual(['Root Simplify']);
@@ -121,11 +119,11 @@ describe('progressiveMode gate on reducible actions', () => {
     expect(filtered['rhs']).toBeUndefined();
   });
 
-  it('hydrates settings properly and merges progressiveMode with default false', () => {
+  it('hydrates settings properly and merges progressiveMode with default true', () => {
     const store = createStore();
     // Simulate hydrating settings with no progressiveMode key (representing an old saved settings payload)
     const oldSettings = {
-      allowEvaluateToDecimal: true,
+      exactValues: true,
       allowComplex: false,
       seenEqualsHint: true,
       chromeScale: 1.2,
@@ -140,8 +138,8 @@ describe('progressiveMode gate on reducible actions', () => {
     }
 
     const settings = store.get(rawSettingsAtom);
-    expect(settings.allowEvaluateToDecimal).toBe(true);
+    expect(settings.exactValues).toBe(true);
     expect(settings.allowComplex).toBe(false);
-    expect(settings.progressiveMode).toBe(false); // defaulted!
+    expect(settings.progressiveMode).toBe(true); // defaulted!
   });
 });

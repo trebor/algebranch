@@ -30,21 +30,29 @@ describe('SettingsModal — capability gates control', () => {
 
   it('exposes switches for individual capabilities', () => {
     renderModal();
-    expect(screen.getByRole('switch', { name: /toggle allow decimals option/i })).toBeTruthy();
-    expect(screen.getByRole('switch', { name: /toggle allow complex numbers option/i })).toBeTruthy();
+    expect(screen.getByRole('switch', { name: /toggle hints option/i })).toBeTruthy();
     expect(screen.getByRole('switch', { name: /toggle progressive simplification option/i })).toBeTruthy();
+    expect(screen.getByRole('switch', { name: /toggle exact values option/i })).toBeTruthy();
+    expect(screen.getByRole('switch', { name: /toggle complex numbers option/i })).toBeTruthy();
   });
 
   it('toggles gate values and updates store', async () => {
     const user = userEvent.setup();
     const { store } = renderModal();
 
-    const decimalSwitch = screen.getByRole('switch', { name: /toggle allow decimals option/i });
-    expect(decimalSwitch.getAttribute('aria-checked')).toBe('false');
+    const hintsSwitch = screen.getByRole('switch', { name: /toggle hints option/i });
+    expect(hintsSwitch.getAttribute('aria-checked')).toBe('true');
 
-    await user.click(decimalSwitch);
-    expect(decimalSwitch.getAttribute('aria-checked')).toBe('true');
-    expect(store.get(rawSettingsAtom).allowEvaluateToDecimal).toBe(true);
+    await user.click(hintsSwitch);
+    expect(hintsSwitch.getAttribute('aria-checked')).toBe('false');
+    expect(store.get(rawSettingsAtom).allowHints).toBe(false);
+
+    const exactSwitch = screen.getByRole('switch', { name: /toggle exact values option/i });
+    expect(exactSwitch.getAttribute('aria-checked')).toBe('true');
+
+    await user.click(exactSwitch);
+    expect(exactSwitch.getAttribute('aria-checked')).toBe('false');
+    expect(store.get(rawSettingsAtom).exactValues).toBe(false);
   });
 
   it('has no structural a11y violations in the settings dialog', async () => {

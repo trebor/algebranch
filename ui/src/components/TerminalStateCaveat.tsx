@@ -7,7 +7,7 @@ import React from 'react';
 import { CircleSlash, Check, TriangleAlert } from 'lucide-react';
 import { useAtomValue } from 'jotai';
 import { undefinedPathsAtom, terminalStatusAtom } from '../store/equation';
-import { THEME_GLASS } from '../constants/theme';
+import { EquationBanner } from './EquationBanner';
 
 /**
  * Standing terminal-state caveat under the main equation (#487).
@@ -56,21 +56,13 @@ export const TerminalStateCaveat: React.FC = () => {
   }[kind];
 
   return (
-    <div
+    <EquationBanner
+      variant={isIdentity ? 'emerald' : 'red'}
       role="note"
-      aria-label={label}
-      className={`${THEME_GLASS.TERMINAL_STATE_CAVEAT} ${
-        isIdentity ? THEME_GLASS.TERMINAL_STATE_CAVEAT_IDENTITY : THEME_GLASS.TERMINAL_STATE_CAVEAT_DEADEND
-      }`}
+      ariaLabel={label}
+      icon={<Icon size={14} aria-hidden />}
     >
-      <Icon
-        size={14}
-        className={
-          isIdentity ? THEME_GLASS.TERMINAL_STATE_CAVEAT_ICON_IDENTITY : THEME_GLASS.TERMINAL_STATE_CAVEAT_ICON_DEADEND
-        }
-        aria-hidden
-      />
       <span>{label}</span>
-    </div>
+    </EquationBanner>
   );
 };

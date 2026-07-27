@@ -18,6 +18,7 @@ import { PRACTICE_SETS } from '../constants/ladders';
 import { Sparkles, ArrowRight, Trophy, X } from 'lucide-react';
 import { ConfettiBurst } from './ConfettiBurst';
 import { useIsHydrated } from '../hooks/useIsHydrated';
+import { EquationBanner } from './EquationBanner';
 
 /**
  * Standing Practice Set "Next problem →" loop affordance (#500).
@@ -67,58 +68,55 @@ export const PracticeSetBanner: React.FC = () => {
         <ConfettiBurst key={`confetti_${set.id}_${position}`} />,
         document.body
       )}
-      <div
-      role="region"
-      aria-label="Practice Set Progress"
-      className={`mt-2 flex items-center justify-between gap-2.5 text-xs font-semibold leading-snug rounded-md px-2.5 py-1 border transition-all animate-[fadeIn_0.2s_ease-out] max-w-full backdrop-blur-md ${
-        isCompleted
-          ? 'text-emerald-200 border-emerald-400/30 bg-emerald-500/10'
-          : 'text-indigo-200 border-indigo-400/30 bg-indigo-500/10'
-      }`}
-    >
-      <div className="flex items-center gap-1.5 min-w-0">
-        {isCompleted ? (
-          <Trophy size={14} className="shrink-0 text-emerald-400" aria-hidden />
-        ) : (
-          <Sparkles size={14} className="shrink-0 text-indigo-400" aria-hidden />
-        )}
+      <EquationBanner
+        variant={isCompleted ? 'emerald' : 'sky'}
+        role="region"
+        ariaLabel="Practice Set Progress"
+        icon={
+          isCompleted ? (
+            <Trophy size={14} className="shrink-0 text-emerald-400" aria-hidden />
+          ) : (
+            <Sparkles size={14} className="shrink-0 text-indigo-400" aria-hidden />
+          )
+        }
+        className="w-full justify-between"
+      >
         <span className="truncate">
           {isCompleted
             ? `Practice Set Complete — ${set.title}`
             : `Problem Solved · ${set.title} · ${position + 1} of ${totalProblems}`}
         </span>
-      </div>
 
-      <div className="flex items-center gap-1.5 shrink-0">
-        {isCompleted ? (
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+          {isCompleted ? (
+            <button
+              type="button"
+              onClick={() => startSet({ setId: nextSet.id, position: 0 })}
+              className="px-2 py-0.5 text-[0.7rem] font-bold rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 flex items-center gap-1 transition-colors"
+            >
+              <span>Next Set</span>
+              <ArrowRight size={11} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => advanceSet()}
+              className="px-2 py-0.5 text-[0.7rem] font-bold rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 flex items-center gap-1 transition-colors"
+            >
+              <span>Next Problem</span>
+              <ArrowRight size={11} />
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => startSet({ setId: nextSet.id, position: 0 })}
-            className="px-2 py-0.5 text-[0.7rem] font-bold rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 flex items-center gap-1 transition-colors"
+            onClick={() => exitSet()}
+            aria-label="Exit Practice Set"
+            className="p-0.5 text-white/50 hover:text-white hover:bg-white/10 rounded transition-colors"
           >
-            <span>Next Set</span>
-            <ArrowRight size={11} />
+            <X size={12} />
           </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => advanceSet()}
-            className="px-2 py-0.5 text-[0.7rem] font-bold rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 flex items-center gap-1 transition-colors"
-          >
-            <span>Next Problem</span>
-            <ArrowRight size={11} />
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => exitSet()}
-          aria-label="Exit Practice Set"
-          className="p-0.5 text-white/50 hover:text-white hover:bg-white/10 rounded transition-colors"
-        >
-          <X size={12} />
-        </button>
-      </div>
-    </div>
-  </>
-);
+        </div>
+      </EquationBanner>
+    </>
+  );
 };

@@ -7,11 +7,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { EquationNode } from '../components/EquationNode';
-import { ActiveRestrictionsCaveat } from '../components/ActiveRestrictionsCaveat';
-import { TerminalStateCaveat } from '../components/TerminalStateCaveat';
-import { PracticeSetBanner } from '../components/PracticeSetBanner';
-import { PracticeGoalBanner } from '../components/PracticeGoalBanner';
-import { HintDrawer } from '../components/HintDrawer';
+import { EquationMessageStack } from '../components/EquationMessageStack';
 import { Sidebar, SidebarContent, LearnPracticeContent, EquationLibraryContent } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import { GraphPanel } from '../components/GraphPanel';
@@ -2090,7 +2086,7 @@ export default function Home() {
                   onActiveKeyChange={(k) => setRovingCursorPath(k ? k.split('#')[0] : null)}
                 >
                 <div
-                  className="flex flex-col items-center justify-center gap-2 origin-center"
+                  className="relative flex-1 w-full h-full min-h-0 grid place-items-center origin-center"
                   ref={equationTreeFocusRef}
                   onFocusCapture={treeFocusHandlers.onFocusCapture}
                   onBlurCapture={treeFocusHandlers.onBlurCapture}
@@ -2106,24 +2102,18 @@ export default function Home() {
                   <div aria-live="assertive" aria-atomic="true" className="sr-only">
                     {navReadout}
                   </div>
-                  {/* The expression is a single composite widget (#257): one Tab
-                      stop, arrow keys rove between actionable terms. tabIndex=-1
-                      lets Escape release focus back here without adding a stop. */}
+                  {/* Layer 1: Centered Equation Tree — sits in exact optical center of canvas */}
                   <div
                     ref={activeContentRef}
                     role="tree"
-                    // The wrapping role="region" already announces "Equation";
-                    // name the tree distinctly so it isn't said twice (#265).
                     aria-label="Interactive equation"
                     tabIndex={-1}
-                    // Speak the enclosing term when focus moves up/out to a containing
-                    // item, where VoiceOver otherwise goes silent (#270/#271).
                     onFocusCapture={handleTreeFocusBridge}
                     style={{
                       fontSize: `${activeScaleValue}em`,
                       opacity: activeIsScaled ? 1 : 0,
                     }}
-                    className="flex items-center justify-center gap-[0.4em] sm:gap-[0.6em] lg:gap-[0.8em] flex-nowrap w-max outline-none"
+                    className="relative flex items-center justify-center gap-[0.4em] sm:gap-[0.6em] lg:gap-[0.8em] flex-nowrap w-max outline-none z-10 transition-transform duration-300 ease-in-out"
                   >
                     {/* LHS Term Tree */}
                     <div className="flex justify-end min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
@@ -2134,13 +2124,6 @@ export default function Home() {
                     <Tooltip content="Apply an operation to both sides" position="bottom" visible={equalsLocked || (showIdleHint && showEqualsPopover) ? false : undefined}>
                       <span
                         ref={equalsRef}
-                        // The equals sign is an actionable equation node, so it is a
-                        // treeitem in the role="tree" composite widget (#257). This
-                        // is also required for validity: its idle-hint "?" badge is a
-                        // <button>, and a button nested in a bare element under
-                        // role="tree" violates aria-required-children — inside a
-                        // treeitem it is allowed. tabIndex -1 keeps the single Tab
-                        // stop (keyboard activation of global ops lands in a later PR).
                         role="treeitem"
                         aria-label="Apply an operation to both sides"
                         aria-selected={false}
@@ -2162,8 +2145,6 @@ export default function Home() {
                           <button
                             type="button"
                             aria-label="What does the = sign do?"
-                            // Out of the tab order: the equals treeitem is one node
-                            // in the single-Tab-stop expression widget (#257).
                             tabIndex={-1}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -2184,17 +2165,14 @@ export default function Home() {
                               top: `${equalsPopoverPos?.top ?? 0}px`,
                               transform: 'translateX(-50%)',
                               opacity: equalsPopoverPos ? 1 : 0,
-                              zIndex: 9999, // above all in-canvas content (#172)
+                              zIndex: 9999,
                             }}
                             className={THEME_GLASS.EQUALS_POPOVER}
                           >
-                            {/* Mini Radial Menu Preview */}
                             <span className="relative w-16 h-16 mx-auto mb-2.5 flex items-center justify-center pointer-events-none select-none">
-                              {/* Center equals */}
                               <span className={THEME_GLASS.EQUALS_MINI_CENTER}>
                                 =
                               </span>
-                              {/* Outer mini petals */}
                               {MINI_PETALS.map((petal) => (
                                 <span
                                   key={petal.char}
@@ -2237,27 +2215,16 @@ export default function Home() {
                       </span>
                     </Tooltip>
 
-                      {/* RHS Term Tree */}
+                    {/* RHS Term Tree */}
                     <div className="flex justify-start min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
                       <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
                     </div>
+
+                    {/* Layer 2: Message Stack Anchor — positioned directly below equation tree with top clearance margin */}
+                    <div className="absolute top-[calc(100%+1.5rem)] left-1/2 -translate-x-1/2 w-full max-w-xl z-20 pointer-events-auto">
+                      <EquationMessageStack />
+                    </div>
                   </div>
-                  {/* Standing Practice Set Goal Banner (#564): explicit problem goal message */}
-                  <PracticeGoalBanner />
-                  {/* Standing domain-restriction caveat (#486): the accumulated
-                      ≠0 assumptions active on the current branch, shown under the
-                      equation so the working answer never hides its conditions. */}
-                  <ActiveRestrictionsCaveat />
-                  {/* Standing terminal-state caveat (#487): whenever the tree is
-                      frozen — ÷0 dead end, contradiction, or identity — this one
-                      banner states why, the "no moves because…" cue under the
-                      equation. At most one halt banner shows; it may stack under the
-                      restriction caveat above when both apply. */}
-                  <TerminalStateCaveat />
-                  {/* Step-by-step hint ladder guidance docked in the equation message stack */}
-                  <HintDrawer />
-                  {/* Standing Practice Set next-problem loop affordance (#500) */}
-                  <PracticeSetBanner />
                 </div>
                 </RovingTabindexProvider>
               )}

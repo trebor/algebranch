@@ -24,34 +24,30 @@ const simplifyAction = (): ReducibleActionInfo => ({
   label: 'Simplify',
 });
 
-// #363: the classroom-sensible baseline is exact-preferred, so the default now
-// suppresses the "Evaluate to Decimal" move rather than offering it. The gate
-// mechanism itself predates this (#67); this file pins the flipped default and
-// re-confirms the gate still filters as expected around it.
-describe('allowEvaluateToDecimal gate on the "Evaluate to Decimal" move', () => {
-  it('defaults to exact-preferred (decimal off)', () => {
-    expect(DEFAULT_SETTINGS.allowEvaluateToDecimal).toBe(false);
+describe('exactValues gate on the "Evaluate to Decimal" move', () => {
+  it('defaults to exact-preferred (exactValues: true)', () => {
+    expect(DEFAULT_SETTINGS.exactValues).toBe(true);
   });
 
-  it('keeps the move when allowEvaluateToDecimal is on', () => {
+  it('keeps the move when exactValues is off (exactValues: false)', () => {
     const store = createStore();
-    store.set(rawSettingsAtom, { ...DEFAULT_SETTINGS, allowEvaluateToDecimal: true });
+    store.set(rawSettingsAtom, { ...DEFAULT_SETTINGS, exactValues: false });
     store.set(reduciblePathsAtom, { rhs: [decimalAction(), simplifyAction()] });
     const filtered = store.get(filteredReduciblePathsAtom);
     expect(filtered.rhs.map((a) => a.label)).toEqual(['Evaluate to Decimal', 'Simplify']);
   });
 
-  it('drops the move under the default, leaving other moves intact', () => {
+  it('drops the move under default exactValues: true, leaving other moves intact', () => {
     const store = createStore();
-    store.set(rawSettingsAtom, { ...DEFAULT_SETTINGS });
+    store.set(rawSettingsAtom, { ...DEFAULT_SETTINGS, exactValues: true });
     store.set(reduciblePathsAtom, { rhs: [decimalAction(), simplifyAction()] });
     const filtered = store.get(filteredReduciblePathsAtom);
     expect(filtered.rhs.map((a) => a.label)).toEqual(['Simplify']);
   });
 
-  it('removes a path entirely when the only move there was Evaluate to Decimal', () => {
+  it('removes a path entirely when the only move there was Evaluate to Decimal under exactValues: true', () => {
     const store = createStore();
-    store.set(rawSettingsAtom, { ...DEFAULT_SETTINGS });
+    store.set(rawSettingsAtom, { ...DEFAULT_SETTINGS, exactValues: true });
     store.set(reduciblePathsAtom, { rhs: [decimalAction()] });
     const filtered = store.get(filteredReduciblePathsAtom);
     expect(filtered.rhs).toBeUndefined();

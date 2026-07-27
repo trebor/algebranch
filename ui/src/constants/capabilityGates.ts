@@ -8,7 +8,7 @@ export interface NodeWithLabel {
 }
 
 export interface CapabilityGateDefinition {
-  key: 'allowComplex' | 'allowEvaluateToDecimal' | 'progressiveMode';
+  key: 'allowHints' | 'progressiveMode' | 'exactValues' | 'allowComplex';
   label: string;
   description: string;
   /**
@@ -17,35 +17,45 @@ export interface CapabilityGateDefinition {
    * or null if the capability is free to toggle.
    */
   checkLock: (equations: string[], nodes: NodeWithLabel[]) => string | null;
+  /** Value forced when locked by workspace history (default: true). */
+  lockedValue?: boolean;
 }
 
 export const CAPABILITY_GATES: CapabilityGateDefinition[] = [
   {
-    key: 'allowEvaluateToDecimal',
-    label: 'Allow decimals',
-    description: 'Allow simplifying subtrees to decimal floats (e.g. 3/4 → 0.75).',
+    key: 'allowHints',
+    label: 'Hints',
+    description: 'Surface guided hint ladder and target operation spotlights when requested',
+    checkLock: () => null,
+  },
+  {
+    key: 'progressiveMode',
+    label: 'Progressive simplification',
+    description: 'Require simplifying expressions systematically from the inside out without skipping steps',
+    checkLock: () => null,
+  },
+  {
+    key: 'exactValues',
+    label: 'Exact values',
+    description: 'Keep fractions and radicals in exact symbolic form rather than converting to decimal values',
     checkLock: (_equations, nodes) => {
       const hasDecimalEvaluation = nodes.some((node) => node.label === EVALUATE_TO_DECIMAL_LABEL);
       return hasDecimalEvaluation
-        ? "Locked to 'Allowed' because your shared derivation already evaluates fractions to decimals."
+        ? "Locked to 'Disabled' because your shared derivation already evaluates fractions to decimals."
         : null;
     },
+    lockedValue: false,
   },
   {
     key: 'allowComplex',
-    label: 'Allow complex numbers',
-    description: 'Offer complex steps when a negative square root appears (e.g. √−4 → 2ⅈ).',
+    label: 'Complex numbers',
+    description: 'Offer the imaginary unit ⅈ for negative square roots such as √−4 = 2ⅈ',
     checkLock: (equations) => {
       const hasComplex = equations.some((eqStr) => eqStr.includes('ⅈ'));
       return hasComplex
         ? "Locked to 'Allowed' because your shared derivation contains complex numbers."
         : null;
     },
-  },
-  {
-    key: 'progressiveMode',
-    label: 'Progressive simplification',
-    description: 'Requires simplifying expressions step-by-step from the inside out.',
-    checkLock: () => null,
+    lockedValue: true,
   },
 ];

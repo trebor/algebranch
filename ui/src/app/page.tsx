@@ -821,25 +821,37 @@ export default function Home() {
               const { matched } = createSessionFromState({ tree, currentNodeId, name });
 
               if (envelope && envelope.g) {
+                const g = envelope.g;
+                const exactValues = g.exactValues !== undefined
+                  ? g.exactValues
+                  : (g.allowEvaluateToDecimal !== undefined ? !g.allowEvaluateToDecimal : DEFAULT_SETTINGS.exactValues);
+                const allowHints = g.allowHints !== undefined
+                  ? g.allowHints
+                  : (g.hintsAllowed !== undefined ? g.hintsAllowed : DEFAULT_SETTINGS.allowHints);
+
                 setSettings((prev) => ({
                   ...prev,
-                  ...envelope.g,
+                  ...g,
+                  exactValues,
+                  allowHints,
                 }));
-              // Format a descriptive string of capability restrictions set by the link
-              const parts: string[] = [];
-              const finalComplex = envelope.g.allowComplex !== undefined ? envelope.g.allowComplex : DEFAULT_SETTINGS.allowComplex;
-              const finalDecimal = envelope.g.allowEvaluateToDecimal !== undefined ? envelope.g.allowEvaluateToDecimal : DEFAULT_SETTINGS.allowEvaluateToDecimal;
-              const finalProgressive = envelope.g.progressiveMode !== undefined ? envelope.g.progressiveMode : DEFAULT_SETTINGS.progressiveMode;
+                // Format a descriptive string of capability restrictions set by the link
+                const parts: string[] = [];
+                const finalHints = allowHints;
+                const finalProgressive = g.progressiveMode !== undefined ? g.progressiveMode : DEFAULT_SETTINGS.progressiveMode;
+                const finalExact = exactValues;
+                const finalComplex = g.allowComplex !== undefined ? g.allowComplex : DEFAULT_SETTINGS.allowComplex;
 
-              if (!finalComplex) parts.push('Real numbers only');
-              if (!finalDecimal) parts.push('Exact forms only');
-              if (finalProgressive) parts.push('Progressive simplification');
+                if (!finalHints) parts.push('Hints disabled');
+                if (!finalProgressive) parts.push('Standard simplification');
+                if (!finalExact) parts.push('Decimals allowed');
+                if (!finalComplex) parts.push('Real numbers only');
 
-              const label = parts.length > 0 ? parts.join(', ') : 'All capabilities enabled';
-              setSharedWorkspacePreset(label);
-            } else {
-              setSharedWorkspacePreset(null);
-            }
+                const label = parts.length > 0 ? parts.join(', ') : 'All capabilities enabled';
+                setSharedWorkspacePreset(label);
+              } else {
+                setSharedWorkspacePreset(null);
+              }
 
               // Recipient loop (#241): the link restored someone's full derivation —
               // acknowledge it and teach the share feature at this primed moment.

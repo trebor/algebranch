@@ -24,6 +24,9 @@ export const hintLoadingAtom = atom<boolean>(false);
 
 export const hintActiveAtom = atom(
   (get) => {
+    const settings = get(settingsAtom);
+    if (!settings.allowHints) return false;
+
     const rawActive = get(rawHintActiveAtom);
     if (!rawActive) return false;
 
@@ -133,6 +136,15 @@ export const updateHintLadderAtom = atom(null, (get, set) => {
 
 
 export const toggleHintActiveAtom = atom(null, (get, set) => {
+  const settings = get(settingsAtom);
+  if (!settings.allowHints) {
+    set(toastAtom, {
+      message: 'Hints are disabled in classroom settings',
+      key: Date.now(),
+    });
+    return;
+  }
+
   const isHintable = get(isHintableAtom);
   if (!isHintable) {
     set(toastAtom, {

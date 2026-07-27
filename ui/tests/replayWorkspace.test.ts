@@ -212,8 +212,9 @@ describe('replay workspace codec (#403)', () => {
       const customSettings: UserSettings = {
         ...DEFAULT_SETTINGS,
         allowComplex: false, // Default is true
-        allowEvaluateToDecimal: true, // Default is false
-        // progressiveMode is false (matches default)
+        exactValues: false, // Default is true
+        // progressiveMode is true (matches default)
+        // allowHints is true (matches default)
       };
 
       const min = minifyReplayWorkspace(
@@ -223,8 +224,9 @@ describe('replay workspace codec (#403)', () => {
 
       expect(min.g).toBeDefined();
       expect(min.g?.allowComplex).toBe(false);
-      expect(min.g?.allowEvaluateToDecimal).toBe(true);
+      expect(min.g?.exactValues).toBe(false);
       expect(min.g?.progressiveMode).toBeUndefined();
+      expect(min.g?.allowHints).toBeUndefined();
     });
   });
 });

@@ -21,6 +21,9 @@ export interface Preset {
    * - undefined / omitted: "Don't Care" (the preset does not impose any requirement).
    */
   requiredSettings?: {
+    allowHints?: boolean;
+    progressiveMode?: boolean;
+    exactValues?: boolean;
     allowComplex?: boolean;
     allowEvaluateToDecimal?: boolean;
   };

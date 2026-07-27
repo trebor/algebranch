@@ -150,8 +150,10 @@ export const ShareModal: React.FC = () => {
     let modified = false;
     const nextSettings = { ...settings };
     for (const gate of CAPABILITY_GATES) {
-      if (gateLockMessages[gate.key] && !settings[gate.key]) {
-        nextSettings[gate.key] = true;
+      const lockMsg = gateLockMessages[gate.key];
+      const requiredVal = gate.lockedValue ?? true;
+      if (lockMsg && settings[gate.key] !== requiredVal) {
+        nextSettings[gate.key] = requiredVal;
         modified = true;
       }
     }

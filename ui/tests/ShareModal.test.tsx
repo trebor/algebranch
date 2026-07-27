@@ -114,7 +114,7 @@ describe('ShareModal', () => {
     renderModal();
 
     // Switches are hidden initially
-    expect(screen.queryByRole('switch', { name: /toggle allow decimals option/i })).toBeNull();
+    expect(screen.queryByRole('switch', { name: /toggle exact values option/i })).toBeNull();
 
     // Click to expand
     const toggle = screen.getByRole('switch', { name: /include settings in share link/i });
@@ -122,16 +122,16 @@ describe('ShareModal', () => {
     await userEvent.click(toggle);
 
     // Switches now exist
-    const decimalSwitch = screen.getByRole('switch', { name: /toggle allow decimals option/i });
-    expect(decimalSwitch.getAttribute('aria-checked')).toBe('false');
+    const exactSwitch = screen.getByRole('switch', { name: /toggle exact values option/i });
+    expect(exactSwitch.getAttribute('aria-checked')).toBe('true');
 
-    // Toggle decimal switch
-    await userEvent.click(decimalSwitch);
-    expect(store.get(settingsAtom).allowEvaluateToDecimal).toBe(true);
+    // Toggle exact values switch
+    await userEvent.click(exactSwitch);
+    expect(store.get(settingsAtom).exactValues).toBe(false);
 
     // Click to collapse again
     await userEvent.click(toggle);
-    expect(screen.queryByRole('switch', { name: /toggle allow decimals option/i })).toBeNull();
+    expect(screen.queryByRole('switch', { name: /toggle exact values option/i })).toBeNull();
   });
 
   it('disables classroom settings toggle when equation-only scope is selected', async () => {
@@ -161,15 +161,15 @@ describe('ShareModal', () => {
     expect(includeSwitch.getAttribute('aria-checked')).toBe('true');
 
     // Individual switches should be visible and not disabled
-    const decimalSwitch = screen.getByRole('switch', { name: /toggle allow decimals option/i }) as HTMLButtonElement;
-    expect(decimalSwitch.disabled).toBe(false);
+    const exactSwitch = screen.getByRole('switch', { name: /toggle exact values option/i }) as HTMLButtonElement;
+    expect(exactSwitch.disabled).toBe(false);
 
     // Toggle it back OFF to opt-out
     await userEvent.click(includeSwitch);
     expect(includeSwitch.getAttribute('aria-checked')).toBe('false');
 
     // Individual switches collapse and disappear from the DOM
-    expect(screen.queryByRole('switch', { name: /toggle allow decimals option/i })).toBeNull();
+    expect(screen.queryByRole('switch', { name: /toggle exact values option/i })).toBeNull();
 
     // Call Copy Share Link to trigger serialization
     const copyBtn = screen.getByRole('button', { name: /copy share link/i });
@@ -198,10 +198,10 @@ describe('ShareModal', () => {
     const includeSwitch = screen.getByRole('switch', { name: /include settings in share link/i });
     await userEvent.click(includeSwitch);
 
-    // The decimals toggle is forced to true and disabled in UI
-    const decimalSwitch = await screen.findByRole('switch', { name: /toggle allow decimals option/i }) as HTMLButtonElement;
-    expect(decimalSwitch.getAttribute('aria-checked')).toBe('true');
-    expect(decimalSwitch.disabled).toBe(true);
+    // The exact values toggle is forced to false (disabled) and locked in UI
+    const exactSwitch = await screen.findByRole('switch', { name: /toggle exact values option/i }) as HTMLButtonElement;
+    expect(exactSwitch.getAttribute('aria-checked')).toBe('false');
+    expect(exactSwitch.disabled).toBe(true);
   });
 
   it('calls createShareLink and copies to clipboard on Copy Share Link click', async () => {

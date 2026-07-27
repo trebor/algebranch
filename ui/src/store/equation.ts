@@ -342,9 +342,12 @@ export interface MinifiedReplayWorkspace {
   n: number; // currentNode index
   a: string; // name
   g?: {
-    allowEvaluateToDecimal?: boolean;
-    allowComplex?: boolean;
+    allowHints?: boolean;
+    hintsAllowed?: boolean;
     progressiveMode?: boolean;
+    exactValues?: boolean;
+    allowComplex?: boolean;
+    allowEvaluateToDecimal?: boolean;
   };
 }
 
@@ -534,16 +537,20 @@ export const minifyReplayWorkspace = (
   if (settings) {
     const g: Record<string, boolean> = {};
     let hasDiff = false;
-    if (settings.allowComplex !== DEFAULT_SETTINGS.allowComplex) {
-      g.allowComplex = settings.allowComplex;
-      hasDiff = true;
-    }
-    if (settings.allowEvaluateToDecimal !== DEFAULT_SETTINGS.allowEvaluateToDecimal) {
-      g.allowEvaluateToDecimal = settings.allowEvaluateToDecimal;
+    if (settings.allowHints !== DEFAULT_SETTINGS.allowHints) {
+      g.allowHints = settings.allowHints;
       hasDiff = true;
     }
     if (settings.progressiveMode !== DEFAULT_SETTINGS.progressiveMode) {
       g.progressiveMode = settings.progressiveMode;
+      hasDiff = true;
+    }
+    if (settings.exactValues !== DEFAULT_SETTINGS.exactValues) {
+      g.exactValues = settings.exactValues;
+      hasDiff = true;
+    }
+    if (settings.allowComplex !== DEFAULT_SETTINGS.allowComplex) {
+      g.allowComplex = settings.allowComplex;
       hasDiff = true;
     }
     if (hasDiff) {
@@ -1376,34 +1383,28 @@ export const undefinedPathsAtom = atom<{ path: string; reason: 'division-by-zero
 export const terminalStatusAtom = atom<'contradiction' | 'identity' | null>(null);
 
 export interface UserSettings {
-  allowEvaluateToDecimal: boolean;
   /**
-   * Whether the "extend to ℂ" doorway is offered (#105). On (default): a
-   * `sqrt` of a negative surfaces an 'extend to ℂ' move that resolves it to
-   * imaginary form. Off: that invitation is never shown — the "keep the complex
-   * door closed" case for a real-numbers-only class. Follows the #67 gate
-   * pattern (mirrors `allowEvaluateToDecimal`); the planning docs call this
-   * `complexAllowed`. It is one member of the broader capability-preset layer
-   * tracked in #362.
+   * Surface guided hint ladder and target operation spotlights when requested (default: true).
    */
-  allowComplex: boolean;
+  allowHints: boolean;
   /**
-   * Progressive simplification mode (#368). If true, restricts reduction moves
-   * to be innermost-first. A reduce move is suppressed if there are any surviving
-   * reduce moves on descendant paths.
+   * Progressive simplification mode (#368). If true (default), restricts reduction moves
+   * to be innermost-first.
    */
   progressiveMode: boolean;
+  /**
+   * Exact values mode (#363, #572). If true (default), keeps fractions and radicals
+   * in exact symbolic form and suppresses the "Evaluate to Decimal" move.
+   */
+  exactValues: boolean;
+  /**
+   * Whether the "extend to ℂ" doorway is offered (#105, default: true).
+   */
+  allowComplex: boolean;
+  /** Legacy decimal evaluation toggle key retained for backwards compatibility. */
+  allowEvaluateToDecimal?: boolean;
   seenEqualsHint: boolean;
-  /**
-   * Accessibility text-size knob (#239). Multiplies the root rem so all
-   * rem-based chrome (menus, tooltips, labels, badges) scales up for readability
-   * without touching the auto-fitting equation canvas. 1 = browser default.
-   */
   chromeScale: number;
-  /**
-   * Animation speed multiplier.
-   * Scales transition durations for equation layout step animations.
-   */
   animationSpeed: number;
 }
 
@@ -1487,13 +1488,10 @@ export const clampAnimationSpeed = (value: number): number => {
 };
 
 export const DEFAULT_SETTINGS: UserSettings = {
-  // Exact-preferred baseline (#363): a fresh session keeps responses in exact
-  // fractional/radical forms and does not offer the "Evaluate to Decimal" move
-  // until a user opts in. Sessions that previously saved settings keep their
-  // explicit value via the `{ ...DEFAULT_SETTINGS, ...parsed }` load merge.
-  allowEvaluateToDecimal: false,
+  allowHints: true,
+  progressiveMode: true,
+  exactValues: true,
   allowComplex: true,
-  progressiveMode: false,
   seenEqualsHint: false,
   chromeScale: CHROME_SCALE_DEFAULT,
   animationSpeed: ANIMATION_SPEED_DEFAULT,
@@ -1511,6 +1509,48 @@ export const getPresetMismatchedSettings = (
   const mismatches: Array<{ key: keyof UserSettings; label: string; requiredValue: boolean }> = [];
 
   if (
+    preset.requiredSettings.allowHints !== undefined &&
+    settings.allowHints !== preset.requiredSettings.allowHints
+  ) {
+    mismatches.push({
+      key: 'allowHints',
+      label: 'Hints',
+      requiredValue: preset.requiredSettings.allowHints,
+    });
+  }
+
+  if (
+    preset.requiredSettings.progressiveMode !== undefined &&
+    settings.progressiveMode !== preset.requiredSettings.progressiveMode
+  ) {
+    mismatches.push({
+      key: 'progressiveMode',
+      label: 'Progressive Simplification',
+      requiredValue: preset.requiredSettings.progressiveMode,
+    });
+  }
+
+  if (
+    preset.requiredSettings.exactValues !== undefined &&
+    settings.exactValues !== preset.requiredSettings.exactValues
+  ) {
+    mismatches.push({
+      key: 'exactValues',
+      label: 'Exact Values',
+      requiredValue: preset.requiredSettings.exactValues,
+    });
+  } else if (preset.requiredSettings.allowEvaluateToDecimal !== undefined) {
+    const reqExact = !preset.requiredSettings.allowEvaluateToDecimal;
+    if (settings.exactValues !== reqExact) {
+      mismatches.push({
+        key: 'exactValues',
+        label: 'Exact Values',
+        requiredValue: reqExact,
+      });
+    }
+  }
+
+  if (
     preset.requiredSettings.allowComplex !== undefined &&
     settings.allowComplex !== preset.requiredSettings.allowComplex
   ) {
@@ -1518,17 +1558,6 @@ export const getPresetMismatchedSettings = (
       key: 'allowComplex',
       label: 'Complex Numbers',
       requiredValue: preset.requiredSettings.allowComplex,
-    });
-  }
-
-  if (
-    preset.requiredSettings.allowEvaluateToDecimal !== undefined &&
-    settings.allowEvaluateToDecimal !== preset.requiredSettings.allowEvaluateToDecimal
-  ) {
-    mismatches.push({
-      key: 'allowEvaluateToDecimal',
-      label: 'Evaluate to Decimal',
-      requiredValue: preset.requiredSettings.allowEvaluateToDecimal,
     });
   }
 
@@ -1544,19 +1573,41 @@ export const getPresetRequiredSettingsList = (
   if (!preset.requiredSettings) return [];
   const reqs: Array<{ key: keyof UserSettings; label: string; requiredValue: boolean }> = [];
 
+  if (preset.requiredSettings.allowHints !== undefined) {
+    reqs.push({
+      key: 'allowHints',
+      label: 'Hints',
+      requiredValue: preset.requiredSettings.allowHints,
+    });
+  }
+
+  if (preset.requiredSettings.progressiveMode !== undefined) {
+    reqs.push({
+      key: 'progressiveMode',
+      label: 'Progressive Simplification',
+      requiredValue: preset.requiredSettings.progressiveMode,
+    });
+  }
+
+  if (preset.requiredSettings.exactValues !== undefined) {
+    reqs.push({
+      key: 'exactValues',
+      label: 'Exact Values',
+      requiredValue: preset.requiredSettings.exactValues,
+    });
+  } else if (preset.requiredSettings.allowEvaluateToDecimal !== undefined) {
+    reqs.push({
+      key: 'exactValues',
+      label: 'Exact Values',
+      requiredValue: !preset.requiredSettings.allowEvaluateToDecimal,
+    });
+  }
+
   if (preset.requiredSettings.allowComplex !== undefined) {
     reqs.push({
       key: 'allowComplex',
       label: 'Complex Numbers',
       requiredValue: preset.requiredSettings.allowComplex,
-    });
-  }
-
-  if (preset.requiredSettings.allowEvaluateToDecimal !== undefined) {
-    reqs.push({
-      key: 'allowEvaluateToDecimal',
-      label: 'Evaluate to Decimal',
-      requiredValue: preset.requiredSettings.allowEvaluateToDecimal,
     });
   }
 
@@ -1627,7 +1678,7 @@ export const filteredReduciblePathsAtom = atom<Record<string, ReducibleActionInf
   const reduciblePaths = get(reduciblePathsAtom);
 
   const suppressed = new Set<string>();
-  if (!settings.allowEvaluateToDecimal) suppressed.add('Evaluate to Decimal');
+  if (settings.exactValues) suppressed.add('Evaluate to Decimal');
   if (!settings.allowComplex) suppressed.add('Extend to ℂ');
 
   const filtered: Record<string, ReducibleActionInfo[]> = {};
@@ -3117,6 +3168,12 @@ export const hydrateWorkspaceTabsAtom = atom(
         try {
           const parsed = JSON.parse(savedSettings);
           const merged = { ...DEFAULT_SETTINGS, ...parsed };
+          if (parsed.exactValues === undefined && parsed.allowEvaluateToDecimal !== undefined) {
+            merged.exactValues = !parsed.allowEvaluateToDecimal;
+          }
+          if (parsed.allowHints === undefined && parsed.hintsAllowed !== undefined) {
+            merged.allowHints = parsed.hintsAllowed;
+          }
           // Sanitize the text-size knob: persisted/hand-edited junk must never
           // drive the root rem to an unusable extreme (#239).
           merged.chromeScale = clampChromeScale(merged.chromeScale);

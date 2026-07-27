@@ -22,9 +22,9 @@ export const HintDrawer: React.FC = () => {
 
   if (loading && !ladder) {
     return (
-      <aside
+      <div
         aria-label="Hint Guidance Calculating"
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4 transition-all duration-300 ease-in-out"
+        className="w-full max-w-xl mx-auto my-2 px-4 transition-all duration-300 ease-in-out select-none"
       >
         <div className={`p-3.5 ${THEME_GLASS.PANEL} border-amber-500/30 shadow-[0_0_30px_rgba(251,191,36,0.15)] flex items-center justify-between gap-3 backdrop-blur-xl`}>
           <div className="flex items-center gap-2.5 min-w-0">
@@ -41,7 +41,7 @@ export const HintDrawer: React.FC = () => {
             </div>
           </div>
         </div>
-      </aside>
+      </div>
     );
   }
 
@@ -62,7 +62,7 @@ export const HintDrawer: React.FC = () => {
   return (
     <aside
       aria-label="Hint Ladder Guidance"
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4 transition-all duration-300 ease-in-out"
+      className="w-full max-w-xl mx-auto my-2 px-4 transition-all duration-300 ease-in-out select-none"
     >
       <div aria-live="polite" className="sr-only">
         {level === 1 && `Goal Hint: ${ladder.strategicGoal}`}

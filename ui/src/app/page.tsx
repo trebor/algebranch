@@ -277,7 +277,7 @@ const SequenceChips: React.FC<{ keys: string[]; className?: string }> = ({ keys,
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
   const liveAnnouncement = useAtomValue(liveAnnouncementAtom);
-  const hintActive = useAtomValue(hintActiveAtom);
+  const [hintActive, setHintActive] = useAtom(hintActiveAtom);
   const toggleHintActive = useSetAtom(toggleHintActiveAtom);
   const isHintable = useAtomValue(isHintableAtom);
   const hintSpotlightPath = useAtomValue(hintSpotlightPathAtom);
@@ -657,6 +657,20 @@ export default function Home() {
       window.removeEventListener('keydown', handleKey);
     };
   }, [isEqualsPopoverOpen]);
+
+  // Close active hint on Escape key.
+  React.useEffect(() => {
+    if (!hintActive) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setHintActive(false);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [hintActive, setHintActive]);
 
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
   // Destructure so the ref-typed members (containerRef/contentRef) are kept
@@ -2237,6 +2251,8 @@ export default function Home() {
                       equation. At most one halt banner shows; it may stack under the
                       restriction caveat above when both apply. */}
                   <TerminalStateCaveat />
+                  {/* Step-by-step hint ladder guidance docked in the equation message stack */}
+                  <HintDrawer />
                   {/* Standing Practice Set next-problem loop affordance (#500) */}
                   <PracticeSetBanner />
                 </div>
@@ -2424,7 +2440,6 @@ export default function Home() {
         <ControlPanel onCloseMobile={() => setActiveBottomSheet(null)} />
       </BottomSheet>
 
-      <HintDrawer />
       <RadialMenu anchorRef={equalsRef} />
     </div>
   );

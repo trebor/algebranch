@@ -6,16 +6,10 @@
 import React from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sliders, Info, Download, Keyboard, HelpCircle, Upload, GraduationCap } from 'lucide-react';
+import { X, Sliders, GraduationCap } from 'lucide-react';
 import {
   settingsModalOpenAtom,
   settingsAtom,
-  aboutModalOpenAtom,
-  pwaInstallPromptAtom,
-  shortcutsOverlayOpenAtom,
-  helpModalOpenAtom,
-  exportWorkspacesModalOpenAtom,
-  importWorkspacesModalOpenAtom,
   TEXT_SIZE_OPTIONS,
   clampChromeScale,
   ANIMATION_SPEED_OPTIONS,
@@ -28,40 +22,10 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
 import Link from 'next/link';
 import { CAPABILITY_GATES } from '../constants/capabilityGates';
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
-
 export const SettingsModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(settingsModalOpenAtom);
   const [settings, setSettings] = useAtom(settingsAtom);
-
-
-  const setAboutOpen = useSetAtom(aboutModalOpenAtom);
-  const setShortcutsOverlayOpen = useSetAtom(shortcutsOverlayOpenAtom);
-  const setHelpOpen = useSetAtom(helpModalOpenAtom);
-  const setExportWorkspacesOpen = useSetAtom(exportWorkspacesModalOpenAtom);
-  const setImportWorkspacesOpen = useSetAtom(importWorkspacesModalOpenAtom);
-  const [installPrompt, setInstallPrompt] = useAtom(pwaInstallPromptAtom);
   const setConsent = useSetAtom(consentAtom);
-
-  const handleInstallApp = async () => {
-    if (!installPrompt) return;
-    try {
-      const promptEvent = installPrompt as BeforeInstallPromptEvent;
-      await promptEvent.prompt();
-      const { outcome } = await promptEvent.userChoice;
-      trackEvent({
-        action: 'install_pwa',
-        category: 'settings',
-        label: outcome,
-      });
-      setInstallPrompt(null);
-    } catch (err) {
-      console.error('Failed to trigger PWA install prompt:', err);
-    }
-  };
 
   const handleClose = () => {
     setIsOpen(false);
@@ -91,7 +55,6 @@ export const SettingsModal: React.FC = () => {
       label: String(speed),
     });
   };
-
 
   const handleToggleGate = (key: 'allowHints' | 'progressiveMode' | 'exactValues' | 'allowComplex') => {
     const newVal = !settings[key];
@@ -151,81 +114,7 @@ export const SettingsModal: React.FC = () => {
 
             {/* Settings Content */}
             <div className="flex-1 min-h-0 flex flex-col gap-5 overflow-y-auto pr-1">
-              <div className={THEME_GLASS.SETTING_ROW_STACKED}>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-white">
-                    Interface text size
-                  </span>
-                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                    Enlarge menus, tooltips, and labels. The equation stays as it is — use your browser&rsquo;s zoom to enlarge everything.
-                  </span>
-                </div>
-                <div
-                  role="radiogroup"
-                  aria-label="Interface text size"
-                  className={`${THEME_GLASS.SEGMENT_GROUP} w-full`}
-                >
-                  {TEXT_SIZE_OPTIONS.map((opt) => {
-                    const isActive = activeChromeScale === opt.scale;
-                    return (
-                      <button
-                        key={opt.label}
-                        type="button"
-                        role="radio"
-                        aria-checked={isActive}
-                        aria-label={opt.label}
-                        onClick={() => handleSelectTextSize(opt.scale)}
-                        className={`${THEME_GLASS.SEGMENT_BTN} flex-1 ${
-                          isActive
-                            ? THEME_GLASS.SEGMENT_BTN_ACTIVE
-                            : THEME_GLASS.SEGMENT_BTN_IDLE
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className={THEME_GLASS.SETTING_ROW_STACKED}>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-white">
-                    Animation speed
-                  </span>
-                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                    Adjust transition speeds for transpositions and operations. Reduced motion overrides this setting.
-                  </span>
-                </div>
-                <div
-                  role="radiogroup"
-                  aria-label="Animation speed"
-                  className={`${THEME_GLASS.SEGMENT_GROUP} w-full`}
-                >
-                  {ANIMATION_SPEED_OPTIONS.map((opt) => {
-                    const isActive = activeAnimationSpeed === opt.speed;
-                    return (
-                      <button
-                        key={opt.label}
-                        type="button"
-                        role="radio"
-                        aria-checked={isActive}
-                        aria-label={opt.label}
-                        onClick={() => handleSelectAnimationSpeed(opt.speed)}
-                        className={`${THEME_GLASS.SEGMENT_BTN} flex-1 ${
-                          isActive
-                            ? THEME_GLASS.SEGMENT_BTN_ACTIVE
-                            : THEME_GLASS.SEGMENT_BTN_IDLE
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Classroom Settings Group */}
+              {/* 1. Classroom Settings Group */}
               <div className="border border-white/5 bg-white/[0.01] rounded-xl p-4 flex flex-col gap-4">
                 <div className="flex items-center gap-2 border-b border-white/5 pb-2 select-none">
                   <GraduationCap size={16} className="text-indigo-400" />
@@ -269,112 +158,84 @@ export const SettingsModal: React.FC = () => {
                 </div>
               </div>
 
-              <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-white">
-                    Keyboard Shortcuts
-                  </span>
-                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                    View every shortcut for navigating history, workspaces, and panels. Press <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>?</kbd> or <kbd className={`${THEME_GLASS.SHORTCUT_KEYCAP} !h-5 !min-w-[1.25rem] !px-1.5`}>k</kbd> any time.
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShortcutsOverlayOpen(true);
-                    setIsOpen(false);
-                  }}
-                  className={`px-3 py-2 text-xs font-bold ${THEME_GLASS.BUTTON_SECONDARY} flex items-center gap-1.5 shrink-0 self-center`}
-                >
-                  <Keyboard size={13} />
-                  <span>View</span>
-                </button>
-              </div>
-
-              <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-white">
-                    Help
-                  </span>
-                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                    Read instructions on formulas, transposition, simplify handles, and node semantics.
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHelpOpen(true);
-                    setIsOpen(false);
-                    trackEvent({
-                      action: 'settings_open_help',
-                      category: 'settings',
-                    });
-                  }}
-                  className={`px-3 py-2 text-xs font-bold ${THEME_GLASS.BUTTON_SECONDARY} flex items-center gap-1.5 shrink-0 self-center cursor-pointer`}
-                >
-                  <HelpCircle size={13} />
-                  <span>Open</span>
-                </button>
-              </div>
-
-              <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-white">
-                    Workspaces
-                  </span>
-                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                    Back up your workspaces to a JSON file, move them to another device, or import a file someone shared with you.
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1.5 shrink-0 self-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setExportWorkspacesOpen(true);
-                      setIsOpen(false);
-                      trackEvent({ action: 'settings_open_export', category: 'settings' });
-                    }}
-                    className={`px-3 py-2 text-xs font-bold ${THEME_GLASS.BUTTON_SECONDARY} flex items-center gap-1.5 justify-center cursor-pointer`}
-                  >
-                    <Upload size={13} />
-                    <span>Export</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setImportWorkspacesOpen(true);
-                      setIsOpen(false);
-                      trackEvent({ action: 'settings_open_import', category: 'settings' });
-                    }}
-                    className={`px-3 py-2 text-xs font-bold ${THEME_GLASS.BUTTON_SECONDARY} flex items-center gap-1.5 justify-center cursor-pointer`}
-                  >
-                    <Download size={13} />
-                    <span>Import</span>
-                  </button>
-                </div>
-              </div>
-
-              {!!installPrompt && (
-                <div className={THEME_GLASS.SETTING_ROW}>
+              {/* 2. Display & Motion Group */}
+              <div className="flex flex-col gap-4">
+                <div className={THEME_GLASS.SETTING_ROW_STACKED}>
                   <div className="flex flex-col gap-1">
                     <span className="text-sm font-semibold text-white">
-                      Install Algebranch
+                      Interface text size
                     </span>
                     <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                      Install Algebranch to your device for offline use, standalone window, and faster startup.
+                      Enlarge menus, tooltips, and labels. The equation stays as it is — use your browser&rsquo;s zoom to enlarge everything.
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleInstallApp}
-                    className={`px-3 py-2 text-xs font-bold ${THEME_GLASS.BUTTON_PRIMARY} flex items-center gap-1.5 shrink-0 self-center`}
+                  <div
+                    role="radiogroup"
+                    aria-label="Interface text size"
+                    className={`${THEME_GLASS.SEGMENT_GROUP} w-full`}
                   >
-                    <Download size={13} />
-                    <span>Install</span>
-                  </button>
+                    {TEXT_SIZE_OPTIONS.map((opt) => {
+                      const isActive = activeChromeScale === opt.scale;
+                      return (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          role="radio"
+                          aria-checked={isActive}
+                          aria-label={opt.label}
+                          onClick={() => handleSelectTextSize(opt.scale)}
+                          className={`${THEME_GLASS.SEGMENT_BTN} flex-1 ${
+                            isActive
+                              ? THEME_GLASS.SEGMENT_BTN_ACTIVE
+                              : THEME_GLASS.SEGMENT_BTN_IDLE
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
 
+                <div className={THEME_GLASS.SETTING_ROW_STACKED}>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-semibold text-white">
+                      Animation speed
+                    </span>
+                    <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                      Adjust transition speeds for transpositions and operations. Reduced motion overrides this setting.
+                    </span>
+                  </div>
+                  <div
+                    role="radiogroup"
+                    aria-label="Animation speed"
+                    className={`${THEME_GLASS.SEGMENT_GROUP} w-full`}
+                  >
+                    {ANIMATION_SPEED_OPTIONS.map((opt) => {
+                      const isActive = activeAnimationSpeed === opt.speed;
+                      return (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          role="radio"
+                          aria-checked={isActive}
+                          aria-label={opt.label}
+                          onClick={() => handleSelectAnimationSpeed(opt.speed)}
+                          className={`${THEME_GLASS.SEGMENT_BTN} flex-1 ${
+                            isActive
+                              ? THEME_GLASS.SEGMENT_BTN_ACTIVE
+                              : THEME_GLASS.SEGMENT_BTN_IDLE
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Privacy & Cookies Group */}
               <div className={THEME_GLASS.SETTING_ROW}>
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-white">
@@ -407,17 +268,7 @@ export const SettingsModal: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className={`flex justify-between items-center gap-3 mt-6 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} pt-4 select-none shrink-0`}>
-              <button
-                onClick={() => {
-                  setAboutOpen(true);
-                  setIsOpen(false);
-                }}
-                className="px-3 py-2 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <Info size={12} />
-                <span>About Algebranch</span>
-              </button>
+            <div className={`flex justify-end items-center mt-6 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} pt-4 select-none shrink-0`}>
               <button
                 onClick={handleClose}
                 className={`px-4 py-2 text-xs font-semibold ${THEME_GLASS.BUTTON_SECONDARY}`}
@@ -431,3 +282,4 @@ export const SettingsModal: React.FC = () => {
     </AnimatePresence>
   );
 };
+

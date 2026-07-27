@@ -469,6 +469,10 @@ export const THEME_GLASS = {
   TERMINAL_STATE_CAVEAT_ICON_DEADEND: 'shrink-0 text-red-400',
   TERMINAL_STATE_CAVEAT_ICON_IDENTITY: 'shrink-0 text-emerald-400',
 
+  // Standing Practice Set goal message banner under the main equation (#564)
+  PRACTICE_GOAL_BANNER: 'flex items-center gap-1.5 text-xs font-semibold leading-snug text-sky-200 rounded-md border border-sky-400/30 bg-sky-500/10 px-2 py-1 backdrop-blur-md',
+  PRACTICE_GOAL_BANNER_ICON: 'shrink-0 text-sky-400',
+
   // --- Term slot (#491): the empty dashed chip standing for "any term/side" ---
   // The generic placeholder in operation previews (( )^n, √( ), the reciprocal
   // hops): an empty dashed rounded socket, echoing the app's drag-target look so

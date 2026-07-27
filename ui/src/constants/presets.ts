@@ -12,6 +12,7 @@ export interface Preset {
   type: 'solvable' | 'formula' | 'identity';
   wikiUrl?: string;
   tags?: string[];
+  goalTemplate?: string;
   /**
    * Optional capability gates required for this preset.
    * Uses three-state logic (Must be True, Must be False, Don't Care):
@@ -105,6 +106,7 @@ export const PRESET_LIST: Preset[] = [
     category: 'Practice Problems',
     subcategory: 'Quadratic',
     type: 'solvable',
+    goalTemplate: 'Factor and solve for {var}',
   },
   {
     id: 'quadratic_factor_gcf',
@@ -115,6 +117,7 @@ export const PRESET_LIST: Preset[] = [
     category: 'Practice Problems',
     subcategory: 'Quadratic',
     type: 'solvable',
+    goalTemplate: 'Factor and solve for {var}',
   },
   {
     id: 'quadratic_factor_general',
@@ -125,6 +128,7 @@ export const PRESET_LIST: Preset[] = [
     category: 'Practice Problems',
     subcategory: 'Quadratic',
     type: 'solvable',
+    goalTemplate: 'Factor and solve for {var}',
   },
   {
     id: 'quadratic_constant_solve',

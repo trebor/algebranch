@@ -10,6 +10,7 @@ import { EquationNode } from '../components/EquationNode';
 import { ActiveRestrictionsCaveat } from '../components/ActiveRestrictionsCaveat';
 import { TerminalStateCaveat } from '../components/TerminalStateCaveat';
 import { PracticeSetBanner } from '../components/PracticeSetBanner';
+import { PracticeGoalBanner } from '../components/PracticeGoalBanner';
 import { HintDrawer } from '../components/HintDrawer';
 import { Sidebar, SidebarContent, LearnPracticeContent, EquationLibraryContent } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
@@ -2236,11 +2237,13 @@ export default function Home() {
                       </span>
                     </Tooltip>
 
-                    {/* RHS Term Tree */}
+                      {/* RHS Term Tree */}
                     <div className="flex justify-start min-w-[1.5em] sm:min-w-[3em] lg:min-w-[5em]">
                       <EquationNode path="rhs" key={(currentEq?.rhs as unknown as { id?: string })?.id || 'rhs'} />
                     </div>
                   </div>
+                  {/* Standing Practice Set Goal Banner (#564): explicit problem goal message */}
+                  <PracticeGoalBanner />
                   {/* Standing domain-restriction caveat (#486): the accumulated
                       ≠0 assumptions active on the current branch, shown under the
                       equation so the working answer never hides its conditions. */}

@@ -46,6 +46,7 @@ export {
   getEquationStatus,
   getTerminalStatus,
   getUndefinedDivisionPaths,
+  getUniqueVariables,
   compressString,
   decompressString,
 } from 'math-engine';

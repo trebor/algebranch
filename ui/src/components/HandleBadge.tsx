@@ -218,8 +218,9 @@ export const HandleBadge = React.forwardRef<HTMLButtonElement, HandleBadgeProps>
           />
         )}
         {isStackMarked && (
-          <span aria-hidden="true" className={`absolute -inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+          <span aria-hidden="true" className={`absolute -inset-[0.3em] ${THEME_GLASS.SPOTLIGHT_CIRCLE}`} />
         )}
+
         {renderInner()}
 
         {/* Corner Overlays */}

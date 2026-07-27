@@ -26,27 +26,33 @@ interface HotkeyHintProps {
 export const HotkeyHint: React.FC<HotkeyHintProps> = ({ label, keys, sequence }) => {
   if (sequence && sequence.length > 0) {
     return (
-      <span className="flex items-center gap-1.5 whitespace-nowrap">
-        {label}
-        {sequence.map((k, i) => (
-          <React.Fragment key={`${k}-${i}`}>
-            {i > 0 && <span className="text-white/40">then</span>}
-            <kbd className={THEME_GLASS.SHORTCUT_KEYCAP_SM}>{k}</kbd>
-          </React.Fragment>
-        ))}
-      </span>
+      <div className="flex items-start justify-between gap-3 text-left">
+        <span className="text-xs leading-snug font-medium text-indigo-100">{label}</span>
+        <div className="flex items-center gap-1 shrink-0 mt-0.5">
+          {sequence.map((k, i) => (
+            <React.Fragment key={`${k}-${i}`}>
+              {i > 0 && <span className="text-[10px] text-white/40">then</span>}
+              <kbd className={THEME_GLASS.SHORTCUT_KEYCAP_SM}>{k}</kbd>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
     );
   }
 
   const keyList = keys === undefined ? [] : Array.isArray(keys) ? keys : [keys];
   return (
-    <span className="flex items-center gap-1.5 whitespace-nowrap">
-      {label}
-      {keyList.map((k, i) => (
-        <kbd key={`${k}-${i}`} className={THEME_GLASS.SHORTCUT_KEYCAP_SM}>
-          {k}
-        </kbd>
-      ))}
-    </span>
+    <div className="flex items-start justify-between gap-3 text-left">
+      <span className="text-xs leading-snug font-medium text-indigo-100">{label}</span>
+      {keyList.length > 0 && (
+        <div className="flex items-center gap-1 shrink-0 mt-0.5">
+          {keyList.map((k, i) => (
+            <kbd key={`${k}-${i}`} className={THEME_GLASS.SHORTCUT_KEYCAP_SM}>
+              {k}
+            </kbd>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };

@@ -360,8 +360,9 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                   >
                     {petal.icon(iconPx)}
                     {isTourPetal && (
-                      <span aria-hidden="true" className={`-inset-[0.35em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                      <span aria-hidden="true" className={`-inset-[0.35em] ${THEME_GLASS.SPOTLIGHT_CIRCLE}`} />
                     )}
+
                   </motion.button>
                 </Tooltip>
               );
@@ -397,7 +398,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                     {termInputAction.type === 'power' || termInputAction.type === 'root' ? (
                       <div className={THEME_GLASS.SPINNER_BOX}>
                         {isTourActive && tourGlobalOp && !tourInputSatisfied && (
-                          <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                          <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.SPOTLIGHT_CIRCLE}`} />
                         )}
                         <button
                           ref={spinnerDecreaseRef}
@@ -439,7 +440,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                           <ImaginaryUnitButton inputRef={termInputRef} onInsert={setTermValue} />
                         )}
                         {isTourActive && tourGlobalOp && !tourInputSatisfied && (
-                          <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                          <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.SPOTLIGHT_CIRCLE}`} />
                         )}
                       </span>
                     )}
@@ -450,9 +451,10 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                     >
                       Apply
                       {isTourActive && tourInputSatisfied && (
-                        <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                        <span aria-hidden="true" className={`-inset-[0.3em] ${THEME_GLASS.SPOTLIGHT_CIRCLE}`} />
                       )}
                     </button>
+
                   </div>
                   {errorStr && (
                     <div className={THEME_GLASS.ALERT_DANGER_SM}>

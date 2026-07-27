@@ -504,7 +504,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const paddingClass = hasPadding ? '' : 'px-3 py-1.5';
 
   const hasWidth = className.includes('w-') || className.includes('max-w-');
-  const widthClass = hasWidth ? '' : 'max-w-[240px] text-center';
+  const widthClass = hasWidth ? '' : 'max-w-[240px] text-left';
 
   const hasTextSize = className.includes('text-');
   const textClass = hasTextSize ? '' : 'text-sm';

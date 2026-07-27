@@ -10,6 +10,7 @@ import { EquationNode } from '../components/EquationNode';
 import { ActiveRestrictionsCaveat } from '../components/ActiveRestrictionsCaveat';
 import { TerminalStateCaveat } from '../components/TerminalStateCaveat';
 import { PracticeSetBanner } from '../components/PracticeSetBanner';
+import { HintDrawer } from '../components/HintDrawer';
 import { Sidebar, SidebarContent, LearnPracticeContent, EquationLibraryContent } from '../components/Sidebar';
 import { ControlPanel } from '../components/ControlPanel';
 import { GraphPanel } from '../components/GraphPanel';
@@ -152,12 +153,13 @@ import {
   getDerivationSteps,
 } from '../store/equation';
 import { hydratePracticeSetsAtom } from '../store/ladders';
+import { hintActiveAtom, toggleHintActiveAtom, isHintableAtom, hintSpotlightPathAtom, hintLevelAtom } from '../store/hint';
 import { THEME_GLASS } from '../constants/theme';
 import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import { APP_TAGLINE } from '../constants/brand';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, GraduationCap, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil, AlertTriangle, Share2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, GraduationCap, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil, AlertTriangle, Share2, Lightbulb } from 'lucide-react';
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -275,6 +277,12 @@ const SequenceChips: React.FC<{ keys: string[]; className?: string }> = ({ keys,
 export default function Home() {
   const currentEq = useAtomValue(currentEquationAtom);
   const liveAnnouncement = useAtomValue(liveAnnouncementAtom);
+  const [hintActive, setHintActive] = useAtom(hintActiveAtom);
+  const toggleHintActive = useSetAtom(toggleHintActiveAtom);
+  const isHintable = useAtomValue(isHintableAtom);
+  const hintSpotlightPath = useAtomValue(hintSpotlightPathAtom);
+  const hintLevel = useAtomValue(hintLevelAtom);
+
   const navReadout = useAtomValue(navReadoutAtom);
   const treeRefocusNonce = useAtomValue(treeRefocusNonceAtom);
   const candidatePaths = useAtomValue(candidatePathsAtom);
@@ -649,6 +657,20 @@ export default function Home() {
       window.removeEventListener('keydown', handleKey);
     };
   }, [isEqualsPopoverOpen]);
+
+  // Close active hint on Escape key.
+  React.useEffect(() => {
+    if (!hintActive) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setHintActive(false);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [hintActive, setHintActive]);
 
   const reduciblePaths = useAtomValue(reduciblePathsAtom);
   // Destructure so the ref-typed members (containerRef/contentRef) are kept
@@ -1431,6 +1453,14 @@ export default function Home() {
       }
       trackEvent({ action: 'shortcut_toggle_right_sidebar', category: 'keyboard' });
     },
+    'toggle-hint': () => {
+      if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      toggleHintActive();
+      trackEvent({ action: 'shortcut_toggle_hint', category: 'keyboard' });
+    },
+
     'clear-selection': () => {
       if (sourcePath !== null) {
         setSourcePath(null);
@@ -1890,6 +1920,49 @@ export default function Home() {
                     aria-label="Workspace actions"
                     className="absolute top-4 right-4 z-30 contextual-actions flex items-center gap-2"
                   >
+                    {/* Step-by-step hint ladder toggle */}
+                    <Tooltip
+                      content={
+                        <HotkeyHint
+                          label={
+                            isHintable
+                              ? hintActive
+                                ? 'Hide hints'
+                                : 'Step-by-step hints'
+                              : 'Hints disabled for multi-variable equations'
+                          }
+                          keys="I"
+                        />
+                      }
+                      position="left"
+                    >
+                      <RovingToolbarButton
+                        itemKey="hints"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleHintActive();
+                        }}
+                        className={
+                          !isHintable
+                            ? THEME_GLASS.ICON_BUTTON_DISABLED
+                            : hintActive
+                            ? THEME_GLASS.ICON_BUTTON_ACTIVE
+                            : THEME_GLASS.ICON_BUTTON
+                        }
+                        aria-pressed={isHintable && hintActive}
+                        aria-disabled={!isHintable}
+                        aria-label={
+                          isHintable
+                            ? hintActive
+                              ? 'Hide hints'
+                              : 'Step-by-step hints'
+                            : 'Hints disabled for multi-variable equations'
+                        }
+                      >
+                        <Lightbulb size={14} />
+                      </RovingToolbarButton>
+                    </Tooltip>
+
                     {/* Read-view toggle (#270): switch between the Interactive view
                         (move handles, transform) and a clean Read view that strips the
                         chrome so the equation can be stepped through part by part. User-
@@ -2156,9 +2229,10 @@ export default function Home() {
                           </div>,
                           document.body
                         )}
-                        {!!onboardingChapterId && onboardingGlobalOp && (
-                          <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.ONBOARDING_CIRCLE}`} />
+                        {((!!onboardingChapterId && onboardingGlobalOp) || (hintActive && (hintSpotlightPath === 'equals' || hintSpotlightPath === '=') && hintLevel >= 2)) && (
+                          <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.SPOTLIGHT_CIRCLE}`} />
                         )}
+
                       </span>
                     </Tooltip>
 
@@ -2177,6 +2251,8 @@ export default function Home() {
                       equation. At most one halt banner shows; it may stack under the
                       restriction caveat above when both apply. */}
                   <TerminalStateCaveat />
+                  {/* Step-by-step hint ladder guidance docked in the equation message stack */}
+                  <HintDrawer />
                   {/* Standing Practice Set next-problem loop affordance (#500) */}
                   <PracticeSetBanner />
                 </div>

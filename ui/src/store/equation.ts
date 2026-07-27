@@ -15,6 +15,13 @@ import { sentenceCase } from '../utils/text';
 import { mergeWorkspaces, hashWorkspace, ExportedWorkspace } from '../utils/workspaceTransfer';
 import { assignLanes } from '../utils/treeLayout';
 import { safeStorage } from '../utils/safeStorage';
+import {
+  rawHintActiveAtom,
+  rawHintTabIdAtom,
+  rawHintNodeIdAtom,
+  rawHintLevelAtom,
+  rawHintDrawerExpandedAtom,
+} from './hint';
 
 // Global Initial Value Constants
 export const INITIAL_EQUATION_STRING = '2 * (x + 3) = 10';
@@ -1121,9 +1128,13 @@ export const currentNodeIdAtom = atom(
   (get, set, update: string | ((prev: string) => string)) => {
     const tabs = get(tabsAtom);
     const activeId = get(activeTabIdAtom);
+    let nodeChanged = false;
     const updatedTabs = tabs.map(t => {
       if (t.id === activeId) {
         const nextNodeId = typeof update === 'function' ? update(t.currentNodeId) : update;
+        if (nextNodeId !== t.currentNodeId) {
+          nodeChanged = true;
+        }
         const activeNode = t.historyTree[nextNodeId];
         const tabName = t.isCustomNamed
           ? t.name
@@ -1137,6 +1148,13 @@ export const currentNodeIdAtom = atom(
       return t;
     });
     set(tabsAtom, updatedTabs);
+    if (nodeChanged) {
+      set(rawHintActiveAtom, false);
+      set(rawHintTabIdAtom, null);
+      set(rawHintNodeIdAtom, null);
+      set(rawHintLevelAtom, 1);
+      set(rawHintDrawerExpandedAtom, false);
+    }
   }
 );
 
@@ -1640,6 +1658,8 @@ export const filteredReduciblePathsAtom = atom<Record<string, ReducibleActionInf
       }
       return true;
     });
+
+
 
     if (progressiveActions.length > 0) {
       progressiveFiltered[path] = progressiveActions;

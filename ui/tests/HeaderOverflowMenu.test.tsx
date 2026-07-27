@@ -1,10 +1,13 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 Robert Harris
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Provider, createStore } from 'jotai';
 import { HeaderOverflowMenu } from '@/components/HeaderOverflowMenu';
+import {
+  exportWorkspacesModalOpenAtom,
+  importWorkspacesModalOpenAtom,
+  pwaInstallPromptAtom,
+} from '@/store/equation';
 
 describe('HeaderOverflowMenu', () => {
   let onOpenSettings: () => void;
@@ -21,15 +24,19 @@ describe('HeaderOverflowMenu', () => {
 
   afterEach(cleanup);
 
-  const renderMenu = () =>
-    render(
-      <HeaderOverflowMenu
-        onOpenSettings={onOpenSettings}
-        onOpenAbout={onOpenAbout}
-        onOpenHelp={onOpenHelp}
-        onOpenShortcuts={onOpenShortcuts}
-      />
+  const renderMenu = (store = createStore()) => {
+    const result = render(
+      <Provider store={store}>
+        <HeaderOverflowMenu
+          onOpenSettings={onOpenSettings}
+          onOpenAbout={onOpenAbout}
+          onOpenHelp={onOpenHelp}
+          onOpenShortcuts={onOpenShortcuts}
+        />
+      </Provider>,
     );
+    return { store, ...result };
+  };
 
   it('initially does not show the dropdown menu', () => {
     renderMenu();
@@ -44,6 +51,8 @@ describe('HeaderOverflowMenu', () => {
     const menu = screen.getByRole('menu');
     expect(menu).toBeTruthy();
     expect(within(menu).getByRole('menuitem', { name: /settings/i })).toBeTruthy();
+    expect(within(menu).getByRole('menuitem', { name: /import workspaces/i })).toBeTruthy();
+    expect(within(menu).getByRole('menuitem', { name: /export workspaces/i })).toBeTruthy();
     expect(within(menu).getByRole('menuitem', { name: /about/i })).toBeTruthy();
   });
 
@@ -54,6 +63,52 @@ describe('HeaderOverflowMenu', () => {
 
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('triggers Import Workspaces modal and closes menu', async () => {
+    const { store } = renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /more options/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /import workspaces/i }));
+
+    expect(store.get(importWorkspacesModalOpenAtom)).toBe(true);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('triggers Export Workspaces modal and closes menu', async () => {
+    const { store } = renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /more options/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /export workspaces/i }));
+
+    expect(store.get(exportWorkspacesModalOpenAtom)).toBe(true);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('shows Install App when PWA prompt is available', async () => {
+    const store = createStore();
+    const mockPromptEvent = {
+      prompt: vi.fn().mockResolvedValue(undefined),
+      userChoice: Promise.resolve({ outcome: 'accepted' }),
+    };
+    store.set(pwaInstallPromptAtom, mockPromptEvent as unknown as Event);
+
+    renderMenu(store);
+    await userEvent.click(screen.getByRole('button', { name: /more options/i }));
+
+    const menu = screen.getByRole('menu');
+    const installItem = within(menu).getByRole('menuitem', { name: /install app/i });
+    expect(installItem).toBeTruthy();
+
+    await userEvent.click(installItem);
+    expect(mockPromptEvent.prompt).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('does NOT show Install App when PWA prompt is null', async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole('button', { name: /more options/i }));
+
+    const menu = screen.getByRole('menu');
+    expect(within(menu).queryByRole('menuitem', { name: /install app/i })).toBeNull();
   });
 
   it('calls onOpenAbout and closes the menu when About is clicked', async () => {
@@ -74,7 +129,7 @@ describe('HeaderOverflowMenu', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('calls onOpenShortcuts and closes the menu when Shortcuts is clicked (#440, #449)', async () => {
+  it('calls onOpenShortcuts and closes the menu when Shortcuts is clicked', async () => {
     renderMenu();
     await userEvent.click(screen.getByRole('button', { name: /more options/i }));
     await userEvent.click(screen.getByRole('menuitem', { name: /^shortcuts$/i }));
@@ -83,16 +138,32 @@ describe('HeaderOverflowMenu', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('shortens the shortcuts label to just "Shortcuts" (#449)', async () => {
+  it('organizes items into grouped sections with visual dividers', async () => {
     renderMenu();
     await userEvent.click(screen.getByRole('button', { name: /more options/i }));
 
     const menu = screen.getByRole('menu');
-    expect(within(menu).getByRole('menuitem', { name: /^shortcuts$/i })).toBeTruthy();
-    expect(within(menu).queryByRole('menuitem', { name: /keyboard shortcuts/i })).toBeNull();
+    const items = within(menu).getAllByRole('menuitem');
+    const itemTexts = items.map((item) => item.querySelector('span')?.textContent?.trim());
+
+    // Section 1: Settings, Import Workspaces, Export Workspaces
+    // Section 2: Help, Shortcuts
+    // Section 3: About, GitHub
+    expect(itemTexts).toEqual([
+      'Settings',
+      'Import Workspaces',
+      'Export Workspaces',
+      'Help',
+      'Shortcuts',
+      'About',
+      'GitHub',
+    ]);
+
+    const dividers = menu.querySelectorAll('[role="separator"]');
+    expect(dividers.length).toBe(2);
   });
 
-  it('offers a GitHub link that opens the repo in a new tab, placed above About (#449)', async () => {
+  it('offers a GitHub link that opens the repo in a new tab in Section 3', async () => {
     renderMenu();
     await userEvent.click(screen.getByRole('button', { name: /more options/i }));
 
@@ -101,13 +172,6 @@ describe('HeaderOverflowMenu', () => {
     expect(github).toHaveAttribute('href', 'https://github.com/trebor/algebranch');
     expect(github).toHaveAttribute('target', '_blank');
     expect(github.getAttribute('rel') ?? '').toContain('noopener');
-
-    // GitHub sits immediately above About in the menu order.
-    const items = within(menu).getAllByRole('menuitem');
-    const githubIndex = items.indexOf(github);
-    const aboutIndex = items.findIndex((el) => /about/i.test(el.textContent ?? ''));
-    expect(githubIndex).toBeGreaterThanOrEqual(0);
-    expect(aboutIndex).toBe(githubIndex + 1);
   });
 
   it('shows each item\'s keyboard-shortcut keycap, mirroring the global bindings', async () => {
@@ -131,8 +195,6 @@ describe('HeaderOverflowMenu', () => {
     await userEvent.click(screen.getByRole('button', { name: /more options/i }));
     const menu = screen.getByRole('menu');
 
-    // Names stay clean — the keycap glyph must not leak into the label a screen
-    // reader announces (would read e.g. "Shortcuts K").
     expect(within(menu).getByRole('menuitem', { name: /^shortcuts$/i })).toBeTruthy();
     expect(within(menu).getByRole('menuitem', { name: /^settings$/i })).toBeTruthy();
   });
@@ -160,8 +222,8 @@ describe('HeaderOverflowMenu', () => {
     await userEvent.click(screen.getByRole('button', { name: /more options/i }));
     expect(screen.getByRole('menu')).toBeTruthy();
 
-    // Click outside
     await userEvent.click(document.body);
     expect(screen.queryByRole('menu')).toBeNull();
   });
 });
+

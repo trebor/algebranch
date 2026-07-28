@@ -119,4 +119,19 @@ describe('PracticeSetBanner Component', () => {
 
     expect(screen.getByRole('region', { name: /Practice Set Progress/i })).toBeInTheDocument();
   });
+
+  test('renders Next Tutorial button on completion when next set tutorial is not yet completed', () => {
+    // Start last problem of linear_basics (position 4)
+    store.set(startPracticeSetAtom, { setId: 'linear_basics', position: 4 });
+    store.set(terminalStatusAtom, 'identity');
+
+    render(
+      <Provider store={store}>
+        <PracticeSetBanner />
+      </Provider>
+    );
+
+    expect(screen.getByText(/Practice Set Complete — Linear Equations/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Next Tutorial/i })).toBeInTheDocument();
+  });
 });

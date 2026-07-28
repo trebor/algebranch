@@ -15,10 +15,25 @@ import {
   recordProblemSolvedAtom,
 } from '../store/ladders';
 import { PRACTICE_SETS } from '../constants/ladders';
-import { Sparkles, ArrowRight, Trophy, X } from 'lucide-react';
+import { startOnboardingChapterAtom, safeLocalStorage } from '../store/equation';
+import { Sparkles, ArrowRight, Trophy, X, BookOpen } from 'lucide-react';
 import { ConfettiBurst } from './ConfettiBurst';
 import { useIsHydrated } from '../hooks/useIsHydrated';
 import { EquationBanner } from './EquationBanner';
+
+/**
+ * Maps a Practice Set ID to its corresponding tutorial chapter ID.
+ */
+const getChapterForPracticeSet = (setId: string): string | null => {
+  const map: Record<string, string> = {
+    linear_basics: 'linear',
+    powers_roots: 'complex',
+    identities_factoring: 'identities',
+    global_rationals: 'global',
+    substitution_systems: 'substitution',
+  };
+  return map[setId] ?? null;
+};
 
 /**
  * Standing Practice Set "Next problem →" loop affordance (#500).
@@ -34,6 +49,7 @@ export const PracticeSetBanner: React.FC = () => {
   const startSet = useSetAtom(startPracticeSetAtom);
   const exitSet = useSetAtom(exitPracticeSetAtom);
   const recordProblemSolved = useSetAtom(recordProblemSolvedAtom);
+  const startTutorialChapter = useSetAtom(startOnboardingChapterAtom);
   const [shouldCelebrate, setShouldCelebrate] = React.useState(false);
 
   const activeSetId = active?.set.id ?? null;
@@ -53,14 +69,26 @@ export const PracticeSetBanner: React.FC = () => {
     }
   }, [activeSetId, activePosition, readyForNext, recordProblemSolved]);
 
-  if (!active || !readyForNext) return null;
+  const currentIndex = active ? PRACTICE_SETS.findIndex((s) => s.id === active.set.id) : -1;
+  const nextSet = active && currentIndex >= 0 ? PRACTICE_SETS[(currentIndex + 1) % PRACTICE_SETS.length] : null;
+  const nextChapterId = nextSet ? getChapterForPracticeSet(nextSet.id) : null;
+
+  const isNextTutorialCompleted = React.useMemo(() => {
+    if (!nextChapterId || typeof window === 'undefined') return true;
+    try {
+      const raw = safeLocalStorage.getItem('algebranch_completed_chapters');
+      if (!raw) return false;
+      const list = JSON.parse(raw);
+      return Array.isArray(list) && list.includes(nextChapterId);
+    } catch {
+      return false;
+    }
+  }, [nextChapterId]);
+
+  if (!active || !readyForNext || !nextSet) return null;
 
   const { set, position, isCompleted } = active;
   const totalProblems = set.presetIds.length;
-
-  // Find next Practice Set if available
-  const currentIndex = PRACTICE_SETS.findIndex((s) => s.id === set.id);
-  const nextSet = PRACTICE_SETS[(currentIndex + 1) % PRACTICE_SETS.length];
 
   return (
     <>
@@ -89,14 +117,32 @@ export const PracticeSetBanner: React.FC = () => {
 
         <div className="flex items-center gap-1.5 shrink-0 ml-auto">
           {isCompleted ? (
-            <button
-              type="button"
-              onClick={() => startSet({ setId: nextSet.id, position: 0 })}
-              className="px-2 py-0.5 text-[0.7rem] font-bold rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 flex items-center gap-1 transition-colors"
-            >
-              <span>Next Set</span>
-              <ArrowRight size={11} />
-            </button>
+            isNextTutorialCompleted ? (
+              <button
+                type="button"
+                onClick={() => startSet({ setId: nextSet.id, position: 0 })}
+                className="px-2 py-0.5 text-[0.7rem] font-bold rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 flex items-center gap-1 transition-colors"
+              >
+                <span>Next Set</span>
+                <ArrowRight size={11} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  exitSet();
+                  if (nextChapterId) {
+                    startTutorialChapter(nextChapterId);
+                  } else {
+                    startSet({ setId: nextSet.id, position: 0 });
+                  }
+                }}
+                className="px-2 py-0.5 text-[0.7rem] font-bold rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 flex items-center gap-1 transition-colors"
+              >
+                <span>Next Tutorial</span>
+                <BookOpen size={11} />
+              </button>
+            )
           ) : (
             <button
               type="button"

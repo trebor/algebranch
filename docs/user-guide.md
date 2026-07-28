@@ -24,7 +24,7 @@ If you have used other interactive math tools, you might expect to drag terms ac
 
 When you first open the app, start from the buttons in the sidebar's **Define Equation** area:
 *   **New** opens the **Enter Equation** dialog, where you type your own equation in standard notation such as `3*x - 4 = 11`. The dialog has a left side, a right side, and a **relation selector** between them. The relation defaults to `=`; click it to switch to an inequality such as `<`, `>`, `<=`, or `>=`. You can also set the relation without the dropdown: typing `=`, `<`, or `>` in either side selects it and jumps focus to the other side, and pasting a full expression like `2*x + 1 <= 9` splits it across the two sides and sets the relation automatically.
-*   **Tutorial** starts an interactive, guided walkthrough of the basic interactions.
+*   **Tutorial** starts an interactive, 5-chapter guided walkthrough (Basic Linear Equations, Powers & Radical Equations, Identities & Factoring, Global & Rational Operations, and Substitution & Systems). Each chapter connects 1:1 with a Practice Set in the sidebar.
 *   **Equation Library** opens a browsable set of over 80 preset equations spanning linear algebra, quadratics, factoring, and more.
 
 ---

@@ -153,7 +153,7 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
     steps: [
       {
         title: 'Conjugate Binomials',
-        description: 'This expression has the identity form a - b times a + b. Let us expand it into a difference of squares: a^2 - b^2.',
+        description: 'This expression has the identity form (a - b)(a + b). Let us expand it into a difference of squares: a^2 - b^2.',
         highlightPath: 'lhs', // multiplication node
         nextEquation: 'x ^ 2 - 3 ^ 2 = 0',
         stepLabel: 'Expand Conjugate Binomials'

@@ -2259,8 +2259,25 @@ export const isTerminalOrFullyReduced = (
 /**
  * Derived resolution state for history tree branch nodes (#576).
  */
-export const isBranchResolved = (node: HistoryNode): boolean => {
-  if (!node.bifurcation) return true;
+export const isBranchResolved = (
+  node: HistoryNode,
+  tree?: Record<string, HistoryNode>
+): boolean => {
+  if (tree) {
+    let curr: HistoryNode | undefined = node;
+    let isBifurcated = false;
+    while (curr) {
+      if (curr.bifurcation) {
+        isBifurcated = true;
+        break;
+      }
+      curr = curr.parentId ? tree[curr.parentId] : undefined;
+    }
+    if (!isBifurcated) return true;
+  } else if (!node.bifurcation) {
+    return true;
+  }
+
   if (node.childrenIds.length > 0) return true;
   if (isTerminalOrFullyReduced(node.equation)) return true;
   return false;

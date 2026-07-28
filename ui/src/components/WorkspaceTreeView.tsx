@@ -208,7 +208,7 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
   onHoverLoop,
 }) => {
   const roving = useOptionalRovingTabindex();
-  const resolved = isBranchResolved(node);
+  const resolved = isBranchResolved(node, tree);
   // Activating a loop bubble jumps to the ancestor it points back to; a regular
   // step selects itself.
   const selectId = loopAncestor ? loopAncestor.id : node.id;

@@ -41,13 +41,17 @@ export const BifurcationBranchBanner: React.FC = () => {
 
   if (!state || state.allComplete || !state.nextUnresolvedBranch) return null;
 
-  const { activeBranchIndex, activeBranchLabel, totalBranches, nextUnresolvedBranch } = state;
+  const { activeBranchIndex, activeBranchLabel, totalBranches, nextUnresolvedBranch, isOnOpenLeaf } = state;
   const cleanLabel = activeBranchLabel ? activeBranchLabel.replace(/\s*\([^)]*\)/g, '').trim() : '';
-  const bannerText = cleanLabel
-    ? `${cleanLabel} split · ${activeBranchIndex} of ${totalBranches}`
-    : `Branch ${activeBranchIndex} of ${totalBranches}`;
+  const bannerText = isOnOpenLeaf
+    ? (cleanLabel
+        ? `${cleanLabel} split · ${activeBranchIndex} of ${totalBranches}`
+        : `Branch ${activeBranchIndex} of ${totalBranches}`)
+    : `${totalBranches} unresolved branch${totalBranches > 1 ? 'es' : ''} remaining`;
 
-  const detailExplanation = getPedagogicalExplanation(activeBranchLabel, activeBranchIndex, totalBranches);
+  const detailExplanation = isOnOpenLeaf
+    ? getPedagogicalExplanation(activeBranchLabel, activeBranchIndex, totalBranches)
+    : `${totalBranches} open solution branch${totalBranches > 1 ? 'es' : ''} exist in this derivation tree.`;
 
   return (
     <div className={THEME_GLASS.BIFURCATION_BRANCH_BANNER}>
@@ -71,7 +75,11 @@ export const BifurcationBranchBanner: React.FC = () => {
           onClick={() => setCurrentNodeId(nextUnresolvedBranch.leafNodeId)}
           className={THEME_GLASS.BIFURCATION_BRANCH_BANNER_CTA}
         >
-          <span>Jump to {nextUnresolvedBranch.branchIndex} of {totalBranches}</span>
+          <span>
+            {isOnOpenLeaf
+              ? `Jump to ${nextUnresolvedBranch.branchIndex} of ${totalBranches}`
+              : `Jump to ${nextUnresolvedBranch.branchIndex} of ${totalBranches}`}
+          </span>
           <ArrowRight size={12} />
         </button>
       )}

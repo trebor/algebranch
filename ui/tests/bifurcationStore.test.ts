@@ -192,9 +192,13 @@ describe('Bifurcation Store & Resolution State', () => {
       expect(state?.nextUnresolvedBranch?.nodeId).toBe('c2');
       expect(state?.allComplete).toBe(false);
 
-      // Selecting a non-leaf root node suppresses the banner
+      // Selecting a non-leaf root node switches to state 2 (isOnOpenLeaf: false)
       store.set(currentNodeIdAtom, rootNodeId);
-      expect(store.get(bifurcationStateAtom)).toBeNull();
+      const rootState = store.get(bifurcationStateAtom);
+      expect(rootState).not.toBeNull();
+      expect(rootState?.isOnOpenLeaf).toBe(false);
+      expect(rootState?.totalBranches).toBe(2);
+      expect(rootState?.nextUnresolvedBranch?.nodeId).toBe('c1');
     });
   });
 });

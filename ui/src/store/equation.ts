@@ -2365,6 +2365,7 @@ export interface BifurcationGroupState {
   openBranchCount: number;
   nextUnresolvedBranch: BranchInfo | null;
   allComplete: boolean;
+  isOnOpenLeaf: boolean;
 }
 
 /**
@@ -2407,15 +2408,14 @@ export const bifurcationStateAtom = atom<BifurcationGroupState | null>((get) => 
 
   if (dfsOpenLeaves.length === 0) return null;
 
-  // Suppress banner when currentNodeId is not one of the marked open branch leaves
   const activeDFSIndex = dfsOpenLeaves.findIndex((n) => n.id === currentNodeId);
-  if (activeDFSIndex < 0) return null;
+  const isOnOpenLeaf = activeDFSIndex >= 0;
 
-  const currentIndex = activeDFSIndex;
+  const currentIndex = isOnOpenLeaf ? activeDFSIndex : 0;
   const activeLeaf = dfsOpenLeaves[currentIndex];
 
   // Select next leaf in cyclic DFS pre-order
-  const nextDFSIndex = (currentIndex + 1) % dfsOpenLeaves.length;
+  const nextDFSIndex = isOnOpenLeaf ? (currentIndex + 1) % dfsOpenLeaves.length : 0;
   const nextLeaf = dfsOpenLeaves[nextDFSIndex];
 
   // Derive causing operation label for active leaf
@@ -2431,7 +2431,7 @@ export const bifurcationStateAtom = atom<BifurcationGroupState | null>((get) => 
   const nextBranchInfo: BranchInfo = {
     nodeId: nextLeaf.id,
     leafNodeId: nextLeaf.id,
-    branchIndex: nextLeaf.bifurcation?.branchIndex ?? 1,
+    branchIndex: nextDFSIndex + 1,
     totalBranches: dfsOpenLeaves.length,
     branchLabel: nextLeaf.bifurcation?.branchLabel || nextLeaf.label,
     isResolved: false,
@@ -2455,6 +2455,7 @@ export const bifurcationStateAtom = atom<BifurcationGroupState | null>((get) => 
     openBranchCount: dfsOpenLeaves.length - 1,
     nextUnresolvedBranch: nextBranchInfo,
     allComplete: false,
+    isOnOpenLeaf,
   };
 });
 

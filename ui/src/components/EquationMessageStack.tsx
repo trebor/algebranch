@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { PracticeGoalBanner } from './PracticeGoalBanner';
+import { BifurcationBranchBanner } from './BifurcationBranchBanner';
 import { ActiveRestrictionsCaveat } from './ActiveRestrictionsCaveat';
 import { TerminalStateCaveat } from './TerminalStateCaveat';
 import { HintDrawer } from './HintDrawer';
@@ -89,6 +90,7 @@ export const EquationMessageStack: React.FC<EquationMessageStackProps> = ({
       className={`flex flex-col items-center justify-start gap-1.5 w-full max-w-xl mx-auto px-4 transition-all duration-300 ease-in-out select-none ${className}`.trim()}
     >
       <PracticeGoalBanner />
+      <BifurcationBranchBanner />
       <ActiveRestrictionsCaveat />
       <TerminalStateCaveat />
       <HintDrawer />

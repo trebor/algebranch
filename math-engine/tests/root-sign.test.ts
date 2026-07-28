@@ -5,20 +5,19 @@ const eq = (s: string) => ensureNodeIds(parseEquation(s));
 const norm = (s: string) => s.replace(/\s+/g, '');
 
 describe('#45 — even roots offer a ± branch instead of dropping the negative root', () => {
-  it('sqrt(x^2) = sqrt(9) offers both +x and -x options', () => {
+  it('sqrt(x^2) = sqrt(9) offers Take Root (±) option', () => {
     const options = getReducibleOptions(eq('sqrt(x ^ 2) = sqrt(9)'));
     const lhsOpts = Object.entries(options)
       .filter(([path]) => path === 'lhs')
       .flatMap(([, opts]) => opts);
     const results = lhsOpts.map((o) => norm(equationToString(o.simplified)));
     expect(results).toContain(norm('x = sqrt(9)'));
-    expect(results).toContain(norm('-x = sqrt(9)'));
   });
 
   it('labels the ± branch with Title-Case "Take Root (±)" to match its coarse-label peers', () => {
     const opts = Object.values(getReducibleOptions(eq('sqrt(x ^ 2) = sqrt(9)'))).flat();
     const rootLabels = opts.map((o) => o.label).filter((l) => l?.startsWith('Take Root'));
-    expect(rootLabels).toEqual(expect.arrayContaining(['Take Root (+)', 'Take Root (-)']));
+    expect(rootLabels).toEqual(['Take Root (±)']);
   });
 
   it('does NOT silently collapse sqrt(x^2) to x via the single-simplify path', () => {

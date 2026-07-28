@@ -491,6 +491,16 @@ export const THEME_GLASS = {
   PRACTICE_GOAL_BANNER: 'flex items-center gap-1.5 text-xs font-semibold leading-snug text-sky-200 rounded-md border border-sky-400/30 bg-sky-500/10 px-2 py-1 backdrop-blur-md',
   PRACTICE_GOAL_BANNER_ICON: 'shrink-0 text-sky-400',
 
+  // Standing Bifurcation Branch Banner under the main equation (#576)
+  BIFURCATION_BRANCH_BANNER: 'flex items-center justify-between gap-2 text-xs font-semibold leading-snug text-amber-200 rounded-md border border-amber-400/30 bg-amber-500/10 px-2.5 py-1.5 backdrop-blur-md w-full',
+  BIFURCATION_BRANCH_BANNER_COMPLETE: 'flex items-center gap-1.5 text-xs font-semibold leading-snug text-emerald-200 rounded-md border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1.5 backdrop-blur-md w-full',
+  BIFURCATION_BRANCH_BANNER_ICON: 'shrink-0 text-amber-400',
+  BIFURCATION_BRANCH_BANNER_ICON_COMPLETE: 'shrink-0 text-emerald-400',
+  BIFURCATION_BRANCH_BANNER_CTA: 'px-2 py-0.5 text-xs font-medium text-amber-100 bg-amber-600/80 hover:bg-amber-500 rounded border border-amber-400/40 transition-colors cursor-pointer flex items-center gap-1',
+
+  TREE_NODE_BADGE_BRANCH_UNRESOLVED: 'bg-amber-600 border-amber-400 text-amber-50',
+  TREE_NODE_BADGE_BRANCH_RESOLVED: 'bg-emerald-600 border-emerald-400 text-emerald-50',
+
   // --- Term slot (#491): the empty dashed chip standing for "any term/side" ---
   // The generic placeholder in operation previews (( )^n, √( ), the reciprocal
   // hops): an empty dashed rounded socket, echoing the app's drag-target look so

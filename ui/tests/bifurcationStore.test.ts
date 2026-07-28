@@ -191,6 +191,10 @@ describe('Bifurcation Store & Resolution State', () => {
       expect(state?.openBranchCount).toBe(1);
       expect(state?.nextUnresolvedBranch?.nodeId).toBe('c2');
       expect(state?.allComplete).toBe(false);
+
+      // Selecting a non-leaf root node suppresses the banner
+      store.set(currentNodeIdAtom, rootNodeId);
+      expect(store.get(bifurcationStateAtom)).toBeNull();
     });
   });
 });

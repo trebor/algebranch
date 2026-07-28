@@ -2390,24 +2390,12 @@ export const bifurcationStateAtom = atom<BifurcationGroupState | null>((get) => 
 
   if (dfsOpenLeaves.length === 0) return null;
 
-  // Find current active leaf node
-  let activeLeaf: HistoryNode | undefined = tree[currentNodeId];
-  if (activeLeaf && activeLeaf.childrenIds.length > 0) {
-    let currNode = activeLeaf;
-    while (currNode.childrenIds.length > 0) {
-      const nextId = currNode.childrenIds[currNode.childrenIds.length - 1];
-      if (tree[nextId]) {
-        currNode = tree[nextId];
-      } else {
-        break;
-      }
-    }
-    activeLeaf = currNode;
-  }
+  // Suppress banner when currentNodeId is not one of the marked open branch leaves
+  const activeDFSIndex = dfsOpenLeaves.findIndex((n) => n.id === currentNodeId);
+  if (activeDFSIndex < 0) return null;
 
-  const activeLeafId = activeLeaf?.id ?? currentNodeId;
-  const activeDFSIndex = dfsOpenLeaves.findIndex((n) => n.id === activeLeafId);
-  const currentIndex = activeDFSIndex >= 0 ? activeDFSIndex : 0;
+  const currentIndex = activeDFSIndex;
+  const activeLeaf = dfsOpenLeaves[currentIndex];
 
   // Select next leaf in cyclic DFS pre-order
   const nextDFSIndex = (currentIndex + 1) % dfsOpenLeaves.length;

@@ -2250,8 +2250,6 @@ export const isTerminalOrFullyReduced = (
     if (isEquationSolved(eq)) return true;
     const status = getTerminalStatus(eq);
     if (status === 'identity' || status === 'contradiction') return true;
-    const reducible = getReducibleOptions(eq);
-    if (!reducible || Object.keys(reducible).length === 0) return true;
   } catch {
     /* fallback */
   }
@@ -2371,7 +2369,7 @@ export const bifurcationStateAtom = atom<BifurcationGroupState | null>((get) => 
     return false;
   };
 
-  // Perform a canonical DFS pre-order traversal of historyTree starting from root '0'
+  // Perform a canonical DFS pre-order traversal of historyTree starting from root nodes
   const dfsOpenLeaves: HistoryNode[] = [];
   const traverse = (nodeId: string) => {
     const node = tree[nodeId];
@@ -2387,7 +2385,8 @@ export const bifurcationStateAtom = atom<BifurcationGroupState | null>((get) => 
     node.childrenIds.forEach(traverse);
   };
 
-  traverse('0');
+  const rootNodes = Object.values(tree).filter((n) => !n.parentId);
+  rootNodes.forEach((r) => traverse(r.id));
 
   if (dfsOpenLeaves.length === 0) return null;
 

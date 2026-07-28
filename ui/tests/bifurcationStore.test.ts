@@ -59,7 +59,7 @@ describe('Bifurcation Store & Resolution State', () => {
     expect(store.get(currentNodeIdAtom)).toBe(child1.id);
   });
 
-  it('pushEquationAtom auto-bifurcates when applying a bifurcating step on sqrt(x^2) = sqrt(9)', () => {
+  it('pushBifurcationAtom inserts bifurcation cases on root equation', () => {
     const store = createStore();
     const rootEq = parseEquation('sqrt(x^2) = sqrt(9)');
     const rootNodeId = 'step_root';
@@ -77,8 +77,11 @@ describe('Bifurcation Store & Resolution State', () => {
     store.set(historyTreeAtom, { [rootNodeId]: rootNode });
     store.set(currentNodeIdAtom, rootNodeId);
 
-    const posEq = parseEquation('x = sqrt(9)');
-    store.set(pushEquationAtom, posEq, 'Take Root (+)');
+    const cases = [
+      { equation: parseEquation('x = sqrt(9)'), label: 'Take Root (+)' },
+      { equation: parseEquation('x = -sqrt(9)'), label: 'Take Root (-)' },
+    ];
+    store.set(pushBifurcationAtom, cases);
 
     const tree = store.get(historyTreeAtom);
     const rootAfter = tree[rootNodeId];
@@ -150,7 +153,7 @@ describe('Bifurcation Store & Resolution State', () => {
 
       const c1: HistoryNode = {
         id: 'c1',
-        equation: parseEquation('x = 3'),
+        equation: parseEquation('x + 2 = 5'),
         parentId: rootNodeId,
         childrenIds: [],
         label: 'Branch 1',

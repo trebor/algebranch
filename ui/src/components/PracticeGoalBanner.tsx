@@ -6,9 +6,10 @@
 import React from 'react';
 import { useAtomValue } from 'jotai';
 import { Target } from 'lucide-react';
+import { parseEquation } from 'math-engine';
 import { getUniqueVariables } from 'math-engine-client';
-import { activePracticeSetAtom, readyForNextProblemAtom } from '../store/ladders';
-import { currentEquationAtom } from '../store/equation';
+import { activePracticeSetAtom, readyForNextProblemAtom, practiceSetProgressAtom } from '../store/ladders';
+import { currentEquationAtom, historyTreeAtom } from '../store/equation';
 import { PRESET_LIST } from '../constants/presets';
 import { THEME_GLASS } from '../constants/theme';
 import { splitSubscript } from '../constants/mathSymbols';
@@ -26,10 +27,29 @@ export const PracticeGoalBanner: React.FC = () => {
   const active = useAtomValue(activePracticeSetAtom);
   const readyForNext = useAtomValue(readyForNextProblemAtom);
   const currentEquation = useAtomValue(currentEquationAtom);
+  const progress = useAtomValue(practiceSetProgressAtom);
+  const tree = useAtomValue(historyTreeAtom);
 
   if (!active || readyForNext) return null;
 
   const { set, position } = active;
+
+  // Verify that the active tab's root equation matches the active practice problem
+  const expectedEqStr = progress.generatedEquations?.[set.id]?.[position];
+  if (expectedEqStr && tree['0']) {
+    try {
+      const rootEq = tree['0'].equation;
+      const expectedEq = parseEquation(expectedEqStr);
+      const rootVars = getUniqueVariables(rootEq);
+      const expectedVars = getUniqueVariables(expectedEq);
+      if (rootVars.length !== expectedVars.length) {
+        return null;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
   const presetId = set.presetIds[position];
   const preset = PRESET_LIST.find((p) => p.id === presetId);
 

@@ -13,6 +13,7 @@ import {
   hoverPathAtom,
   targetPathsAtom,
   pushEquationAtom,
+  pushBifurcationAtom,
   currentEquationAtom,
   candidatePathsAtom,
   hoverReducePathAtom,
@@ -39,7 +40,7 @@ import { getReferenceUrl } from '../constants/referenceLinks';
 import { useOptionalRovingTabindex, nearestAncestorKey, nearestDescendantKey } from '../hooks/useRovingTabindex';
 import { Equation, getNodeByPath, getFunctionName, getChildren, formatNumber, nodeToSpeech, flattenAssociativeChain } from 'math-engine-client';
 import type { SubstitutionOption, StepChange } from 'math-engine';
-import { describeTransposition, describeMove, describeReduction, describeSubstitution, describeCollapse, precedenceOf, PREC } from 'math-engine';
+import { describeTransposition, describeMove, describeReduction, describeSubstitution, describeCollapse, precedenceOf, PREC, getBifurcationCases } from 'math-engine';
 import type { ReductionOption } from 'math-engine';
 import { ArrowLeftRight, Zap, UnfoldHorizontal, FoldHorizontal, RefreshCw, Replace, TriangleAlert, ArrowRight, Info } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
@@ -390,6 +391,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
   const substitutionPaths = useAtomValue(substitutionPathsAtom);
   const targetPaths = useAtomValue(targetPathsAtom);
   const pushEquation = useSetAtom(pushEquationAtom);
+  const pushBifurcation = useSetAtom(pushBifurcationAtom);
   const currentEq = useAtomValue(currentEquationAtom);
   const candidatePaths = useAtomValue(candidatePathsAtom);
   const undefinedPaths = useAtomValue(undefinedPathsAtom);
@@ -1720,6 +1722,18 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
         change,
         onApply: () => {
           const reductionLabel = action.label || defaultLabelFor(action.type);
+          if (
+            reductionLabel.startsWith('Take Root') ||
+            reductionLabel.startsWith('Apply Quadratic Formula') ||
+            reductionLabel.startsWith('Split Abs') ||
+            reductionLabel.startsWith('Zero-Product')
+          ) {
+            const cases = getBifurcationCases(currentEq);
+            if (cases && cases.length >= 2) {
+              pushBifurcation(cases);
+              return;
+            }
+          }
           pushEquation(action.equation, reductionLabel, change);
           trackEvent({
             action: 'apply_reduction',
@@ -1803,7 +1817,7 @@ export const EquationNode: React.FC<EquationNodeProps> = ({
     }
 
     return stacks;
-  }, [actions, substitutions, currentEq, path, pushEquation]);
+  }, [actions, substitutions, currentEq, path, pushEquation, pushBifurcation]);
 
   // Roving within the open menu. Reads the live focus position from the option
   // registry (so it's immune to stale state) and wraps at both ends.

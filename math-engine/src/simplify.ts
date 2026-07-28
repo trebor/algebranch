@@ -2232,13 +2232,7 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
       const analysis = analyzeRootOfPower(getNodeByPath(eq, path));
       if (!analysis || !analysis.even) return;
       const posEq = replaceNodeAtPath(eq, path, analysis.base.clone());
-      const negEq = replaceNodeAtPath(
-        eq,
-        path,
-        new mjs.OperatorNode('-', 'unaryMinus', [analysis.base.clone()]),
-      );
-      rawReductions.push({ path, simplified: posEq, type: 'reduce', label: 'Take Root (+)' });
-      rawReductions.push({ path, simplified: negEq, type: 'reduce', label: 'Take Root (-)' });
+      rawReductions.push({ path, simplified: posEq, type: 'reduce', label: 'Take Root (±)' });
     } catch {
       /* skip paths that fail to resolve */
     }

@@ -28,12 +28,13 @@ import {
   activeZoomModeAtom,
   appHydratedAtom,
   computeTreeLayout,
+  isBranchResolved,
   type VisualTreeNode,
   type HistoryNode,
   type ZoomMode,
 } from '../store/equation';
 import { THEME_GLASS } from '../constants/theme';
-import { Check, CircleSlash, Infinity, ZoomIn, Search, ZoomOut, TriangleAlert } from 'lucide-react';
+import { Check, CircleSlash, Infinity, ZoomIn, Search, ZoomOut, TriangleAlert, GitBranch } from 'lucide-react';
 import {
   RovingTabindexProvider,
   useOptionalRovingTabindex,
@@ -207,6 +208,7 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
   onHoverLoop,
 }) => {
   const roving = useOptionalRovingTabindex();
+  const resolved = isBranchResolved(node, tree);
   // Activating a loop bubble jumps to the ancestor it points back to; a regular
   // step selects itself.
   const selectId = loopAncestor ? loopAncestor.id : node.id;
@@ -485,6 +487,36 @@ const HistoryStepNode: React.FC<HistoryStepNodeProps> = ({
             </span>
           </Tooltip>
         )}
+
+        {/* Bifurcation Branch Status Badge (#576) — sits on active leaf tips of open branches */}
+        {(() => {
+          const isLeafNode = node.childrenIds.length === 0;
+          let ancestorLabel: string | null = node.bifurcation?.branchLabel || null;
+          let pNode = node.parentId ? tree[node.parentId] : undefined;
+          while (!ancestorLabel && pNode) {
+            if (pNode.bifurcation) {
+              ancestorLabel = pNode.bifurcation.branchLabel;
+            }
+            pNode = pNode.parentId ? tree[pNode.parentId] : undefined;
+          }
+          const isBifurcatedPath = ancestorLabel !== null;
+          const isOpenLeaf = isLeafNode && isBifurcatedPath && !resolved && !isContradiction && !isIdentity && !isUndefined;
+
+          if (!isOpenLeaf) return null;
+
+          return (
+            <Tooltip
+              content={`Open solution path — ${ancestorLabel}`}
+              position="top"
+              className="w-max max-w-[240px] text-center text-sm"
+              wrapperClassName="z-20 absolute -top-1.5 -right-1.5"
+            >
+              <span className={`h-4 w-4 rounded-full border text-[0.5rem] flex items-center justify-center shadow transition-all duration-300 ${THEME_GLASS.TREE_NODE_BADGE_BRANCH_UNRESOLVED}`}>
+                <GitBranch size={9} />
+              </span>
+            </Tooltip>
+          );
+        })()}
 
         {/* Truncated Equation Label. Asymmetric padding (#279): the right side
             still clears the copy split-button toolbar (`pr-10`), but the left

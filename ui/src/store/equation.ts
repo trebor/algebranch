@@ -2,10 +2,10 @@
 // Copyright (C) 2026 Robert Harris
 
 import { atom, Getter, Setter } from 'jotai';
-import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, nodeToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getChildren, stripRedundantParentheses, getFunctionName, flipRelation, compressString } from 'math-engine-client';
+import { Equation, RelationOperator, parseEquation, ensureNodeIds, getNodeByPath, replaceNodeAtPath, equationToString, equationToLatex, equationToLatexAligned, equationToUnicode, equationToSpeech, nodeToSpeech, serializeEquation, deserializeEquation, SerializedEquation, getChildren, stripRedundantParentheses, getFunctionName, flipRelation, compressString, getTerminalStatus } from 'math-engine-client';
 // AST transforms come from the single source of truth (the real engine),
 // consumed client-side. First step toward retiring the math-engine-client shim.
-import { applyGlobalOp, GlobalOpParams, GlobalOpType, StepChange, describeGlobalOp, describeSubstitution, describeCollapse, describeReduction, getReducibleOptions, ReductionOption, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow } from 'math-engine';
+import { applyGlobalOp, GlobalOpParams, GlobalOpType, StepChange, describeGlobalOp, describeSubstitution, describeCollapse, describeReduction, getReducibleOptions, ReductionOption, getIsolatedDefinition, getSubstitutionOptions, getCombineOptions, SubstitutionFact, SubstitutionOption, computeGraphData, getGraphVariables, sampleCurve, findIntersections, GraphWindow, getBifurcationCases, isEquationSolved } from 'math-engine';
 import type * as math from 'mathjs';
 import { mjs } from 'math-engine';
 import { Preset, PRESET_LIST } from '../constants/presets';
@@ -22,6 +22,7 @@ import {
   rawHintLevelAtom,
   rawHintDrawerExpandedAtom,
 } from './hint';
+import { rawPracticeSetProgressAtom } from './ladders';
 
 // Global Initial Value Constants
 export const INITIAL_EQUATION_STRING = '2 * (x + 3) = 10';
@@ -38,6 +39,17 @@ export interface HistoryNode {
   timestamp: number;
   /** Structured description of the move that produced this node (#42). */
   change?: StepChange;
+
+  /** Present ONLY on nodes created by automatic mathematical splits (#576). */
+  bifurcation?: {
+    groupId: string;
+    totalBranches: number;
+    branchIndex: number;
+    branchLabel: string;
+  };
+
+  /** Set when node has received user focus in current session (#576). */
+  focusedInSession?: boolean;
 }
 
 export interface SerializedHistoryNode {
@@ -56,6 +68,15 @@ export interface SerializedHistoryNode {
   timestamp: number;
   /** Plain serializable data — round-trips via the spread in serializeTree. */
   change?: StepChange;
+
+  bifurcation?: {
+    groupId: string;
+    totalBranches: number;
+    branchIndex: number;
+    branchLabel: string;
+  };
+
+  focusedInSession?: boolean;
 }
 
 export interface SavedSession {
@@ -1143,12 +1164,23 @@ export const currentNodeIdAtom = atom(
           nodeChanged = true;
         }
         const activeNode = t.historyTree[nextNodeId];
+        let historyTree = t.historyTree;
+        if (activeNode && !activeNode.focusedInSession) {
+          historyTree = {
+            ...historyTree,
+            [nextNodeId]: {
+              ...activeNode,
+              focusedInSession: true,
+            },
+          };
+        }
         const tabName = t.isCustomNamed
           ? t.name
           : (activeNode ? equationToString(activeNode.equation) : t.name);
         return {
           ...t,
           currentNodeId: nextNodeId,
+          historyTree,
           name: tabName
         };
       }
@@ -2205,6 +2237,229 @@ export const pushEquationAtom = atom(
 );
 
 /**
+ * Checks if an equation is terminal (isolated single variable target, zero remaining reductions,
+ * contradiction, or identity) for branch resolution (#576).
+ */
+export const isTerminalOrFullyReduced = (
+  eq: Equation,
+  isPracticeActive?: boolean,
+  expectedEqStr?: string
+): boolean => {
+  try {
+    if (isPracticeActive && expectedEqStr && equationToString(eq) === expectedEqStr) return true;
+    if (isEquationSolved(eq)) return true;
+    const status = getTerminalStatus(eq);
+    if (status === 'identity' || status === 'contradiction') return true;
+  } catch {
+    /* fallback */
+  }
+  return false;
+};
+
+/**
+ * Derived resolution state for history tree branch nodes (#576).
+ */
+export const isBranchResolved = (
+  node: HistoryNode,
+  tree?: Record<string, HistoryNode>
+): boolean => {
+  if (tree) {
+    let curr: HistoryNode | undefined = node;
+    let isBifurcated = false;
+    while (curr) {
+      if (curr.bifurcation) {
+        isBifurcated = true;
+        break;
+      }
+      curr = curr.parentId ? tree[curr.parentId] : undefined;
+    }
+    if (!isBifurcated) return true;
+  } else if (!node.bifurcation) {
+    return true;
+  }
+
+  if (node.childrenIds.length > 0) return true;
+  if (isTerminalOrFullyReduced(node.equation)) return true;
+  return false;
+};
+
+/**
+ * Action: Atomically inserts sibling child nodes for each mathematical case under the parent step (#576).
+ */
+export const pushBifurcationAtom = atom(
+  null,
+  (get, set, cases: { equation: Equation; label: string }[]) => {
+    if (cases.length === 0) return;
+    const tree = get(historyTreeAtom);
+    const currentNodeId = get(currentNodeIdAtom);
+    const parentNode = tree[currentNodeId];
+    if (!parentNode) return;
+
+    const groupId = `bif_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const totalBranches = cases.length;
+    const timestampBase = Date.now();
+
+    const newNodes: HistoryNode[] = [];
+    const newChildrenIds: string[] = [];
+
+    cases.forEach((c, idx) => {
+      const branchIndex = idx + 1;
+      const newId = `step_${timestampBase}_${branchIndex}_${Math.random().toString(36).substr(2, 6)}`;
+      const newNode: HistoryNode = {
+        id: newId,
+        equation: ensureNodeIds(c.equation),
+        parentId: currentNodeId,
+        childrenIds: [],
+        label: c.label,
+        timestamp: timestampBase + idx,
+        bifurcation: {
+          groupId,
+          totalBranches,
+          branchIndex,
+          branchLabel: c.label,
+        },
+        focusedInSession: idx === 0,
+      };
+      newNodes.push(newNode);
+      newChildrenIds.push(newId);
+    });
+
+    const updatedTree: Record<string, HistoryNode> = { ...tree };
+    updatedTree[currentNodeId] = {
+      ...parentNode,
+      childrenIds: [...parentNode.childrenIds, ...newChildrenIds],
+    };
+
+    newNodes.forEach((node) => {
+      updatedTree[node.id] = node;
+    });
+
+    set(historyTreeAtom, updatedTree);
+    set(currentNodeIdAtom, newNodes[0].id);
+
+    set(sourcePathAtom, null);
+    set(hoverPathAtom, null);
+    set(hoverReducePathAtom, null);
+    set(hoverReduceIndexAtom, null);
+    set(hoveredLoopTargetIdAtom, null);
+
+    set(liveAnnouncementAtom, `Bifurcated equation into ${totalBranches} solution branches.`);
+  }
+);
+
+export interface BranchInfo {
+  nodeId: string;
+  leafNodeId: string;
+  branchIndex: number;
+  totalBranches: number;
+  branchLabel: string;
+  isResolved: boolean;
+}
+
+export interface BifurcationGroupState {
+  groupId: string;
+  totalBranches: number;
+  activeBranchIndex: number;
+  activeBranchLabel: string;
+  branches: BranchInfo[];
+  openBranchCount: number;
+  nextUnresolvedBranch: BranchInfo | null;
+  allComplete: boolean;
+  isOnOpenLeaf: boolean;
+}
+
+/**
+ * Derived atom tracking open/unresolved branches for the interactive jump banner (#576).
+ */
+export const bifurcationStateAtom = atom<BifurcationGroupState | null>((get) => {
+  const tree = get(historyTreeAtom);
+  const currentNodeId = get(currentNodeIdAtom);
+  const rawPractice = get(rawPracticeSetProgressAtom);
+  const isPracticeActive = Boolean(rawPractice.activeSetId);
+
+  // Helper to check if a node descends from any bifurcated node
+  const extendsBifurcation = (node: HistoryNode): boolean => {
+    let curr: HistoryNode | undefined = node;
+    while (curr) {
+      if (curr.bifurcation) return true;
+      curr = curr.parentId ? tree[curr.parentId] : undefined;
+    }
+    return false;
+  };
+
+  // Perform a canonical DFS pre-order traversal of historyTree starting from root nodes
+  const dfsOpenLeaves: HistoryNode[] = [];
+  const traverse = (nodeId: string) => {
+    const node = tree[nodeId];
+    if (!node) return;
+
+    if (node.childrenIds.length === 0) {
+      if (extendsBifurcation(node) && !isTerminalOrFullyReduced(node.equation, isPracticeActive)) {
+        dfsOpenLeaves.push(node);
+      }
+      return;
+    }
+
+    node.childrenIds.forEach(traverse);
+  };
+
+  const rootNodes = Object.values(tree).filter((n) => !n.parentId);
+  rootNodes.forEach((r) => traverse(r.id));
+
+  if (dfsOpenLeaves.length === 0) return null;
+
+  const activeDFSIndex = dfsOpenLeaves.findIndex((n) => n.id === currentNodeId);
+  const isOnOpenLeaf = activeDFSIndex >= 0;
+
+  const currentIndex = isOnOpenLeaf ? activeDFSIndex : 0;
+  const activeLeaf = dfsOpenLeaves[currentIndex];
+
+  // Select next leaf in cyclic DFS pre-order
+  const nextDFSIndex = isOnOpenLeaf ? (currentIndex + 1) % dfsOpenLeaves.length : 0;
+  const nextLeaf = dfsOpenLeaves[nextDFSIndex];
+
+  // Derive causing operation label for active leaf
+  let activeBranchLabel = activeLeaf?.bifurcation?.branchLabel || activeLeaf?.label || '';
+  let pNode = activeLeaf?.parentId ? tree[activeLeaf.parentId] : undefined;
+  while (!activeBranchLabel && pNode) {
+    if (pNode.bifurcation) {
+      activeBranchLabel = pNode.bifurcation.branchLabel;
+    }
+    pNode = pNode.parentId ? tree[pNode.parentId] : undefined;
+  }
+
+  const nextBranchInfo: BranchInfo = {
+    nodeId: nextLeaf.id,
+    leafNodeId: nextLeaf.id,
+    branchIndex: nextDFSIndex + 1,
+    totalBranches: dfsOpenLeaves.length,
+    branchLabel: nextLeaf.bifurcation?.branchLabel || nextLeaf.label,
+    isResolved: false,
+  };
+
+  const branchesInfo: BranchInfo[] = dfsOpenLeaves.map((n, idx) => ({
+    nodeId: n.id,
+    leafNodeId: n.id,
+    branchIndex: idx + 1,
+    totalBranches: dfsOpenLeaves.length,
+    branchLabel: n.bifurcation?.branchLabel || n.label,
+    isResolved: false,
+  }));
+
+  return {
+    groupId: nextLeaf.bifurcation?.groupId || 'bif_group',
+    activeBranchIndex: currentIndex + 1,
+    activeBranchLabel: activeBranchLabel || 'Branch',
+    totalBranches: dfsOpenLeaves.length,
+    branches: branchesInfo,
+    openBranchCount: dfsOpenLeaves.length - 1,
+    nextUnresolvedBranch: nextBranchInfo,
+    allComplete: false,
+    isOnOpenLeaf,
+  };
+});
+
+/**
  * Helper to check if a workspace matching the candidate (by content hash)
  * already exists in open tabs or saved sessions.
  */
@@ -2840,6 +3095,12 @@ export const applyGlobalOpAtom = atom(
   (get, set, params: GlobalOpParams) => {
     const currentEq = get(currentEquationAtom);
     if (!currentEq) return;
+
+    const bifurcationCases = getBifurcationCases(currentEq, params);
+    if (bifurcationCases && bifurcationCases.length > 0) {
+      set(pushBifurcationAtom, bifurcationCases);
+      return;
+    }
 
     // AST mutation lives in the (single) math engine; the store only orchestrates
     // history + the display label. Throws on a binary op with no term.

@@ -30,6 +30,7 @@ export * from './sync';
 export * from './normalizeInput';
 export * from './variation';
 export * from './hints';
+export * from './bifurcation';
 
 /**
  * Parses an equation string of the form "LHS = RHS" into an Equation tree.

@@ -6,7 +6,6 @@ import { parseEquation } from 'math-engine';
 import {
   historyTreeAtom,
   currentNodeIdAtom,
-  pushEquationAtom,
   pushBifurcationAtom,
   isBranchResolved,
   bifurcationStateAtom,

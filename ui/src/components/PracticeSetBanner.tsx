@@ -14,7 +14,7 @@ import {
   exitPracticeSetAtom,
   recordProblemSolvedAtom,
 } from '../store/ladders';
-import { PRACTICE_SETS, getPracticeSetForChapter } from '../constants/ladders';
+import { PRACTICE_SETS } from '../constants/ladders';
 import { startOnboardingChapterAtom, safeLocalStorage } from '../store/equation';
 import { Sparkles, ArrowRight, Trophy, X, BookOpen } from 'lucide-react';
 import { ConfettiBurst } from './ConfettiBurst';
@@ -83,7 +83,7 @@ export const PracticeSetBanner: React.FC = () => {
     } catch {
       return false;
     }
-  }, [nextChapterId, activeSetId, activePosition]);
+  }, [nextChapterId]);
 
   if (!active || !readyForNext || !nextSet) return null;
 

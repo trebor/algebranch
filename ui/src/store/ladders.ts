@@ -10,6 +10,7 @@ import {
   terminalStatusAtom,
   tabsAtom,
   activeTabIdAtom,
+  sidebarTabAtom,
 } from './equation';
 import { isEquationSolved, generateEquationVariation } from 'math-engine';
 import { equationToString } from 'math-engine-client';
@@ -172,6 +173,7 @@ export const startPracticeSetAtom = atom(
     };
 
     set(practiceSetProgressAtom, nextProgress);
+    set(sidebarTabAtom, 'learn');
 
     const presetId = practiceSet.presetIds[targetPos];
     const preset = PRESET_LIST.find((p) => p.id === presetId);
@@ -237,6 +239,7 @@ export const advancePracticeSetAtom = atom(null, (get, set) => {
       },
     };
     set(practiceSetProgressAtom, nextProgress);
+    set(sidebarTabAtom, 'learn');
 
     if (eqStr) {
       const nextPresetId = active.set.presetIds[nextPos];

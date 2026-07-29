@@ -3608,6 +3608,7 @@ export const startOnboardingChapterAtom = atom(
     set(onboardingHighlightPathAtom, chapter.steps[stepIdx]?.highlightPath || null);
     set(onboardingShowDirectoryAtom, false);
     set(tutorialFactsAtom, chapterFacts(chapter));
+    set(sidebarTabAtom, 'learn');
 
     const stepStartEq = stepIdx > 0
       ? chapter.steps[stepIdx - 1].nextEquation

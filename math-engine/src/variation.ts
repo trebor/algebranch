@@ -245,10 +245,10 @@ export const generateEquationVariation = (
     if (node.type === 'ConstantNode') {
       const constNode = node as math.ConstantNode;
       const val = constNode.value;
-      if (typeof val === 'number' && varyConsts && !isExponent && val !== 0 && val !== 1) {
+      if (typeof val === 'number' && varyConsts && !isExponent && val !== 0 && val !== 1 && val !== -1) {
         const offset = prng.pick([-3, -2, -1, 1, 2, 3]);
         const newVal = val + offset;
-        if (newVal !== 0 && Math.sign(newVal) === Math.sign(val)) {
+        if (newVal !== 0 && newVal !== 1 && newVal !== -1 && Math.sign(newVal) === Math.sign(val)) {
           return new mjs.ConstantNode(newVal);
         }
       }

@@ -24,6 +24,8 @@ export const THEME_ANIMATIONS = {
 export const THEME_GLASS = {
   PANEL: 'backdrop-blur-md bg-[#110f22]/90 border border-white/10 shadow-2xl shadow-black/40 rounded-2xl',
   CARD: 'backdrop-blur-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200 ease-in-out shadow-md rounded-xl',
+  RECESSED_CARD: 'rounded-xl border border-white/5 hover:border-white/10 bg-neutral-950/80 hover:bg-neutral-900/90 text-zinc-300 hover:text-white transition-all duration-200 cursor-pointer shadow-sm',
+  RECESSED_CARD_ACTIVE: 'rounded-xl border border-indigo-500/50 bg-neutral-950/90 text-indigo-200 shadow-[0_0_12px_rgba(99,102,241,0.2)] transition-all duration-200 cursor-pointer',
   SHADOW_AMBIENT: 'shadow-[0_0_15px_rgba(99,102,241,0.2)]',
   SOURCE: 'shadow-[0_0_25px_rgba(99,102,241,0.5)] border-indigo-400/50 bg-indigo-950/80 text-indigo-100 font-semibold cursor-pointer',
   TARGET: 'shadow-[0_0_25px_rgba(16,185,129,0.5)] border-emerald-400/50 bg-emerald-950/80 cursor-pointer text-emerald-100 animate-pulse font-semibold',

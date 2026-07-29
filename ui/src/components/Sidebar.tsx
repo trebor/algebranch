@@ -116,10 +116,14 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
     return (
       <TooltipCard
         eyebrow={session.chapterId ? 'Tutorial Workspace' : 'Workspace'}
-        meta={`${steps} ${steps === 1 ? 'step' : 'steps'}`}
         title={session.name}
         equation={eq}
-        footer={<span>{formatTimestamp(session.timestamp)}</span>}
+        footer={
+          <div className="flex items-center justify-between gap-2 w-full font-sans text-xs">
+            <span>{steps} {steps === 1 ? 'step' : 'steps'}</span>
+            <span className="text-right text-white/60 font-medium">{formatTimestamp(session.timestamp)}</span>
+          </div>
+        }
       />
     );
   };
@@ -201,10 +205,10 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                         }
                         onCloseMobile?.();
                       }}
-                      className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col gap-1.5 cursor-pointer group ${
+                      className={`w-full text-left p-3 flex flex-col gap-1.5 group ${
                         isActive
-                          ? 'border-indigo-500/50 bg-indigo-950/40 text-indigo-200 shadow-[0_0_12px_rgba(99,102,241,0.2)]'
-                          : `border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-[#16142a]/30 hover:bg-[#16142a]/60 text-zinc-300 hover:text-white`
+                          ? THEME_GLASS.RECESSED_CARD_ACTIVE
+                          : THEME_GLASS.RECESSED_CARD
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2 w-full">
@@ -458,7 +462,7 @@ export const LearnPracticeContent: React.FC<LearnPracticeContentProps> = ({
                   }
                   onCloseMobile?.();
                 }}
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-white/10 bg-neutral-900/60 hover:bg-neutral-800/90 hover:border-indigo-500/30 text-white transition-all cursor-pointer group shadow-sm"
+                className={`w-full flex items-center justify-between p-3 ${THEME_GLASS.RECESSED_CARD} group`}
               >
                 <div className="flex items-center gap-2.5">
                   <div className="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 group-hover:bg-indigo-500/20 group-hover:border-indigo-500/30 transition-all">
@@ -532,10 +536,10 @@ export const LearnPracticeContent: React.FC<LearnPracticeContentProps> = ({
                           }
                           onCloseMobile?.();
                         }}
-                        className={`w-full flex flex-col gap-1.5 text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                        className={`w-full flex flex-col gap-1.5 text-left p-3 ${
                           isActive
-                            ? 'border-indigo-500/50 bg-indigo-950/40 text-indigo-200 shadow-[0_0_12px_rgba(99,102,241,0.2)]'
-                            : `border ${THEME_GLASS.PANEL_BORDER_SUBTLE} bg-[#16142a]/30 hover:bg-[#16142a]/60 text-zinc-300 hover:text-white`
+                            ? THEME_GLASS.RECESSED_CARD_ACTIVE
+                            : THEME_GLASS.RECESSED_CARD
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">

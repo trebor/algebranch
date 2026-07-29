@@ -92,7 +92,7 @@ export const TooltipCard: React.FC<TooltipCardProps> = ({
     )}
     {(footer || wikiUrl) && (
       <div className={`${THEME_GLASS.TEXT_MUTED} text-xs flex items-center justify-between gap-4 pt-0.5 border-t ${THEME_GLASS.PANEL_BORDER_SUBTLE} mt-1`}>
-        {footer ? <div>{footer}</div> : <div />}
+        {footer ? <div className="flex-1 min-w-0">{footer}</div> : <div />}
         {wikiUrl && (
           <a
             href={wikiUrl}

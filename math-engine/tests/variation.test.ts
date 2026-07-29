@@ -111,5 +111,22 @@ describe('generateEquationVariation', () => {
       expect(isIntegerPower).toBe(true);
     }
   });
+
+  test('omits 0, 1, and -1 for varied constant values', () => {
+    const input = '2 * x + 5 = 12';
+    for (let seed = 1; seed <= 50; seed++) {
+      const variation = generateEquationVariation(input, { seed, targetVariable: 'x' });
+      const parsed = parseEquation(variation);
+
+      parsed.lhs.traverse((node) => {
+        if (node.type === 'ConstantNode') {
+          const val = (node as any).value;
+          expect(val).not.toBe(0);
+          expect(val).not.toBe(1);
+          expect(val).not.toBe(-1);
+        }
+      });
+    }
+  });
 });
 

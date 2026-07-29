@@ -96,6 +96,7 @@ import {
   unwrapVersioned,
   INITIAL_EQUATION_STRING,
   leftSidebarOpenAtom,
+  sidebarTabAtom,
   rightSidebarOpenAtom,
   feedbackModalOpenAtom,
   feedbackContextAtom,
@@ -319,6 +320,7 @@ export default function Home() {
   // carry-over (#373) lands focus on the restored node in the Interaction tree
   // instead, which is where the user was and strictly better than the control.
   const [leftSidebarOpen, setLeftSidebarOpen] = useAtom(leftSidebarOpenAtom);
+  const [sidebarTab, setSidebarTab] = useAtom(sidebarTabAtom);
   const [rightSidebarOpen, setRightSidebarOpen] = useAtom(rightSidebarOpenAtom);
   
   const [tree, setTree] = useAtom(historyTreeAtom);
@@ -1321,7 +1323,7 @@ export default function Home() {
 
   const cyclePane = (dir: 1 | -1) => {
     const panes = [
-      { id: 'tabs', getEl: () => document.querySelector('[role="tablist"]') as HTMLElement | null, getFocusEl: (parent: HTMLElement) => parent.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement | null || parent.querySelector('[role="tab"]') as HTMLElement | null },
+      { id: 'tabs', getEl: () => (document.querySelector('[role="tablist"][aria-label="Open workspaces"]') || document.querySelector('[role="tablist"]')) as HTMLElement | null, getFocusEl: (parent: HTMLElement) => parent.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement | null || parent.querySelector('[role="tab"]') as HTMLElement | null },
       { id: 'equation', getEl: () => document.getElementById('equation-region'), getFocusEl: (parent: HTMLElement) => parent.querySelector('[role="tree"] [tabindex="0"], [role="treeitem"][tabindex="0"]') as HTMLElement | null || parent.querySelector('[tabindex="0"]') as HTMLElement | null },
       { id: 'history', getEl: () => document.getElementById('history-region'), getFocusEl: (parent: HTMLElement) => parent.querySelector('[role="tree"] [tabindex="0"], [role="treeitem"][tabindex="0"]') as HTMLElement | null || parent.querySelector('[tabindex="0"]') as HTMLElement | null },
       { id: 'library', getEl: () => document.getElementById('library-region'), getFocusEl: (parent: HTMLElement) => parent.querySelector('[role="tree"] [tabindex="0"], [role="treeitem"][tabindex="0"]') as HTMLElement | null || parent.querySelector('[tabindex="0"]') as HTMLElement | null }
@@ -1421,7 +1423,14 @@ export default function Home() {
       if (isMobile) {
         setActiveBottomSheet((prev) => (prev === 'workspace' ? null : 'workspace'));
       } else {
-        setLeftSidebarOpen((prev) => !prev);
+        if (!leftSidebarOpen) {
+          setLeftSidebarOpen(true);
+          setSidebarTab('workspace');
+        } else if (sidebarTab === 'workspace') {
+          setLeftSidebarOpen(false);
+        } else {
+          setSidebarTab('workspace');
+        }
       }
       trackEvent({ action: 'shortcut_toggle_workspace', category: 'keyboard' });
     },
@@ -1430,7 +1439,14 @@ export default function Home() {
       if (isMobile) {
         setActiveBottomSheet((prev) => (prev === 'practice' ? null : 'practice'));
       } else {
-        setLeftSidebarOpen((prev) => !prev);
+        if (!leftSidebarOpen) {
+          setLeftSidebarOpen(true);
+          setSidebarTab('learn');
+        } else if (sidebarTab === 'learn') {
+          setLeftSidebarOpen(false);
+        } else {
+          setSidebarTab('learn');
+        }
       }
       trackEvent({ action: 'shortcut_toggle_practice_sets', category: 'keyboard' });
     },
@@ -1439,7 +1455,14 @@ export default function Home() {
       if (isMobile) {
         setActiveBottomSheet((prev) => (prev === 'library' ? null : 'library'));
       } else {
-        setLeftSidebarOpen((prev) => !prev);
+        if (!leftSidebarOpen) {
+          setLeftSidebarOpen(true);
+          setSidebarTab('library');
+        } else if (sidebarTab === 'library') {
+          setLeftSidebarOpen(false);
+        } else {
+          setSidebarTab('library');
+        }
       }
       trackEvent({ action: 'shortcut_toggle_library', category: 'keyboard' });
     },

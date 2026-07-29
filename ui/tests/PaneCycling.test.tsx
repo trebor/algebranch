@@ -6,7 +6,7 @@ import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { Provider, createStore } from 'jotai';
 import React from 'react';
 import Home from '@/app/page';
-import { leftSidebarOpenAtom, rightSidebarSizeAtom, rawTabsAtom, rawActiveTabIdAtom, type WorkspaceTab } from '@/store/equation';
+import { leftSidebarOpenAtom, sidebarTabAtom, rightSidebarSizeAtom, rawTabsAtom, rawActiveTabIdAtom, type WorkspaceTab } from '@/store/equation';
 import { parseEquation } from 'math-engine-client';
 
 function makeStore() {
@@ -40,6 +40,7 @@ describe('Pane Cycling shortcut (F6 / Shift+F6)', () => {
     const store = makeStore();
     // Open library and history sidebars so they are visible
     store.set(leftSidebarOpenAtom, true);
+    store.set(sidebarTabAtom, 'library');
     store.set(rightSidebarSizeAtom, 'normal');
 
     render(
@@ -53,7 +54,7 @@ describe('Pane Cycling shortcut (F6 / Shift+F6)', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
-    const tabsList = screen.getByRole('tablist');
+    const tabsList = screen.getByRole('tablist', { name: /open workspaces/i });
     const equationPanel = screen.getByRole('tabpanel', { name: /workspace: w/i });
     const historyRegion = document.getElementById('history-region');
     const libraryRegion = document.getElementById('library-region');

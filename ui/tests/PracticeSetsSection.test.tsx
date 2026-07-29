@@ -3,7 +3,7 @@
 // Copyright (C) 2026 Robert Harris
 
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, createStore } from 'jotai';
 import { SHORTCUT_CATALOG } from '@/constants/shortcutCatalog';
@@ -37,21 +37,11 @@ describe('Learn & Practice Section (#550)', () => {
     expect(screen.getByText('Interactive Tutorials')).toBeInTheDocument();
     expect(screen.getByText('Practice Sets')).toBeInTheDocument();
 
-    // Collapsed initially, so Linear Equations item is not shown yet
-    expect(screen.queryByText('Linear Equations')).not.toBeInTheDocument();
-
-    // Click Practice Sets button to expand
-    const practiceSetsBtn = screen.getByText('Practice Sets').closest('button');
-    expect(practiceSetsBtn).not.toBeNull();
-    if (practiceSetsBtn) {
-      fireEvent.click(practiceSetsBtn);
-    }
-
-    // Now Linear Equations item is revealed
+    // Practice Sets are displayed directly in the scrollable list
     expect(screen.getByText('Linear Equations')).toBeInTheDocument();
   });
 
-  it('renders Sidebar containing Learn & Practice section between Workspace and Library', () => {
+  it('renders Sidebar containing Learn and Library tabs', () => {
     render(
       <Provider>
         <Sidebar />
@@ -60,8 +50,8 @@ describe('Learn & Practice Section (#550)', () => {
 
     const sidebar = screen.getByRole('complementary', { name: /workspace and library/i });
     expect(sidebar).toBeInTheDocument();
-    expect(screen.getByText('Learn & Practice')).toBeInTheDocument();
-    expect(screen.getByText('Equation Library')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /learn/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /library/i })).toBeInTheDocument();
   });
 
   it('automatically expands practice sets when an active practice set is set', () => {

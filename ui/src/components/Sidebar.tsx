@@ -234,7 +234,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
 
                       <div className={`text-[0.6875rem] ${THEME_GLASS.TEXT_MUTED} flex items-center justify-between gap-2 font-sans w-full`}>
                         <span>{stepCount} {stepCount === 1 ? 'step' : 'steps'}</span>
-                        <span className="text-right text-white/45 font-medium">{formatTimestamp(session.timestamp)}</span>
+                        <span className="text-right text-white/60 font-medium">{formatTimestamp(session.timestamp)}</span>
                       </div>
                     </div>
                   </Tooltip>
@@ -285,7 +285,7 @@ export const SidebarContent: React.FC<SidebarContentProps> = ({
                 {sessionToDelete.name}
               </span>
               {sessionToDelete.chapterId && (
-                <span className="text-[0.5625rem] font-sans font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
+                <span className="text-[0.5625rem] font-sans font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 border border-indigo-500/30 shrink-0">
                   Tutorial
                 </span>
               )}
@@ -469,7 +469,7 @@ export const LearnPracticeContent: React.FC<LearnPracticeContentProps> = ({
                     <span className="text-[0.625rem] text-white/50 font-medium">Guided Chapters</span>
                   </div>
                 </div>
-                <span className="text-[0.625rem] font-semibold px-2 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 group-hover:text-white transition-colors">
+                <span className="text-[0.625rem] font-semibold px-2 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/30 text-indigo-200 group-hover:text-white transition-colors">
                   Open
                 </span>
               </RovingLibraryButton>

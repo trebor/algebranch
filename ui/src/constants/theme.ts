@@ -224,11 +224,11 @@ export const THEME_GLASS = {
   // more opaque tint than the card so scrolling content stays legible as it
   // passes under the pinned controls. Under the new black step-content card,
   // this blueish footer uses a subtle top border to create a clean divider.
-  TOUR_FOOTER: 'bg-[#110f22]/95 backdrop-blur-md border-t border-white/5',
+  TOUR_FOOTER: 'bg-neutral-950/95 rounded-b-2xl border-t border-white/5',
   // Onboarding walkthrough coach card container: a dark neutral background
   // to match the chapter-menu cards and welcome modal, highlighting the
   // content area.
-  TOUR_CARD: 'w-full shrink-0 border-t border-white/10 bg-neutral-950/95 rounded-b-2xl max-lg:rounded-b-none z-40 overflow-hidden flex flex-col max-h-[38dvh] sm:max-h-none shadow-lg',
+  TOUR_CARD: 'w-full shrink-0 border border-white/10 bg-neutral-950/95 rounded-2xl z-40 overflow-hidden flex flex-col max-h-[38dvh] sm:max-h-none shadow-xl',
   EQUALS_SIGN: 'relative text-[1.2em] font-light font-mono text-indigo-400 select-none px-[0.6em] py-[0.2em] bg-indigo-500/5 border border-indigo-500/10 rounded-[0.4em] shadow-inner shadow-black transition-all z-10',
   EQUALS_SIGN_INTERACTIVE: 'cursor-pointer hover:bg-indigo-500/15 hover:border-indigo-400/35 active:scale-95',
   EQUALS_BADGE: 'absolute -top-2 -right-2 w-5 h-5 rounded-full bg-indigo-600 border border-indigo-400 flex items-center justify-center text-xs leading-none text-white font-bold select-none cursor-pointer shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse z-20',

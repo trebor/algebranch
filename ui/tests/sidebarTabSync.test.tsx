@@ -20,7 +20,7 @@ describe('Sidebar tab synchronization with learning activities', () => {
     const store = createStore();
     expect(store.get(sidebarTabAtom)).toBe('workspace');
 
-    store.set(startOnboardingChapterAtom, 'intro');
+    store.set(startOnboardingChapterAtom, 'linear');
 
     expect(store.get(sidebarTabAtom)).toBe('learn');
   });

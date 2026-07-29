@@ -66,7 +66,7 @@ describe('Learn & Practice Section (#550)', () => {
 
   it('automatically expands practice sets when an active practice set is set', () => {
     const customStore = createStore();
-    customStore.set(startPracticeSetAtom, { setId: 'powers_roots', position: 0 });
+    customStore.set(startPracticeSetAtom, { setId: 'radical_equations', position: 0 });
 
     render(
       <Provider store={customStore}>
@@ -75,6 +75,6 @@ describe('Learn & Practice Section (#550)', () => {
     );
 
     // Should be automatically expanded when activePracticeSet is non-null
-    expect(screen.getByText('Powers & Radical Equations')).toBeInTheDocument();
+    expect(screen.getByText('Radical Equations')).toBeInTheDocument();
   });
 });

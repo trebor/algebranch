@@ -1394,6 +1394,7 @@ export type RadialInitialAction = Extract<
  * ring.
  */
 export const radialInitialActionAtom = atom<RadialInitialAction | null>(null);
+export const radialInputPanelOpenAtom = atom(false);
 
 
 export interface ReducibleActionInfo {
@@ -3501,6 +3502,12 @@ export const onboardingStepIndexAtom = atom<number | null>(null);
 export const onboardingHighlightPathAtom = atom<string | null>(null);
 export const onboardingShowDirectoryAtom = atom<boolean>(false);
 export const onboardingCompletedAtom = atom<boolean>(false);
+export interface OnboardingStepSnapshot {
+  tree: Record<string, HistoryNode>;
+  currentNodeId: string;
+}
+
+export const onboardingStepSnapshotsAtom = atom<Record<number, OnboardingStepSnapshot>>({});
 
 // Onboarding step progress is stored PER CHAPTER (chapterId -> stepIndex) so
 // starting/resuming one chapter never clobbers another chapter's saved step.
@@ -3684,6 +3691,7 @@ export const startOnboardingChapterAtom = atom(
       }
 
       set(currentSessionIdAtom, sessionId);
+      set(onboardingStepSnapshotsAtom, { [stepIdx]: { tree: tabTree, currentNodeId: tabNodeId } });
       set(sourcePathAtom, null);
       set(hoverPathAtom, null);
       set(hoverReducePathAtom, null);
@@ -3793,9 +3801,41 @@ export const setOnboardingStepAtom = atom(
             set(pushEquationAtom, reduceAction.equation, reduceAction.label || prevStep.stepLabel || 'Simplify');
           } else if (subOption) {
             set(pushEquationAtom, subOption.substituted, 'Substitute', describeSubstitution(subOption.variable, subOption.replacement));
+          } else if (prevStep.branchJump) {
+            // Branch jump step: switch to the next unresolved branch
+            const bifState = get(bifurcationStateAtom);
+            if (bifState?.nextUnresolvedBranch) {
+              set(currentNodeIdAtom, bifState.nextUnresolvedBranch.leafNodeId);
+            }
           } else if (prevStep.globalOp) {
             // 3. Global operation applied to both sides
-            set(applyGlobalOpAtom, prevStep.globalOp);
+            const isRadialOpen = get(radialMenuOpenAtom);
+            const isInputPanelOpen = get(radialInputPanelOpenAtom);
+            const needsInputPanel =
+              prevStep.globalOp.type === 'add' ||
+              prevStep.globalOp.type === 'sub' ||
+              prevStep.globalOp.type === 'mul' ||
+              prevStep.globalOp.type === 'div' ||
+              prevStep.globalOp.type === 'power' ||
+              prevStep.globalOp.type === 'root';
+
+            if (!isRadialOpen) {
+              // Click 1 on Next: Open radial flower menu showing petal ring
+              set(radialMenuOpenAtom, true);
+              set(onboardingStepIndexAtom, currentStepIndex);
+              return;
+            } else if (needsInputPanel && !isInputPanelOpen) {
+              // Click 2 on Next: Select highlighted petal to open number choice input panel
+              set(radialInitialActionAtom, prevStep.globalOp.type as RadialInitialAction);
+              set(onboardingStepIndexAtom, currentStepIndex);
+              return;
+            } else {
+              // Click 3 on Next: Submit operation and advance to next tutorial step
+              set(applyGlobalOpAtom, prevStep.globalOp);
+              set(radialMenuOpenAtom, false);
+              set(radialInputPanelOpenAtom, false);
+              set(radialInitialActionAtom, null);
+            }
           } else {
             // 4. Fallback: push the parsed expected equation directly
             const parsed = parseEquation(prevStep.nextEquation);
@@ -3804,22 +3844,30 @@ export const setOnboardingStepAtom = atom(
         }
       }
     }
-    // If going back, only move to parent if equation doesn't already match the previous step's nextEquation
+    // If going back, restore the exact tree snapshot recorded when step nextIndex was reached
     else if (currentStepIndex !== null && nextIndex < currentStepIndex) {
-      const prevStep = nextIndex > 0 ? chapter.steps[nextIndex - 1] : null;
-      const targetEqStr = prevStep ? prevStep.nextEquation : chapter.initialEquation;
-      
-      if (targetEqStr && currentEq) {
-        const currentStr = equationToString(currentEq).replace(/\s+/g, '');
-        const targetStr = targetEqStr.replace(/\s+/g, '');
-        
-        if (currentStr !== targetStr) {
-          const tree = get(historyTreeAtom);
-          const nodeId = get(currentNodeIdAtom);
-          const activeNode = tree[nodeId];
-          if (activeNode?.parentId) {
-            set(currentNodeIdAtom, activeNode.parentId);
+      const snapshots = get(onboardingStepSnapshotsAtom);
+      const snapshot = snapshots[nextIndex];
+
+      if (snapshot) {
+        set(historyTreeAtom, snapshot.tree);
+        set(currentNodeIdAtom, snapshot.currentNodeId);
+
+        // Truncate snapshots map for indices > nextIndex
+        const updatedSnapshots: Record<number, OnboardingStepSnapshot> = {};
+        Object.keys(snapshots).forEach((kStr) => {
+          const k = Number(kStr);
+          if (k <= nextIndex) {
+            updatedSnapshots[k] = snapshots[k];
           }
+        });
+        set(onboardingStepSnapshotsAtom, updatedSnapshots);
+      } else {
+        const tree = get(historyTreeAtom);
+        const nodeId = get(currentNodeIdAtom);
+        const activeNode = tree[nodeId];
+        if (activeNode?.parentId) {
+          set(currentNodeIdAtom, activeNode.parentId);
         }
       }
     }
@@ -3833,6 +3881,15 @@ export const setOnboardingStepAtom = atom(
       writeOnboardingStep(chapterId, nextIndex);
       safeLocalStorage.setItem('algebranch_onboarding_active', 'true');
     }
+
+    // Record step snapshot for nextIndex
+    const activeTree = get(historyTreeAtom);
+    const activeNodeId = get(currentNodeIdAtom);
+    const updatedSnapshots = {
+      ...get(onboardingStepSnapshotsAtom),
+      [nextIndex]: { tree: activeTree, currentNodeId: activeNodeId },
+    };
+    set(onboardingStepSnapshotsAtom, updatedSnapshots);
 
     // Update selection based on next step's selectPath
     const nextStep = chapter.steps[nextIndex];

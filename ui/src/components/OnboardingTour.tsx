@@ -72,6 +72,36 @@ export const OnboardingTour: React.FC = () => {
   
   const [showPrompt, setShowPrompt] = useState(false);
 
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const [anchorRect, setAnchorRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  React.useLayoutEffect(() => {
+    if (!anchorRef.current || !chapterId || stepIndex === null) {
+      setAnchorRect(null);
+      return;
+    }
+
+    const updateRect = () => {
+      if (anchorRef.current) {
+        const r = anchorRef.current.getBoundingClientRect();
+        setAnchorRect({ top: r.top, left: r.left, width: r.width });
+      }
+    };
+
+    updateRect();
+
+    const observer = new ResizeObserver(updateRect);
+    observer.observe(anchorRef.current);
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect, true);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect, true);
+    };
+  }, [chapterId, stepIndex]);
+
   // Load saved states (from localStorage, an external store) on client mount.
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -556,142 +586,170 @@ export const OnboardingTour: React.FC = () => {
     );
   }
 
-  // Render the step walkthrough helper card
+  // Render the step walkthrough helper card:
+  // Uses a dual-element anchor/portal pattern. An in-flow invisible spacer reserves height
+  // in page.tsx's flexbox column (centering the equation in the subtracted height below).
+  // The visible interactive card is portaled to document.body at z-[60] (positioned over the spacer)
+  // so it sits above all modal backdrops and radial menu overlays.
   if (activeChapter && activeStep !== null && stepIndex !== null) {
-    return (
-      <motion.div
-        initial={{ height: 0, opacity: 0 }}
-        animate={{ height: 'auto', opacity: 1 }}
-        transition={THEME_ANIMATIONS.LAYOUT_TRANSITION}
-        className={THEME_GLASS.TOUR_CARD}
-      >
-        <div className="w-full flex flex-col gap-2.5 min-h-0 flex-1 pt-3 sm:pt-4 pb-0">
-          {/* Header */}
-          <div className="max-w-2xl mx-auto w-full flex items-center justify-between px-4 sm:px-6">
-            <button
-              onClick={handleAllChapters}
-              className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer group/title"
-              aria-label="Chapters menu"
-            >
-              <BookOpen size={13} className="group-hover/title:scale-110 transition-transform" />
-              <span className="text-xs font-bold tracking-wider hover:underline">{activeChapter.title}</span>
-            </button>
-            <button
-              onClick={() => setStep(null)}
-              className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${THEME_GLASS.PANEL_BORDER} ${THEME_GLASS.TEXT_MUTED_BRIGHT} hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-1`}
-              aria-label="Exit tutorial"
-            >
-              <span>Exit Tutorial</span>
-              <X size={11} className="shrink-0" />
-            </button>
-          </div>
+    const cardContent = (
+      <div className="w-full flex flex-col gap-2.5 min-h-0 flex-1 pt-3 sm:pt-4 pb-0">
+        {/* Header */}
+        <div className="max-w-2xl mx-auto w-full flex items-center justify-between px-4 sm:px-6">
+          <button
+            onClick={handleAllChapters}
+            className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer group/title"
+            aria-label="Chapters menu"
+          >
+            <BookOpen size={13} className="group-hover/title:scale-110 transition-transform" />
+            <span className="text-xs font-bold tracking-wider hover:underline">{activeChapter.title}</span>
+          </button>
+          <button
+            onClick={() => setStep(null)}
+            className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${THEME_GLASS.PANEL_BORDER} ${THEME_GLASS.TEXT_MUTED_BRIGHT} hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-1`}
+            aria-label="Exit tutorial"
+          >
+            <span>Exit Tutorial</span>
+            <X size={11} className="shrink-0" />
+          </button>
+        </div>
 
-          {/* Scrollable body: on a capped mobile sheet the title/description/legend
-              scroll within the card so the pinned header + step controls stay put
-              and the equation canvas keeps its guaranteed minimum height. */}
-          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden w-full">
-            <div className="max-w-2xl mx-auto w-full flex flex-col gap-2.5 px-4 sm:px-6 pb-3 min-h-0">
-              {/* Title & Desc */}
-              <div className="flex flex-col gap-1">
-                <h4 className="text-xs font-bold text-white">{activeStep.title}</h4>
-                <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed mt-0.5`}>
-                  {activeStep.description}
-                </p>
-              </div>
-
-              {/* Node-kind color legend (steps with legend: 'nodeTypes') */}
-              {activeStep.legend === 'nodeTypes' && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
-                  <div className={THEME_GLASS.TUTORIAL_SWATCH}>
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-sky-300 font-serif italic font-medium text-xs`}>x</span>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Variable</span>
-                      <span className="text-sky-300/80 text-[0.4375rem] leading-none">The unknown to find</span>
-                    </div>
-                  </div>
-
-                  <div className={THEME_GLASS.TUTORIAL_SWATCH}>
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-yellow-400/90 font-semibold text-xs`}>3</span>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Constant</span>
-                      <span className="text-yellow-400/85 text-[0.4375rem] leading-none">A known number</span>
-                    </div>
-                  </div>
-
-                  <div className={THEME_GLASS.TUTORIAL_SWATCH}>
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-white/90 font-bold text-xs`}>+</span>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Operator</span>
-                      <span className={`${THEME_GLASS.TEXT_MUTED} text-[0.4375rem] leading-none`}>Combines terms</span>
-                    </div>
-                  </div>
-
-                  <div className={THEME_GLASS.TUTORIAL_SWATCH_IMMOBILE}>
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_LOCKED} text-xs`}>4</span>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-zinc-400 text-[0.5625rem] leading-tight font-medium">Immobile</span>
-                      <span className="text-zinc-500/80 text-[0.4375rem] leading-none font-sans">Locked in place</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Selection-state color legend (steps with legend: 'sourceTarget') */}
-              {activeStep.legend === 'sourceTarget' && (
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <div className={THEME_GLASS.TUTORIAL_SWATCH}>
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_SOURCE} text-xs`}>4</span>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Source</span>
-                      <span className="text-indigo-300/80 text-[0.4375rem] leading-none">The term you picked up</span>
-                    </div>
-                  </div>
-
-                  <div className={THEME_GLASS.TUTORIAL_SWATCH}>
-                    <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_TARGET} text-xs`}>11</span>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Target</span>
-                      <span className="text-emerald-300/80 text-[0.4375rem] leading-none">Tap to drop it there</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+        {/* Scrollable body */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden w-full">
+          <div className="max-w-2xl mx-auto w-full flex flex-col gap-2.5 px-4 sm:px-6 pb-3 min-h-0">
+            {/* Title & Desc */}
+            <div className="flex flex-col gap-1">
+              <h4 className="text-xs font-bold text-white">{activeStep.title}</h4>
+              <p className={`text-xs ${THEME_GLASS.TEXT_MUTED_BRIGHT} leading-relaxed mt-0.5`}>
+                {activeStep.description}
+              </p>
             </div>
 
-          </div>
+            {/* Node-kind color legend */}
+            {activeStep.legend === 'nodeTypes' && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+                <div className={THEME_GLASS.TUTORIAL_SWATCH}>
+                  <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-sky-300 font-serif italic font-medium text-xs`}>x</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Variable</span>
+                    <span className="text-sky-300/80 text-[0.4375rem] leading-none">The unknown to find</span>
+                  </div>
+                </div>
 
-          {/* Controls — footer pinned to the bottom of the card, placed outside the
-              scroll container so it goes true full-bleed regardless of scrollbars. */}
-          <div className={`w-full shrink-0 ${THEME_GLASS.TOUR_FOOTER}`}>
-            <div className="max-w-2xl mx-auto w-full px-4 py-3 sm:px-6 flex items-center justify-between">
-              <span className={`text-xs ${THEME_GLASS.TEXT_MUTED} font-bold`}>
-                Step {stepIndex + 1} of {activeChapter.steps.length}
-              </span>
+                <div className={THEME_GLASS.TUTORIAL_SWATCH}>
+                  <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-yellow-400/90 font-semibold text-xs`}>3</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Constant</span>
+                    <span className="text-yellow-400/85 text-[0.4375rem] leading-none">A known number</span>
+                  </div>
+                </div>
 
-              <div className="flex items-center gap-2">
-                {stepIndex > 0 && (
-                  <button
-                    onClick={() => setStep(stepIndex - 1)}
-                    className={`h-7 px-2.5 text-xs font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_SECONDARY}`}
-                  >
-                    <ArrowLeft size={10} />
-                    <span>Back</span>
-                  </button>
-                )}
+                <div className={THEME_GLASS.TUTORIAL_SWATCH}>
+                  <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_MOVABLE} text-white/90 font-bold text-xs`}>+</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Operator</span>
+                    <span className={`${THEME_GLASS.TEXT_MUTED} text-[0.4375rem] leading-none`}>Combines terms</span>
+                  </div>
+                </div>
 
-                <button
-                  ref={stepNextButtonRef}
-                  onClick={() => setStep(isLastStep ? null : stepIndex + 1)}
-                  className={`h-7 px-3 text-xs font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_PRIMARY}`}
-                >
-                  <span>{isLastStep ? 'Finish' : 'Next'}</span>
-                  {isLastStep ? <CheckCircle2 size={10} /> : <ArrowRight size={10} />}
-                </button>
+                <div className={THEME_GLASS.TUTORIAL_SWATCH_IMMOBILE}>
+                  <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_LOCKED} text-xs`}>4</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-zinc-400 text-[0.5625rem] leading-tight font-medium">Immobile</span>
+                    <span className="text-zinc-500/80 text-[0.4375rem] leading-none font-sans">Locked in place</span>
+                  </div>
+                </div>
               </div>
+            )}
+
+            {/* Selection-state color legend */}
+            {activeStep.legend === 'sourceTarget' && (
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <div className={THEME_GLASS.TUTORIAL_SWATCH}>
+                  <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_SOURCE} text-xs`}>4</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Source</span>
+                    <span className="text-indigo-300/80 text-[0.4375rem] leading-none">The term you picked up</span>
+                  </div>
+                </div>
+
+                <div className={THEME_GLASS.TUTORIAL_SWATCH}>
+                  <span className={`w-5 h-5 flex items-center justify-center rounded border ${SWATCH_TARGET} text-xs`}>11</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-white/90 text-[0.5625rem] leading-tight">Target</span>
+                    <span className="text-emerald-300/80 text-[0.4375rem] leading-none">Tap to drop it there</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className={`w-full shrink-0 ${THEME_GLASS.TOUR_FOOTER}`}>
+          <div className="max-w-2xl mx-auto w-full px-4 py-3 sm:px-6 flex items-center justify-between">
+            <span className={`text-xs ${THEME_GLASS.TEXT_MUTED} font-bold`}>
+              Step {stepIndex + 1} of {activeChapter.steps.length}
+            </span>
+
+            <div className="flex items-center gap-2">
+              {stepIndex > 0 && (
+                <button
+                  onClick={() => setStep(stepIndex - 1)}
+                  className={`h-7 px-2.5 text-xs font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_SECONDARY}`}
+                >
+                  <ArrowLeft size={10} />
+                  <span>Back</span>
+                </button>
+              )}
+
+              <button
+                ref={stepNextButtonRef}
+                onClick={() => setStep(isLastStep ? null : stepIndex + 1)}
+                className={`h-7 px-3 text-xs font-bold flex items-center gap-1 ${THEME_GLASS.BUTTON_PRIMARY}`}
+              >
+                <span>{isLastStep ? 'Finish' : 'Next'}</span>
+                {isLastStep ? <CheckCircle2 size={10} /> : <ArrowRight size={10} />}
+              </button>
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
+    );
+
+    return (
+      <>
+        {/* 1. In-flow layout spacer: reserves physical height in page.tsx flexbox column */}
+        <div ref={anchorRef} className="w-full shrink-0 px-3 sm:px-4 py-3 max-w-4xl mx-auto opacity-0 pointer-events-none" aria-hidden="true">
+          <div className={`${THEME_GLASS.TOUR_CARD} w-full`}>
+            {cardContent}
+          </div>
+        </div>
+
+        {/* 2. Visible Interactive Card Overlay: portaled to document.body at z-[60] */}
+        {mounted && createPortal(
+          <div
+            className="fixed z-[60] pointer-events-auto"
+            style={{
+              top: anchorRect ? `${anchorRect.top}px` : undefined,
+              left: anchorRect ? `${anchorRect.left}px` : undefined,
+              width: anchorRect ? `${anchorRect.width}px` : undefined,
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={THEME_ANIMATIONS.LAYOUT_TRANSITION}
+              className="w-full rounded-2xl overflow-hidden shadow-2xl"
+            >
+              <div className={`${THEME_GLASS.TOUR_CARD} w-full`}>
+                {cardContent}
+              </div>
+            </motion.div>
+          </div>,
+          document.body
+        )}
+      </>
     );
   }
 

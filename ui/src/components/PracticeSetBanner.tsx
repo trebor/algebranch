@@ -27,9 +27,10 @@ import { EquationBanner } from './EquationBanner';
 const getChapterForPracticeSet = (setId: string): string | null => {
   const map: Record<string, string> = {
     linear_basics: 'linear',
-    powers_roots: 'complex',
-    identities_factoring: 'identities',
     global_rationals: 'global',
+    radical_equations: 'radicals',
+    solution_branching: 'branching',
+    identities_factoring: 'identities',
     substitution_systems: 'substitution',
   };
   return map[setId] ?? null;

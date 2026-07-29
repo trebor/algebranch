@@ -1850,9 +1850,12 @@ export default function Home() {
               each re-reserving it with diverging hardcoded values (#251). Skipped
               during the tour, when the nav is hidden and the coach card docks
               directly below. */}
-          <div className={`flex-1 flex flex-col h-full min-h-0 relative ${THEME_GLASS.PANEL} overflow-hidden max-lg:border-x-0 max-lg:rounded-none ${
+          <div className={`flex-1 flex flex-col h-full min-h-0 relative ${onboardingChapterId ? 'z-50' : ''} ${THEME_GLASS.PANEL} overflow-hidden max-lg:border-x-0 max-lg:rounded-none ${
             onboardingChapterId ? '' : 'max-lg:pb-[calc(var(--bottom-nav-clearance)+var(--facts-gap))]'
           }`}>
+
+            {/* Top Tutorial Strip Banner when Onboarding is active */}
+            <OnboardingTour />
 
             {/* 1. Active Derivation Workspace */}
             <div
@@ -2220,7 +2223,7 @@ export default function Home() {
                           </div>,
                           document.body
                         )}
-                        {((!!onboardingChapterId && onboardingGlobalOp) || (hintActive && (hintSpotlightPath === 'equals' || hintSpotlightPath === '=') && hintLevel >= 2)) && (
+                        {(!radialMenuOpen && ((!!onboardingChapterId && onboardingGlobalOp) || (hintActive && (hintSpotlightPath === 'equals' || hintSpotlightPath === '=') && hintLevel >= 2))) && (
                           <span aria-hidden="true" className={`-inset-[0.4em] ${THEME_GLASS.SPOTLIGHT_CIRCLE}`} />
                         )}
 
@@ -2295,7 +2298,6 @@ export default function Home() {
               </div>
             )}
 
-            <OnboardingTour />
             <DragNudgeHint />
             <SharedWorkspaceBanner />
             <StorageDegradedBanner />

@@ -116,7 +116,7 @@ export const THEME_GLASS = {
   // List items & groups
   LIST_ITEM_ACTIVE: 'text-indigo-300 bg-indigo-600/5 font-semibold',
   LIST_ITEM_HOVER: 'hover:bg-indigo-600/20 transition-colors',
-  ACTIVE_BADGE: 'bg-indigo-500/20 text-indigo-400 rounded-full border border-indigo-500/30',
+  ACTIVE_BADGE: 'bg-indigo-500/20 text-indigo-200 rounded-full border border-indigo-500/30',
   BADGE_MUTED: 'text-white/55 bg-white/5 rounded-full border border-white/5',
   // Keycap chip for the keyboard-shortcuts cheat-sheet (#126).
   SHORTCUT_KEYCAP: 'inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-lg border border-white/15 bg-white/5 text-white/90 text-xs font-semibold shadow-sm select-none',
@@ -191,7 +191,7 @@ export const THEME_GLASS = {
   TUTORIAL_BADGE_SUCCESS: 'p-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
   TUTORIAL_BADGE_ACTIVE: 'p-1 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 animate-pulse',
   TUTORIAL_BADGE_MUTED: 'p-1 rounded-md bg-white/5 text-white/20 border border-white/10',
-  TUTORIAL_RESUME_LABEL: 'text-[0.5rem] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 tracking-wider',
+  TUTORIAL_RESUME_LABEL: 'text-[0.5rem] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-200 border border-indigo-500/30 tracking-wider',
   TUTORIAL_CHAPTER_BUTTON: 'w-full text-left p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 active:scale-[0.99] transition-all flex items-center justify-between gap-3 cursor-pointer group',
   TUTORIAL_CELEBRATION_PANEL: 'shadow-[0_0_40px_rgba(52,211,153,0.2)] border border-emerald-500/20',
   TUTORIAL_CELEBRATION_TINT: 'p-3.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_25px_rgba(52,211,153,0.35)]',

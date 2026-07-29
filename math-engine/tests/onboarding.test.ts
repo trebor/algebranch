@@ -10,7 +10,8 @@ import {
   getNodeByPath,
   equationToString,
   Equation,
-  SubstitutionFact
+  SubstitutionFact,
+  getBifurcationCases,
 } from '../src';
 
 const strip = (s: string) => s.replace(/\s+/g, '');
@@ -18,7 +19,8 @@ const strip = (s: string) => s.replace(/\s+/g, '');
 /**
  * Derives the equation a step is expected to produce, using the exact same
  * mechanisms the live UI offers: reduce/distribute/identity handles, valid
- * transposition targets for the step's selection, or a global operation.
+ * transposition targets for the step's selection, a global operation, or
+ * jumping to a bifurcated sibling branch.
  * Returns null (with diagnostics collected) when the transition is unreachable.
  */
 const deriveStep = (
@@ -26,9 +28,14 @@ const deriveStep = (
   step: OnboardingStep,
   pendingTargets: Record<string, Equation> | null,
   facts: SubstitutionFact[],
-  diagnostics: string[]
+  diagnostics: string[],
+  bifurcatedBranches: Equation[]
 ): Equation | null => {
   const nextStr = strip(step.nextEquation);
+
+  // 0. A branch jump to a bifurcated sibling branch
+  const branchHit = bifurcatedBranches.find(b => strip(equationToString(b)) === nextStr);
+  if (branchHit) return branchHit;
 
   // 1. A reduce handle on the current state
   const reductions = getReducibleOptions(eq);
@@ -66,6 +73,14 @@ const deriveStep = (
   if (step.globalOp) {
     const { type, term, power } = step.globalOp;
     const effectivePower = power ?? 2;
+
+    const bifurcationCases = getBifurcationCases(eq, step.globalOp);
+    if (bifurcationCases && bifurcationCases.length > 0) {
+      bifurcationCases.slice(1).forEach(c => bifurcatedBranches.push(c.equation));
+      const case1 = bifurcationCases[0].equation;
+      if (strip(equationToString(case1)) === nextStr) return case1;
+    }
+
     let result: Equation | null = null;
 
     if (type === 'swap') {
@@ -111,6 +126,7 @@ describe('Onboarding chapter derivation chains', () => {
       test('every step is reachable through real engine mechanisms', () => {
         let eq = parseEquation(chapter.initialEquation);
         let pendingTargets: Record<string, Equation> | null = null;
+        const bifurcatedBranches: Equation[] = [];
 
         // Chapter facts must each parse to a valid isolated definition (#3)
         const facts: SubstitutionFact[] = (chapter.facts ?? []).map((f) => {
@@ -149,7 +165,7 @@ describe('Onboarding chapter derivation chains', () => {
           }
 
           const diagnostics: string[] = [];
-          const next = deriveStep(eq, step, pendingTargets, facts, diagnostics);
+          const next = deriveStep(eq, step, pendingTargets, facts, diagnostics, bifurcatedBranches);
           expect(
             next
               ? true

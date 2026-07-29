@@ -551,11 +551,11 @@ export const THEME_GLASS = {
   CHOOSER_OPTION_INFO_ICON: 'shrink-0',
 
   // --- RadialMenu specific ---
-  RADIAL_CENTER: 'w-14 h-14 rounded-full bg-indigo-600/30 border-2 border-indigo-400/50 backdrop-blur-xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)] pointer-events-auto cursor-pointer select-none z-10',
-  RADIAL_PETAL: 'w-12 h-12 rounded-full backdrop-blur-xl bg-neutral-900/80 border border-white/15 shadow-lg shadow-black/40 flex items-center justify-center pointer-events-auto select-none transition-colors',
-  RADIAL_PETAL_HOVER: 'cursor-pointer hover:bg-white/10 hover:border-white/30 hover:scale-110 active:scale-95',
+  RADIAL_CENTER: 'w-14 h-14 rounded-full bg-indigo-600 border-2 border-indigo-400 flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.6)] pointer-events-auto cursor-pointer select-none z-10',
+  RADIAL_PETAL: 'w-12 h-12 rounded-full bg-neutral-900 border border-white/15 shadow-lg shadow-black/40 flex items-center justify-center pointer-events-auto select-none transition-colors',
+  RADIAL_PETAL_HOVER: 'cursor-pointer hover:bg-neutral-800 hover:border-white/30 hover:scale-110 active:scale-95',
   RADIAL_PETAL_LOCKED: 'cursor-default',
-  RADIAL_INPUT_PANEL: 'flex items-center gap-2 bg-neutral-950/95 backdrop-blur-xl border border-white/15 rounded-xl px-3 py-2 shadow-2xl shadow-black/60',
+  RADIAL_INPUT_PANEL: 'flex items-center gap-2 bg-neutral-950 border border-white/15 rounded-xl px-3 py-2 shadow-2xl shadow-black/60',
   SPINNER_BOX: 'relative flex items-center gap-3 bg-neutral-900 border border-white/10 rounded-lg px-2 py-1',
   SPINNER_BTN: 'w-6 h-6 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all cursor-pointer',
   FIELD_INPUT: 'bg-neutral-900 border border-white/10 text-white placeholder-white/30 focus:outline-none transition-all font-mono rounded-lg',

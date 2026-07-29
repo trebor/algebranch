@@ -11,6 +11,7 @@ import {
   swapSidesAtom,
   radialMenuOpenAtom,
   radialInitialActionAtom,
+  radialInputPanelOpenAtom,
   onboardingChapterIdAtom,
   onboardingGlobalOpAtom,
   settingsAtom,
@@ -83,6 +84,7 @@ interface RadialMenuProps {
 export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
   const [isOpen, setIsOpen] = useAtom(radialMenuOpenAtom);
   const [initialAction, setInitialAction] = useAtom(radialInitialActionAtom);
+  const setIsInputPanelOpen = useSetAtom(radialInputPanelOpenAtom);
   const applyGlobalOp = useSetAtom(applyGlobalOpAtom);
   const swapSides = useSetAtom(swapSidesAtom);
   const isTourActive = !!useAtomValue(onboardingChapterIdAtom);
@@ -113,6 +115,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
     setTermValue('');
     setErrorStr(null);
     setInitialAction(null);
+    setIsInputPanelOpen(false);
   };
 
   const containerRef = useFocusTrap<HTMLDivElement>({
@@ -139,23 +142,48 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
   }, [isOpen, anchorRef]);
 
 
-  // Hotkey path (#322): when armed via radialInitialActionAtom, skip the petal
-  // ring and open straight into that op's input panel — the same state a petal
-  // click would set. Consume the atom so a later bare-`=` returns to the ring.
-  // Suppressed during the tour, which drives its own petal. This syncs internal
-  // panel state to an external open-intent trigger (the keypress), the
-  // documented legitimate use for setState-in-effect.
+  // Reset panel state whenever the menu closes so subsequent menu opens start cleanly at the petal ring
   React.useEffect(() => {
-    if (!isOpen || !initialAction || isTourActive) return;
+    if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTermInputAction(null);
+      setTermValue('');
+      setErrorStr(null);
+      setIsInputPanelOpen(false);
+    }
+  }, [isOpen, setIsInputPanelOpen]);
+
+  // Hotkey / Onboarding path: when armed via radialInitialActionAtom, open
+  // straight into that op's input panel with preset values.
+  React.useEffect(() => {
+    if (!isOpen || !initialAction) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTermInputAction(
       initialAction === 'power' || initialAction === 'root'
-        ? { type: initialAction, power: 2 }
+        ? { type: initialAction, power: isTourActive && tourGlobalOp ? tourGlobalOp.power ?? 2 : 2 }
         : { type: initialAction },
     );
-    if (initialAction === 'power' || initialAction === 'root') setSpinnerValue(2);
+    setIsInputPanelOpen(true);
+    if (initialAction === 'power' || initialAction === 'root') {
+      setSpinnerValue(isTourActive && tourGlobalOp ? tourGlobalOp.power ?? 2 : 2);
+    } else if (isTourActive && tourGlobalOp?.term) {
+      setTermValue(tourGlobalOp.term);
+    }
     setInitialAction(null);
-  }, [isOpen, initialAction, isTourActive, setInitialAction]);
+  }, [isOpen, initialAction, isTourActive, tourGlobalOp, setInitialAction, setIsInputPanelOpen]);
+
+  // Sync term and power values dynamically from the active tutorial step
+  React.useEffect(() => {
+    if (isOpen && isTourActive && tourGlobalOp) {
+      if (tourGlobalOp.term !== undefined) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setTermValue(tourGlobalOp.term);
+      }
+      if (tourGlobalOp.power !== undefined) {
+        setSpinnerValue(tourGlobalOp.power);
+      }
+    }
+  }, [isOpen, isTourActive, tourGlobalOp]);
 
   // Close on Escape
   React.useEffect(() => {
@@ -167,11 +195,12 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
         setTermValue('');
         setErrorStr(null);
         setInitialAction(null);
+        setIsInputPanelOpen(false);
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [isOpen, setIsOpen, setInitialAction]);
+  }, [isOpen, setIsOpen, setInitialAction, setIsInputPanelOpen]);
 
   // Focus term input or spinner controls when they appear (not during the tour —
   // the value is locked, and focusing would pop the keyboard on mobile for nothing)
@@ -207,11 +236,9 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
   const tourExpectedPower = tourGlobalOp?.power ?? 2;
   const tourInputSatisfied = !isTourActive
     ? true
-    : !tourGlobalOp
-      ? false
-      : termInputAction?.type === 'power' || termInputAction?.type === 'root'
+    : tourGlobalOp?.type === 'power' || tourGlobalOp?.type === 'square' || tourGlobalOp?.type === 'root' || tourGlobalOp?.type === 'sqrt'
         ? spinnerValue === tourExpectedPower
-        : termValue.trim() === (tourGlobalOp.term ?? '');
+        : termValue.trim() === (tourGlobalOp?.term ?? '');
 
   const handlePetalClick = (petal: RadialPetal) => {
     const { action } = petal;
@@ -222,6 +249,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
       swapSides();
       trackEvent({ action: 'radial_swap_sides', category: 'operations' });
       setIsOpen(false);
+      setIsInputPanelOpen(false);
       return;
     }
 
@@ -235,6 +263,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
       action.type === 'root'
     ) {
       setTermInputAction(action);
+      setIsInputPanelOpen(true);
       // Tour steps arrive with their parameter preset (and locked in the UI)
       if (action.type === 'power' || action.type === 'root') {
         setSpinnerValue(isTourActive && tourGlobalOp ? tourGlobalOp.power ?? 2 : 2);
@@ -277,6 +306,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
       setTermValue('');
       setSpinnerValue(2);
       setTermInputAction(null);
+      setIsInputPanelOpen(false);
       setIsOpen(false);
     } catch (err) {
       setErrorStr(err instanceof Error ? err.message : String(err));
@@ -295,7 +325,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            className={`fixed inset-0 z-50 bg-black/40 ${isTourActive ? '' : 'backdrop-blur-sm'}`}
             onClick={handleClose}
           />
 
@@ -342,7 +372,7 @@ export const RadialMenu: React.FC<RadialMenuProps> = ({ anchorRef }) => {
                 >
                   <motion.button
                     initial={{ scale: 0, opacity: 0, x: 0, y: 0 }}
-                    animate={{ scale: 1, opacity: isPetalLocked ? 0.35 : 1, x, y }}
+                    animate={{ scale: 1, opacity: 1, x, y }}
                     exit={{ scale: 0, opacity: 0, x: 0, y: 0 }}
                     transition={{
                       type: 'spring',

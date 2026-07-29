@@ -14,6 +14,8 @@ export interface OnboardingStep {
   selectPath?: string;
   /** When set, the Next button performs this both-sides operation via applyGlobalOpAtom */
   globalOp?: { type: 'square' | 'sqrt' | 'add' | 'sub' | 'mul' | 'div' | 'power' | 'root' | 'swap'; term?: string; power?: number };
+  /** When set, highlights the branch banner CTA button and performs branch jump on Next */
+  branchJump?: boolean;
   /** Renders a color legend on this step's coach card: node kinds, or the source/target selection states */
   legend?: 'nodeTypes' | 'sourceTarget';
 }
@@ -51,13 +53,13 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       {
         title: 'Isolate the Variable',
         description: 'To solve for x, we want to isolate it on the left side of the equals sign. Let us move the constant -4 to the other side. Click on the highlighted 4 to select it.',
-        highlightPath: 'lhs/1', // constant 4 in subtraction
+        highlightPath: 'lhs/1',
         nextEquation: '3 * x - 4 = 11',
         stepLabel: 'Select'
       },
       {
         title: 'Colors Changed!',
-        description: 'Oh look, the colors have changed! The number 4 is now highlighted, and a target destination has appeared on the right. Click the glowing target to transpose it.',
+        description: 'The number 4 is now highlighted, and a target destination has appeared on the right. Click the glowing target to transpose it.',
         highlightPath: null,
         nextEquation: '3 * x = 11 + 4',
         stepLabel: 'Transpose',
@@ -67,14 +69,14 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       {
         title: 'Simplify Constants',
         description: 'Moving -4 across the equals sign flipped its sign to +4. Now, let us simplify the addition 11 + 4 to reduce it to 15.',
-        highlightPath: 'rhs', // sum on the right side
+        highlightPath: 'rhs',
         nextEquation: '3 * x = 15',
         stepLabel: 'Simplify'
       },
       {
         title: 'Divide by Coefficient',
         description: 'We have 3 * x = 15. To get x completely alone, let us move the multiplier 3 to the other side. Click on the highlighted 3 to select it.',
-        highlightPath: 'lhs/0', // constant 3 in multiplication
+        highlightPath: 'lhs/0',
         nextEquation: '3 * x = 15',
         stepLabel: 'Select'
       },
@@ -89,114 +91,13 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       {
         title: 'Final Division',
         description: 'Now, simplify the division 15 / 3 to calculate the final answer.',
-        highlightPath: 'rhs', // division node
+        highlightPath: 'rhs',
         nextEquation: 'x = 5',
         stepLabel: 'Simplify'
       },
       {
         title: 'Equation Solved!',
-        description: 'Awesome job! x = 5. You isolated x and solved the equation step by step using transpositions and simplifications. Remember that variable terms can be transposed across the equals sign just like numbers, terms in parentheses can be distributed using the Expand handle, and like terms can be combined on either side.',
-        highlightPath: null,
-        nextEquation: ''
-      }
-    ]
-  },
-  {
-    id: 'complex',
-    title: '2. Powers & Radical Equations',
-    description: 'Learn how to isolate exponents and radicals using square roots and global power operations.',
-    initialEquation: '9 = x ^ 2',
-    steps: [
-      {
-        title: 'Flip the Equation',
-        description: 'The variable is on the right side. Click the circled = sign and choose the swap operation to flip the equation so x^2 is on the left side.',
-        highlightPath: null,
-        nextEquation: 'x ^ 2 = 9',
-        stepLabel: 'Swap Sides',
-        globalOp: { type: 'swap' }
-      },
-      {
-        title: 'Square Root Both Sides',
-        description: 'To undo the exponent ^2, take the square root of both sides of the equation. Click the circled = sign and choose the square root operation.',
-        highlightPath: null,
-        nextEquation: 'sqrt(x ^ 2) = sqrt(9)',
-        stepLabel: 'Global Sqrt',
-        globalOp: { type: 'sqrt' }
-      },
-      {
-        title: 'Cancel the Root',
-        description: 'The square root undoes the square: the square root of x^2 simplifies to x. Click the handle to simplify the left side.',
-        highlightPath: 'lhs', // sqrt(x^2) node
-        nextEquation: 'x = sqrt(9)',
-        stepLabel: 'Simplify'
-      },
-      {
-        title: 'Calculate the Root',
-        description: 'Now, simplify the square root of 9 to calculate the final root.',
-        highlightPath: 'rhs', // sqrt node
-        nextEquation: 'x = 3',
-        stepLabel: 'Simplify'
-      },
-      {
-        title: 'Solved!',
-        description: 'Perfect! You solved for x by flipping the equation and taking square roots. Remember that taking square roots undoes exponents, while squaring both sides undoes radical square roots. Even roots of variables produce positive and negative solution branches.',
-        highlightPath: null,
-        nextEquation: ''
-      }
-    ]
-  },
-  {
-    id: 'identities',
-    title: '3. Identities & Factoring',
-    description: 'Discover how to factor polynomials, apply conjugate binomial identities, and solve quadratic branches.',
-    initialEquation: '(x - 3) * (x + 3) = 0',
-    steps: [
-      {
-        title: 'Conjugate Binomials',
-        description: 'This expression has the identity form (a - b)(a + b). Let us expand it into a difference of squares: a^2 - b^2.',
-        highlightPath: 'lhs', // multiplication node
-        nextEquation: 'x ^ 2 - 3 ^ 2 = 0',
-        stepLabel: 'Expand Conjugate Binomials'
-      },
-      {
-        title: 'Simplify Exponent',
-        description: 'Let us calculate the value of 3^2, which is 9.',
-        highlightPath: 'lhs/1', // 3^2 node
-        nextEquation: 'x ^ 2 - 9 = 0',
-        stepLabel: 'Simplify'
-      },
-      {
-        title: 'Transpose -9',
-        description: 'Now we are back to a familiar shape. Click on the highlighted 9, then click the glowing target to move it to the right side.',
-        highlightPath: 'lhs/1',
-        nextEquation: 'x ^ 2 = 9',
-        stepLabel: 'Transpose'
-      },
-      {
-        title: 'Square Root Both Sides',
-        description: 'Undo the exponent by taking the square root of both sides. Click the circled = sign and choose the square root operation.',
-        highlightPath: null,
-        nextEquation: 'sqrt(x ^ 2) = sqrt(9)',
-        stepLabel: 'Global Sqrt',
-        globalOp: { type: 'sqrt' }
-      },
-      {
-        title: 'Cancel the Root',
-        description: 'The square root of x^2 simplifies to just x. Click the handle to simplify the left side.',
-        highlightPath: 'lhs', // sqrt(x^2) node
-        nextEquation: 'x = sqrt(9)',
-        stepLabel: 'Simplify'
-      },
-      {
-        title: 'Find final x',
-        description: 'Simplify the square root of 9 to get the positive root.',
-        highlightPath: 'rhs',
-        nextEquation: 'x = 3',
-        stepLabel: 'Simplify'
-      },
-      {
-        title: 'Master Class Complete!',
-        description: 'Fantastic! You expanded the binomial product, calculated the powers, and isolated x successfully. Factoring works as the inverse of expanding, using the teal Factor handle to split polynomials into solvable zero-product branches.',
+        description: 'Awesome job! x = 5. You isolated x and solved the equation step by step using transpositions and simplifications.',
         highlightPath: null,
         nextEquation: ''
       }
@@ -204,13 +105,13 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
   },
   {
     id: 'global',
-    title: '4. Global & Rational Operations',
+    title: '2. Global & Rational Operations',
     description: 'Learn how to apply operations to both sides of the equation simultaneously to clear denominators and negative signs.',
     initialEquation: '-x / 3 = 4',
     steps: [
       {
         title: 'Undo Division Globally',
-        description: 'Since x is divided by 3, cancel it out by multiplying both sides of the equation by 3. We call this a Global Operation.',
+        description: 'Since x is divided by 3, cancel it out by multiplying both sides of the equation by 3. Click the glowing equals sign in the middle of the equation to open the operation menu, then select multiply by 3.',
         highlightPath: null,
         nextEquation: '-x / 3 * 3 = 4 * 3',
         stepLabel: 'Global ⋅ 3',
@@ -232,7 +133,7 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       },
       {
         title: 'Clear Negative Sign Globally',
-        description: 'We have -x = 12. To clear the negative sign on x, multiply both sides of the equation by -1.',
+        description: 'We have -x = 12. To clear the negative sign on x, click the glowing equals sign and select multiply by -1.',
         highlightPath: null,
         nextEquation: '-x * -1 = 12 * -1',
         stepLabel: 'Global ⋅ -1',
@@ -254,7 +155,209 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       },
       {
         title: 'Completed!',
-        description: 'Outstanding! Applying operations globally to both sides is a powerful way to solve complex algebraic equations, clear variable denominators, and combine rational fractions.',
+        description: 'Outstanding! Applying operations globally to both sides is a powerful way to solve complex algebraic equations and clear variable denominators.',
+        highlightPath: null,
+        nextEquation: ''
+      }
+    ]
+  },
+  {
+    id: 'radicals',
+    title: '3. Radical Equations',
+    description: 'Learn how to isolate square roots and square both sides globally to solve radical equations.',
+    initialEquation: 'sqrt(x) + 2 = 5',
+    steps: [
+      {
+        title: 'Isolate the Square Root',
+        description: 'To solve a radical equation, first isolate the square root term. Click on constant 2 to select it for transposition.',
+        highlightPath: 'lhs/1',
+        nextEquation: 'sqrt(x) + 2 = 5',
+        stepLabel: 'Select'
+      },
+      {
+        title: 'Transpose Constant',
+        description: 'Click the glowing target on the right side to transpose the constant 2 across the equals sign.',
+        highlightPath: null,
+        nextEquation: 'sqrt(x) = 5 - 2',
+        stepLabel: 'Transpose',
+        selectPath: 'lhs/1'
+      },
+      {
+        title: 'Simplify Right Side',
+        description: 'Simplify 5 - 2 on the right side to finish isolating the square root.',
+        highlightPath: 'rhs',
+        nextEquation: 'sqrt(x) = 3',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Square Both Sides',
+        description: 'To eliminate the square root, square both sides globally. Click the glowing equals sign and select the square operation.',
+        highlightPath: null,
+        nextEquation: 'sqrt(x) ^ 2 = 3 ^ 2',
+        stepLabel: 'Global Sq',
+        globalOp: { type: 'square' }
+      },
+      {
+        title: 'Cancel the Root',
+        description: 'Squaring a square root cancels the radical. Click the handle on the left side to reduce sqrt(x)^2 to x.',
+        highlightPath: 'lhs',
+        nextEquation: 'x = 3 ^ 2',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Calculate Solution',
+        description: 'Simplify 3^2 on the right side to find the final value of x.',
+        highlightPath: 'rhs',
+        nextEquation: 'x = 9',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Radical Solved!',
+        description: 'Excellent! Squaring both sides cleanly eliminates the square root without splitting into multiple branches.',
+        highlightPath: null,
+        nextEquation: ''
+      }
+    ]
+  },
+  {
+    id: 'branching',
+    title: '4. Solution Branching & Derivation Trees',
+    description: 'Learn how taking square roots produces positive and negative solution branches, and how to navigate derivation trees.',
+    initialEquation: 'x ^ 2 = 9',
+    steps: [
+      {
+        title: 'Even Roots Split Equations',
+        description: 'When solving x^2 = 9, taking square roots yields both positive 3 and negative 3. Algebranch splits these into solution branches in your derivation tree.',
+        highlightPath: null,
+        nextEquation: 'x ^ 2 = 9',
+        stepLabel: 'Start'
+      },
+      {
+        title: 'Take Square Root Globally',
+        description: 'Click the glowing equals sign and select the square root operation to apply square root to both sides.',
+        highlightPath: null,
+        nextEquation: 'sqrt(x ^ 2) = sqrt(9)',
+        stepLabel: 'Global Sqrt',
+        globalOp: { type: 'sqrt' }
+      },
+      {
+        title: 'Simplify Left Side',
+        description: 'You are on Branch 1, the positive root. Click the handle on sqrt(x^2) to reduce it to x.',
+        highlightPath: 'lhs',
+        nextEquation: 'x = sqrt(9)',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Calculate Positive Root',
+        description: 'Simplify sqrt(9) on the right side to find the positive root solution.',
+        highlightPath: 'rhs',
+        nextEquation: 'x = 3',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Jump to Branch 2',
+        description: 'Branch 1 is complete! Look at the bottom branch banner showing 1 unresolved branch remaining. Click the glowing Jump to Branch button in the banner to switch to Branch 2.',
+        highlightPath: null,
+        nextEquation: 'sqrt(x ^ 2) = -sqrt(9)',
+        stepLabel: 'Branch Jump',
+        branchJump: true
+      },
+      {
+        title: 'Simplify Negative Root Left Side',
+        description: 'Now on Branch 2, the negative root. Click the handle on sqrt(x^2) to reduce it to x.',
+        highlightPath: 'lhs',
+        nextEquation: 'x = -sqrt(9)',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Calculate Negative Root',
+        description: 'Simplify -sqrt(9) on the right side to find the negative root solution.',
+        highlightPath: 'rhs',
+        nextEquation: 'x = -3',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'All Solution Paths Complete!',
+        description: 'Awesome job! You solved both branches: x = 3 and x = -3. Remember that taking even roots, solving absolute values, and zero-product factoring all produce solution branches.',
+        highlightPath: null,
+        nextEquation: ''
+      }
+    ]
+  },
+  {
+    id: 'identities',
+    title: '5. Identities & Factoring',
+    description: 'Discover how to factor polynomials, apply conjugate binomial identities, and solve quadratic branches.',
+    initialEquation: '(x - 3) * (x + 3) = 0',
+    steps: [
+      {
+        title: 'Conjugate Binomials',
+        description: 'This expression has the form of conjugate binomials. Let us expand it into a difference of squares.',
+        highlightPath: 'lhs',
+        nextEquation: 'x ^ 2 - 3 ^ 2 = 0',
+        stepLabel: 'Expand Conjugate Binomials'
+      },
+      {
+        title: 'Simplify Exponent',
+        description: 'Calculate the value of 3^2, which is 9.',
+        highlightPath: 'lhs/1',
+        nextEquation: 'x ^ 2 - 9 = 0',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Transpose Constant',
+        description: 'Click on the highlighted 9, then click the glowing target on the right side to move it across the equals sign.',
+        highlightPath: 'lhs/1',
+        nextEquation: 'x ^ 2 = 9',
+        stepLabel: 'Transpose'
+      },
+      {
+        title: 'Square Root Both Sides',
+        description: 'Undo the exponent by taking square roots. Click the glowing equals sign and select the square root operation.',
+        highlightPath: null,
+        nextEquation: 'sqrt(x ^ 2) = sqrt(9)',
+        stepLabel: 'Global Sqrt',
+        globalOp: { type: 'sqrt' }
+      },
+      {
+        title: 'Simplify Root',
+        description: 'The square root of x^2 simplifies to just x. Click the handle to simplify the left side.',
+        highlightPath: 'lhs',
+        nextEquation: 'x = sqrt(9)',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Find Positive Root',
+        description: 'Simplify the square root of 9 on the right side to calculate the positive root.',
+        highlightPath: 'rhs',
+        nextEquation: 'x = 3',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Jump to Negative Branch',
+        description: 'Branch 1 is complete. Look at the bottom branch banner showing 1 unresolved branch remaining. Click the glowing Jump to Branch button in the banner to switch to Branch 2.',
+        highlightPath: null,
+        nextEquation: 'sqrt(x ^ 2) = -sqrt(9)',
+        stepLabel: 'Branch Jump',
+        branchJump: true
+      },
+      {
+        title: 'Simplify Negative Root Left Side',
+        description: 'Now on Branch 2, the negative root. Click the handle on sqrt of x squared to reduce it to x.',
+        highlightPath: 'lhs',
+        nextEquation: 'x = -sqrt(9)',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Find Negative Root',
+        description: 'Simplify negative sqrt of 9 on the right side to calculate the negative root solution.',
+        highlightPath: 'rhs',
+        nextEquation: 'x = -3',
+        stepLabel: 'Simplify'
+      },
+      {
+        title: 'Chapter Complete!',
+        description: 'Fantastic job. You expanded the binomial product, simplified powers, and solved both solution branches: x = 3 and x = -3.',
         highlightPath: null,
         nextEquation: ''
       }
@@ -262,7 +365,7 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
   },
   {
     id: 'substitution',
-    title: '5. Substitution & Systems',
+    title: '6. Substitution & Systems',
     description: 'Connect equations using substitution from another workspace to solve systems of equations.',
     initialEquation: 'y + 4 = 10',
     facts: ['y = 2 * x'],
@@ -277,13 +380,13 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       {
         title: 'Substitute the Known Value',
         description: 'The y carries a violet substitution handle: it can be replaced by what it equals. Click the violet handle on y to swap it for 2 * x.',
-        highlightPath: 'lhs/0', // the y
+        highlightPath: 'lhs/0',
         nextEquation: '2 * x + 4 = 10',
         stepLabel: 'Substitute'
       },
       {
         title: 'Isolate the Variable',
-        description: 'Now the equation only involves x — solve it like Chapter 1. Click on the highlighted 4 to select it.',
+        description: 'Now the equation only involves x. Click on the highlighted 4 to select it.',
         highlightPath: 'lhs/1',
         nextEquation: '2 * x + 4 = 10',
         stepLabel: 'Select'
@@ -327,7 +430,7 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       },
       {
         title: 'Completed!',
-        description: 'Brilliant! You combined two equations by substitution, the key technique for solving systems of equations, working with formulas, and unlocking logarithmic or complex variable paths.',
+        description: 'Brilliant! You combined two equations by substitution, the key technique for solving systems of equations and working with formulas.',
         highlightPath: null,
         nextEquation: ''
       }

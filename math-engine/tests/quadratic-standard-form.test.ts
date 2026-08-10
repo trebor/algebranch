@@ -69,7 +69,8 @@ describe('#90 — surface the =0 normalization as an inspectable step', () => {
       const sf = optionsMatching('x^2 + 5*x + 6 = 0', isStandardFormOpt);
       const formula = optionsMatching('x^2 + 5*x + 6 = 0', isFormulaOpt);
       expect(sf).toHaveLength(0);
-      expect(formula.length).toBeGreaterThanOrEqual(2);
+      expect(formula).toHaveLength(1);
+      expect(formula[0].label).toBe('Apply Quadratic Formula (±)');
     });
 
     it('chains: normalized output then offers the ± formula', () => {
@@ -77,7 +78,8 @@ describe('#90 — surface the =0 normalization as an inspectable step', () => {
       const normalized = sf[0].simplified;
       const reductions = getReducibleOptions(normalized);
       const formula = Object.values(reductions).flat().filter((r) => isFormulaOpt(r.label));
-      expect(formula.length).toBeGreaterThanOrEqual(2);
+      expect(formula).toHaveLength(1);
+      expect(formula[0].label).toBe('Apply Quadratic Formula (±)');
     });
   });
 

@@ -131,8 +131,8 @@ describe('ensureNodeIds — de-aliases shared node objects (#400)', () => {
     return option.simplified;
   };
 
-  test('Quadratic Formula (−) output has no aliased nodes', () => {
-    const simplified = findOption('x^2-4x=0', 'Apply Quadratic Formula (-)');
+  test('Quadratic Formula (±) output has no aliased nodes', () => {
+    const simplified = findOption('x^2-4x=0', 'Apply Quadratic Formula (±)');
     expectNoAliasing(ensureNodeIds(simplified));
   });
 

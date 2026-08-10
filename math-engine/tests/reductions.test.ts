@@ -105,20 +105,19 @@ describe('Algebraic Reducible Options & Labeling Tests', () => {
     expect(equationToString(expandOption!.simplified)).toBe('x = y * y');
   });
 
-  test('should correctly label quadratic solver moves', () => {
+  test('should correctly label quadratic solver moves with unified ± option', () => {
     const eq = parseEquation('x ^ 2 - 5 * x + 6 = 0');
     const reductions = getReducibleOptions(eq);
 
     // Offered on LHS since variable 'x' is on LHS
     expect(reductions['lhs']).toBeDefined();
-    
-    const posOption = reductions['lhs'].find(r => r.label === 'Apply Quadratic Formula (+)');
-    expect(posOption).toBeDefined();
-    expect(equationToString(posOption!.simplified)).toBe('x = (-(-5) + sqrt((-5) ^ 2 - 4 * 1 * 6)) / (2 * 1)');
 
-    const negOption = reductions['lhs'].find(r => r.label === 'Apply Quadratic Formula (-)');
-    expect(negOption).toBeDefined();
-    expect(equationToString(negOption!.simplified)).toBe('x = (-(-5) - sqrt((-5) ^ 2 - 4 * 1 * 6)) / (2 * 1)');
+    const quadOpts = reductions['lhs'].filter(r => r.label && r.label.includes('Quadratic Formula'));
+    expect(quadOpts).toHaveLength(1);
+
+    const quadOption = quadOpts[0];
+    expect(quadOption.label).toBe('Apply Quadratic Formula (±)');
+    expect(equationToString(quadOption.simplified)).toBe('x = (-(-5) + sqrt((-5) ^ 2 - 4 * 1 * 6)) / (2 * 1)');
   });
 
   test('should NOT offer quadratic formula when b=0 (solvable by isolation + square root)', () => {

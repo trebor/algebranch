@@ -74,10 +74,15 @@ describe('Bifurcating Operations', () => {
       expect(cases).toHaveLength(2);
     });
 
-    it('dispatches absolute value equation correctly', () => {
-      const eq = parseEquation('abs(x - 1) = 4');
+    it('dispatches quadratic formula equation correctly', () => {
+      const eq = parseEquation('x^2 - 5*x + 6 = 0');
       const cases = getBifurcationCases(eq);
+      expect(cases).not.toBeNull();
       expect(cases).toHaveLength(2);
+      expect(cases![0].label).toBe('Apply Quadratic Formula (+)');
+      expect(cases![1].label).toBe('Apply Quadratic Formula (-)');
+      expect(equationToString(cases![0].equation)).toBe('x = (-(-5) + sqrt((-5) ^ 2 - 4 * 1 * 6)) / (2 * 1)');
+      expect(equationToString(cases![1].equation)).toBe('x = (-(-5) - sqrt((-5) ^ 2 - 4 * 1 * 6)) / (2 * 1)');
     });
   });
 });

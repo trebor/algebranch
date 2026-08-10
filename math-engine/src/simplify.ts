@@ -2209,14 +2209,7 @@ export const getReducibleOptions = (eq: Equation): Record<string, ReductionOptio
         path: solvePath,
         simplified: sol.pos,
         type: 'identity',
-        label: `Apply Quadratic Formula (+)`
-      });
-
-      rawReductions.push({
-        path: solvePath,
-        simplified: sol.neg,
-        type: 'identity',
-        label: `Apply Quadratic Formula (-)`
+        label: 'Apply Quadratic Formula (±)'
       });
     }
   } catch (err) {

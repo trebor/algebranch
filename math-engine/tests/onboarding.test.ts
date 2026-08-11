@@ -138,6 +138,10 @@ describe('Onboarding chapter derivation chains', () => {
         chapter.steps.forEach((step, i) => {
           const label = `step ${i} ('${step.title}')`;
 
+          // User-facing copy must avoid parentheses per copywriting style standards
+          expect(step.title.includes('(') || step.title.includes(')')).toBe(false);
+          expect(step.description.includes('(') || step.description.includes(')')).toBe(false);
+
           // highlightPath must exist on the equation state the step starts from
           if (step.highlightPath) {
             const node = getNodeByPath(eq, step.highlightPath);
@@ -178,4 +182,13 @@ describe('Onboarding chapter derivation chains', () => {
       });
     });
   });
+
+  test('Chapter 2 explicitly explains transposition relationship with both-sides operations', () => {
+    const chapter2 = ONBOARDING_CHAPTERS.find(c => c.id === 'global');
+    expect(chapter2).toBeDefined();
+    const allText = chapter2!.steps.map(s => s.description).join(' ');
+    expect(allText.toLowerCase()).toContain('shortcut');
+    expect(allText.toLowerCase()).toContain('moving terms');
+  });
 });
+

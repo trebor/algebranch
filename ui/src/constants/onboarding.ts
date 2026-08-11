@@ -106,12 +106,12 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
   {
     id: 'global',
     title: '2. Global & Rational Operations',
-    description: 'Learn how to apply operations to both sides of the equation simultaneously to clear denominators and negative signs.',
+    description: 'Learn how operations applied to both sides form the mathematical foundation for moving terms across the equals sign.',
     initialEquation: '-x / 3 = 4',
     steps: [
       {
-        title: 'Undo Division Globally',
-        description: 'Since x is divided by 3, cancel it out by multiplying both sides of the equation by 3. Click the glowing equals sign in the middle of the equation to open the operation menu, then select multiply by 3.',
+        title: 'Balance Both Sides',
+        description: 'In the first lesson, moving terms across the equals sign was a shortcut for balancing equations. Here is what actually happens: to eliminate division by 3, multiply both sides by 3. Click the glowing equals sign in the middle to open the menu, then select multiply by 3.',
         highlightPath: null,
         nextEquation: '-x / 3 * 3 = 4 * 3',
         stepLabel: 'Global ⋅ 3',
@@ -119,21 +119,21 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       },
       {
         title: 'Cancel the Division',
-        description: 'On the left side, dividing by 3 and multiplying by 3 cancel each other out. Simplify the left-hand side.',
+        description: 'Multiplying by 3 cancels the division on the left side, exactly like moving terms across the equals sign would. Click the handle on the left to simplify it.',
         highlightPath: 'lhs',
         nextEquation: '-x = 4 * 3',
         stepLabel: 'Simplify'
       },
       {
         title: 'Calculate Solution',
-        description: 'Simplify the multiplication 4 * 3 on the right side.',
+        description: 'Simplify the multiplication 4 * 3 on the right side to reduce it to 12.',
         highlightPath: 'rhs',
         nextEquation: '-x = 12',
         stepLabel: 'Simplify'
       },
       {
         title: 'Clear Negative Sign Globally',
-        description: 'We have -x = 12. To clear the negative sign on x, click the glowing equals sign and select multiply by -1.',
+        description: 'We have -x = 12. To isolate positive x, multiply both sides by -1. Click the glowing equals sign and select multiply by -1.',
         highlightPath: null,
         nextEquation: '-x * -1 = 12 * -1',
         stepLabel: 'Global ⋅ -1',
@@ -141,7 +141,7 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       },
       {
         title: 'Simplify Left Side',
-        description: 'On the left side, -x * -1 simplifies to x.',
+        description: 'Multiplying -x by -1 produces positive x on the left side. Click the handle on the left to simplify it.',
         highlightPath: 'lhs',
         nextEquation: 'x = 12 * -1',
         stepLabel: 'Simplify'
@@ -154,8 +154,8 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
         stepLabel: 'Simplify'
       },
       {
-        title: 'Completed!',
-        description: 'Outstanding! Applying operations globally to both sides is a powerful way to solve complex algebraic equations and clear variable denominators.',
+        title: 'Two Ways, One Principle!',
+        description: 'Outstanding! Moving terms across the equals sign is the fast shortcut for single terms, while the equals sign menu applies operations across both sides for clearing denominators, changing signs, and taking roots or powers.',
         highlightPath: null,
         nextEquation: ''
       }
@@ -199,7 +199,7 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       },
       {
         title: 'Cancel the Root',
-        description: 'Squaring a square root cancels the radical. Click the handle on the left side to reduce sqrt(x)^2 to x.',
+        description: 'Squaring a square root cancels the radical. Click the handle on the left side to reduce square root of x squared to x.',
         highlightPath: 'lhs',
         nextEquation: 'x = 3 ^ 2',
         stepLabel: 'Simplify'
@@ -242,14 +242,14 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       },
       {
         title: 'Simplify Left Side',
-        description: 'You are on Branch 1, the positive root. Click the handle on sqrt(x^2) to reduce it to x.',
+        description: 'You are on Branch 1, the positive root. Click the handle on square root of x squared to reduce it to x.',
         highlightPath: 'lhs',
         nextEquation: 'x = sqrt(9)',
         stepLabel: 'Simplify'
       },
       {
         title: 'Calculate Positive Root',
-        description: 'Simplify sqrt(9) on the right side to find the positive root solution.',
+        description: 'Simplify square root of 9 on the right side to find the positive root solution.',
         highlightPath: 'rhs',
         nextEquation: 'x = 3',
         stepLabel: 'Simplify'
@@ -264,14 +264,14 @@ export const ONBOARDING_CHAPTERS: OnboardingChapter[] = [
       },
       {
         title: 'Simplify Negative Root Left Side',
-        description: 'Now on Branch 2, the negative root. Click the handle on sqrt(x^2) to reduce it to x.',
+        description: 'Now on Branch 2, the negative root. Click the handle on square root of x squared to reduce it to x.',
         highlightPath: 'lhs',
         nextEquation: 'x = -sqrt(9)',
         stepLabel: 'Simplify'
       },
       {
         title: 'Calculate Negative Root',
-        description: 'Simplify -sqrt(9) on the right side to find the negative root solution.',
+        description: 'Simplify negative square root of 9 on the right side to find the negative root solution.',
         highlightPath: 'rhs',
         nextEquation: 'x = -3',
         stepLabel: 'Simplify'

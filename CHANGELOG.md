@@ -8,6 +8,14 @@ and the monorepo uses a single unified version across all workspaces; the root
 v1.0.0 onward, entries are generated automatically from conventional commits by
 [release-please](https://github.com/googleapis/release-please) (#337).
 
+## [1.6.0](https://github.com/trebor/algebranch/compare/v1.5.0...v1.6.0) (2026-08-11)
+
+
+### Features
+
+* **math-engine,ui:** unify quadratic formula into single auto-branching rewrite option ([#583](https://github.com/trebor/algebranch/issues/583)) ([#584](https://github.com/trebor/algebranch/issues/584)) ([3dd002f](https://github.com/trebor/algebranch/commit/3dd002f9c2f144fdaef7470feec4323b9bb52e2c))
+* **onboarding:** connect transposition with both-sides operations in chapter 2 tutorial ([#586](https://github.com/trebor/algebranch/issues/586)) ([#587](https://github.com/trebor/algebranch/issues/587)) ([7cb1058](https://github.com/trebor/algebranch/commit/7cb105820562c86a21f002a13a66ba46300717bd))
+
 ## [1.5.0](https://github.com/trebor/algebranch/compare/v1.4.0...v1.5.0) (2026-07-29)
 
 

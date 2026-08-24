@@ -364,6 +364,8 @@ export default function Home() {
   const currentTabName = useAtomValue(currentTabNameAtom);
   const addTab = useSetAtom(addTabAtom);
   const [toast, setToast] = useAtom(toastAtom);
+  const [shareCopied, setShareCopied] = React.useState(false);
+  const shareCopiedTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [isHydrated, setIsHydrated] = React.useState(false);
   const [initError, setInitError] = React.useState<string | null>(null);
 
@@ -1321,6 +1323,38 @@ export default function Home() {
     }
   };
 
+  const handleShareWorkspacePill = async () => {
+    try {
+      const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName, 'full', settings);
+      if (!compressed) return;
+      if (!navigator.onLine) {
+        setToast({ message: "You're offline — open Share for a link that works offline.", key: Date.now(), type: 'error' });
+        return;
+      }
+      const result = await createShareLink(compressed, window.location.origin);
+      if (result.status !== 'ok') {
+        const message = result.status === 'busy'
+          ? `${busyShareSummary(result.dailyLimit, new Date())} Open Share for a link that works offline.`
+          : "Couldn't create a short link — open Share for a link that works offline.";
+        setToast({ message, key: Date.now(), type: 'error' });
+        return;
+      }
+      const success = await safeCopyText(result.url);
+      if (success) {
+        if (shareCopiedTimeoutRef.current) clearTimeout(shareCopiedTimeoutRef.current);
+        setShareCopied(true);
+        shareCopiedTimeoutRef.current = setTimeout(() => setShareCopied(false), 2000);
+        setToast({ message: 'Workspace link copied — open Share to configure', key: Date.now() });
+        trackEvent({ action: 'share_workspace_link', category: 'interaction' });
+      } else {
+        setToast({ message: LINK_NOT_COPIED_TOAST, key: Date.now(), type: 'error' });
+      }
+    } catch (err) {
+      console.error('Failed to copy share link:', err);
+      setToast({ message: LINK_NOT_COPIED_TOAST, key: Date.now(), type: 'error' });
+    }
+  };
+
   const cyclePane = (dir: 1 | -1) => {
     const panes = [
       { id: 'tabs', getEl: () => (document.querySelector('[role="tablist"][aria-label="Open workspaces"]') || document.querySelector('[role="tablist"]')) as HTMLElement | null, getFocusEl: (parent: HTMLElement) => parent.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement | null || parent.querySelector('[role="tab"]') as HTMLElement | null },
@@ -1765,12 +1799,32 @@ export default function Home() {
             >
               <button
                 type="button"
-                onClick={() => setShareModalOpen(true)}
-                aria-label="Share"
+                onClick={handleShareWorkspacePill}
+                aria-label="Share workspace link"
                 className={THEME_GLASS.SHARE_PILL_PRIMARY}
               >
-                <Share2 size={14} className="text-indigo-300 group-hover:scale-110 transition-transform" />
-                <span className="hidden sm:inline">Share</span>
+                {shareCopied ? (
+                  <>
+                    <Check size={14} className="text-emerald-400" />
+                    <span className="hidden sm:inline text-emerald-400">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 size={14} className="text-indigo-300 group-hover:scale-110 transition-transform" />
+                    <span className="hidden sm:inline">Share</span>
+                  </>
+                )}
+              </button>
+            </Tooltip>
+            <span aria-hidden="true" className={THEME_GLASS.SHARE_PILL_DIVIDER} />
+            <Tooltip content="More sharing options" position="bottom" autoAlign={false}>
+              <button
+                type="button"
+                onClick={() => setShareModalOpen(true)}
+                aria-label="More sharing options"
+                className={THEME_GLASS.SHARE_PILL_CARET}
+              >
+                <ChevronDown size={12} />
               </button>
             </Tooltip>
           </div>

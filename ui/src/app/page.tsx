@@ -157,7 +157,7 @@ import { RELATION_DISPLAY } from '../constants/mathSymbols';
 import { APP_TAGLINE } from '../constants/brand';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, GraduationCap, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil, AlertTriangle, Share2, Lightbulb } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Trash2, GitBranch, LayoutGrid, Library, GraduationCap, TrendingUp, ChevronUp, ChevronDown, ScanText, RefreshCw, Pencil, AlertTriangle, Share2, Lightbulb, Loader2 } from 'lucide-react';
 import { parseEquation, equationToString, decompressString } from 'math-engine-client';
 import { useMathScale } from '../hooks/useMathScale';
 import { useFLIPAnimation } from '../hooks/useFLIPAnimation';
@@ -365,6 +365,7 @@ export default function Home() {
   const addTab = useSetAtom(addTabAtom);
   const [toast, setToast] = useAtom(toastAtom);
   const [shareCopied, setShareCopied] = React.useState(false);
+  const [shareCreating, setShareCreating] = React.useState(false);
   const shareCopiedTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [isHydrated, setIsHydrated] = React.useState(false);
   const [initError, setInitError] = React.useState<string | null>(null);
@@ -1324,6 +1325,8 @@ export default function Home() {
   };
 
   const handleShareWorkspacePill = async () => {
+    if (shareCreating) return;
+    setShareCreating(true);
     try {
       const compressed = await serializeWorkspaceState(tree, currentNodeId, currentTabName, 'full', settings);
       if (!compressed) return;
@@ -1352,6 +1355,8 @@ export default function Home() {
     } catch (err) {
       console.error('Failed to copy share link:', err);
       setToast({ message: LINK_NOT_COPIED_TOAST, key: Date.now(), type: 'error' });
+    } finally {
+      setShareCreating(false);
     }
   };
 
@@ -1800,10 +1805,17 @@ export default function Home() {
               <button
                 type="button"
                 onClick={handleShareWorkspacePill}
+                disabled={shareCreating}
+                aria-busy={shareCreating}
                 aria-label="Share workspace link"
                 className={THEME_GLASS.SHARE_PILL_PRIMARY}
               >
-                {shareCopied ? (
+                {shareCreating ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin text-indigo-300" />
+                    <span className="hidden sm:inline">Creating…</span>
+                  </>
+                ) : shareCopied ? (
                   <>
                     <Check size={14} className="text-emerald-400" />
                     <span className="hidden sm:inline text-emerald-400">Copied</span>

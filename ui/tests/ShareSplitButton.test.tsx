@@ -134,4 +134,57 @@ describe('Header Share Split-Button', () => {
     expect(writeText).toHaveBeenCalledWith('https://algebranch.org/s/test1234#key5678');
     expect(within(primaryBtn).getByText('Copied')).toBeTruthy();
   });
+
+  it('shows loading state, disables button, and ignores duplicate clicks while creating link', async () => {
+    let resolveSharePromise!: (val: { status: 'ok'; url: string }) => void;
+    mockCreateShareLink.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSharePromise = resolve;
+        })
+    );
+
+    const store = makeStore();
+    render(
+      <Provider store={store}>
+        <Home />
+      </Provider>
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    const primaryBtn = screen.getByRole('button', { name: /share workspace/i });
+
+    // Initial idle state
+    expect(primaryBtn).not.toBeDisabled();
+    expect(primaryBtn.getAttribute('aria-busy')).toBe('false');
+
+    // Trigger click
+    await userEvent.click(primaryBtn);
+
+    // In flight loading state
+    expect(mockCreateShareLink).toHaveBeenCalledTimes(1);
+    expect(primaryBtn).toBeDisabled();
+    expect(primaryBtn.getAttribute('aria-busy')).toBe('true');
+    expect(within(primaryBtn).getByText(/creating/i)).toBeTruthy();
+
+    // Attempt second click while disabled/busy
+    await userEvent.click(primaryBtn);
+    expect(mockCreateShareLink).toHaveBeenCalledTimes(1);
+
+    // Resolve creation
+    await act(async () => {
+      resolveSharePromise({
+        status: 'ok',
+        url: 'https://algebranch.org/s/test1234#key5678',
+      });
+    });
+
+    // Completed state
+    expect(primaryBtn).not.toBeDisabled();
+    expect(primaryBtn.getAttribute('aria-busy')).toBe('false');
+    expect(within(primaryBtn).getByText('Copied')).toBeTruthy();
+  });
 });

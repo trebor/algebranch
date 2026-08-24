@@ -3,7 +3,7 @@
 
 import { safeStorage } from './safeStorage';
 
-export type ConsentState = 'unset' | 'granted' | 'denied';
+export type ConsentState = 'granted' | 'denied';
 
 const STORAGE_KEY = 'algebranch_consent';
 
@@ -24,10 +24,10 @@ const getWindow = (): WindowWithGtag | undefined => {
 
 export const getConsentFromStorage = (): ConsentState => {
   const val = safeStorage.getItem(STORAGE_KEY);
-  if (val === 'granted' || val === 'denied') {
-    return val;
+  if (val === 'granted') {
+    return 'granted';
   }
-  return 'unset';
+  return 'denied';
 };
 
 export const saveConsentToStorage = (state: ConsentState): void => {

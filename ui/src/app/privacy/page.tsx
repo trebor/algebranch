@@ -3,15 +3,12 @@
 
 'use client';
 
-import { useSetAtom } from 'jotai';
 import Link from 'next/link';
 import { THEME_GLASS } from '../../constants/theme';
-import { consentAtom } from '../../store/consent';
 import { BackToWorkspaceLink } from '../../components/BackToWorkspaceLink';
 import { DocsCrossNav } from '../../components/DocsNav';
 
 export default function PrivacyPage() {
-  const setConsent = useSetAtom(consentAtom);
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
@@ -73,14 +70,7 @@ export default function PrivacyPage() {
                 4. Consent Control
               </h2>
               <p>
-                Google Analytics tracking is disabled by default, backed by Google Consent Mode v2, until you opt in via the consent banner. You can change your choice at any time by clicking{' '}
-                <button
-                  onClick={() => setConsent('unset')}
-                  className={`${THEME_GLASS.LINK} bg-transparent border-none cursor-pointer p-0 inline`}
-                >
-                  Cookie Settings
-                </button>
-                .
+                Google Analytics tracking is disabled by default, backed by Google Consent Mode v2, until you opt in. You can enable or disable anonymous usage analytics at any time using the toggle in the Settings menu.
               </p>
             </section>
 

@@ -14,7 +14,6 @@ import { softwareApplicationJsonLd } from "../constants/structuredData";
 // Note: the bare brand is the base <title> on purpose — the tagline is kept out
 // of the browser tab (#449); it lives in the on-page subtitle and social cards.
 import { ChromeScaleProvider } from "../components/ChromeScaleProvider";
-import { ConsentManager } from "../components/ConsentManager";
 import { shouldRenderDebugOverlay, buildDebugOverlayScript } from "../utils/debugOverlay";
 import { AppUnavailableNotice } from "../components/AppUnavailableNotice";
 import { DocModalHost } from "../components/DocModalHost";
@@ -140,7 +139,6 @@ export default function RootLayout({
                   fed to a client modal, opened from the Help launcher and synced
                   to the crawlable `/<slug>` URL via the History API. */}
               <DocModalHost />
-              <ConsentManager />
             </ChromeScaleProvider>
           </ReducedMotionProvider>
         </JotaiProvider>

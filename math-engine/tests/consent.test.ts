@@ -95,8 +95,8 @@ describe('Consent Utility', () => {
   });
 
   describe('getConsentFromStorage', () => {
-    it('returns unset when storage is empty', () => {
-      expect(getConsentFromStorage()).toBe('unset');
+    it('returns denied when storage is empty', () => {
+      expect(getConsentFromStorage()).toBe('denied');
     });
 
     it('returns granted when storage has granted', () => {
@@ -109,9 +109,9 @@ describe('Consent Utility', () => {
       expect(getConsentFromStorage()).toBe('denied');
     });
 
-    it('returns unset when storage has invalid value', () => {
+    it('returns denied when storage has invalid value', () => {
       localStorageMock['algebranch_consent'] = 'invalid';
-      expect(getConsentFromStorage()).toBe('unset');
+      expect(getConsentFromStorage()).toBe('denied');
     });
   });
 

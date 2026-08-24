@@ -6,20 +6,16 @@ import { render, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, createStore } from 'jotai';
 import { SharedWorkspaceBanner } from '@/components/SharedWorkspaceBanner';
-import { ConsentBanner } from '@/components/ConsentBanner';
 import {
   sharedWorkspaceBannerAtom,
   sharedWorkspacePresetAtom,
   isSharedWorkspaceBannerDismissed,
 } from '@/store/sharedWorkspaceBanner';
-import { rawConsentAtom } from '@/store/consent';
-import type { ConsentState } from '@/utils/consent';
 
-function renderWith(open: boolean, consent: ConsentState = 'denied', presetLabel: string | null = null) {
+function renderWith(open: boolean, presetLabel: string | null = null) {
   const store = createStore();
   store.set(sharedWorkspaceBannerAtom, open);
   store.set(sharedWorkspacePresetAtom, presetLabel);
-  store.set(rawConsentAtom, consent);
   const utils = render(
     <Provider store={store}>
       <SharedWorkspaceBanner />
@@ -75,45 +71,13 @@ describe('SharedWorkspaceBanner', () => {
     expect(store.get(sharedWorkspaceBannerAtom)).toBe(false);
   });
 
-  it('takes focus once consent is resolved', () => {
-    renderWith(true, 'denied');
+  it('takes focus when mounted', () => {
+    renderWith(true);
     expect(document.activeElement).toBe(screen.getByRole('button', { name: /got it/i }));
   });
 
-  it('stays hidden until the cookie consent choice is resolved', () => {
-    // Opening a ?ws= link on first run raises the consent banner too; the cookie
-    // choice takes precedence, so the share banner waits until it is dismissed.
-    renderWith(true, 'unset');
-    expect(screen.queryByRole('dialog')).toBeNull();
-  });
-
-  it('appears once consent resolves, without the declining Escape dismissing it', async () => {
-    // The Escape that declines cookies must not cascade into the share banner:
-    // while consent is unset the share banner is not mounted (no listener), so
-    // only a *second* Escape — after it appears — dismisses it.
-    const store = createStore();
-    store.set(sharedWorkspaceBannerAtom, true);
-    store.set(rawConsentAtom, 'unset');
-    render(
-      <Provider store={store}>
-        <ConsentBanner />
-        <SharedWorkspaceBanner />
-      </Provider>,
-    );
-
-    // First Escape declines cookies; the share banner now appears but is still open.
-    await userEvent.keyboard('{Escape}');
-    expect(store.get(rawConsentAtom)).toBe('denied');
-    expect(store.get(sharedWorkspaceBannerAtom)).toBe(true);
-    expect(screen.getByRole('dialog')).toBeTruthy();
-
-    // Second Escape dismisses the now-visible share banner.
-    await userEvent.keyboard('{Escape}');
-    expect(store.get(sharedWorkspaceBannerAtom)).toBe(false);
-  });
-
   it('displays the preset label if presetLabel is set', () => {
-    renderWith(true, 'denied', 'Real numbers only');
+    renderWith(true, 'Real numbers only');
     const banner = screen.getByRole('dialog');
     expect(banner.textContent).toContain('This link set: Real numbers only');
   });

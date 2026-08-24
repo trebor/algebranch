@@ -8,6 +8,14 @@ and the monorepo uses a single unified version across all workspaces; the root
 v1.0.0 onward, entries are generated automatically from conventional commits by
 [release-please](https://github.com/googleapis/release-please) (#337).
 
+## [1.7.0](https://github.com/trebor/algebranch/compare/v1.6.0...v1.7.0) (2026-08-24)
+
+
+### Features
+
+* **share:** restore split-button for one-click short-link copying and modal launcher ([#591](https://github.com/trebor/algebranch/issues/591)) ([#592](https://github.com/trebor/algebranch/issues/592)) ([45c0f9e](https://github.com/trebor/algebranch/commit/45c0f9e6ad30e98d411b8d233e0d4dd5daf3f2ea))
+* **ui:** loading spinner and disabled state for share button ([#594](https://github.com/trebor/algebranch/issues/594)) ([#595](https://github.com/trebor/algebranch/issues/595)) ([a9df734](https://github.com/trebor/algebranch/commit/a9df734ee541fe0498a367abc4c85559899612b2))
+
 ## [1.6.0](https://github.com/trebor/algebranch/compare/v1.5.0...v1.6.0) (2026-08-11)
 
 

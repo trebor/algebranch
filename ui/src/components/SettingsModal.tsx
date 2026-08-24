@@ -4,7 +4,7 @@
 'use client';
 
 import React from 'react';
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sliders, GraduationCap } from 'lucide-react';
 import {
@@ -25,7 +25,7 @@ import { CAPABILITY_GATES } from '../constants/capabilityGates';
 export const SettingsModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(settingsModalOpenAtom);
   const [settings, setSettings] = useAtom(settingsAtom);
-  const setConsent = useSetAtom(consentAtom);
+  const [consent, setConsent] = useAtom(consentAtom);
 
   const handleClose = () => {
     setIsOpen(false);
@@ -236,33 +236,43 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               {/* 3. Privacy & Cookies Group */}
-              <div className={THEME_GLASS.SETTING_ROW}>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-white">
-                    Privacy & Cookies
-                  </span>
-                  <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
-                    Review what anonymous analytics data we collect or update your cookie tracking preferences.
-                  </span>
+              <div className={THEME_GLASS.SETTING_ROW_STACKED}>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-semibold text-white">
+                      Privacy & Cookies
+                    </span>
+                    <span className={`text-xs leading-snug ${THEME_GLASS.TEXT_MUTED_LIGHT}`}>
+                      Allow anonymous usage analytics to help improve Algebranch. Equation content is never collected.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConsent(consent === 'granted' ? 'denied' : 'granted')}
+                    className={`${THEME_GLASS.TOGGLE_TRACK} ${
+                      consent === 'granted'
+                        ? THEME_GLASS.TOGGLE_TRACK_ON
+                        : THEME_GLASS.TOGGLE_TRACK_OFF
+                    }`}
+                    role="switch"
+                    aria-checked={consent === 'granted'}
+                    aria-label="Toggle anonymous analytics option"
+                  >
+                    <span
+                      className={`${THEME_GLASS.TOGGLE_KNOB} ${
+                        consent === 'granted' ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
                 </div>
-                <div className="flex flex-col gap-1.5 shrink-0 self-center">
+                <div className="flex items-center pt-1 border-t border-white/5">
                   <Link
                     href="/privacy"
                     onClick={() => setIsOpen(false)}
-                    className={`${THEME_GLASS.LINK} text-xs font-bold text-center no-underline`}
+                    className={`${THEME_GLASS.LINK} text-xs font-bold no-underline`}
                   >
                     Privacy Policy
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setConsent('unset');
-                      setIsOpen(false);
-                    }}
-                    className={`${THEME_GLASS.LINK} text-xs font-bold bg-transparent border-none cursor-pointer p-0 text-center`}
-                  >
-                    Cookie Settings
-                  </button>
                 </div>
               </div>
             </div>

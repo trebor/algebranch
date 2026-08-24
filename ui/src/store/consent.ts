@@ -10,7 +10,7 @@ import {
   clearGaCookies,
 } from '../utils/consent';
 
-export const rawConsentAtom = atom<ConsentState>('unset');
+export const rawConsentAtom = atom<ConsentState>('denied');
 
 export const consentAtom = atom(
   (get) => get(rawConsentAtom),
@@ -33,13 +33,12 @@ export const hydrateConsentAtom = atom(
   null,
   (get, set) => {
     const saved = getConsentFromStorage();
-    if (saved === 'granted' || saved === 'denied') {
-      set(rawConsentAtom, saved);
-      if (saved === 'granted') {
-        updateGtagConsent('granted');
-      } else if (saved === 'denied') {
-        clearGaCookies();
-      }
+    set(rawConsentAtom, saved);
+    if (saved === 'granted') {
+      updateGtagConsent('granted');
+    } else {
+      updateGtagConsent('denied');
+      clearGaCookies();
     }
   }
 );

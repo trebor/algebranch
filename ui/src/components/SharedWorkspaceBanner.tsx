@@ -11,7 +11,6 @@ import {
   sharedWorkspacePresetAtom,
   markSharedWorkspaceBannerDismissed,
 } from '../store/sharedWorkspaceBanner';
-import { consentAtom } from '../store/consent';
 import { THEME_GLASS } from '../constants/theme';
 
 /**
@@ -19,22 +18,14 @@ import { THEME_GLASS } from '../constants/theme';
  * acknowledges that the link restored someone's *full* derivation — the actual
  * magic of workspace-share — and invites the recipient to keep working on it or
  * share their own. It closes the viral loop by teaching the feature to the
- * person most primed to discover it. Non-blocking and dismissible; mirrors the
- * focus etiquette of the ConsentBanner so keyboard/SR users land on the action.
+ * person most primed to discover it. Non-blocking and dismissible.
  */
 export const SharedWorkspaceBanner = () => {
   const [open, setOpen] = useAtom(sharedWorkspaceBannerAtom);
   const presetLabel = useAtomValue(sharedWorkspacePresetAtom);
-  const consent = useAtomValue(consentAtom);
   const dismissButtonRef = React.useRef<HTMLButtonElement>(null);
 
-  // On first run a ?ws= link can raise this banner *and* the cookie consent
-  // banner together. The cookie choice takes precedence, so we hold the banner
-  // back entirely until consent is resolved — then it takes the stage (and
-  // focus) on its own. Gating on this also isolates the Escape keys: while
-  // consent is unset the banner is unmounted with no global listener, so the
-  // Escape that declines cookies can never cascade into dismissing it (#484).
-  const visible = open && consent !== 'unset';
+  const visible = open;
 
   // Record the dismissal so future `?ws=` arrivals skip the banner (#263).
   const dismiss = React.useCallback(() => {

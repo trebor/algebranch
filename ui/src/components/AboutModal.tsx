@@ -4,13 +4,12 @@
 'use client';
 
 import React from 'react';
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtom } from 'jotai';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { X, Info, ExternalLink, Shield, Github } from 'lucide-react';
 import { aboutModalOpenAtom } from '../store/equation';
-import { consentAtom } from '../store/consent';
 import { THEME_GLASS } from '../constants/theme';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import {
@@ -23,7 +22,6 @@ import { APP_VERSION } from '../constants/version';
 
 export const AboutModal: React.FC = () => {
   const [isOpen, setIsOpen] = useAtom(aboutModalOpenAtom);
-  const setConsent = useSetAtom(consentAtom);
 
   const handleClose = () => {
     setIsOpen(false);
@@ -163,15 +161,6 @@ export const AboutModal: React.FC = () => {
                 >
                   Link Format
                 </Link>
-                <button
-                  onClick={() => {
-                    setConsent('unset');
-                    setIsOpen(false);
-                  }}
-                  className={`${THEME_GLASS.LINK} bg-transparent border-none cursor-pointer`}
-                >
-                  Cookie Settings
-                </button>
                 <a
                   href={GITHUB_REPO_URL}
                   target="_blank"
